@@ -792,6 +792,8 @@ function loadTGConfig(){
 buildCards();
 renderHist();
 loadTGConfig();
+// Auto-inicia o monitor ao abrir o app
+setTimeout(startMonitor, 800);
 
 // ── RECONEXÃO AO VOLTAR PARA A TELA ──
 document.addEventListener('visibilitychange', () => {
