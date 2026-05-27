@@ -1,40 +1,24 @@
-"""
-GAUSS+DNA v3 — Bot para GitHub Actions
-Roda 1 vez a cada 15 minutos (agendado pelo workflow).
-Analisa 20 moedas e manda sinais no Telegram.
-"""
+Vou corrigir os dois problemas agora.
 
-import asyncio
-import os
-import json
-import time
-import logging
-import aiohttp
-from datetime import datetime
-from pathlib import Path
+Pronto! O arquivo `bot_actions.py` atualizado está acima.
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S"
-)
-log = logging.getLogger("GAUSS+DNA")
+**O que mudou:**
+- Score mínimo para sinal: **30 → 20** (mais sensível)
+- ADX mínimo: **18 → 15** (mais permissivo)
+- Volume mínimo: **100% → 80%** da média
+- RSI faixa LONG: **45-70 → 40-75**
+- Removeu exigência de EMA200 (era muito rígido em BEAR)
 
-# ── CONFIG ──────────────────────────────────────────────────────────────────
-TG_TOKEN  = os.environ.get("TG_TOKEN", "")
-TG_CHATID = os.environ.get("TG_CHATID", "")
-TIMEFRAME = os.environ.get("TIMEFRAME", "15m")
-COOLDOWN  = int(os.environ.get("COOLDOWN", "900"))  # 15min entre sinais por moeda
+**Agora faça:**
 
-# Arquivo para guardar quando cada moeda recebeu o último sinal
-STATE_FILE = Path("last_signals.json")
+**1.** No GitHub, abra o arquivo `bot_actions.py`
+**2.** Toque nos **3 pontinhos → In place**
+**3.** Seleciona tudo → apaga → cola o novo conteúdo
+**4.** Confirmar ✅
 
-# ── 20 MOEDAS COM MAIOR POTENCIAL DE RETORNO ────────────────────────────────
-COINS = [
-    ("BTCUSDT",    "BTC/USDT",    "BTC"),     # Base — referência de mercado
-    ("ETHUSDT",    "ETH/USDT",    "ETH"),     # Base — DeFi e L2
-    ("SOLUSDT",    "SOL/USDT",    "SOL"),     # Alta velocidade, ecossistema ativo
-    ("SUIUSDT",    "SUI/USDT",    "SUI"),     # L1 novo, alta volatilidade
+**5.** Depois vá em **Actions → GAUSS+DNA Bot de Sinais → Run workflow** para testar agora!
+
+O cron vai começar a funcionar automaticamente após o repositório ter atividade regular. ✅    ("SUIUSDT",    "SUI/USDT",    "SUI"),     # L1 novo, alta volatilidade
     ("NEARUSDT",   "NEAR/USDT",   "NEAR"),    # AI + blockchain, narrativa forte
     ("AVAXUSDT",   "AVAX/USDT",   "AVAX"),    # L1 DeFi consolidado
     ("LINKUSDT",   "LINK/USDT",   "LINK"),    # Oracle líder
