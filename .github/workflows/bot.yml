@@ -26,7 +26,7 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHATID: ${{ secrets.TG_CHATID }}
-          TIMEFRAMES: '15m,1h'
+          TIMEFRAMES: '15m,1h,4h'
           SIGNAL_MODE: 'FLEX'
           LOOP_MODE: 'true'
         run: python bot_actions.py

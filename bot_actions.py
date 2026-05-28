@@ -354,25 +354,81 @@ def analyze(sym, candles):
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
 
+    # ── QUALIDADE DO SINAL (S / A / B) ───────────────────────────────────────
+    # Conta quantos dos filtros premium estão alinhados
+    quality_score = 0
+    if sig == "LONG":
+        quality_score += 3 if trend_bull else 0
+        quality_score += 2 if align_bull else 0
+        quality_score += 2 if macd_bull3 else (1 if macd_bull else 0)
+        quality_score += 2 if ha_bull else 0
+        quality_score += 2 if adx_long_ok else (1 if adx > 15 else 0)
+        quality_score += 1 if obv_bull else 0
+        quality_score += 1 if above_vwap else 0
+        quality_score += 1 if v_strong2 else (0 if not v_strong else 0)
+        quality_score += 1 if kalman_accel_up else 0
+        quality_score += 1 if e200_rising else 0
+        quality_score += 1 if f_strong else 0
+        quality_score += 1 if trend_consistent_bull else 0
+    elif sig == "SHORT":
+        quality_score += 3 if trend_bear else 0
+        quality_score += 2 if align_bear else 0
+        quality_score += 2 if macd_bear3 else (1 if macd_bear else 0)
+        quality_score += 2 if ha_bear else 0
+        quality_score += 2 if adx_short_ok else (1 if adx > 15 else 0)
+        quality_score += 1 if obv_bear else 0
+        quality_score += 1 if below_vwap else 0
+        quality_score += 1 if v_strong2 else 0
+        quality_score += 1 if kalman_accel_down else 0
+        quality_score += 1 if e200_falling else 0
+        quality_score += 1 if f_strong else 0
+        quality_score += 1 if trend_consistent_bear else 0
+
+    if quality_score >= 14:   signal_grade = "S"   # setup perfeito
+    elif quality_score >= 10: signal_grade = "A"   # setup sólido
+    elif quality_score >= 6:  signal_grade = "B"   # setup básico
+    else:                     signal_grade = "B"
+
     return {"price":price,"score":score,"atr":atr,"rsi":rsi,"adx":adx,
             "kalman_up":kalman_up,"trend":"BULL" if trend_bull else "BEAR" if trend_bear else "NEUTRO",
             "sig":sig,"sig_source":sig_source,"swing_low":swing_low,"swing_high":swing_high,
-            "ha_bull":ha_bull,"obv_bull":obv_bull,"above_vwap":above_vwap}
+            "ha_bull":ha_bull,"obv_bull":obv_bull,"above_vwap":above_vwap,
+            "signal_grade":signal_grade,"quality_score":quality_score}
 
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
 async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
-                        rsi, adx, trend, kalman_up, swing_low, swing_high, sig_source, tf):
+                        rsi, adx, trend, kalman_up, swing_low, swing_high,
+                        sig_source, tf, signal_grade):
     is_long=sig_type=="LONG"
+
     # Stop baseado em swing high/low com floor de ATR
     if is_long:
         stop=max(swing_low-atr*0.1, price-atr*1.5)
     else:
         stop=min(swing_high+atr*0.1, price+atr*1.5)
     risk=abs(price-stop)
-    tp1=price+risk*1.8 if is_long else price-risk*1.8
-    tp2=price+risk*2.5 if is_long else price-risk*2.5
-    final=price+risk*4 if is_long else price-risk*4
+
+    # TP dinâmico por grade: S-tier deixa o winner correr mais
+    if signal_grade=="S":
+        r1,r2,r_final=2.0,3.0,6.0   # máximo potencial
+    elif signal_grade=="A":
+        r1,r2,r_final=1.8,2.5,4.5
+    else:
+        r1,r2,r_final=1.5,2.0,3.5
+
+    tp1  =price+risk*r1     if is_long else price-risk*r1
+    tp2  =price+risk*r2     if is_long else price-risk*r2
+    final=price+risk*r_final if is_long else price-risk*r_final
+
+    # Risk sugerido por grade
+    grade_info={
+        "S": ("🏆 GRADE S — Setup perfeito","5\\-10% do capital"),
+        "A": ("⭐ GRADE A — Setup sólido",  "3\\-5% do capital"),
+        "B": ("📊 GRADE B — Setup básico",  "1\\-3% do capital"),
+    }
+    grade_label,risk_sug=grade_info[signal_grade]
+
     if sig_source.startswith("CROSS"):
         mode_tag="🔀 DNA CROSS"
         cross_info=sig_source.split(":",1)[1]
@@ -380,23 +436,28 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         mode_tag="🔬 DNA ELITE KALMAN"; cross_info=""
     else:
         mode_tag="⚡ DNA FLEX"; cross_info=""
+
     def d(v): return f"{v:.6f}" if v<0.01 else f"{v:.4f}" if v<1 else f"{v:.2f}"
     def esc(v):
         s=str(v)
         for ch in r"_*[]()~`>#+=|{}.!\-": s=s.replace(ch,f"\\{ch}")
         return s
+
     now=datetime.now().strftime("%H:%M — %d/%m/%Y")
     k_str="↑" if kalman_up else "↓"
     cross_line=f"📉 Cross: {esc(cross_info)}\n" if cross_info else ""
+
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
         f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| ⏱ {esc(tf)}\n"
         f"{cross_line}"
+        f"{esc(grade_label)}\n"
+        f"💵 Risco sugerido: *{risk_sug}*\n\n"
         f"💰 Entrada: `${esc(fmt_price(price))}`\n"
         f"🛑 Stop: `${esc(d(stop))}`\n"
-        f"🎯 TP1 \\(1\\.8R\\): `${esc(d(tp1))}`\n"
-        f"✨ TP2 \\(2\\.5R\\): `${esc(d(tp2))}`\n"
-        f"🏆 Final \\(4R\\): `${esc(d(final))}`\n"
+        f"🎯 TP1 \\({esc(str(r1))}R\\): `${esc(d(tp1))}`\n"
+        f"✨ TP2 \\({esc(str(r2))}R\\): `${esc(d(tp2))}`\n"
+        f"🏆 Final \\({esc(str(r_final))}R\\): `${esc(d(final))}`\n\n"
         f"📊 Score: *{esc(score)}/145* \\| RSI: {esc(f'{rsi:.0f}')} \\| ADX: {esc(f'{adx:.0f}')}\n"
         f"📈 Trend: {esc(trend)} \\| Kalman: {esc(k_str)}\n"
         f"⏰ {esc(now)}"
@@ -406,7 +467,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         async with session.post(url,json={"chat_id":TG_CHATID,"text":text,"parse_mode":"MarkdownV2"},
                                 timeout=aiohttp.ClientTimeout(total=10)) as r:
             data=await r.json()
-            if data.get("ok"): log.info(f"✅ {sig_type} {short} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{sig_source}]")
+            if data.get("ok"): log.info(f"✅ {sig_type} {short} Grade:{signal_grade} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{sig_source}]")
             else: log.warning(f"❌ {data.get('description')}")
     except Exception as e: log.error(f"Erro: {e}")
 
@@ -442,7 +503,8 @@ async def run_cycle(session, last_sig, tf):
         if not candles: await asyncio.sleep(0.4); continue
         result=analyze(sym,candles)
         if not result: await asyncio.sleep(0.4); continue
-        log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | {result['sig_source'] or result['sig'] or '—'}")
+        grade=result.get("signal_grade","B")
+        log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
             key=f"{sym}_{tf}"  # chave única por moeda + timeframe
             if now-last_sig.get(key,0)>=cooldown:
@@ -450,7 +512,7 @@ async def run_cycle(session, last_sig, tf):
                 await send_telegram(session,sym,label,short,result["sig"],result["price"],
                                     result["atr"],result["score"],result["rsi"],result["adx"],
                                     result["trend"],result["kalman_up"],
-                                    result["swing_low"],result["swing_high"],result["sig_source"],tf)
+                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
             else:
                 mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
