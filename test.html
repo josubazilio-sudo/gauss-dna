@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAUSS+DNA · Teste Manual</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060810;color:#ccd8ee;font-family:'DM Mono',monospace,monospace;padding:1.2rem;min-height:100vh}
+h1{font-size:1rem;font-weight:700;letter-spacing:.1em;color:#3b9eff;margin-bottom:1.2rem;text-transform:uppercase}
+.card{background:#0b0f1a;border:1px solid #1a2035;border-radius:10px;padding:1rem 1.1rem;margin-bottom:1rem}
+label{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:#5a6d8a;display:block;margin-bottom:.25rem}
+input,select{width:100%;background:#101422;border:1px solid #252d45;border-radius:6px;color:#ccd8ee;font-family:inherit;font-size:.8rem;padding:.45rem .65rem;outline:none;margin-bottom:.7rem}
+input:focus,select:focus{border-color:#3b9eff}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+@media(max-width:480px){.row{grid-template-columns:1fr}}
+button{width:100%;padding:.65rem;border-radius:7px;font-family:inherit;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border:none;margin-top:.2rem}
+.btn-run{background:rgba(0,224,144,.12);border:1px solid rgba(0,224,144,.35);color:#00e090}
+.btn-send{background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.35);color:#3b9eff}
+.btn-run:disabled,.btn-send:disabled{opacity:.4;cursor:not-allowed}
+
+/* RESULTADO */
+.result{display:none;margin-top:.8rem}
+.sig-box{border-radius:8px;padding:.9rem 1rem;margin-bottom:.8rem;text-align:center}
+.sig-box.long{background:rgba(0,224,144,.08);border:1px solid rgba(0,224,144,.3)}
+.sig-box.short{background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.3)}
+.sig-box.none{background:rgba(90,109,138,.08);border:1px solid rgba(90,109,138,.25)}
+.sig-type{font-size:1.2rem;font-weight:700;letter-spacing:.05em}
+.sig-coin{font-size:.72rem;color:#5a6d8a;margin-top:.15rem}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.8rem}
+.metric{background:#101422;border-radius:6px;padding:.55rem .7rem}
+.metric-lbl{font-size:.57rem;text-transform:uppercase;letter-spacing:.1em;color:#3a4d6a;margin-bottom:.18rem}
+.metric-val{font-size:.88rem;font-weight:700}
+.green{color:#00e090}.red{color:#ff3d5a}.yellow{color:#ffcc44}.blue{color:#3b9eff}.muted{color:#5a6d8a}
+
+/* FILTROS */
+.filters{display:grid;grid-template-columns:repeat(2,1fr);gap:.35rem;margin-bottom:.8rem}
+@media(min-width:480px){.filters{grid-template-columns:repeat(4,1fr)}}
+.flt{border-radius:5px;padding:.35rem .5rem;font-size:.62rem;text-align:center;border:1px solid}
+.flt.ok{background:rgba(0,224,144,.07);border-color:rgba(0,224,144,.3);color:#00e090}
+.flt.fail{background:rgba(255,61,90,.06);border-color:rgba(255,61,90,.2);color:#ff3d5a}
+
+/* TP TABLE */
+.tp-table{width:100%;border-collapse:collapse;font-size:.72rem}
+.tp-table th{text-align:left;padding:.3rem .5rem;color:#3a4d6a;font-weight:400;font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #1a2035}
+.tp-table td{padding:.35rem .5rem;border-bottom:1px solid #1a2035}
+.tp-table tr:last-child td{border-bottom:none}
+
+/* LOG */
+#log{font-size:.67rem;color:#3a4d6a;line-height:1.7;max-height:120px;overflow-y:auto;margin-top:.5rem}
+#log span{display:block}
+#log .ok{color:#00e090}#log .info{color:#3b9eff}#log .warn{color:#ffcc44}#log .err{color:#ff3d5a}
+
+.toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:#0b0f1a;border:1px solid #252d45;color:#ccd8ee;padding:.55rem 1.2rem;border-radius:8px;font-size:.72rem;display:none;z-index:999}
+</style>
+</head>
+<body>
+<h1>⚡ GAUSS+DNA · Teste Manual</h1>
+
+<!-- CONFIG TELEGRAM -->
+<div class="card">
+  <label>Token do Bot Telegram</label>
+  <input id="tgToken" type="password" placeholder="123456:ABC-DEF...">
+  <label>Chat ID</label>
+  <input id="tgChatId" placeholder="-100123456 ou @canal">
+</div>
+
+<!-- SELEÇÃO -->
+<div class="card">
+  <div class="row">
+    <div>
+      <label>Moeda</label>
+      <select id="sym">
+        <option value="BTCUSDT">BTC/USDT</option>
+        <option value="ETHUSDT">ETH/USDT</option>
+        <option value="BNBUSDT">BNB/USDT</option>
+        <option value="XRPUSDT">XRP/USDT</option>
+        <option value="SOLUSDT" selected>SOL/USDT</option>
+        <option value="AVAXUSDT">AVAX/USDT</option>
+        <option value="SUIUSDT">SUI/USDT</option>
+        <option value="APTUSDT">APT/USDT</option>
+        <option value="NEARUSDT">NEAR/USDT</option>
+        <option value="TONUSDT">TON/USDT</option>
+        <option value="LINKUSDT">LINK/USDT</option>
+        <option value="INJUSDT">INJ/USDT</option>
+        <option value="JUPUSDT">JUP/USDT</option>
+        <option value="ARBUSDT">ARB/USDT</option>
+        <option value="OPUSDT">OP/USDT</option>
+        <option value="UNIUSDT">UNI/USDT</option>
+        <option value="DOGEUSDT">DOGE/USDT</option>
+        <option value="PEPEUSDT">PEPE/USDT</option>
+        <option value="WIFUSDT">WIF/USDT</option>
+        <option value="SHIBUSDT">SHIB/USDT</option>
+        <option value="ADAUSDT">ADA/USDT</option>
+        <option value="DOTUSDT">DOT/USDT</option>
+        <option value="ATOMUSDT">ATOM/USDT</option>
+        <option value="LTCUSDT">LTC/USDT</option>
+        <option value="FETUSDT">FET/USDT</option>
+      </select>
+    </div>
+    <div>
+      <label>Timeframe</label>
+      <select id="tf">
+        <option value="5m">5 minutos</option>
+        <option value="15m" selected>15 minutos</option>
+        <option value="1h">1 hora</option>
+        <option value="4h">4 horas</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn-run" id="btnRun" onclick="runTest()">🔍 Analisar</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="result" id="result">
+  <div class="card">
+    <div id="sigBox" class="sig-box none">
+      <div class="sig-type" id="sigType">—</div>
+      <div class="sig-coin" id="sigCoin"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="metric"><div class="metric-lbl">Score</div><div class="metric-val" id="rScore">—</div></div>
+      <div class="metric"><div class="metric-lbl">RSI</div><div class="metric-val" id="rRsi">—</div></div>
+      <div class="metric"><div class="metric-lbl">ADX</div><div class="metric-val" id="rAdx">—</div></div>
+      <div class="metric"><div class="metric-lbl">Preço</div><div class="metric-val" id="rPrice">—</div></div>
+    </div>
+
+    <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:#3a4d6a;margin-bottom:.4rem">Filtros</div>
+    <div class="filters" id="filters"></div>
+
+    <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:#3a4d6a;margin:.7rem 0 .4rem">Níveis</div>
+    <table class="tp-table">
+      <thead><tr><th>Nível</th><th>Preço</th><th>R:R</th></tr></thead>
+      <tbody id="tpBody"></tbody>
+    </table>
+
+    <button class="btn-send" id="btnSend" onclick="sendTelegram()" style="margin-top:.9rem">📲 Enviar no Telegram</button>
+  </div>
+</div>
+
+<div class="card">
+  <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:#3a4d6a;margin-bottom:.3rem">Log</div>
+  <div id="log"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── INDICADORES ──────────────────────────────────────────────────────────────
+function ema(arr,p){const k=2/(p+1);let v=arr[0];const o=[v];for(let i=1;i<arr.length;i++){v=arr[i]*k+v*(1-k);o.push(v);}return o;}
+function rma(arr,p){let v=arr.slice(0,p).reduce((a,b)=>a+b,0)/p;const o=[v];for(let i=p;i<arr.length;i++){v=(v*(p-1)+arr[i])/p;o.push(v);}return o;}
+
+function macdCalc(closes){
+  const ea=ema(closes,12),eb=ema(closes,26);
+  const ml=ea.map((v,i)=>v-eb[i]);
+  const sl=ema(ml,9);
+  const hist=ml.map((v,i)=>v-sl[i]);
+  const n=hist.length;
+  return{ml:ml[n-1],sl:sl[n-1],hist:hist[n-1],histP:hist[n-2]||hist[n-1]};
+}
+
+function rsiCalc(closes,p=14){
+  let ag=0,al=0;
+  for(let i=1;i<=p;i++){const d=closes[i]-closes[i-1];ag+=Math.max(d,0);al+=Math.max(-d,0);}
+  ag/=p;al/=p;
+  for(let i=p+1;i<closes.length;i++){const d=closes[i]-closes[i-1];ag=(ag*(p-1)+Math.max(d,0))/p;al=(al*(p-1)+Math.max(-d,0))/p;}
+  return al===0?100:100-(100/(1+ag/al));
+}
+
+function adxCalc(candles,p=14){
+  const pdm=[],mdm=[],tr=[];
+  for(let i=1;i<candles.length;i++){
+    const h=candles[i].h,l=candles[i].l,ph=candles[i-1].h,pl=candles[i-1].l,pc=candles[i-1].c;
+    const up=h-ph,dn=pl-l;
+    pdm.push(up>dn&&up>0?up:0);mdm.push(dn>up&&dn>0?dn:0);
+    tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));
+  }
+  const rtr=rma(tr,p),rpdm=rma(pdm,p),rmdm=rma(mdm,p);
+  const dx=rtr.map((t,i)=>{const tt=t||1e-10;const pdi=(rpdm[i]/tt)*100,mdi=(rmdm[i]/tt)*100;return Math.abs(pdi-mdi)/(pdi+mdi||1)*100;});
+  const adxArr=rma(dx,p);
+  const idx=adxArr.length-1,t=rtr[idx]||1e-10;
+  return{adx:adxArr[idx],pdi:(rpdm[idx]/t)*100,mdi:(rmdm[idx]/t)*100};
+}
+
+function atrCalc(candles,p=14){
+  const tr=[candles[0].h-candles[0].l];
+  for(let i=1;i<candles.length;i++){const h=candles[i].h,l=candles[i].l,pc=candles[i-1].c;tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));}
+  return rma(tr,p).at(-1);
+}
+
+function fmtP(v){
+  if(v<0.0001)return v.toFixed(7);
+  if(v<0.01)return v.toFixed(5);
+  if(v<1)return v.toFixed(4);
+  if(v<100)return v.toFixed(3);
+  return v.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+// ── ANÁLISE ──────────────────────────────────────────────────────────────────
+let lastResult=null;
+
+function analyze(candles){
+  const closes=candles.map(c=>c.c);
+  const vols=candles.map(c=>c.v);
+  const n=closes.length;
+  const price=closes[n-1];
+
+  const e10=ema(closes,10).at(-1);
+  const e21=ema(closes,21).at(-1);
+  const e50=ema(closes,50).at(-1);
+  const e200=ema(closes,200).at(-1);
+  const e200p=ema(closes.slice(0,-5),200).at(-1);
+
+  const{ml,sl,hist,histP}=macdCalc(closes);
+  const rsiV=rsiCalc(closes.slice(-50));
+  const{adx,pdi,mdi}=adxCalc(candles.slice(-60));
+
+  const avgVol=vols.slice(-20).reduce((a,b)=>a+b,0)/20;
+  const lastC=candles[n-1];
+  const sp=Math.max(lastC.h-lastC.l,1e-10);
+  const flow=((lastC.c-lastC.o)/sp)*lastC.v;
+  const atrV=atrCalc(candles.slice(-20));
+
+  // Condições — iguais à versão que funciona
+  const tBull=price>e200&&e10>e21&&e21>e50;
+  const tBear=price<e200&&e10<e21&&e21<e50;
+  const mBull=ml>sl&&hist>histP;
+  const mBear=ml<sl&&hist<histP;
+  const adxOk=adx>18;
+  const vStrong=vols[n-1]>avgVol;
+  const fBull=flow>0,fBear=flow<0;
+  const e200Rising=e200>e200p;
+  const rsiBull=rsiV>45&&rsiV<70;
+  const rsiBear=rsiV<55&&rsiV>30;
+
+  let score=
+    (tBull?35:tBear?-35:0)+
+    (mBull?20:mBear?-20:0)+
+    (rsiBull?10:rsiBear?-10:0)+
+    (vStrong?10:-10)+
+    (adxOk?15:-15)+
+    (fBull?20:fBear?-20:0)+
+    (e200Rising?10:-10)+
+    (adxOk?10:-10);
+  score=Math.max(-145,Math.min(145,score));
+
+  let sig=null;
+  if(score>30&&tBull&&mBull&&adxOk&&vStrong) sig='LONG';
+  else if(score<-30&&tBear&&mBear&&adxOk&&vStrong) sig='SHORT';
+
+  // TPs
+  const isL=sig==='LONG';
+  const stop=isL?price-atrV*1.5:price+atrV*1.5;
+  const risk=Math.abs(price-stop);
+  const tp1=isL?price+risk*1.5:price-risk*1.5;
+  const tp2=isL?price+risk*2.5:price-risk*2.5;
+  const tp3=isL?price+risk*5:price-risk*5;
+
+  return{
+    sig,score,price,rsiV,adx,atrV,stop,tp1,tp2,tp3,risk,
+    filters:{
+      'Tendência':tBull?(sig==='LONG'?true:null):(tBear?(sig==='SHORT'?true:null):false),
+      'tBull':tBull,'tBear':tBear,
+      'MACD':mBull?true:(mBear?false:null),
+      'ADX>18':adxOk,
+      'Volume':vStrong,
+      'Flow':fBull?true:(fBear?false:null),
+      'RSI zona':rsiBull?true:(rsiBear?false:null),
+      'e200↑':e200Rising,
+    }
+  };
+}
+
+// ── UI ───────────────────────────────────────────────────────────────────────
+function log(msg,cls=''){
+  const d=document.getElementById('log');
+  const s=document.createElement('span');
+  s.className=cls;s.textContent=msg;
+  d.prepend(s);
+  while(d.children.length>30)d.removeChild(d.lastChild);
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';
+  setTimeout(()=>t.style.display='none',3000);
+}
+
+async function runTest(){
+  const sym=document.getElementById('sym').value;
+  const tf=document.getElementById('tf').value;
+  const btn=document.getElementById('btnRun');
+  btn.disabled=true;btn.textContent='⏳ Buscando...';
+  log(`Buscando ${sym} [${tf}]...`,'info');
+
+  try{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),12000);
+    const url=`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${tf}&limit=250`;
+    const r=await fetch(url,{signal:ctrl.signal});
+    clearTimeout(tid);
+    const data=await r.json();
+    if(!Array.isArray(data)||data.length<60){log('Dados insuficientes','warn');return;}
+    const candles=data.map(k=>({o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+
+    const res=analyze(candles);
+    lastResult={...res,sym,tf,label:document.getElementById('sym').selectedOptions[0].text};
+    showResult(lastResult);
+    log(`✓ ${sym} | Score ${res.score>0?'+':''}${res.score} | ${res.sig||'Sem sinal'}`,res.sig?'ok':'');
+  }catch(e){
+    log('Erro: '+e.message,'err');
+    toast('❌ Erro ao buscar dados');
+  }finally{
+    btn.disabled=false;btn.textContent='🔍 Analisar';
+  }
+}
+
+function showResult(res){
+  document.getElementById('result').style.display='block';
+
+  const box=document.getElementById('sigBox');
+  const sigEl=document.getElementById('sigType');
+  const coinEl=document.getElementById('sigCoin');
+
+  if(res.sig==='LONG'){
+    box.className='sig-box long';
+    sigEl.textContent='🟢 SINAL LONG';sigEl.style.color='#00e090';
+  }else if(res.sig==='SHORT'){
+    box.className='sig-box short';
+    sigEl.textContent='🔴 SINAL SHORT';sigEl.style.color='#ff3d5a';
+  }else{
+    box.className='sig-box none';
+    sigEl.textContent='— Sem Sinal';sigEl.style.color='#5a6d8a';
+  }
+  coinEl.textContent=res.label+' · '+res.tf;
+
+  const sc=document.getElementById('rScore');
+  sc.textContent=(res.score>0?'+':'')+res.score;
+  sc.className='metric-val '+(res.score>30?'green':res.score<-30?'red':'yellow');
+
+  document.getElementById('rRsi').textContent=res.rsiV.toFixed(1);
+  const ri=document.getElementById('rRsi');
+  ri.className='metric-val '+(res.rsiV>70?'red':res.rsiV<30?'red':res.rsiV>50?'green':'yellow');
+
+  document.getElementById('rAdx').textContent=res.adx.toFixed(1);
+  const ad=document.getElementById('rAdx');
+  ad.className='metric-val '+(res.adx>25?'green':res.adx>18?'yellow':'muted');
+
+  document.getElementById('rPrice').textContent='$'+fmtP(res.price);
+
+  // Filtros
+  const fd=document.getElementById('filters');
+  const show={
+    'tBull':res.filters.tBull,
+    'tBear':res.filters.tBear,
+    'MACD':res.filters.MACD,
+    'ADX>18':res.filters['ADX>18'],
+    'Volume':res.filters.Volume,
+    'Flow':res.filters.Flow,
+    'RSI zona':res.filters['RSI zona'],
+    'e200 ↑':res.filters['e200↑'],
+  };
+  fd.innerHTML=Object.entries(show).map(([k,v])=>`
+    <div class="flt ${v?'ok':'fail'}">${v?'✓':'✗'} ${k}</div>
+  `).join('');
+
+  // TPs
+  const isL=res.sig==='LONG';
+  const tpData=[
+    {n:'Stop',p:res.stop,rr:null,col:'#ff3d5a'},
+    {n:'TP1 (1.5R)',p:res.tp1,rr:1.5,col:'#3b9eff'},
+    {n:'TP2 (2.5R)',p:res.tp2,rr:2.5,col:'#00d4c8'},
+    {n:'TP3 (5R)',p:res.tp3,rr:5,col:'#00e090'},
+  ];
+  document.getElementById('tpBody').innerHTML=tpData.map(t=>`
+    <tr>
+      <td style="color:${t.col}">${t.n}</td>
+      <td>$${fmtP(t.p)}</td>
+      <td style="color:${t.col}">${t.rr?t.rr+'R':'—'}</td>
+    </tr>
+  `).join('');
+}
+
+// ── TELEGRAM ─────────────────────────────────────────────────────────────────
+async function sendTelegram(){
+  const tok=document.getElementById('tgToken').value.trim();
+  const cid=document.getElementById('tgChatId').value.trim();
+  if(!tok||!cid){toast('⚠️ Configure Token e Chat ID');return;}
+  if(!lastResult){toast('⚠️ Execute uma análise primeiro');return;}
+
+  const r=lastResult;
+  const isL=r.sig==='LONG'||(!r.sig&&r.score>0);
+  const sigType=r.sig||(isL?'LONG':'SHORT');
+
+  function esc(v){return String(v).replace(/[_*[\]()~`>#+=|{}.!\\-]/g,'\\$&');}
+
+  const text=
+    `🚨 *GAUSS\\+DNA — SINAL ${sigType}*\n\n`+
+    `${isL?'🟢':'🔴'} *${esc(r.label)}* \\| ⏱ ${esc(r.tf)}\n\n`+
+    `💰 Entrada: \`$${esc(fmtP(r.price))}\`\n`+
+    `🛑 Stop: \`$${esc(fmtP(r.stop))}\`\n`+
+    `🎯 TP1 \\(1\\.5R\\): \`$${esc(fmtP(r.tp1))}\`\n`+
+    `✨ TP2 \\(2\\.5R\\): \`$${esc(fmtP(r.tp2))}\`\n`+
+    `🏆 TP3 \\(5R\\): \`$${esc(fmtP(r.tp3))}\`\n\n`+
+    `📊 Score: *${esc(r.score)}/145* \\| RSI: ${esc(r.rsiV.toFixed(0))} \\| ADX: ${esc(r.adx.toFixed(0))}\n`+
+    `⏰ ${esc(new Date().toLocaleString('pt-BR'))}`;
+
+  const btn=document.getElementById('btnSend');
+  btn.disabled=true;btn.textContent='⏳ Enviando...';
+  try{
+    const res=await fetch(`https://api.telegram.org/bot${tok}/sendMessage`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:cid,text,parse_mode:'MarkdownV2'})
+    });
+    const d=await res.json();
+    if(d.ok){toast('✅ Enviado no Telegram!');log('✓ Telegram OK','ok');}
+    else{toast('❌ '+d.description);log('Telegram erro: '+d.description,'err');}
+  }catch(e){toast('❌ Erro de rede');log('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='📲 Enviar no Telegram';}
+}
+
+// Carrega config salva
+try{
+  const tok=localStorage.getItem('tg_token'),cid=localStorage.getItem('tg_chatid');
+  if(tok)document.getElementById('tgToken').value=tok;
+  if(cid)document.getElementById('tgChatId').value=cid;
+}catch(e){}
+
+// Salva config ao digitar
+document.getElementById('tgToken').addEventListener('input',function(){try{localStorage.setItem('tg_token',this.value);}catch(e){}});
+document.getElementById('tgChatId').addEventListener('input',function(){try{localStorage.setItem('tg_chatid',this.value);}catch(e){}});
+</script>
+</body>
+</html>
