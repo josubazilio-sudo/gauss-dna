@@ -372,27 +372,28 @@ def analyze(sym, candles):
                  bear_absorb and f_bear and trend_bear and e200_falling and
                  kalman_down and below_vwap and macd_exhausting and safe_short)
 
-    # Sinal de cruzamento
+    # Sinal de cruzamento (sem safe_long — não bloquear crossovers válidos)
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 (macd_bull or ha_bull) and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97 and safe_long)
+                v_strong and not_ext_long and price>e200*0.97)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  (macd_bear or ha_bear) and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03 and safe_short)
+                 v_strong and not_ext_short and price<e200*1.03)
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
-    long_pullback=(pullback_bull and trend_bull and (macd_bull or macd_recovering) and
+    # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
+    trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
+    long_pullback=(pullback_bull and trend_bull_relaxed and (macd_bull or macd_recovering) and
                    adx>18 and (f_bull or obv_bull) and v_strong and
-                   above_vwap and score>25 and not any_cross_bull)
-    short_pullback=(pullback_bear and trend_bear and (macd_bear or macd_exhausting) and
+                   above_vwap and score>15 and not any_cross_bull)
+    trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
+    short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-25 and not any_cross_bear)
+                    below_vwap and score<-15 and not any_cross_bear)
 
-    # ── SINAIS FLEX ── (critérios essenciais; safe_long/safe_short apenas no ELITE)
-    long_flex=(score>20 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
-               adx>12 and (f_bull or obv_bull) and not_ext_long)
-    short_flex=(score<-20 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
-                adx>12 and (f_bear or obv_bear) and not_ext_short)
+    # ── SINAIS FLEX ── score captura tendência; sem exigir alinhamento total de EMAs
+    long_flex=(score>25 and (macd_bull or ha_bull) and adx>12 and not_ext_long)
+    short_flex=(score<-25 and (macd_bear or ha_bear) and adx>12 and not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -440,6 +441,15 @@ def analyze(sym, candles):
     elif quality_score >= 10: signal_grade = "A"   # setup sólido
     elif quality_score >= 6:  signal_grade = "B"   # setup básico
     else:                     signal_grade = "B"
+
+    # Log de diagnóstico detalhado quando não há sinal
+    if not sig:
+        blockers=[]
+        if not (macd_bull or ha_bull): blockers.append(f"macd={macd_bull}/ha={ha_bull}")
+        if adx<=12: blockers.append(f"adx={adx:.1f}<12")
+        if not not_ext_long and score>0: blockers.append(f"ext_long={(price-e50)/atr:.1f}ATR")
+        if score<=25 and score>=-25: blockers.append(f"score={score}")
+        log.info(f"  no-sig {sym}: score={score:+d} tBull={trend_bull} kUp={kalman_up} macd={macd_bull} ha={ha_bull} adx={adx:.0f} | {'; '.join(blockers) if blockers else 'score insuf'}")
 
     return {"price":price,"score":score,"atr":atr,"rsi":rsi,"adx":adx,
             "kalman_up":kalman_up,"trend":"BULL" if trend_bull else "BEAR" if trend_bear else "NEUTRO",
