@@ -255,6 +255,45 @@ def analyze(sym, candles):
     not_ext_long=(price-e50)/atr<2.5
     not_ext_short=(e50-price)/atr<2.5
 
+    # ── ANTI-TOPO / ANTI-FUNDO ───────────────────────────────────────────────
+    # Posição do preço dentro das Bollinger Bands (0=fundo, 1=topo)
+    bb_range=max(bb_upper-bb_lower,1e-10)
+    price_bb_pos=(price-bb_lower)/bb_range   # 0.0=fundo BB, 1.0=topo BB
+
+    near_bb_top=price_bb_pos>0.88  # preço nos últimos 12% da BB → risco de topo
+    near_bb_bot=price_bb_pos<0.12  # preço nos primeiros 12% da BB → risco de fundo
+
+    # Preço muito esticado acima/abaixo da EMA21 (movimento já feito)
+    ext_above_ema21=(price-e21)/atr>2.0   # comprou tarde demais
+    ext_below_ema21=(e21-price)/atr>2.0   # vendeu tarde demais
+
+    # Volume secando: últimas 3 velas com volume decrescente = momentum acabando
+    vol3=[vols[-4],vols[-3],vols[-2]]
+    vol_drying=vols[-1]<min(vol3)*0.8 and vols[-1]<vol_ma*0.7
+
+    # RSI extremo (evitar entrar em sobrecompra/sobrevenda)
+    rsi_not_overbought=rsi<72
+    rsi_not_oversold=rsi>28
+
+    # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
+    def _low_touched_ema(ema_arr, n=5):
+        return any(lows[i]<=ema_arr[i]*1.008 for i in range(-n,-1))
+    def _high_touched_ema(ema_arr, n=5):
+        return any(highs[i]>=ema_arr[i]*0.992 for i in range(-n,-1))
+
+    pullback_bull=(_low_touched_ema(e10_arr) or _low_touched_ema(e21_arr)) and price>e10 and price>opens[-1] and ha_bull
+    pullback_bear=(_high_touched_ema(e10_arr) or _high_touched_ema(e21_arr)) and price<e10 and price<opens[-1] and ha_bear
+
+    # Candle de exaustão: sombra superior > 40% do range → possível reversão no topo
+    uwick_ratio=(highs[-1]-max(opens[-1],price))/max(highs[-1]-lows[-1],1e-10)
+    lwick_ratio=(min(opens[-1],price)-lows[-1])/max(highs[-1]-lows[-1],1e-10)
+    exhaustion_top=uwick_ratio>0.40 and price<(highs[-1]-bb_range*0.02)  # rejeição no topo
+    exhaustion_bot=lwick_ratio>0.40 and price>(lows[-1]+bb_range*0.02)    # rejeição no fundo
+
+    # Filtro combinado: evita entrar no topo ou no fundo de uma move
+    safe_long=not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought
+    safe_short=not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_oversold
+
     # Consistência de tendência: 4 das últimas 5 velas acima/abaixo da EMA21
     bulls_5=sum(1 for i in range(-5,0) if closes[i]>e21_arr[i])
     trend_consistent_bull=bulls_5>=4
@@ -321,39 +360,49 @@ def analyze(sym, candles):
                 macd_bull3 and ha_bull and f_bull and f_strong and adx_long_ok and
                 rsi_bull_elite and (v_strong2 or obv_bull) and not_ext_long and
                 kalman_accel_up and above_vwap and trend_consistent_bull and
-                (bull_impulse or liq_long) and score>65)
+                (bull_impulse or liq_long) and score>65 and safe_long)
     short_elite=(strong_trend and trend_bear and align_bear and e200_falling and
                  macd_bear3 and ha_bear and f_bear and f_strong and adx_short_ok and
                  rsi_bear_elite and (v_strong2 or obv_bear) and not_ext_short and
                  kalman_accel_down and below_vwap and trend_consistent_bear and
-                 (bear_impulse or liq_short) and score<-65)
+                 (bear_impulse or liq_short) and score<-65 and safe_short)
     early_long=(adx_long_ok and (v_strong or obv_bull) and sell_exhaust and liq_long and
                 bull_absorb and f_bull and trend_bull and e200_rising and
-                kalman_up and above_vwap and macd_recovering)
+                kalman_up and above_vwap and macd_recovering and safe_long)
     early_short=(adx_short_ok and (v_strong or obv_bear) and buy_exhaust and liq_short and
                  bear_absorb and f_bear and trend_bear and e200_falling and
-                 kalman_down and below_vwap and macd_exhausting)
+                 kalman_down and below_vwap and macd_exhausting and safe_short)
 
-    # Sinal de cruzamento (score já calculado — referência correta)
+    # Sinal de cruzamento
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 (macd_bull or ha_bull) and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97)
+                v_strong and not_ext_long and price>e200*0.97 and safe_long)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  (macd_bear or ha_bear) and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03)
+                 v_strong and not_ext_short and price<e200*1.03 and safe_short)
 
-    # ── SINAIS FLEX ──
+    # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
+    long_pullback=(pullback_bull and trend_bull and (macd_bull or macd_recovering) and
+                   adx>18 and (f_bull or obv_bull) and v_strong and
+                   above_vwap and score>25 and safe_long and not any_cross_bull)
+    short_pullback=(pullback_bear and trend_bear and (macd_bear or macd_exhausting) and
+                    adx>18 and (f_bear or obv_bear) and v_strong and
+                    below_vwap and score<-25 and safe_short and not any_cross_bear)
+
+    # ── SINAIS FLEX ── (inclui filtro anti-topo/fundo)
     long_flex=(score>35 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
-               adx>15 and (f_bull or obv_bull) and (v_strong or bb_expand))
+               adx>15 and (f_bull or obv_bull) and (v_strong or bb_expand) and safe_long)
     short_flex=(score<-35 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
-                adx>15 and (f_bear or obv_bear) and (v_strong or bb_expand))
+                adx>15 and (f_bear or obv_bear) and (v_strong or bb_expand) and safe_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
         if long_elite or early_long: sig="LONG"; sig_source="ELITE"
         elif short_elite or early_short: sig="SHORT"; sig_source="ELITE"
-    else:  # FLEX — cruzamento tem prioridade, depois score
-        if long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
+    else:  # FLEX — pullback > cross > flex (prioridade melhor preço)
+        if long_pullback: sig="LONG"; sig_source="PULLBACK"
+        elif short_pullback: sig="SHORT"; sig_source="PULLBACK"
+        elif long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
         elif short_cross: sig="SHORT"; sig_source=f"CROSS:{cross_label}"
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
@@ -433,7 +482,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     }
     grade_label,risk_sug=grade_info[signal_grade]
 
-    if sig_source.startswith("CROSS"):
+    if sig_source=="PULLBACK":
+        mode_tag="🎯 DNA PULLBACK"; cross_info=""
+    elif sig_source.startswith("CROSS"):
         mode_tag="🔀 DNA CROSS"
         cross_info=sig_source.split(":",1)[1]
     elif SIGNAL_MODE=="ELITE":
