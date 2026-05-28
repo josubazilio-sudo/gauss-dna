@@ -391,9 +391,18 @@ def analyze(sym, candles):
                     adx>18 and (f_bear or obv_bear) and v_strong and
                     below_vwap and score<-15 and not any_cross_bear)
 
-    # ── SINAIS FLEX ── score captura tendência; sem exigir alinhamento total de EMAs
-    long_flex=(score>25 and (macd_bull or ha_bull) and adx>12 and not_ext_long)
-    short_flex=(score<-25 and (macd_bear or ha_bear) and adx>12 and not_ext_short)
+    # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
+    # MACD relaxado: acima do sinal + histograma subindo (sem exigir hist>0)
+    macd_bull_r=ml>sl_v and hist>hist_p
+    macd_bear_r=ml<sl_v and hist<hist_p
+    # Volume: acima da média simples (sem multiplicador 1.1x)
+    vol_avg=vols[-1]>vol_ma
+    # Tendência relaxada: sem exigir e50>e200
+    tbull_r=price>e200 and e10>e21 and e21>e50
+    tbear_r=price<e200 and e10<e21 and e21<e50
+
+    long_flex =(score>30 and tbull_r and macd_bull_r and adx>15 and vol_avg and not_ext_long)
+    short_flex=(score<-30 and tbear_r and macd_bear_r and adx>15 and vol_avg and not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
