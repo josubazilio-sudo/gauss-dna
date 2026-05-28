@@ -190,6 +190,30 @@ function atrCalc(candles,p=14){
   return rma(tr,p).at(-1);
 }
 
+function haCalc(candles){
+  // Heikin-Ashi series — returns last two HA candles
+  let ho=(candles[0].o+candles[0].c)/2;
+  let hc=(candles[0].o+candles[0].h+candles[0].l+candles[0].c)/4;
+  const ha=[{o:ho,c:hc,h:Math.max(candles[0].h,ho,hc),l:Math.min(candles[0].l,ho,hc)}];
+  for(let i=1;i<candles.length;i++){
+    const po=ha[i-1].o,pc=ha[i-1].c;
+    const no=(po+pc)/2;
+    const nc=(candles[i].o+candles[i].h+candles[i].l+candles[i].c)/4;
+    ha.push({o:no,c:nc,h:Math.max(candles[i].h,no,nc),l:Math.min(candles[i].l,no,nc)});
+  }
+  return ha;
+}
+
+function obvCalc(closes,vols){
+  let obv=0;const arr=[0];
+  for(let i=1;i<closes.length;i++){
+    if(closes[i]>closes[i-1])obv+=vols[i];
+    else if(closes[i]<closes[i-1])obv-=vols[i];
+    arr.push(obv);
+  }
+  return arr;
+}
+
 function fmtP(v){
   if(v<0.0001)return v.toFixed(7);
   if(v<0.01)return v.toFixed(5);
@@ -216,14 +240,26 @@ function analyze(candles){
   const{ml,sl,hist,histP}=macdCalc(closes);
   const rsiV=rsiCalc(closes.slice(-50));
   const{adx,pdi,mdi}=adxCalc(candles.slice(-60));
+  const atrV=atrCalc(candles.slice(-20));
 
   const avgVol=vols.slice(-20).reduce((a,b)=>a+b,0)/20;
   const lastC=candles[n-1];
   const sp=Math.max(lastC.h-lastC.l,1e-10);
   const flow=((lastC.c-lastC.o)/sp)*lastC.v;
-  const atrV=atrCalc(candles.slice(-20));
 
-  // Condições — iguais à versão que funciona
+  // Heikin-Ashi
+  const ha=haCalc(candles);
+  const haLast=ha[ha.length-1],haPrev=ha[ha.length-2];
+  const haBull=haLast.c>haLast.o&&haPrev.c>haPrev.o;
+  const haBear=haLast.c<haLast.o&&haPrev.c<haPrev.o;
+
+  // OBV trend (EMA of OBV rising/falling)
+  const obvArr=obvCalc(closes,vols);
+  const obvEma=ema(obvArr,14);
+  const obvBull=obvEma[obvEma.length-1]>obvEma[obvEma.length-4];
+  const obvBear=obvEma[obvEma.length-1]<obvEma[obvEma.length-4];
+
+  // Base conditions
   const tBull=price>e200&&e10>e21&&e21>e50;
   const tBear=price<e200&&e10<e21&&e21<e50;
   const mBull=ml>sl&&hist>histP;
@@ -234,6 +270,8 @@ function analyze(candles){
   const e200Rising=e200>e200p;
   const rsiBull=rsiV>45&&rsiV<70;
   const rsiBear=rsiV<55&&rsiV>30;
+  const notExtLong=rsiV<75;
+  const notExtShort=rsiV>25;
 
   let score=
     (tBull?35:tBear?-35:0)+
@@ -246,29 +284,61 @@ function analyze(candles){
     (adxOk?10:-10);
   score=Math.max(-145,Math.min(145,score));
 
+  // Signal (MACD or HA; volume or OBV; RSI extreme block)
   let sig=null;
-  if(score>30&&tBull&&mBull&&adxOk&&vStrong) sig='LONG';
-  else if(score<-30&&tBear&&mBear&&adxOk&&vStrong) sig='SHORT';
+  if(score>30&&tBull&&(mBull||haBull)&&adxOk&&(vStrong||obvBull)&&notExtLong) sig='LONG';
+  else if(score<-30&&tBear&&(mBear||haBear)&&adxOk&&(vStrong||obvBear)&&notExtShort) sig='SHORT';
 
-  // TPs
-  const isL=sig==='LONG';
-  const stop=isL?price-atrV*1.5:price+atrV*1.5;
+  // Signal grade based on confirmations
+  let grade='B',gradeConfs=0;
+  if(sig==='LONG'){
+    if(mBull)gradeConfs++;
+    if(haBull)gradeConfs++;
+    if(obvBull)gradeConfs++;
+    if(adx>25)gradeConfs++;
+    if(rsiV>50&&rsiV<65)gradeConfs++;
+    if(e200Rising)gradeConfs++;
+  }else if(sig==='SHORT'){
+    if(mBear)gradeConfs++;
+    if(haBear)gradeConfs++;
+    if(obvBear)gradeConfs++;
+    if(adx>25)gradeConfs++;
+    if(rsiV<50&&rsiV>35)gradeConfs++;
+    if(!e200Rising)gradeConfs++;
+  }
+  if(gradeConfs>=5)grade='S';
+  else if(gradeConfs>=3)grade='A';
+  else grade='B';
+
+  // TP ratios by grade
+  const ratios={S:[2,3.5,6],A:[1.8,2.8,5],B:[1.5,2.5,4]};
+  const[r1,r2,r3]=ratios[grade];
+
+  // Stop: swing low/high of last 5 candles with ATR buffer
+  const isL=sig==='LONG'||(!sig&&score>0);
+  const last5=candles.slice(-6,-1);
+  const swingLow=Math.min(...last5.map(c=>c.l));
+  const swingHigh=Math.max(...last5.map(c=>c.h));
+  const stop=isL?Math.min(swingLow-atrV*0.3,price-atrV*1.5)
+                :Math.max(swingHigh+atrV*0.3,price+atrV*1.5);
   const risk=Math.abs(price-stop);
-  const tp1=isL?price+risk*1.5:price-risk*1.5;
-  const tp2=isL?price+risk*2.5:price-risk*2.5;
-  const tp3=isL?price+risk*5:price-risk*5;
+  const tp1=isL?price+risk*r1:price-risk*r1;
+  const tp2=isL?price+risk*r2:price-risk*r2;
+  const tp3=isL?price+risk*r3:price-risk*r3;
 
   return{
-    sig,score,price,rsiV,adx,atrV,stop,tp1,tp2,tp3,risk,
+    sig,grade,gradeConfs,score,price,rsiV,adx,atrV,stop,tp1,tp2,tp3,risk,r1,r2,r3,
+    haBull,haBear,obvBull,obvBear,mBull,mBear,vStrong,
     filters:{
-      'Tendência':tBull?(sig==='LONG'?true:null):(tBear?(sig==='SHORT'?true:null):false),
       'tBull':tBull,'tBear':tBear,
-      'MACD':mBull?true:(mBear?false:null),
+      'MACD':mBull?true:(mBear?null:false),
+      'Heikin-Ashi':haBull?true:(haBear?null:false),
       'ADX>18':adxOk,
       'Volume':vStrong,
-      'Flow':fBull?true:(fBear?false:null),
-      'RSI zona':rsiBull?true:(rsiBear?false:null),
-      'e200↑':e200Rising,
+      'OBV':obvBull?true:(obvBear?null:false),
+      'Flow':fBull?true:(fBear?null:false),
+      'RSI zona':rsiBull?true:(rsiBear?null:false),
+      'e200 ↑':e200Rising,
     }
   };
 }
@@ -323,55 +393,49 @@ function showResult(res){
   const sigEl=document.getElementById('sigType');
   const coinEl=document.getElementById('sigCoin');
 
+  const gradeColor={S:'#ffcc44',A:'#00e090',B:'#3b9eff'};
+  const gc=res.sig?gradeColor[res.grade]:'#5a6d8a';
+
   if(res.sig==='LONG'){
     box.className='sig-box long';
-    sigEl.textContent='🟢 SINAL LONG';sigEl.style.color='#00e090';
+    sigEl.innerHTML=`<span style="color:#00e090">🟢 SINAL LONG</span> <span style="color:${gc};font-size:.8rem;margin-left:.5rem">[${res.grade}]</span>`;
   }else if(res.sig==='SHORT'){
     box.className='sig-box short';
-    sigEl.textContent='🔴 SINAL SHORT';sigEl.style.color='#ff3d5a';
+    sigEl.innerHTML=`<span style="color:#ff3d5a">🔴 SINAL SHORT</span> <span style="color:${gc};font-size:.8rem;margin-left:.5rem">[${res.grade}]</span>`;
   }else{
     box.className='sig-box none';
-    sigEl.textContent='— Sem Sinal';sigEl.style.color='#5a6d8a';
+    sigEl.innerHTML='<span style="color:#5a6d8a">— Sem Sinal</span>';
   }
-  coinEl.textContent=res.label+' · '+res.tf;
+  coinEl.textContent=res.label+' · '+res.tf+(res.sig?` · ${res.gradeConfs}/6 confs`:'');
 
   const sc=document.getElementById('rScore');
   sc.textContent=(res.score>0?'+':'')+res.score;
   sc.className='metric-val '+(res.score>30?'green':res.score<-30?'red':'yellow');
 
-  document.getElementById('rRsi').textContent=res.rsiV.toFixed(1);
   const ri=document.getElementById('rRsi');
+  ri.textContent=res.rsiV.toFixed(1);
   ri.className='metric-val '+(res.rsiV>70?'red':res.rsiV<30?'red':res.rsiV>50?'green':'yellow');
 
-  document.getElementById('rAdx').textContent=res.adx.toFixed(1);
   const ad=document.getElementById('rAdx');
+  ad.textContent=res.adx.toFixed(1);
   ad.className='metric-val '+(res.adx>25?'green':res.adx>18?'yellow':'muted');
 
   document.getElementById('rPrice').textContent='$'+fmtP(res.price);
 
-  // Filtros
+  // Filtros (null = neutral, shown as warning)
   const fd=document.getElementById('filters');
-  const show={
-    'tBull':res.filters.tBull,
-    'tBear':res.filters.tBear,
-    'MACD':res.filters.MACD,
-    'ADX>18':res.filters['ADX>18'],
-    'Volume':res.filters.Volume,
-    'Flow':res.filters.Flow,
-    'RSI zona':res.filters['RSI zona'],
-    'e200 ↑':res.filters['e200↑'],
-  };
-  fd.innerHTML=Object.entries(show).map(([k,v])=>`
-    <div class="flt ${v?'ok':'fail'}">${v?'✓':'✗'} ${k}</div>
-  `).join('');
+  fd.innerHTML=Object.entries(res.filters).map(([k,v])=>{
+    const cls=v===true?'ok':v===false?'fail':'fail';
+    const icon=v===true?'✓':v===null?'~':'✗';
+    return`<div class="flt ${cls}">${icon} ${k}</div>`;
+  }).join('');
 
-  // TPs
-  const isL=res.sig==='LONG';
+  // TPs with dynamic ratios by grade
   const tpData=[
     {n:'Stop',p:res.stop,rr:null,col:'#ff3d5a'},
-    {n:'TP1 (1.5R)',p:res.tp1,rr:1.5,col:'#3b9eff'},
-    {n:'TP2 (2.5R)',p:res.tp2,rr:2.5,col:'#00d4c8'},
-    {n:'TP3 (5R)',p:res.tp3,rr:5,col:'#00e090'},
+    {n:`TP1 (${res.r1}R)`,p:res.tp1,rr:res.r1,col:'#3b9eff'},
+    {n:`TP2 (${res.r2}R)`,p:res.tp2,rr:res.r2,col:'#00d4c8'},
+    {n:`TP3 (${res.r3}R)`,p:res.tp3,rr:res.r3,col:'#00e090'},
   ];
   document.getElementById('tpBody').innerHTML=tpData.map(t=>`
     <tr>
@@ -395,14 +459,24 @@ async function sendTelegram(){
 
   function esc(v){return String(v).replace(/[_*[\]()~`>#+=|{}.!\\-]/g,'\\$&');}
 
+  const gradeLabel={S:'⭐ S — Premium',A:'🔷 A — Alta',B:'🔹 B — Normal'};
+  const gl=r.sig?gradeLabel[r.grade]||r.grade:'—';
+  const r1e=esc(r.r1||1.5),r2e=esc(r.r2||2.5),r3e=esc(r.r3||5);
+  const confs=[];
+  if(isL){if(r.mBull)confs.push('MACD');if(r.haBull)confs.push('HA');if(r.obvBull)confs.push('OBV');}
+  else{if(r.mBear)confs.push('MACD');if(r.haBear)confs.push('HA');if(r.obvBear)confs.push('OBV');}
+  const confStr=confs.length?esc(confs.join(' \\+ ')):'—';
+
   const text=
     `🚨 *GAUSS\\+DNA — SINAL ${sigType}*\n\n`+
-    `${isL?'🟢':'🔴'} *${esc(r.label)}* \\| ⏱ ${esc(r.tf)}\n\n`+
+    `${isL?'🟢':'🔴'} *${esc(r.label)}* \\| ⏱ ${esc(r.tf)}\n`+
+    `🏅 Grau: *${esc(gl)}* \\(${esc(r.gradeConfs||0)}/6\\)\n`+
+    `📡 Conf: ${confStr}\n\n`+
     `💰 Entrada: \`$${esc(fmtP(r.price))}\`\n`+
-    `🛑 Stop: \`$${esc(fmtP(r.stop))}\`\n`+
-    `🎯 TP1 \\(1\\.5R\\): \`$${esc(fmtP(r.tp1))}\`\n`+
-    `✨ TP2 \\(2\\.5R\\): \`$${esc(fmtP(r.tp2))}\`\n`+
-    `🏆 TP3 \\(5R\\): \`$${esc(fmtP(r.tp3))}\`\n\n`+
+    `🛑 Stop \\(swing\\): \`$${esc(fmtP(r.stop))}\`\n`+
+    `🎯 TP1 \\(${r1e}R\\): \`$${esc(fmtP(r.tp1))}\`\n`+
+    `✨ TP2 \\(${r2e}R\\): \`$${esc(fmtP(r.tp2))}\`\n`+
+    `🏆 TP3 \\(${r3e}R\\): \`$${esc(fmtP(r.tp3))}\`\n\n`+
     `📊 Score: *${esc(r.score)}/145* \\| RSI: ${esc(r.rsiV.toFixed(0))} \\| ADX: ${esc(r.adx.toFixed(0))}\n`+
     `⏰ ${esc(new Date().toLocaleString('pt-BR'))}`;
 
