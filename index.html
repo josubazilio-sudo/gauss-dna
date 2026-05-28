@@ -165,6 +165,27 @@ tr:hover td{background:rgba(255,255,255,.01)}
 #toast{position:fixed;bottom:1.5rem;right:1rem;background:var(--s2);border:1px solid var(--border2);border-radius:8px;padding:.65rem 1rem;font-size:.7rem;color:var(--text);z-index:999;display:none;animation:fadeUp .3s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
+/* RASTREADOR */
+.scan-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;margin-bottom:1.1rem;overflow:hidden}
+.scan-head{display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.1rem;cursor:pointer;user-select:none}
+.scan-ttl{font-family:'Unbounded',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--cyan)}
+.scan-actions{display:flex;align-items:center;gap:.6rem}
+.scan-status{font-size:.6rem;color:var(--muted2)}
+#scanBtn{padding:.38rem .85rem;border-radius:6px;font-family:'Unbounded',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;background:rgba(0,212,200,.08);border:1px solid rgba(0,212,200,.25);color:var(--cyan);transition:all .2s}
+#scanBtn:hover{background:rgba(0,212,200,.16)}
+#scanBtn:disabled{opacity:.4;cursor:not-allowed}
+.scan-body{padding:.5rem .8rem .8rem;display:none}
+.scan-body.open{display:block}
+.scan-row{display:flex;align-items:center;gap:.7rem;padding:.55rem .6rem;border-radius:6px;cursor:pointer;transition:background .15s;flex-wrap:wrap}
+.scan-row:hover{background:rgba(255,255,255,.03)}
+.scan-rank{font-family:'Unbounded',sans-serif;font-size:.65rem;color:var(--muted);min-width:18px;text-align:right}
+.scan-coin{font-family:'Unbounded',sans-serif;font-size:.72rem;font-weight:700;min-width:70px}
+.scan-badge{font-size:.55rem;font-family:'Unbounded',sans-serif;font-weight:700;padding:.1rem .35rem;border-radius:3px}
+.scan-badge.bull{background:rgba(0,224,144,.1);color:var(--green)}
+.scan-badge.bear{background:rgba(255,61,90,.1);color:var(--red)}
+.scan-score{margin-left:auto;font-family:'Unbounded',sans-serif;font-size:.72rem;font-weight:700;color:var(--purple)}
+.scan-divider{height:1px;background:var(--border);margin:.3rem 0}
+
 .wrap>*{animation:fadeUp .35s ease both}
 .wrap>*:nth-child(1){animation-delay:.04s}.wrap>*:nth-child(2){animation-delay:.08s}
 .wrap>*:nth-child(3){animation-delay:.12s}.wrap>*:nth-child(4){animation-delay:.16s}
@@ -228,9 +249,24 @@ tr:hover td{background:rgba(255,255,255,.01)}
     <span class="last-upd" id="lastUpd">—</span>
   </div>
 
+  <!-- RASTREADOR DE MERCADO -->
+  <div class="scan-card">
+    <div class="scan-head" onclick="toggleScanner()">
+      <span class="scan-ttl">🔍 Rastreador de Mercado</span>
+      <div class="scan-actions">
+        <span class="scan-status" id="scanStatus">Clique para varrer o mercado</span>
+        <button id="scanBtn" onclick="event.stopPropagation();startScan()">🔍 Rastrear</button>
+      </div>
+    </div>
+    <div class="scan-body" id="scanBody">
+      <div class="scan-divider"></div>
+      <div id="scanList"><div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">Pressione "Rastrear" para encontrar as melhores moedas agora.</div></div>
+    </div>
+  </div>
+
   <!-- SUMMARY -->
   <div class="summary">
-    <div class="sum-card"><div class="sum-lbl">Monitorando</div><div class="sum-val" style="color:var(--blue)" id="sumCoins">22</div><div class="sum-sub">moedas</div></div>
+    <div class="sum-card"><div class="sum-lbl">Monitorando</div><div class="sum-val" style="color:var(--blue)" id="sumCoins">25</div><div class="sum-sub">moedas</div></div>
     <div class="sum-card"><div class="sum-lbl">Sinais hoje</div><div class="sum-val" style="color:var(--green)" id="sumSigs">0</div><div class="sum-sub">detectados</div></div>
     <div class="sum-card"><div class="sum-lbl">Maior Score</div><div class="sum-val" style="color:var(--purple)" id="sumTopScore">—</div><div class="sum-sub" id="sumTopCoin">—</div></div>
     <div class="sum-card"><div class="sum-lbl">Melhor Alta</div><div class="sum-val" style="color:var(--green)" id="sumTopGain">—</div><div class="sum-sub" id="sumTopGainCoin">—</div></div>
@@ -1051,7 +1087,7 @@ keepAlive();
 // ── PWA SERVICE WORKER ──
 if('serviceWorker' in navigator){
   const swCode=`
-    const CACHE='gauss-dna-elite-v3';
+    const CACHE='gauss-dna-elite-v4';
     const ASSETS=[self.location.href];
     self.addEventListener('install',e=>{
       e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
@@ -1082,6 +1118,111 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register(swUrl,{scope:'./'})
     .then(()=>console.log('SW registrado'))
     .catch(e=>console.log('SW erro:',e));
+}
+
+// ── RASTREADOR DE MERCADO ─────────────────────────────────────────────────────
+const SCAN_EXCL=['USDC','BUSD','TUSD','FDUSD','DAI','USDP','WBTC','WETH'];
+const SCAN_EXCL_SUB=['UP','DOWN','BULL','BEAR','3L','3S','2L','2S'];
+let scanRunning=false;
+
+function toggleScanner(){
+  const b=document.getElementById('scanBody');
+  b.classList.toggle('open');
+}
+function emaS(arr,p){const k=2/(p+1);const o=[arr[0]];for(let i=1;i<arr.length;i++)o.push(arr[i]*k+o[i-1]*(1-k));return o;}
+function rmaS(arr,p){const o=[arr.slice(0,p).reduce((a,b)=>a+b,0)/p];for(let i=p;i<arr.length;i++)o.push((o[o.length-1]*(p-1)+arr[i])/p);return o;}
+function sADX(candles){
+  const pdm=[],mdm=[],tr=[];
+  for(let i=1;i<candles.length;i++){
+    const h=candles[i].h,l=candles[i].l,ph=candles[i-1].h,pl=candles[i-1].l,pc=candles[i-1].c;
+    const up=h-ph,dn=pl-l;
+    pdm.push(up>dn&&up>0?up:0);mdm.push(dn>up&&dn>0?dn:0);
+    tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));
+  }
+  const rtr=rmaS(tr,14),rpdm=rmaS(pdm,14),rmdm=rmaS(mdm,14);
+  const dx=rtr.map((t,i)=>{const tt=t||1e-10;const pdi=(rpdm[i]/tt)*100,mdi=(rmdm[i]/tt)*100;return Math.abs(pdi-mdi)/(pdi+mdi||1)*100;});
+  return rmaS(dx,14).at(-1)||0;
+}
+function sATRpct(candles){
+  const tr=[candles[0].h-candles[0].l];
+  for(let i=1;i<candles.length;i++){const h=candles[i].h,l=candles[i].l,pc=candles[i-1].c;tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));}
+  return (rmaS(tr,14).at(-1)/candles.at(-1).c)*100;
+}
+function quickScore(candles){
+  if(candles.length<60) return 0;
+  const closes=candles.map(c=>c.c),vols=candles.map(c=>c.v),price=closes.at(-1);
+  const atrPct=sATRpct(candles);if(atrPct<0.25||atrPct>6) return 0;
+  const adx=sADX(candles.slice(-60));if(adx<15) return 0;
+  const e200=emaS(closes,200).at(-1);
+  const trendOk=Math.abs(price-e200)/e200>0.005;
+  const volMa=vols.slice(-20).reduce((a,b)=>a+b,0)/20;
+  const volOk=vols.at(-1)>volMa;
+  return adx*0.4+(trendOk?20:0)+(volOk?15:0)+Math.max(0,25-Math.abs(atrPct-1.5)*8);
+}
+async function fetchKl(sym){
+  try{const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=15m&limit=250`);const d=await r.json();if(!Array.isArray(d)||d.length<60)return null;return d.map(k=>({h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));}catch{return null;}
+}
+async function startScan(){
+  if(scanRunning)return;
+  scanRunning=true;
+  document.getElementById('scanBody').classList.add('open');
+  const btn=document.getElementById('scanBtn');
+  const status=document.getElementById('scanStatus');
+  const list=document.getElementById('scanList');
+  btn.disabled=true;btn.textContent='Varrendo...';
+  status.textContent='Buscando pares...';
+  list.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--muted2);font-size:.7rem;animation:fade .8s infinite alternate">🔍 Analisando mercado — aguarde...</div>';
+  let pairs=[];
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/ticker/24hr');
+    const d=await r.json();
+    pairs=d.filter(t=>{
+      if(!t.symbol.endsWith('USDT'))return false;
+      const b=t.symbol.slice(0,-4);
+      if(SCAN_EXCL.includes(b))return false;
+      if(SCAN_EXCL_SUB.some(s=>b.includes(s)))return false;
+      return +t.quoteVolume>=3e6;
+    }).sort((a,b)=>+b.quoteVolume-+a.quoteVolume).slice(0,80);
+  }catch{status.textContent='Erro de conexão.';scanRunning=false;btn.disabled=false;btn.textContent='🔍 Rastrear';return;}
+
+  const scored=[];
+  for(let i=0;i<pairs.length;i++){
+    const t=pairs[i];const base=t.symbol.slice(0,-4);
+    status.textContent=`Analisando ${base}... (${i+1}/${pairs.length})`;
+    const candles=await fetchKl(t.symbol);
+    if(candles){
+      const s=quickScore(candles);
+      if(s>0){
+        const atrPct=sATRpct(candles);
+        const adx=sADX(candles.slice(-60));
+        const closes=candles.map(c=>c.c);
+        const e200=emaS(closes,200).at(-1);
+        const trend=closes.at(-1)>e200?'BULL':'BEAR';
+        const volM=candles.slice(-20).reduce((a,c)=>a+c.v*c.c,0)/20/1e6;
+        scored.push({sym:t.symbol,base,score:s,adx,atrPct,trend,volM});
+      }
+    }
+    await new Promise(r=>setTimeout(r,100));
+  }
+  scored.sort((a,b)=>b.score-a.score);
+  const top=scored.slice(0,20);
+  if(!top.length){
+    list.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--muted2);font-size:.7rem">Nenhuma moeda qualificada no momento.</div>';
+  } else {
+    const gradeColor=s=>s>=70?'var(--green)':s>=50?'var(--blue)':'var(--muted2)';
+    list.innerHTML=top.map((c,i)=>`
+      <div class="scan-row" onclick="window.open('https://www.binance.com/trade/${c.sym}','_blank')">
+        <span class="scan-rank">${i+1}</span>
+        <span class="scan-coin">${c.base}<span style="color:var(--muted2);font-size:.58rem">/USDT</span></span>
+        <span class="scan-badge ${c.trend==='BULL'?'bull':'bear'}">${c.trend}</span>
+        <span style="color:var(--muted2);font-size:.65rem">ADX&nbsp;<b style="color:var(--text)">${c.adx.toFixed(0)}</b></span>
+        <span style="color:var(--muted2);font-size:.65rem">ATR&nbsp;<b style="color:var(--text)">${c.atrPct.toFixed(2)}%</b></span>
+        <span style="color:var(--muted2);font-size:.65rem">Vol&nbsp;<b style="color:var(--text)">$${c.volM.toFixed(0)}M</b></span>
+        <span class="scan-score" style="color:${gradeColor(c.score)}">${c.score.toFixed(0)}</span>
+      </div>`).join('<div class="scan-divider"></div>');
+  }
+  status.textContent=`✅ Top ${top.length} de ${pairs.length} pares analisados`;
+  scanRunning=false;btn.disabled=false;btn.textContent='🔍 Rastrear';
 }
 
 // ── INSTALL PROMPT ──
