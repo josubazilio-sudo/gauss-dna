@@ -18,16 +18,22 @@ SIGNAL_MODE  = os.environ.get("SIGNAL_MODE", "FLEX").upper()  # ELITE ou FLEX
 STATE_FILE   = Path("last_signals.json")
 
 COINS = [
+    # Mega caps — máxima liquidez e tendências confiáveis
     ("BTCUSDT","BTC/USDT","BTC"),("ETHUSDT","ETH/USDT","ETH"),
-    ("SOLUSDT","SOL/USDT","SOL"),("SUIUSDT","SUI/USDT","SUI"),
-    ("NEARUSDT","NEAR/USDT","NEAR"),("AVAXUSDT","AVAX/USDT","AVAX"),
-    ("LINKUSDT","LINK/USDT","LINK"),("XRPUSDT","XRP/USDT","XRP"),
+    ("BNBUSDT","BNB/USDT","BNB"),("XRPUSDT","XRP/USDT","XRP"),
+    # L1 com boa volatilidade e volume
+    ("SOLUSDT","SOL/USDT","SOL"),("AVAXUSDT","AVAX/USDT","AVAX"),
+    ("SUIUSDT","SUI/USDT","SUI"),("APTUSDT","APT/USDT","APT"),
+    ("NEARUSDT","NEAR/USDT","NEAR"),("TONUSDT","TON/USDT","TON"),
+    # DeFi / infra — trending behavior consistente
+    ("LINKUSDT","LINK/USDT","LINK"),("INJUSDT","INJ/USDT","INJ"),
+    ("JUPUSDT","JUP/USDT","JUP"),("ARBUSDT","ARB/USDT","ARB"),
+    ("OPUSDT","OP/USDT","OP"),
+    # Meme coins com alta liquidez
     ("DOGEUSDT","DOGE/USDT","DOGE"),("PEPEUSDT","PEPE/USDT","PEPE"),
-    ("BONKUSDT","BONK/USDT","BONK"),("JUPUSDT","JUP/USDT","JUP"),
-    ("SEIUSDT","SEI/USDT","SEI"),("WIFUSDT","WIF/USDT","WIF"),
-    ("TIAUSDT","TIA/USDT","TIA"),("STRKUSDT","STRK/USDT","STRK"),
-    ("ARBUSDT","ARB/USDT","ARB"),("OPUSDT","OP/USDT","OP"),
-    ("INJUSDT","INJ/USDT","INJ"),("RENDERUSDT","RENDER/USDT","RENDER"),
+    ("WIFUSDT","WIF/USDT","WIF"),
+    # High beta com volume consistente
+    ("ADAUSDT","ADA/USDT","ADA"),("DOTUSDT","DOT/USDT","DOT"),
 ]
 
 # ── INDICADORES ──────────────────────────────────────────────────────────────
