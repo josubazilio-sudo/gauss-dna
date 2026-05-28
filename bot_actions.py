@@ -28,12 +28,15 @@ COINS = [
     # DeFi / infra — trending behavior consistente
     ("LINKUSDT","LINK/USDT","LINK"),("INJUSDT","INJ/USDT","INJ"),
     ("JUPUSDT","JUP/USDT","JUP"),("ARBUSDT","ARB/USDT","ARB"),
-    ("OPUSDT","OP/USDT","OP"),
+    ("OPUSDT","OP/USDT","OP"),("UNIUSDT","UNI/USDT","UNI"),
     # Meme coins com alta liquidez
     ("DOGEUSDT","DOGE/USDT","DOGE"),("PEPEUSDT","PEPE/USDT","PEPE"),
-    ("WIFUSDT","WIF/USDT","WIF"),
+    ("WIFUSDT","WIF/USDT","WIF"),("SHIBUSDT","SHIB/USDT","SHIB"),
     # High beta com volume consistente
     ("ADAUSDT","ADA/USDT","ADA"),("DOTUSDT","DOT/USDT","DOT"),
+    ("ATOMUSDT","ATOM/USDT","ATOM"),("LTCUSDT","LTC/USDT","LTC"),
+    # IA / narrativa em alta
+    ("FETUSDT","FET/USDT","FET"),
 ]
 
 # ── INDICADORES ──────────────────────────────────────────────────────────────
