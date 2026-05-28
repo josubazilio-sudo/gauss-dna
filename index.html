@@ -871,9 +871,8 @@ function keepAlive() {
 keepAlive();
 </script>
 
-
+<script>
 // ── RASTREADOR DE MERCADO ─────────────────────────────────────────────────────
-// Pool completo: as 25 moedas monitoradas + extras trending
 const SCAN_POOL_EXTRA=[
   'TRXUSDT','MATICUSDT','RENDERUSDT','AAVEUSDT','WLDUSDT','TIAUSDT','SEIUSDT',
   'STRKUSDT','BONKUSDT','FLOKIUSDT','PENDLEUSDT','GALAUSDT','SANDUSDT','ALGOUSDT',
@@ -1001,6 +1000,7 @@ function renderScanRows(rows){
     </a>`;
   }).join('');
 }
+</script>
 
 <!-- PWA SERVICE WORKER + INSTALL BANNER -->
 <div id="pwaBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#0b0f1a;border-bottom:1px solid rgba(59,158,255,.3);padding:.7rem 1rem;display:none;align-items:center;justify-content:space-between;gap:.5rem">
