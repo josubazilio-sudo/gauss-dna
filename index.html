@@ -344,7 +344,8 @@ const COINS=[
 // ── STATE ──
 const state={};
 COINS.forEach(c=>{
-  state[c.sym]={price:0,change:0,prevPrice:0,score:0,trend:'—',macd:'—',rsi:0,vol:'—',adx:0,candles:[],atr:0,sig:null,loading:true};
+  state[c.sym]={price:0,change:0,prevPrice:0,score:0,trend:'—',macd:'—',rsi:0,vol:'—',adx:0,candles:[],atr:0,sig:null,loading:true,
+    h1Setup:null,h1Candles:[],h1e21:0,h1e50:0};
 });
 
 let monitoring=false;
@@ -469,6 +470,10 @@ function updateCard(sym){
   else if(sc>30){stEl.textContent='✅ Score OK — aguardando confirmação';stEl.className='cc-status long-sig';}
   else if(sc<-30){stEl.textContent='⚠️ Score SHORT — aguardando';stEl.className='cc-status short-sig';}
   else{stEl.textContent='⏳ Aguardando alinhamento (score < 30)';stEl.className='cc-status wait';}
+  if(s.h1Setup&&!s.sig){
+    stEl.textContent=`📡 Setup 1H ${s.h1Setup.dir==='bull'?'🟡 BULL':'🟡 BEAR'} — aguardando pullback 15m`;
+    stEl.className='cc-status wait';
+  }
 }
 
 function setBar(bid,vid,pct,bgColor,lbl,txtColor){
@@ -554,6 +559,18 @@ async function fetchCandles(sym){
     const data=await res.json();
     if(!Array.isArray(data)||data.length<50){state[sym].loading=false;return;}
     state[sym].candles=data.map(k=>({o:parseFloat(k[1]),h:parseFloat(k[2]),l:parseFloat(k[3]),c:parseFloat(k[4]),v:parseFloat(k[5])}));
+    // 1h candles for MTF setup (only if currentTF is not already 1h)
+    if(currentTF!=='1h'){
+      try{
+        const url1h=`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=1h&limit=150`;
+        const res1h=await fetch(url1h);
+        const data1h=await res1h.json();
+        if(Array.isArray(data1h)&&data1h.length>=50){
+          state[sym].h1Candles=data1h.map(k=>({o:parseFloat(k[1]),h:parseFloat(k[2]),l:parseFloat(k[3]),c:parseFloat(k[4]),v:parseFloat(k[5])}));
+          state[sym].h1Setup=analyzeH1(state[sym].h1Candles);
+        }
+      }catch(e){state[sym].h1Setup=null;}
+    }
     analyzeSymbol(sym);
   }catch(e){state[sym].loading=false;}
 }
@@ -595,6 +612,39 @@ function adxCalc(candles,p=14){
   if(tr===0) return 20;
   const pdi=(pdm/tr)*100,mdi=(mdm/tr)*100;
   return Math.abs(pdi-mdi)/(pdi+mdi||1)*100;
+}
+
+function analyzeH1(candles){
+  if(candles.length<50) return null;
+  const closes=candles.map(c=>c.c);
+  const n=closes.length;
+  const price=closes[n-1];
+  const e10=ema(closes,10);
+  const e21=ema(closes,21);
+  const e50=ema(closes,50);
+  const e200=ema(closes,200);
+  const {ml,sl,hist,histP}=macdCalc(closes);
+  const mBull=ml>sl&&hist>histP;
+  const mBear=ml<sl&&hist<histP;
+  // HA
+  let haBull=false,haBear=false;
+  if(candles.length>=3){
+    let hPo=(candles[0].o+candles[0].c)/2,hPc=(candles[0].o+candles[0].h+candles[0].l+candles[0].c)/4;
+    let hPrev={o:hPo,c:hPc};
+    for(let i=1;i<candles.length;i++){
+      const no=(hPrev.o+hPrev.c)/2,nc=(candles[i].o+candles[i].h+candles[i].l+candles[i].c)/4;
+      const hCur={o:no,c:nc};
+      if(i===candles.length-2){haBull=hPrev.c>hPrev.o;haBear=hPrev.c<hPrev.o;}
+      if(i===candles.length-1){haBull=haBull&&hCur.c>hCur.o;haBear=haBear&&hCur.c<hCur.o;}
+      hPrev=hCur;
+    }
+  }
+  const adxV=adxCalc(candles.slice(-60));
+  const tBull=price>e200&&e10>e21&&e21>e50;
+  const tBear=price<e200&&e10<e21&&e21<e50;
+  if(tBull&&(mBull||haBull)&&adxV>18) return{dir:'bull',e21,e50,adx:adxV};
+  if(tBear&&(mBear||haBear)&&adxV>18) return{dir:'bear',e21,e50,adx:adxV};
+  return null;
 }
 
 function analyzeSymbol(sym){
@@ -681,16 +731,32 @@ function analyzeSymbol(sym){
   const now=Date.now();
   const cooldown=120000;
   const lastT=lastSigTime[sym]||0;
+
+  // MTF check: 1h setup + 15m pullback entry
+  const h1=s.h1Setup;
+  let mtfSig=null;
+  if(h1){
+    const atrV=s.atr||price*0.015;
+    const nearE21Long  = Math.abs(price-e21)<atrV*1.5 && price>e200;
+    const nearE50Long  = Math.abs(price-e50)<atrV*2.0 && price>e200;
+    const nearE21Short = Math.abs(price-e21)<atrV*1.5 && price<e200;
+    const nearE50Short = Math.abs(price-e50)<atrV*2.0 && price<e200;
+    const bounceLong  = (mBull||haBull)&&lastC.c>lastC.o&&vStrong;
+    const bounceShort = (mBear||haBear)&&lastC.c<lastC.o&&vStrong;
+    if(h1.dir==='bull'&&(nearE21Long||nearE50Long)&&bounceLong&&rsiV>35&&rsiV<68) mtfSig='LONG';
+    if(h1.dir==='bear'&&(nearE21Short||nearE50Short)&&bounceShort&&rsiV<65&&rsiV>32) mtfSig='SHORT';
+  }
+
   s.sig=null;
   if(now-lastT>cooldown){
-    if(score>30&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong){
-      s.sig='LONG';
+    const flexLong  = score>30&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
+    const flexShort = score<-30&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
+    const finalSig  = mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
+    if(finalSig){
+      s.sig=finalSig;
+      s.sigSource=mtfSig?'MTF':'FLEX';
       lastSigTime[sym]=now;
-      triggerSignal(sym,'LONG',price,s.atr,score);
-    } else if(score<-30&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort){
-      s.sig='SHORT';
-      lastSigTime[sym]=now;
-      triggerSignal(sym,'SHORT',price,s.atr,score);
+      triggerSignal(sym,finalSig,price,s.atr,score);
     }
   }
 
@@ -703,10 +769,16 @@ function triggerSignal(sym,type,price,atrVal,score){
   const coin=COINS.find(c=>c.sym===sym);
   const isL=type==='LONG';
   const a=atrVal||price*0.015;
-  const stop=isL?price-a*1.5:price+a*1.5;
+  // Swing stop: min/max of last 5 candles + ATR buffer (tighter than ATR*1.5 from entry)
+  const s15=state[sym];
+  const recentCandles=s15&&s15.candles&&s15.candles.length>=6?s15.candles.slice(-6,-1):null;
+  const swLow =recentCandles?Math.min(...recentCandles.map(c=>c.l)):price-a*1.5;
+  const swHigh=recentCandles?Math.max(...recentCandles.map(c=>c.h)):price+a*1.5;
+  const stop=isL?Math.min(swLow-a*0.3, price-a*1.5):Math.max(swHigh+a*0.3, price+a*1.5);
   const risk=Math.abs(price-stop);
-  const tp1=isL?price+risk*1.5:price-risk*1.5;
-  const final=isL?price+risk*5:price-risk*5;
+  const isMTF=s15&&s15.sigSource==='MTF';
+  const tp1=isL?price+risk*(isMTF?2.0:1.5):price-risk*(isMTF?2.0:1.5);
+  const final=isL?price+risk*(isMTF?6:5):price-risk*(isMTF?6:5);
 
   activeSignal={sym,coin:coin.label,type,price,stop,tp1,final,score,time:new Date()};
   sigCount++;
@@ -1046,7 +1118,7 @@ function renderScanRows(rows){
 // ── PWA SERVICE WORKER ──
 if('serviceWorker' in navigator){
   const swCode=`
-    const CACHE='gauss-dna-v9';
+    const CACHE='gauss-dna-v10';
     const ASSETS=[self.location.href];
     self.addEventListener('install',e=>{
       e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));

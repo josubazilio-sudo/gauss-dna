@@ -468,7 +468,86 @@ def analyze(sym, candles):
             "kalman_up":kalman_up,"trend":"BULL" if trend_bull else "BEAR" if trend_bear else "NEUTRO",
             "sig":sig,"sig_source":sig_source,"swing_low":swing_low,"swing_high":swing_high,
             "ha_bull":ha_bull,"obv_bull":obv_bull,"above_vwap":above_vwap,
-            "signal_grade":signal_grade,"quality_score":quality_score}
+            "signal_grade":signal_grade,"quality_score":quality_score,
+            "tbull_r":tbull_r,"tbear_r":tbear_r}
+
+def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
+    """Entrada na 15m dado setup confirmado na 1h.
+    Procura pullback até EMA21/EMA50 com bounce — stop no swing da correção."""
+    n = len(candles_15m)
+    if n < 50: return None
+    closes = [c["c"] for c in candles_15m]
+    highs  = [c["h"] for c in candles_15m]
+    lows   = [c["l"] for c in candles_15m]
+    opens  = [c["o"] for c in candles_15m]
+    vols   = [c["v"] for c in candles_15m]
+    price  = closes[-1]
+
+    e10_arr = ema_series(closes, 10); e10 = e10_arr[-1]
+    e21_arr = ema_series(closes, 21); e21 = e21_arr[-1]
+    e50_arr = ema_series(closes, 50); e50 = e50_arr[-1]
+    e200    = ema_series(closes, 200)[-1]
+    atr_arr = atr_series(candles_15m, 14); atr = max(atr_arr[-1], 1e-10)
+
+    ml, sl_v, hist, hist_p, _ = macd_calc(closes)
+    macd_bull_r = ml > sl_v and hist > hist_p
+    macd_bear_r = ml < sl_v and hist < hist_p
+
+    ha = ha_series(candles_15m)
+    ha_bull = ha[-1]["c"] > ha[-1]["o"] and ha[-2]["c"] > ha[-2]["o"]
+    ha_bear = ha[-1]["c"] < ha[-1]["o"] and ha[-2]["c"] < ha[-2]["o"]
+
+    rsi = rsi_calc(closes[-50:])
+    vol_ma = sum(vols[-20:]) / 20
+    vol_ok = vols[-1] > vol_ma
+
+    obv = obv_calc(closes, vols)
+    obv_ema = ema_series(obv, 20)
+    obv_bull = obv[-1] > obv_ema[-1] and obv[-1] > obv[-6]
+    obv_bear = obv[-1] < obv_ema[-1] and obv[-1] < obv[-6]
+
+    _, _, adx, _ = dmi_adx(candles_15m[-60:])
+
+    # Zona de pullback: preço dentro de 1.5 ATR da EMA21 ou 2 ATR da EMA50
+    near_ema21_long  = abs(price - e21) < atr * 1.5 and price > e200
+    near_ema50_long  = abs(price - e50) < atr * 2.0 and price > e200
+    near_ema21_short = abs(price - e21) < atr * 1.5 and price < e200
+    near_ema50_short = abs(price - e50) < atr * 2.0 and price < e200
+
+    in_pullback_long  = near_ema21_long  or near_ema50_long
+    in_pullback_short = near_ema21_short or near_ema50_short
+
+    # Bounce: momentum virando + vela favorável
+    bounce_long  = (macd_bull_r or ha_bull) and price > opens[-1] and (vol_ok or obv_bull)
+    bounce_short = (macd_bear_r or ha_bear) and price < opens[-1] and (vol_ok or obv_bear)
+
+    # Stop no swing da correção (últimas 5 velas anteriores + buffer ATR)
+    swing_low  = min(lows[-6:-1])
+    swing_high = max(highs[-6:-1])
+    stop_long  = swing_low  - atr * 0.3
+    stop_short = swing_high + atr * 0.3
+
+    sig = None
+    if h1_bull and in_pullback_long  and bounce_long  and adx > 15 and 35 < rsi < 68:
+        sig = "LONG"
+    elif h1_bear and in_pullback_short and bounce_short and adx > 15 and 32 < rsi < 65:
+        sig = "SHORT"
+
+    if not sig:
+        return None
+
+    is_long = sig == "LONG"
+    stop    = stop_long if is_long else stop_short
+    near21  = near_ema21_long if is_long else near_ema21_short
+
+    return {
+        "sig": sig, "sig_source": f"MTF_PULLBACK [1h→15m] EMA{'21' if near21 else '50'}",
+        "price": price, "atr": atr,
+        "swing_low": swing_low, "swing_high": swing_high,
+        "rsi": rsi, "adx": adx, "score": 0,
+        "kalman_up": False, "trend": "BULL" if is_long else "BEAR",
+        "signal_grade": "A",
+    }
 
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
@@ -676,6 +755,61 @@ async def run_cycle(session, last_sig, tf, coins):
         await asyncio.sleep(0.4)
     return sent
 
+async def run_mtf_cycle(session, last_sig, coins):
+    """Ciclo MTF: 1h confirma direção → 15m encontra entrada no pullback EMA21/50."""
+    now = time.time()
+    sent = 0
+    cooldown_mtf = 3600  # 1h entre sinais MTF por moeda
+
+    for sym, label, short in coins:
+        # 1h — direção e setup
+        candles_1h = await fetch_candles(session, sym, "1h")
+        if not candles_1h: await asyncio.sleep(0.5); continue
+
+        r1h = analyze(sym, candles_1h)
+        if not r1h: await asyncio.sleep(0.5); continue
+
+        h1_bull = r1h["score"] > 20 and r1h.get("tbull_r", False) and r1h["adx"] > 18
+        h1_bear = r1h["score"] < -20 and r1h.get("tbear_r", False) and r1h["adx"] > 18
+
+        if not (h1_bull or h1_bear):
+            log.info(f"[MTF] {short:7s} | 1h sem setup | Score {r1h['score']:+d}")
+            await asyncio.sleep(0.5)
+            continue
+
+        direction = "BULL" if h1_bull else "BEAR"
+        log.info(f"[MTF] {short:7s} | 1h {direction} setup | Score {r1h['score']:+d} → buscando entrada 15m...")
+
+        # 15m — entrada no pullback
+        candles_15m = await fetch_candles(session, sym, "15m")
+        if not candles_15m: await asyncio.sleep(0.5); continue
+
+        result = analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear)
+        if not result:
+            log.info(f"[MTF] {short:7s} | 15m sem entrada (não está no pullback)")
+            await asyncio.sleep(0.5)
+            continue
+
+        log.info(f"[MTF] {short:7s} | ✅ 15m {result['sig']} | {result['sig_source']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
+
+        key = f"{sym}_MTF"
+        if now - last_sig.get(key, 0) >= cooldown_mtf:
+            last_sig[key] = now
+            sent += 1
+            await send_telegram(session, sym, label, short, result["sig"],
+                                result["price"], result["atr"], r1h["score"],
+                                result["rsi"], result["adx"], result["trend"],
+                                r1h["kalman_up"],
+                                result["swing_low"], result["swing_high"],
+                                result["sig_source"], "15m", "A")
+        else:
+            mins = int((cooldown_mtf - (now - last_sig.get(key, 0))) / 60)
+            log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
+
+        await asyncio.sleep(0.5)
+
+    return sent
+
 async def run_test(session):
     """Modo de teste: analisa BTC e SOL em 15m com dados reais e manda sinal forçado."""
     log.info("🧪 TEST MODE — Analisando BTC e SOL em 15m com dados reais...")
@@ -747,9 +881,14 @@ async def main():
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
             try:
                 total=0
-                for tf in TIMEFRAMES:
-                    sent=await run_cycle(session,last_sig,tf,active_coins)
-                    total+=sent
+                # MTF: 1h→15m quando ambos os timeframes configurados
+                if "1h" in TIMEFRAMES and "15m" in TIMEFRAMES:
+                    sent_mtf = await run_mtf_cycle(session, last_sig, active_coins)
+                    total += sent_mtf
+                else:
+                    for tf in TIMEFRAMES:
+                        sent=await run_cycle(session,last_sig,tf,active_coins)
+                        total+=sent
                 save_state(last_sig)
                 log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total} | TFs: {','.join(TIMEFRAMES)}")
             except Exception as e:
