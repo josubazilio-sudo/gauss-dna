@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>GAUSS+DNA ELITE · Portfolio Tracker</title>
+<title>GAUSS+DNA · Portfolio Tracker</title>
 
 <!-- PWA META -->
 <meta name="theme-color" content="#060810">
@@ -165,32 +165,34 @@ tr:hover td{background:rgba(255,255,255,.01)}
 #toast{position:fixed;bottom:1.5rem;right:1rem;background:var(--s2);border:1px solid var(--border2);border-radius:8px;padding:.65rem 1rem;font-size:.7rem;color:var(--text);z-index:999;display:none;animation:fadeUp .3s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-/* RASTREADOR */
-.scan-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;margin-bottom:1.1rem;overflow:hidden}
-.scan-head{display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.1rem;cursor:pointer;user-select:none}
-.scan-ttl{font-family:'Unbounded',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--cyan)}
-.scan-actions{display:flex;align-items:center;gap:.6rem}
-.scan-status{font-size:.6rem;color:var(--muted2)}
-#scanBtn{padding:.38rem .85rem;border-radius:6px;font-family:'Unbounded',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;background:rgba(0,212,200,.08);border:1px solid rgba(0,212,200,.25);color:var(--cyan);transition:all .2s}
-#scanBtn:hover{background:rgba(0,212,200,.16)}
-#scanBtn:disabled{opacity:.4;cursor:not-allowed}
-.scan-body{padding:.5rem .8rem .8rem;display:none}
-.scan-body.open{display:block}
-.scan-row{display:flex;align-items:center;gap:.7rem;padding:.55rem .6rem;border-radius:6px;cursor:pointer;transition:background .15s;flex-wrap:wrap}
-.scan-row:hover{background:rgba(255,255,255,.03)}
-.scan-rank{font-family:'Unbounded',sans-serif;font-size:.65rem;color:var(--muted);min-width:18px;text-align:right}
-.scan-coin{font-family:'Unbounded',sans-serif;font-size:.72rem;font-weight:700;min-width:70px}
-.scan-badge{font-size:.55rem;font-family:'Unbounded',sans-serif;font-weight:700;padding:.1rem .35rem;border-radius:3px}
-.scan-badge.bull{background:rgba(0,224,144,.1);color:var(--green)}
-.scan-badge.bear{background:rgba(255,61,90,.1);color:var(--red)}
-.scan-score{margin-left:auto;font-family:'Unbounded',sans-serif;font-size:.72rem;font-weight:700;color:var(--purple)}
-.scan-divider{height:1px;background:var(--border);margin:.3rem 0}
-
 .wrap>*{animation:fadeUp .35s ease both}
 .wrap>*:nth-child(1){animation-delay:.04s}.wrap>*:nth-child(2){animation-delay:.08s}
 .wrap>*:nth-child(3){animation-delay:.12s}.wrap>*:nth-child(4){animation-delay:.16s}
 .wrap>*:nth-child(5){animation-delay:.2s}.wrap>*:nth-child(6){animation-delay:.24s}
 .wrap>*:nth-child(7){animation-delay:.28s}
+
+/* SCANNER DE MERCADO */
+.scan-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:0}
+.scan-head{padding:.8rem 1.1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;transition:background .2s}
+.scan-head:hover{background:rgba(255,255,255,.02)}
+.scan-ttl{font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.scan-actions{display:flex;align-items:center;gap:.6rem}
+.scan-status{font-size:.6rem;color:var(--muted2);font-family:'DM Mono',monospace}
+.scan-body{display:none;transition:all .3s}
+.scan-body.open{display:block}
+#scanBtn{font-size:.58rem;font-family:'Unbounded',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.3rem .65rem;border-radius:5px;border:1px solid rgba(59,158,255,.4);background:rgba(59,158,255,.1);color:var(--blue);cursor:pointer;transition:background .2s}
+#scanBtn:hover{background:rgba(59,158,255,.2)}
+#scanBtn:disabled{opacity:.5;cursor:not-allowed}
+.scan-divider{height:1px;background:var(--border);margin:0}
+.scan-row{display:flex;align-items:center;gap:.5rem;padding:.55rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.022);cursor:pointer;transition:background .15s;text-decoration:none;color:inherit}
+.scan-row:hover{background:rgba(255,255,255,.025)}
+.scan-row:last-child{border-bottom:none}
+.scan-rank{font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:700;color:var(--muted2);min-width:1.4rem;text-align:center}
+.scan-coin{font-family:'Unbounded',sans-serif;font-size:.68rem;font-weight:700;flex:1}
+.scan-badge{display:inline-block;padding:.06rem .35rem;border-radius:3px;font-size:.55rem;font-family:'Unbounded',sans-serif;font-weight:700;margin-left:.25rem}
+.scan-badge.bull{background:rgba(0,224,144,.12);color:var(--green)}
+.scan-badge.bear{background:rgba(255,61,90,.12);color:var(--red)}
+.scan-score{font-family:'Unbounded',sans-serif;font-size:.7rem;font-weight:700;min-width:2.5rem;text-align:right}
 </style>
 </head>
 <body>
@@ -201,17 +203,6 @@ tr:hover td{background:rgba(255,255,255,.01)}
     <div class="hdr-badge"><span class="dot"></span>GAUSS+DNA v2 · Portfolio Tracker</div>
     <h1><span class="c1">Portfolio</span> <span class="c2">Monitor</span> <span class="c3">⚡</span></h1>
     <p>// BTC · ETH · BNB · SOL · NEAR · AVAX · LINK · SUI · GALA · XRP · DOGE · ADA · DOT · POL · SEI · TRX · LTC · ATOM · PEPE · JUP · PENDLE · BONK</p>
-  </div>
-
-  <!-- NOTIFICAÇÕES NATIVAS -->
-  <div class="tg-card" id="notifCard">
-    <div class="tg-top" style="cursor:default;justify-content:space-between;align-items:center">
-      <span class="tg-title">🔔 Alertas do Dispositivo</span>
-      <button id="notifBtn" onclick="handleNotifBtn()" style="background:rgba(0,224,144,.12);border:1px solid rgba(0,224,144,.35);color:#00e090;font-family:'Unbounded',sans-serif;font-size:.55rem;font-weight:700;padding:.4rem .9rem;border-radius:6px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;transition:all .2s">🔔 Ativar Notificações</button>
-    </div>
-    <div style="padding:.5rem 1rem .8rem;font-size:.62rem;color:var(--muted2);line-height:1.6" id="notifStatus">
-      Receba alertas de sinais mesmo com o app minimizado ou tela apagada.
-    </div>
   </div>
 
   <!-- TELEGRAM -->
@@ -249,24 +240,9 @@ tr:hover td{background:rgba(255,255,255,.01)}
     <span class="last-upd" id="lastUpd">—</span>
   </div>
 
-  <!-- RASTREADOR DE MERCADO -->
-  <div class="scan-card">
-    <div class="scan-head" onclick="toggleScanner()">
-      <span class="scan-ttl">🔍 Rastreador de Mercado</span>
-      <div class="scan-actions">
-        <span class="scan-status" id="scanStatus">Clique para varrer o mercado</span>
-        <button id="scanBtn" onclick="event.stopPropagation();startScan()">🔍 Rastrear</button>
-      </div>
-    </div>
-    <div class="scan-body" id="scanBody">
-      <div class="scan-divider"></div>
-      <div id="scanList"><div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">Pressione "Rastrear" para encontrar as melhores moedas agora.</div></div>
-    </div>
-  </div>
-
   <!-- SUMMARY -->
   <div class="summary">
-    <div class="sum-card"><div class="sum-lbl">Monitorando</div><div class="sum-val" style="color:var(--blue)" id="sumCoins">25</div><div class="sum-sub">moedas</div></div>
+    <div class="sum-card"><div class="sum-lbl">Monitorando</div><div class="sum-val" style="color:var(--blue)" id="sumCoins">22</div><div class="sum-sub">moedas</div></div>
     <div class="sum-card"><div class="sum-lbl">Sinais hoje</div><div class="sum-val" style="color:var(--green)" id="sumSigs">0</div><div class="sum-sub">detectados</div></div>
     <div class="sum-card"><div class="sum-lbl">Maior Score</div><div class="sum-val" style="color:var(--purple)" id="sumTopScore">—</div><div class="sum-sub" id="sumTopCoin">—</div></div>
     <div class="sum-card"><div class="sum-lbl">Melhor Alta</div><div class="sum-val" style="color:var(--green)" id="sumTopGain">—</div><div class="sum-sub" id="sumTopGainCoin">—</div></div>
@@ -292,6 +268,22 @@ tr:hover td{background:rgba(255,255,255,.01)}
 
   <!-- PORTFOLIO GRID -->
   <div class="port-grid" id="portGrid"></div>
+
+
+  <!-- RASTREADOR DE MERCADO -->
+  <div class="scan-card">
+    <div class="scan-head" onclick="toggleScanner()">
+      <span class="scan-ttl">🔍 Rastreador de Mercado</span>
+      <div class="scan-actions">
+        <span class="scan-status" id="scanStatus">Clique para varrer o mercado</span>
+        <button id="scanBtn" onclick="event.stopPropagation();startScan()">🔍 Rastrear</button>
+      </div>
+    </div>
+    <div class="scan-body" id="scanBody">
+      <div class="scan-divider"></div>
+      <div id="scanList"><div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">Pressione "Rastrear" para encontrar as melhores moedas agora.</div></div>
+    </div>
+  </div>
 
   <!-- HISTÓRICO -->
   <div class="hist-card">
@@ -567,227 +559,116 @@ async function fetchCandles(sym){
 }
 
 // ── ANALYSIS ──
-// ── KALMAN FILTER ──
-function kalmanFilter(src, length, R=0.01, Q=0.1){
-  let estimate=src[0], errorEst=1.0;
-  const out=[];
-  for(const s of src){
-    const errorMeas=R*length;
-    const gain=errorEst/(errorEst+errorMeas);
-    estimate=estimate+gain*(s-estimate);
-    errorEst=(1-gain)*errorEst+Q/length;
-    out.push(estimate);
-  }
-  return out;
-}
-
-// ── RMA (Wilder Moving Average) ──
-function rmaArr(arr, p){
-  const out=[arr.slice(0,p).reduce((a,v)=>a+v,0)/p];
-  for(let i=p;i<arr.length;i++) out.push((out[out.length-1]*(p-1)+arr[i])/p);
-  return out;
-}
-
 function emaArr(arr,p){
   const k=2/(p+1);const out=[arr[0]];
   for(let i=1;i<arr.length;i++) out.push(arr[i]*k+out[i-1]*(1-k));
   return out;
 }
 function ema(arr,p){return emaArr(arr,p).slice(-1)[0];}
-
 function rsiCalc(closes,p=14){
-  const gains=[0],losses=[0];
-  for(let i=1;i<closes.length;i++){
-    const d=closes[i]-closes[i-1];
-    gains.push(Math.max(d,0)); losses.push(Math.max(-d,0));
-  }
-  let ag=gains.slice(1,p+1).reduce((a,v)=>a+v,0)/p;
-  let al=losses.slice(1,p+1).reduce((a,v)=>a+v,0)/p;
-  for(let i=p+1;i<closes.length;i++){
-    ag=(ag*(p-1)+gains[i])/p; al=(al*(p-1)+losses[i])/p;
-  }
+  let g=0,l=0;
+  for(let i=1;i<=p;i++){const d=closes[i]-closes[i-1];if(d>0)g+=d;else l-=d;}
+  let ag=g/p,al=l/p;
+  for(let i=p+1;i<closes.length;i++){const d=closes[i]-closes[i-1];ag=((ag*(p-1))+(d>0?d:0))/p;al=((al*(p-1))+(d<0?-d:0))/p;}
   return al===0?100:100-(100/(1+ag/al));
 }
-
 function atrCalc(candles,p=14){
   const trs=candles.slice(1).map((c,i)=>Math.max(c.h-c.l,Math.abs(c.h-candles[i].c),Math.abs(c.l-candles[i].c)));
   return trs.slice(-p).reduce((a,v)=>a+v,0)/p;
 }
-
 function macdCalc(closes,f=12,s=26,sig=9){
   const ea=emaArr(closes,f),eb=emaArr(closes,s);
   const ml=ea.map((v,i)=>v-eb[i]);
   const sl=emaArr(ml,sig);
   const hist=ml.map((v,i)=>v-sl[i]);
-  return{ml:ml.slice(-1)[0],sl:sl.slice(-1)[0],hist:hist.slice(-1)[0],histP:hist.slice(-2)[0],histPP:hist.slice(-3)[0]};
+  return{ml:ml.slice(-1)[0],sl:sl.slice(-1)[0],hist:hist.slice(-1)[0],histP:hist.slice(-2)[0]};
 }
-
-// ── DMI / ADX (Wilder) ──
-function dmiAdx(candles, p=14, smooth=14){
-  const pdmArr=[], mdmArr=[], trArr=[];
-  for(let i=1;i<candles.length;i++){
+function adxCalc(candles,p=14){
+  let pdm=0,mdm=0,tr=0;
+  for(let i=1;i<candles.length&&i<=p;i++){
     const h=candles[i].h,l=candles[i].l,ph=candles[i-1].h,pl=candles[i-1].l,pc=candles[i-1].c;
-    const up=h-ph, dn=pl-l;
-    pdmArr.push(up>dn&&up>0?up:0);
-    mdmArr.push(dn>up&&dn>0?dn:0);
-    trArr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));
+    const up=h-ph,dn=pl-l;
+    pdm+=up>dn&&up>0?up:0;
+    mdm+=dn>up&&dn>0?dn:0;
+    tr+=Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc));
   }
-  const rtr=rmaArr(trArr,p), rpdm=rmaArr(pdmArr,p), rmdm=rmaArr(mdmArr,p);
-  const dx=rtr.map((t,i)=>{
-    const pdi=(rpdm[i]/(t||1e-10))*100, mdi=(rmdm[i]/(t||1e-10))*100;
-    return Math.abs(pdi-mdi)/((pdi+mdi)||1)*100;
-  });
-  const adxArr=rmaArr(dx,smooth);
-  const lastIdx=adxArr.length-1;
-  const pdi=(rpdm[lastIdx]/(rtr[lastIdx]||1e-10))*100;
-  const mdi=(rmdm[lastIdx]/(rtr[lastIdx]||1e-10))*100;
-  return{pdi, mdi, adx:adxArr[lastIdx], adxP:adxArr[lastIdx-1]||adxArr[lastIdx]};
+  if(tr===0) return 20;
+  const pdi=(pdm/tr)*100,mdi=(mdm/tr)*100;
+  return Math.abs(pdi-mdi)/(pdi+mdi||1)*100;
 }
 
 function analyzeSymbol(sym){
   const s=state[sym];
   const candles=s.candles;
-  if(candles.length<55){s.loading=false;updateCard(sym);return;}
+  if(candles.length<50){s.loading=false;updateCard(sym);return;}
   const closes=candles.map(c=>c.c);
-  const highs=candles.map(c=>c.h);
-  const lows=candles.map(c=>c.l);
-  const opens=candles.map(c=>c.o);
   const vols=candles.map(c=>c.v);
   const n=closes.length;
   const price=closes[n-1]||s.price;
 
-  // ── EMAs ──
   const e10=ema(closes.slice(-10),10);
   const e21=ema(closes.slice(-21),21);
   const e50=ema(closes.slice(-50),50);
-  const e200arr=emaArr(closes,200);
-  const e200=e200arr[e200arr.length-1];
-  const e200p=n>5?e200arr[e200arr.length-4]:e200;
+  const e200=ema(closes,200);
+  const tBull=price>e200&&e10>e21&&e21>e50;
+  const tBear=price<e200&&e10<e21&&e21<e50;
 
-  // ── ATR ──
-  const atrVal=Math.max(atrCalc(candles.slice(-20)),1e-10);
+  const {ml,sl,hist,histP}=macdCalc(closes);
+  const mBull=ml>sl&&hist>histP;
+  const mBear=ml<sl&&hist<histP;
 
-  // ── KALMAN ──
-  const kShortArr=kalmanFilter(closes,50);
-  const kLongArr=kalmanFilter(closes,150);
-  const kS=kShortArr[n-1], kL=kLongArr[n-1], kSp=kShortArr[n-2]||kS;
-  const kalmanUp=kS>kL, kalmanDown=kS<kL;
+  const rsiV=rsiCalc(closes.slice(-30));
+  const rsiBull=rsiV>45&&rsiV<70;
+  const rsiBear=rsiV<55&&rsiV>30;
 
-  // ── MACD ──
-  const{ml,sl,hist,histP,histPP}=macdCalc(closes);
-  const haClose=(ml+sl+hist)/3;
-  const haOpen=(closes.length>1?(macdCalc(closes.slice(0,-1)).ml+macdCalc(closes.slice(0,-1)).sl)/2:ml);
-  const haBull=haClose>haOpen;
-  const macdBull=ml>sl&&hist>histP&&hist>0&&haBull;
-  const macdBear=ml<sl&&hist<histP&&hist<0&&!haBull;
+  const avgVol=vols.slice(-20).reduce((a,v)=>a+v,0)/20;
+  const vStrong=vols[n-1]>avgVol;
 
-  // ── RSI ──
-  const rsiRaw=rsiCalc(closes.slice(-50));
-  const rsiV=rsiRaw; // já é a RSI suavizada
-  const rsiBull=rsiV>50&&rsiV<70;
-  const rsiBear=rsiV<50&&rsiV>30;
+  const adxV=adxCalc(candles.slice(-20));
+  const adxOk=adxV>18;
 
-  // ── DMI/ADX ──
-  const{pdi,mdi,adx,adxP}=dmiAdx(candles.slice(-60));
-  const adxLongOk=adx>22&&pdi>mdi&&adx>=adxP*0.95;
-  const adxShortOk=adx>28&&mdi>pdi&&adx>=adxP*0.95;
+  const lastC=candles[n-1];
+  const sp=Math.max(lastC.h-lastC.l,0.0001);
+  const flow=((lastC.c-lastC.o)/sp)*lastC.v;
+  const fBull=flow>0,fBear=flow<0;
 
-  // ── VOLUME ──
-  const volMa=vols.slice(-20).reduce((a,v)=>a+v,0)/20;
-  const vStrong=vols[n-1]>volMa*1.1;
+  const e200p=ema(closes.slice(0,-5),200);
+  const e200s=e200>e200p?10:-10;
+  const pdiScore=adxOk?10:-10;
 
-  // ── VOLUME FLOW ──
-  const flowRaw=candles.map(c=>((c.c-c.o)/Math.max(c.h-c.l,1e-10))*c.v);
-  const flowEma=emaArr(flowRaw,13);
-  const flow=flowEma[n-1];
-  const flowAbs=flowEma.map(Math.abs);
-  const flowSma=flowAbs.slice(-20).reduce((a,v)=>a+v,0)/20;
-  const fBull=flow>0, fBear=flow<0;
-  const fStrong=Math.abs(flow)>flowSma*1.2;
-
-  // ── TENDÊNCIA ──
-  const trendBull=price>e200&&e10>e21&&e21>e50&&e50>e200;
-  const trendBear=price<e200&&e10<e21&&e21<e50&&e50<e200;
-  const alignBull=price>e10&&price>e21&&price>e50;
-  const alignBear=price<e10&&price<e21&&price<e50;
-  const e200Rising=e200>e200p, e200Falling=e200<e200p;
-  const trendStrength=Math.abs(e21-e50)/atrVal;
-  const strongTrend=trendStrength>0.6;
-
-  // ── DISTÂNCIA EMA50 ──
-  const distLong=(price-e50)/atrVal;
-  const distShort=(e50-price)/atrVal;
-  const notExtLong=distLong<2.5, notExtShort=distShort<2.5;
-
-  // ── IMPULSO ──
-  const bullImpulse=price>highs[n-2]&&price>opens[n-1]&&(price-opens[n-1])>atrVal*0.2;
-  const bearImpulse=price<lows[n-2]&&price<opens[n-1]&&(opens[n-1]-price)>atrVal*0.2;
-
-  // ── SWEEP LIQUIDEZ ──
-  const liqSweepLong=lows[n-1]<lows[n-2]&&price>lows[n-2]&&price>opens[n-1];
-  const liqSweepShort=highs[n-1]>highs[n-2]&&price<highs[n-2]&&price<opens[n-1];
-
-  // ── ABSORÇÃO ──
-  const cRange=highs[n-1]-lows[n-1];
-  const lWick=Math.min(opens[n-1],price)-lows[n-1];
-  const uWick=highs[n-1]-Math.max(opens[n-1],price);
-  const bullAbsorb=cRange>0&&lWick>cRange*0.45&&price>(lows[n-1]+cRange*0.6)&&vols[n-1]>volMa;
-  const bearAbsorb=cRange>0&&uWick>cRange*0.45&&price<(highs[n-1]-cRange*0.6)&&vols[n-1]>volMa;
-
-  // ── EXAUSTÃO ──
-  const sellExhaust=hist<histP&&histP<histPP&&price<e21&&price<e50&&price<e200;
-  const buyExhaust=hist>histP&&histP>histPP&&price>e21&&price>e50&&price>e200;
-
-  // ── SCORE INSTITUCIONAL ──
   let score=
-    (trendBull?35:trendBear?-35:0)+
-    (fBull?20:fBear?-20:0)+
-    (fStrong?10:0)+
-    (macdBull?20:macdBear?-20:0)+
-    (adx>30?20:adx>22?10:0)+
-    (vStrong?10:-5)+
+    (tBull?35:tBear?-35:0)+
+    (mBull?20:mBear?-20:0)+
     (rsiBull?10:rsiBear?-10:0)+
-    (e200Rising?10:e200Falling?-10:0)+
-    (kalmanUp?10:kalmanDown?-10:0);
+    (vStrong?10:-10)+
+    (adxOk?15:-15)+
+    (fBull?20:fBear?-20:0)+
+    e200s+pdiScore;
   score=Math.max(-145,Math.min(145,score));
 
-  s.trend=trendBull?'BULL':trendBear?'BEAR':'NEUTRO';
-  s.macd=macdBull?'BULL':macdBear?'BEAR':'NEUTRO';
-  s.rsi=rsiV; s.adx=adx; s.score=score;
-  s.atr=atrVal; s.loading=false;
-  s.kalman=kalmanUp?'UP':kalmanDown?'DOWN':'—';
+  s.trend=tBull?'BULL':tBear?'BEAR':'NEUTRO';
+  s.macd=mBull?'BULL':mBear?'BEAR':'NEUTRO';
+  s.rsi=rsiV;
+  s.vol=vStrong?'FORTE':'FRACO';
+  s.adx=adxV;
+  s.score=score;
+  s.atr=atrCalc(candles.slice(-20));
+  s.loading=false;
 
-  // ── SINAIS ──
+  // SIGNAL
   const now=Date.now();
   const cooldown=120000;
   const lastT=lastSigTime[sym]||0;
   s.sig=null;
-
-  // Sinal LONG principal
-  const longSig=strongTrend&&trendBull&&alignBull&&e200Rising&&macdBull&&
-    fBull&&fStrong&&adxLongOk&&rsiBull&&vStrong&&notExtLong&&
-    kalmanUp&&(bullImpulse||liqSweepLong)&&score>50;
-
-  // Sinal SHORT principal
-  const shortSig=strongTrend&&trendBear&&alignBear&&e200Falling&&macdBear&&
-    fBear&&fStrong&&adxShortOk&&rsiBear&&vStrong&&notExtShort&&
-    kalmanDown&&(bearImpulse||liqSweepShort)&&score<-50;
-
-  // Reversão precoce LONG
-  const earlyLong=adxLongOk&&vStrong&&sellExhaust&&liqSweepLong&&
-    bullAbsorb&&fBull&&trendBull&&e200Rising&&kalmanUp;
-
-  // Reversão precoce SHORT
-  const earlyShort=adxShortOk&&vStrong&&buyExhaust&&liqSweepShort&&
-    bearAbsorb&&fBear&&trendBear&&e200Falling&&kalmanDown;
-
   if(now-lastT>cooldown){
-    if(longSig||earlyLong){
-      s.sig='LONG'; lastSigTime[sym]=now;
-      triggerSignal(sym,'LONG',price,atrVal,score);
-    } else if(shortSig||earlyShort){
-      s.sig='SHORT'; lastSigTime[sym]=now;
-      triggerSignal(sym,'SHORT',price,atrVal,score);
+    if(score>30&&tBull&&mBull&&adxOk&&vStrong){
+      s.sig='LONG';
+      lastSigTime[sym]=now;
+      triggerSignal(sym,'LONG',price,s.atr,score);
+    } else if(score<-30&&tBear&&mBear&&adxOk&&vStrong){
+      s.sig='SHORT';
+      lastSigTime[sym]=now;
+      triggerSignal(sym,'SHORT',price,s.atr,score);
     }
   }
 
@@ -802,8 +683,8 @@ function triggerSignal(sym,type,price,atrVal,score){
   const a=atrVal||price*0.015;
   const stop=isL?price-a*1.5:price+a*1.5;
   const risk=Math.abs(price-stop);
-  const tp1=isL?price+risk*1.8:price-risk*1.8;
-  const final=isL?price+risk*4:price-risk*4;
+  const tp1=isL?price+risk*1.5:price-risk*1.5;
+  const final=isL?price+risk*5:price-risk*5;
 
   activeSignal={sym,coin:coin.label,type,price,stop,tp1,final,score,time:new Date()};
   sigCount++;
@@ -819,12 +700,12 @@ function triggerSignal(sym,type,price,atrVal,score){
   $('saFinal').textContent='$'+final.toFixed(final<1?5:2);
 
   const msg=encodeURIComponent(
-    `🚨 DNA ELITE KALMAN — SINAL ${type}\n`+
+    `🚨 GAUSS+DNA v2 — SINAL ${type}\n`+
     `Par: ${coin.label}\n`+
     `Entrada: $${fmtPrice(price,sym)}\n`+
     `Stop: $${stop.toFixed(stop<1?5:2)}\n`+
-    `TP1 (1.8R): $${tp1.toFixed(tp1<1?5:2)}\n`+
-    `Final (4R): $${final.toFixed(final<1?5:2)}\n`+
+    `TP1 (1.5R): $${tp1.toFixed(tp1<1?5:2)}\n`+
+    `Final (5R): $${final.toFixed(final<1?5:2)}\n`+
     `Score: ${score}/145\n`+
     `⏰ ${new Date().toLocaleTimeString('pt-BR')}`
   );
@@ -832,7 +713,6 @@ function triggerSignal(sym,type,price,atrVal,score){
 
   playAlert(isL);
   addHist(activeSignal);
-  showNativeNotif(sym, type, price, score);
 
   const tok=$('tgToken').value.trim(),cid=$('tgChatId').value.trim();
   if(tok&&cid) sendTGMsg(tok,cid,activeSignal);
@@ -868,12 +748,12 @@ async function sendTGMsg(tok,cid,sig){
   // Escape all MarkdownV2 reserved characters
   function esc(v){return String(v).replace(/[_*[\]()~`>#+=|{}.!\\-]/g,'\\$&');}
   const text=
-    `🚨 *DNA ELITE KALMAN — SINAL ${sig.type}*\n\n`+
+    `🚨 *GAUSS\\+DNA v2 — SINAL ${sig.type}*\n\n`+
     `📌 Par: ${esc(sig.coin)}\n`+
     `💰 Entrada: \`$${esc(fmtPrice(sig.price,sig.sym))}\`\n`+
     `🛑 Stop Loss: \`$${esc(sig.stop.toFixed(sig.stop<1?5:2))}\`\n`+
-    `🎯 TP1 \\(1\\.8R\\): \`$${esc(sig.tp1.toFixed(sig.tp1<1?5:2))}\`\n`+
-    `🏆 Final \\(4R\\): \`$${esc(sig.final.toFixed(sig.final<1?5:2))}\`\n`+
+    `🎯 TP1 \\(1\\.5R\\): \`$${esc(sig.tp1.toFixed(sig.tp1<1?5:2))}\`\n`+
+    `🏆 Final \\(5R\\): \`$${esc(sig.final.toFixed(sig.final<1?5:2))}\`\n`+
     `📊 Score: *${esc(sig.score)}/145*\n`+
     `⏰ ${esc(sig.time.toLocaleTimeString('pt-BR'))} — ${esc(sig.time.toLocaleDateString('pt-BR'))}`;
   try{
@@ -954,89 +834,6 @@ function loadTGConfig(){
   }catch(e){}
 }
 
-// ── NOTIFICAÇÕES NATIVAS ──
-let notifPermission = 'default';
-
-async function requestNotifPermission(){
-  if(!('Notification' in window)){
-    showToast('⚠️ Seu navegador não suporta notificações');
-    return;
-  }
-  const perm = await Notification.requestPermission();
-  notifPermission = perm;
-  if(perm === 'granted'){
-    showToast('🔔 Notificações ativadas!');
-    // Notificação de teste
-    new Notification('GAUSS+DNA ativado', {
-      body: 'Você receberá alertas de sinais mesmo com o app minimizado.',
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23060810"/><text x="50" y="68" font-size="55" text-anchor="middle">📈</text></svg>',
-      badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%233b9eff"/></svg>',
-      tag: 'gauss-init',
-      silent: false
-    });
-  } else if(perm === 'denied'){
-    showToast('🔕 Notificações bloqueadas. Ative nas configurações do browser.');
-  }
-}
-
-function showNativeNotif(sym, type, price, score){
-  if(notifPermission !== 'granted') return;
-  const coin = COINS.find(c=>c.sym===sym);
-  const isL = type === 'LONG';
-  const title = `${isL?'🟢':'🔴'} SINAL ${type} — ${coin?.short||sym}`;
-  const body = `Entrada: $${fmtPrice(price,sym)} | Score: ${score}/145\nClique para ver detalhes`;
-  try {
-    const notif = new Notification(title, {
-      body,
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23060810"/><text x="50" y="68" font-size="55" text-anchor="middle">' + (isL?'🚀':'📉') + '</text></svg>',
-      tag: `signal-${sym}-${Date.now()}`,
-      requireInteraction: true,
-      silent: false,
-      vibrate: [200, 100, 200]
-    });
-    notif.onclick = () => {
-      window.focus();
-      notif.close();
-    };
-  } catch(e) { console.log('Notif erro:', e); }
-}
-
-// Verifica permissão atual ao carregar
-if('Notification' in window){
-  notifPermission = Notification.permission;
-  updateNotifUI();
-}
-
-function updateNotifUI(){
-  const btn = $('notifBtn');
-  const status = $('notifStatus');
-  if(!('Notification' in window)){
-    if(btn) btn.style.display = 'none';
-    if(status) status.textContent = '⚠️ Seu navegador não suporta notificações nativas.';
-    return;
-  }
-  const p = Notification.permission;
-  if(p === 'granted'){
-    if(btn){ btn.textContent = '✅ Ativado'; btn.style.background='rgba(0,224,144,.08)'; btn.style.borderColor='rgba(0,224,144,.2)'; btn.style.color='#00e090'; btn.disabled=true; }
-    if(status) status.textContent = '✅ Notificações ativas — você receberá alertas mesmo com o app minimizado.';
-  } else if(p === 'denied'){
-    if(btn){ btn.textContent = '🚫 Bloqueado'; btn.style.background='rgba(255,61,90,.08)'; btn.style.borderColor='rgba(255,61,90,.3)'; btn.style.color='var(--red)'; btn.disabled=false; }
-    if(status) status.textContent = '🚫 Notificações bloqueadas. Vá em Configurações do navegador → Permissões do site → Notificações → Permitir para este site.';
-  } else {
-    if(btn){ btn.textContent = '🔔 Ativar Notificações'; btn.style.background='rgba(0,224,144,.12)'; btn.style.borderColor='rgba(0,224,144,.35)'; btn.style.color='#00e090'; btn.disabled=false; }
-    if(status) status.textContent = 'Receba alertas de sinais mesmo com o app minimizado ou tela apagada.';
-  }
-}
-
-async function handleNotifBtn(){
-  if(Notification.permission === 'denied'){
-    showToast('🚫 Ative manualmente nas configurações do navegador');
-    return;
-  }
-  await requestNotifPermission();
-  updateNotifUI();
-}
-
 // ── INIT ──
 buildCards();
 renderHist();
@@ -1074,51 +871,6 @@ function keepAlive() {
 keepAlive();
 </script>
 
-<!-- PWA SERVICE WORKER + INSTALL BANNER -->
-<div id="pwaBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#0b0f1a;border-bottom:1px solid rgba(59,158,255,.3);padding:.7rem 1rem;display:none;align-items:center;justify-content:space-between;gap:.5rem">
-  <span style="font-size:.68rem;color:#ccd8ee;font-family:'DM Mono',monospace">⚡ Instalar app na tela inicial?</span>
-  <div style="display:flex;gap:.4rem">
-    <button onclick="installPWA()" style="background:rgba(59,158,255,.15);border:1px solid rgba(59,158,255,.4);color:#3b9eff;font-family:'Unbounded',sans-serif;font-size:.55rem;font-weight:700;padding:.35rem .7rem;border-radius:5px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em">Instalar</button>
-    <button onclick="document.getElementById('pwaBar').style.display='none'" style="background:none;border:1px solid #1a2035;color:#3a4d6a;font-family:'DM Mono',monospace;font-size:.65rem;padding:.35rem .6rem;border-radius:5px;cursor:pointer">✕</button>
-  </div>
-</div>
-
-<script>
-// ── PWA SERVICE WORKER ──
-if('serviceWorker' in navigator){
-  const swCode=`
-    const CACHE='gauss-dna-elite-v7';
-    const ASSETS=[self.location.href];
-    self.addEventListener('install',e=>{
-      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
-    });
-    self.addEventListener('activate',e=>{
-      e.waitUntil(
-        caches.keys().then(keys=>Promise.all(
-          keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))
-        )).then(()=>clients.claim())
-      );
-    });
-    self.addEventListener('fetch',e=>{
-      // Deixa passar APIs externas (Binance, Telegram), cacheia só o app
-      const url=e.request.url;
-      if(url.includes('binance.com')||url.includes('telegram.org')||url.includes('googleapis.com')){
-        e.respondWith(fetch(e.request));
-        return;
-      }
-      e.respondWith(
-        caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
-          return caches.open(CACHE).then(c=>{c.put(e.request,res.clone());return res;});
-        }))
-      );
-    });
-  `;
-  const blob=new Blob([swCode],{type:'application/javascript'});
-  const swUrl=URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl,{scope:'./'})
-    .then(()=>console.log('SW registrado'))
-    .catch(e=>console.log('SW erro:',e));
-}
 
 // ── RASTREADOR DE MERCADO ─────────────────────────────────────────────────────
 // Pool completo: as 25 moedas monitoradas + extras trending
@@ -1143,98 +895,153 @@ function sADX(candles){
     pdm.push(up>dn&&up>0?up:0);mdm.push(dn>up&&dn>0?dn:0);
     tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));
   }
-  const rtr=rmaS(tr,14),rpdm=rmaS(pdm,14),rmdm=rmaS(mdm,14);
-  const dx=rtr.map((t,i)=>{const tt=t||1e-10;const pdi=(rpdm[i]/tt)*100,mdi=(rmdm[i]/tt)*100;return Math.abs(pdi-mdi)/(pdi+mdi||1)*100;});
-  return rmaS(dx,14).at(-1)||0;
+  const p=14;
+  const atr=rmaS(tr,p),pdiA=rmaS(pdm,p),mdiA=rmaS(mdm,p);
+  const pdi=pdiA.map((v,i)=>atr[i]?v/atr[i]*100:0);
+  const mdi=mdiA.map((v,i)=>atr[i]?v/atr[i]*100:0);
+  const dx=pdi.map((v,i)=>{const s=v+mdi[i];return s?Math.abs(v-mdi[i])/s*100:0;});
+  const adxArr=rmaS(dx.slice(p),p);
+  const adx=adxArr[adxArr.length-1]||0;
+  const lastPdi=pdi[pdi.length-1]||0,lastMdi=mdi[mdi.length-1]||0;
+  return{adx,bull:lastPdi>lastMdi};
 }
 function sATRpct(candles){
-  const tr=[candles[0].h-candles[0].l];
-  for(let i=1;i<candles.length;i++){const h=candles[i].h,l=candles[i].l,pc=candles[i-1].c;tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));}
-  return (rmaS(tr,14).at(-1)/candles.at(-1).c)*100;
+  const tr=[];
+  for(let i=1;i<candles.length;i++){
+    const h=candles[i].h,l=candles[i].l,pc=candles[i-1].c;
+    tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)));
+  }
+  const p=14;
+  const atr=rmaS(tr,p);
+  const lastAtr=atr[atr.length-1]||0;
+  const lastClose=candles[candles.length-1].c;
+  return lastClose?lastAtr/lastClose*100:0;
 }
 function quickScore(candles){
-  if(candles.length<60) return 0;
-  const closes=candles.map(c=>c.c),vols=candles.map(c=>c.v),price=closes.at(-1);
-  const atrPct=sATRpct(candles);
-  const adx=sADX(candles.slice(-60));
+  if(candles.length<50) return 0;
+  const closes=candles.map(c=>c.c);
+  const vols=candles.map(c=>c.v);
+  const n=closes.length;
+  const{adx,bull}=sADX(candles);
   if(adx<10) return 0;
-  const e200=emaS(closes,200).at(-1);
-  const trendOk=Math.abs(price-e200)/e200>0.002;
-  const volMa=vols.slice(-20).reduce((a,b)=>a+b,0)/20;
-  const volOk=vols.at(-1)>volMa*0.8;
+  const ema20=emaS(closes,20);const ema50=emaS(closes,50);
+  const trendOk=bull&&ema20[ema20.length-1]>ema50[ema50.length-1];
+  const avgVol=vols.slice(-20).reduce((a,b)=>a+b,0)/20;
+  const volOk=vols[n-1]>avgVol*1.1;
+  const atrPct=sATRpct(candles);
   const atrScore=Math.max(0,25-Math.abs(atrPct-1.5)*5);
   return adx*0.4+(trendOk?20:0)+(volOk?15:0)+atrScore;
 }
 async function fetchKlScan(sym){
   try{
     const ctrl=new AbortController();
-    const tid=setTimeout(()=>ctrl.abort(),9000);
+    setTimeout(()=>ctrl.abort(),9000);
     const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=15m&limit=250`,{signal:ctrl.signal});
-    clearTimeout(tid);
-    const d=await r.json();
-    if(!Array.isArray(d)||d.length<60) return null;
-    return d.map(k=>({h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+    const data=await r.json();
+    if(!Array.isArray(data)||data.length<50) return null;
+    return data.map(k=>({o:parseFloat(k[1]),h:parseFloat(k[2]),l:parseFloat(k[3]),c:parseFloat(k[4]),v:parseFloat(k[5])}));
   }catch(e){return null;}
 }
 async function startScan(){
   if(scanRunning) return;
   scanRunning=true;
-  document.getElementById('scanBody').classList.add('open');
   const btn=document.getElementById('scanBtn');
   const status=document.getElementById('scanStatus');
   const list=document.getElementById('scanList');
-  btn.disabled=true; btn.textContent='⏳';
+  if(btn) btn.disabled=true;
+  // Open the scanner body
+  document.getElementById('scanBody').classList.add('open');
 
   // Combina COINS + extras (sem duplicatas)
   const coinSyms=COINS.map(c=>c.sym);
   const allSyms=[...coinSyms,...SCAN_POOL_EXTRA.filter(s=>!coinSyms.includes(s))];
+  const results=[];
+  let partial=[];
 
-  list.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--muted2);font-size:.7rem">🔍 Varrendo mercado...</div>';
-
-  const scored=[];
   for(let i=0;i<allSyms.length;i++){
     const sym=allSyms[i];
-    const base=sym.replace('USDT','');
-    status.textContent=`${base} — ${i+1}/${allSyms.length}`;
+    if(status) status.textContent=`Analisando ${i+1}/${allSyms.length}: ${sym}`;
     const candles=await fetchKlScan(sym);
     if(candles){
       const s=quickScore(candles);
-      const atrPct=sATRpct(candles);
-      const adx=sADX(candles.slice(-60));
-      const closes=candles.map(c=>c.c);
-      const e200=emaS(closes,200).at(-1);
-      const trend=closes.at(-1)>e200?'BULL':'BEAR';
-      const volM=candles.slice(-20).reduce((a,c)=>a+c.v*c.c,0)/20/1e6;
-      scored.push({sym,base,score:s,adx,atrPct,trend,volM});
+      if(s>0){
+        const{adx,bull}=sADX(candles);
+        const atrPct=sATRpct(candles);
+        const vols=candles.map(c=>c.v);
+        const closes=candles.map(c=>c.c);
+        const lastVol=vols[vols.length-1]*closes[closes.length-1]/1e6;
+        partial.push({sym,adx,bull,atrPct,vol:lastVol,score:s});
+      }
     }
-    if(scored.length>0&&i>0&&i%8===0){
-      const partial=[...scored].sort((a,b)=>b.score-a.score).slice(0,10);
+    if((i+1)%8===0&&partial.length){
+      partial.sort((a,b)=>b.score-a.score);
       list.innerHTML=renderScanRows(partial)+'<div style="padding:.5rem 1rem;color:var(--muted2);font-size:.63rem">⏳ Analisando mais moedas...</div>';
     }
     await new Promise(r=>setTimeout(r,60));
   }
 
-  scored.sort((a,b)=>b.score-a.score);
-  const filtered=scored.filter(c=>c.score>0);
-  const top=(filtered.length>0?filtered:scored).slice(0,20);
+  partial.sort((a,b)=>b.score-a.score);
+  const top=partial.filter(r=>r.score>0);
+  if(status) status.textContent=`${top.length} oportunidades encontradas`;
   list.innerHTML=top.length
     ? renderScanRows(top)
-    : '<div style="padding:1.5rem;text-align:center;color:var(--muted2);font-size:.7rem">Sem dados no momento — verifique conexão.</div>';
-  status.textContent=`✅ ${top.length} melhores de ${scored.length} analisadas`;
-  scanRunning=false; btn.disabled=false; btn.textContent='🔍 Rastrear';
+    : '<div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">Nenhuma oportunidade clara no momento.</div>';
+  if(btn) btn.disabled=false;
+  scanRunning=false;
 }
 function renderScanRows(rows){
-  const gc=s=>s>=65?'var(--green)':s>=45?'var(--blue)':'var(--muted2)';
-  return rows.map((c,i)=>`
-    <div class="scan-row" onclick="window.open('https://www.binance.com/trade/${c.sym}','_blank')">
-      <span class="scan-rank">${i+1}</span>
-      <span class="scan-coin">${c.base}<span style="color:var(--muted2);font-size:.56rem">/USDT</span></span>
-      <span class="scan-badge ${c.trend==='BULL'?'bull':'bear'}">${c.trend}</span>
-      <span style="color:var(--muted2);font-size:.63rem">ADX <b style="color:var(--text)">${c.adx.toFixed(0)}</b></span>
-      <span style="color:var(--muted2);font-size:.63rem">ATR <b style="color:var(--text)">${c.atrPct.toFixed(2)}%</b></span>
-      <span style="color:var(--muted2);font-size:.63rem">Vol <b style="color:var(--text)">$${c.volM<1?c.volM.toFixed(1):c.volM.toFixed(0)}M</b></span>
-      <span class="scan-score" style="color:${gc(c.score)}">${c.score.toFixed(0)}</span>
-    </div><div class="scan-divider"></div>`).join('');
+  return rows.slice(0,20).map((r,i)=>{
+    const label=r.sym.replace('USDT','');
+    const scoreColor=r.score>60?'var(--green)':r.score>40?'var(--yellow)':'var(--muted2)';
+    return `<a class="scan-row" href="https://www.binance.com/trade/${r.sym}" target="_blank" rel="noopener">
+      <span class="scan-rank">#${i+1}</span>
+      <span class="scan-coin">${label}<span class="scan-badge ${r.bull?'bull':'bear'}">${r.bull?'BULL':'BEAR'}</span></span>
+      <span style="font-size:.6rem;color:var(--muted2);font-family:'DM Mono',monospace">ADX ${r.adx.toFixed(0)} · ATR ${r.atrPct.toFixed(2)}% · Vol $${r.vol.toFixed(1)}M</span>
+      <span class="scan-score" style="color:${scoreColor}">${r.score.toFixed(0)}</span>
+    </a>`;
+  }).join('');
+}
+
+<!-- PWA SERVICE WORKER + INSTALL BANNER -->
+<div id="pwaBar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#0b0f1a;border-bottom:1px solid rgba(59,158,255,.3);padding:.7rem 1rem;display:none;align-items:center;justify-content:space-between;gap:.5rem">
+  <span style="font-size:.68rem;color:#ccd8ee;font-family:'DM Mono',monospace">⚡ Instalar app na tela inicial?</span>
+  <div style="display:flex;gap:.4rem">
+    <button onclick="installPWA()" style="background:rgba(59,158,255,.15);border:1px solid rgba(59,158,255,.4);color:#3b9eff;font-family:'Unbounded',sans-serif;font-size:.55rem;font-weight:700;padding:.35rem .7rem;border-radius:5px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em">Instalar</button>
+    <button onclick="document.getElementById('pwaBar').style.display='none'" style="background:none;border:1px solid #1a2035;color:#3a4d6a;font-family:'DM Mono',monospace;font-size:.65rem;padding:.35rem .6rem;border-radius:5px;cursor:pointer">✕</button>
+  </div>
+</div>
+
+<script>
+// ── PWA SERVICE WORKER ──
+if('serviceWorker' in navigator){
+  const swCode=`
+    const CACHE='gauss-dna-v8';
+    const ASSETS=[self.location.href];
+    self.addEventListener('install',e=>{
+      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
+    });
+    self.addEventListener('activate',e=>{
+      e.waitUntil(clients.claim());
+    });
+    self.addEventListener('fetch',e=>{
+      // Deixa passar APIs externas (Binance, Telegram), cacheia só o app
+      const url=e.request.url;
+      if(url.includes('binance.com')||url.includes('telegram.org')||url.includes('googleapis.com')){
+        e.respondWith(fetch(e.request));
+        return;
+      }
+      e.respondWith(
+        caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
+          return caches.open(CACHE).then(c=>{c.put(e.request,res.clone());return res;});
+        }))
+      );
+    });
+  `;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  const swUrl=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl,{scope:'./'})
+    .then(()=>console.log('SW registrado'))
+    .catch(e=>console.log('SW erro:',e));
 }
 
 // ── INSTALL PROMPT ──
