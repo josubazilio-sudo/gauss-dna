@@ -1087,7 +1087,7 @@ keepAlive();
 // ── PWA SERVICE WORKER ──
 if('serviceWorker' in navigator){
   const swCode=`
-    const CACHE='gauss-dna-elite-v6';
+    const CACHE='gauss-dna-elite-v7';
     const ASSETS=[self.location.href];
     self.addEventListener('install',e=>{
       e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
@@ -1215,7 +1215,8 @@ async function startScan(){
   }
 
   scored.sort((a,b)=>b.score-a.score);
-  const top=scored.slice(0,20);
+  const filtered=scored.filter(c=>c.score>0);
+  const top=(filtered.length>0?filtered:scored).slice(0,20);
   list.innerHTML=top.length
     ? renderScanRows(top)
     : '<div style="padding:1.5rem;text-align:center;color:var(--muted2);font-size:.7rem">Sem dados no momento — verifique conexão.</div>';

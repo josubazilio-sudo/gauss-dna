@@ -383,16 +383,16 @@ def analyze(sym, candles):
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     long_pullback=(pullback_bull and trend_bull and (macd_bull or macd_recovering) and
                    adx>18 and (f_bull or obv_bull) and v_strong and
-                   above_vwap and score>25 and safe_long and not any_cross_bull)
+                   above_vwap and score>25 and not any_cross_bull)
     short_pullback=(pullback_bear and trend_bear and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-25 and safe_short and not any_cross_bear)
+                    below_vwap and score<-25 and not any_cross_bear)
 
-    # ── SINAIS FLEX ── (inclui filtro anti-topo/fundo)
-    long_flex=(score>25 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
-               adx>14 and (f_bull or obv_bull) and (v_strong or bb_expand) and safe_long)
-    short_flex=(score<-25 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
-                adx>14 and (f_bear or obv_bear) and (v_strong or bb_expand) and safe_short)
+    # ── SINAIS FLEX ── (critérios essenciais; safe_long/safe_short apenas no ELITE)
+    long_flex=(score>20 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
+               adx>12 and (f_bull or obv_bull) and not_ext_long)
+    short_flex=(score<-20 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
+                adx>12 and (f_bear or obv_bear) and not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
