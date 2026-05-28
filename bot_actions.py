@@ -152,10 +152,12 @@ def analyze(sym, candles):
     opens=[c["o"] for c in candles]; vols=[c["v"] for c in candles]
     price=closes[-1]
 
-    # EMAs
-    e10=ema_series(closes,10)[-1]; e21=ema_series(closes,21)[-1]
-    e50=ema_series(closes,50)[-1]
+    # EMAs (com valores anteriores para detecção de cruzamento)
+    e10_arr=ema_series(closes,10); e10=e10_arr[-1]; e10_p=e10_arr[-2]
+    e21_arr=ema_series(closes,21); e21=e21_arr[-1]; e21_p=e21_arr[-2]
+    e50_arr=ema_series(closes,50); e50=e50_arr[-1]; e50_p=e50_arr[-2]
     e200a=ema_series(closes,200); e200=e200a[-1]; e200p=e200a[-4] if n>4 else e200
+    price_p=closes[-2]
 
     # ATR
     atr_arr=atr_series(candles,14); atr=max(atr_arr[-1],1e-10)
@@ -233,6 +235,34 @@ def analyze(sym, candles):
     sell_exhaust=hist<hist_p and hist_p<hist_pp and price<e21 and price<e50 and price<e200
     buy_exhaust=hist>hist_p and hist_p>hist_pp and price>e21 and price>e50 and price>e200
 
+    # Cruzamentos de médias móveis
+    cross_10_21_bull=e10_p<=e21_p and e10>e21   # EMA10 cruzou acima da EMA21
+    cross_10_21_bear=e10_p>=e21_p and e10<e21   # EMA10 cruzou abaixo da EMA21
+    cross_21_50_bull=e21_p<=e50_p and e21>e50   # EMA21 cruzou acima da EMA50
+    cross_21_50_bear=e21_p>=e50_p and e21<e50   # EMA21 cruzou abaixo da EMA50
+    px_e50_bull=price_p<=e50_p and price>e50     # Preço cruzou acima da EMA50
+    px_e50_bear=price_p>=e50_p and price<e50     # Preço cruzou abaixo da EMA50
+
+    any_cross_bull=cross_10_21_bull or cross_21_50_bull or px_e50_bull
+    any_cross_bear=cross_10_21_bear or cross_21_50_bear or px_e50_bear
+
+    # Label do cruzamento (mais significativo tem prioridade)
+    if cross_21_50_bull: cross_label="EMA21 > EMA50"
+    elif px_e50_bull: cross_label="Preco > EMA50"
+    elif cross_10_21_bull: cross_label="EMA10 > EMA21"
+    elif cross_21_50_bear: cross_label="EMA21 < EMA50"
+    elif px_e50_bear: cross_label="Preco < EMA50"
+    elif cross_10_21_bear: cross_label="EMA10 < EMA21"
+    else: cross_label=""
+
+    # Sinal de cruzamento: cross recente + confirmação mínima de volume e momentum
+    long_cross=(any_cross_bull and score>10 and adx>15 and
+                (macd_bull or ha_bull) and (f_bull or obv_bull) and
+                v_strong and not_ext_long and price>e200*0.97)
+    short_cross=(any_cross_bear and score<-10 and adx>15 and
+                 (macd_bear or ha_bear) and (f_bear or obv_bear) and
+                 v_strong and not_ext_short and price<e200*1.03)
+
     # Swing levels para stop baseado em estrutura de mercado
     swing_low=min(lows[-5:]); swing_high=max(highs[-5:])
 
@@ -273,23 +303,25 @@ def analyze(sym, candles):
     short_flex=(score<-35 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
                 adx>15 and (f_bear or obv_bear) and (v_strong or bb_expand))
 
-    sig=None
+    sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
-        if long_elite or early_long: sig="LONG"
-        elif short_elite or early_short: sig="SHORT"
-    else:  # FLEX
-        if long_flex: sig="LONG"
-        elif short_flex: sig="SHORT"
+        if long_elite or early_long: sig="LONG"; sig_source="ELITE"
+        elif short_elite or early_short: sig="SHORT"; sig_source="ELITE"
+    else:  # FLEX — cruzamento tem prioridade, depois score
+        if long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
+        elif short_cross: sig="SHORT"; sig_source=f"CROSS:{cross_label}"
+        elif long_flex: sig="LONG"; sig_source="FLEX"
+        elif short_flex: sig="SHORT"; sig_source="FLEX"
 
     return {"price":price,"score":score,"atr":atr,"rsi":rsi,"adx":adx,
             "kalman_up":kalman_up,"trend":"BULL" if trend_bull else "BEAR" if trend_bear else "NEUTRO",
-            "sig":sig,"swing_low":swing_low,"swing_high":swing_high,
+            "sig":sig,"sig_source":sig_source,"swing_low":swing_low,"swing_high":swing_high,
             "ha_bull":ha_bull,"obv_bull":obv_bull,"above_vwap":above_vwap}
 
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
 async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
-                        rsi, adx, trend, kalman_up, swing_low, swing_high):
+                        rsi, adx, trend, kalman_up, swing_low, swing_high, sig_source):
     is_long=sig_type=="LONG"
     # Stop baseado em swing high/low com floor de ATR
     if is_long:
@@ -300,7 +332,13 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     tp1=price+risk*1.8 if is_long else price-risk*1.8
     tp2=price+risk*2.5 if is_long else price-risk*2.5
     final=price+risk*4 if is_long else price-risk*4
-    mode_tag="🔬 DNA ELITE KALMAN" if SIGNAL_MODE=="ELITE" else "⚡ DNA FLEX"
+    if sig_source.startswith("CROSS"):
+        mode_tag="🔀 DNA CROSS"
+        cross_info=sig_source.split(":",1)[1]
+    elif SIGNAL_MODE=="ELITE":
+        mode_tag="🔬 DNA ELITE KALMAN"; cross_info=""
+    else:
+        mode_tag="⚡ DNA FLEX"; cross_info=""
     def d(v): return f"{v:.6f}" if v<0.01 else f"{v:.4f}" if v<1 else f"{v:.2f}"
     def esc(v):
         s=str(v)
@@ -308,9 +346,11 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         return s
     now=datetime.now().strftime("%H:%M — %d/%m/%Y")
     k_str="↑" if kalman_up else "↓"
+    cross_line=f"📉 Cross: {esc(cross_info)}\n" if cross_info else ""
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
         f"{'🟢' if is_long else '🔴'} *{esc(label)}*\n"
+        f"{cross_line}"
         f"💰 Entrada: `${esc(fmt_price(price))}`\n"
         f"🛑 Stop: `${esc(d(stop))}`\n"
         f"🎯 TP1 \\(1\\.8R\\): `${esc(d(tp1))}`\n"
@@ -325,7 +365,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         async with session.post(url,json={"chat_id":TG_CHATID,"text":text,"parse_mode":"MarkdownV2"},
                                 timeout=aiohttp.ClientTimeout(total=10)) as r:
             data=await r.json()
-            if data.get("ok"): log.info(f"✅ {sig_type} {short} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{SIGNAL_MODE}]")
+            if data.get("ok"): log.info(f"✅ {sig_type} {short} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{sig_source}]")
             else: log.warning(f"❌ {data.get('description')}")
     except Exception as e: log.error(f"Erro: {e}")
 
@@ -363,14 +403,14 @@ async def main():
             if not candles: await asyncio.sleep(0.4); continue
             result=analyze(sym,candles)
             if not result: await asyncio.sleep(0.4); continue
-            log.info(f"{short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | OBV:{'↑' if result['obv_bull'] else '↓'} | {result['sig'] or '—'}")
+            log.info(f"{short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | OBV:{'↑' if result['obv_bull'] else '↓'} | {result['sig_source'] or result['sig'] or '—'}")
             if result["sig"]:
                 if now-last_sig.get(sym,0)>=COOLDOWN:
                     last_sig[sym]=now; sent+=1
                     await send_telegram(session,sym,label,short,result["sig"],result["price"],
                                         result["atr"],result["score"],result["rsi"],result["adx"],
                                         result["trend"],result["kalman_up"],
-                                        result["swing_low"],result["swing_high"])
+                                        result["swing_low"],result["swing_high"],result["sig_source"])
                 else:
                     mins=int((COOLDOWN-(now-last_sig.get(sym,0)))/60)
                     log.info(f"  ⏳ {short} cooldown {mins}min")
