@@ -1,0 +1,28 @@
+name: GAUSS+DNA Teste de Sinal
+
+on:
+  workflow_dispatch:   # Disparo manual — botão "Run workflow" no GitHub Actions
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install aiohttp
+
+      - name: Enviar sinal de teste
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHATID: ${{ secrets.TG_CHATID }}
+          TEST_MODE: 'true'
+        run: python bot_actions.py

@@ -16,6 +16,7 @@ TIMEFRAME    = os.environ.get("TIMEFRAME", "15m")   # compatibilidade retroativa
 TIMEFRAMES   = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",")]
 SIGNAL_MODE  = os.environ.get("SIGNAL_MODE", "FLEX").upper()
 LOOP_MODE    = os.environ.get("LOOP_MODE", "false").lower() == "true"
+TEST_MODE    = os.environ.get("TEST_MODE", "false").lower() == "true"
 STATE_FILE   = Path("last_signals.json")
 
 def tf_to_minutes(tf):
@@ -519,9 +520,39 @@ async def run_cycle(session, last_sig, tf):
         await asyncio.sleep(0.4)
     return sent
 
+async def run_test(session):
+    """Modo de teste: analisa BTC e SOL em 15m com dados reais e manda sinal forçado."""
+    log.info("🧪 TEST MODE — Analisando BTC e SOL em 15m com dados reais...")
+    test_coins=[("BTCUSDT","BTC/USDT","BTC"),("SOLUSDT","SOL/USDT","SOL")]
+    for sym,label,short in test_coins:
+        candles=await fetch_candles(session,sym,"15m")
+        if not candles:
+            log.warning(f"❌ Sem dados para {short}"); continue
+        result=analyze(sym,candles)
+        if not result:
+            log.warning(f"❌ Análise falhou para {short}"); continue
+        grade=result.get("signal_grade","B")
+        # Em teste força envio independente de sinal real, usando direção do score
+        sig_force="LONG" if result["score"]>=0 else "SHORT"
+        sig_src=result["sig_source"] or f"TEST({result['score']:+d})"
+        log.info(f"🧪 {short} | Score {result['score']:+d} | Grade {grade} | Enviando sinal {sig_force}...")
+        await send_telegram(session,sym,label,short,sig_force,result["price"],
+                            result["atr"],result["score"],result["rsi"],result["adx"],
+                            result["trend"],result["kalman_up"],
+                            result["swing_low"],result["swing_high"],
+                            f"TESTE — {sig_src}","15m",grade)
+        await asyncio.sleep(1)
+    log.info("✅ Teste concluído — verifique o Telegram!")
+
 async def main():
     if not TG_TOKEN or not TG_CHATID:
         log.error("❌ Configure TG_TOKEN e TG_CHATID!"); return
+
+    if TEST_MODE:
+        log.info("🧪 GAUSS+DNA — MODO TESTE ATIVADO")
+        async with aiohttp.ClientSession() as session:
+            await run_test(session)
+        return
 
     tf_min_base=min(tf_to_minutes(tf) for tf in TIMEFRAMES)  # menor TF controla o loop
     mode_str="LOOP CONTÍNUO" if LOOP_MODE else "EXECUÇÃO ÚNICA"
