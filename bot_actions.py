@@ -162,32 +162,44 @@ def analyze(sym, candles):
     # ATR
     atr_arr=atr_series(candles,14); atr=max(atr_arr[-1],1e-10)
 
-    # Kalman
+    # Kalman (com aceleração: spread crescendo = momentum se fortalecendo)
     ks=kalman_filter(closes,50); kl=kalman_filter(closes,150)
     kalman_up=ks[-1]>kl[-1]; kalman_down=ks[-1]<kl[-1]
+    kalman_spread=ks[-1]-kl[-1]; kalman_spread_p=ks[-2]-kl[-2]
+    kalman_accel_up=kalman_spread>kalman_spread_p>0
+    kalman_accel_down=kalman_spread<kalman_spread_p<0
 
-    # MACD
+    # MACD (bull3/bear3 = 3 barras consecutivas para ELITE; recovering para early)
     ml,sl_v,hist,hist_p,hist_pp=macd_calc(closes)
     macd_bull=ml>sl_v and hist>hist_p and hist>0
     macd_bear=ml<sl_v and hist<hist_p and hist<0
+    macd_bull3=macd_bull and hist_p>hist_pp        # 3 barras crescentes (sinal mais limpo)
+    macd_bear3=macd_bear and hist_p<hist_pp        # 3 barras decrescentes
+    macd_recovering=hist>hist_p                    # histograma subindo (para early long)
+    macd_exhausting=hist<hist_p                    # histograma caindo (para early short)
 
     # Heikin-Ashi (série correta — open baseado no HA anterior)
     ha=ha_series(candles)
     ha_bull=ha[-1]["c"]>ha[-1]["o"] and ha[-2]["c"]>ha[-2]["o"]
     ha_bear=ha[-1]["c"]<ha[-1]["o"] and ha[-2]["c"]<ha[-2]["o"]
 
-    # RSI
+    # RSI (elite usa zona mais estreita + momentum direcional)
     rsi=rsi_calc(closes[-50:])
-    rsi_bull=50<rsi<70; rsi_bear=30<rsi<50
+    rsi_prev=rsi_calc(closes[-53:-3]) if n>=53 else rsi
+    rsi_rising=rsi>rsi_prev; rsi_falling=rsi<rsi_prev
+    rsi_bull=50<rsi<70; rsi_bear=30<rsi<50              # score + FLEX (zona ampla)
+    rsi_bull_elite=48<rsi<65 and rsi_rising              # ELITE: evita sobrecompra + momentum
+    rsi_bear_elite=35<rsi<52 and rsi_falling             # ELITE: evita sobrevenda + momentum
 
-    # DMI/ADX
+    # DMI/ADX (strictly rising: ADX deve estar subindo, não apenas estável)
     pdi,mdi,adx,adx_p=dmi_adx(candles[-60:])
-    adx_rising=adx>=adx_p*0.95
-    adx_long_ok=adx>22 and pdi>mdi and adx_rising
-    adx_short_ok=adx>22 and mdi>pdi and adx_rising
+    adx_long_ok=adx>22 and pdi>mdi and adx>adx_p
+    adx_short_ok=adx>22 and mdi>pdi and adx>adx_p
 
-    # Volume
-    vol_ma=sum(vols[-20:])/20; v_strong=vols[-1]>vol_ma*1.1
+    # Volume (v_strong2: 2 velas consecutivas com bom volume = confirmação mais sólida)
+    vol_ma=sum(vols[-20:])/20
+    v_strong=vols[-1]>vol_ma*1.1
+    v_strong2=v_strong and vols[-2]>vol_ma*0.9
 
     # Flow
     flow_raw=[((c["c"]-c["o"])/max(c["h"]-c["l"],1e-10))*c["v"] for c in candles]
@@ -220,6 +232,11 @@ def analyze(sym, candles):
 
     not_ext_long=(price-e50)/atr<2.5
     not_ext_short=(e50-price)/atr<2.5
+
+    # Consistência de tendência: 4 das últimas 5 velas acima/abaixo da EMA21
+    bulls_5=sum(1 for i in range(-5,0) if closes[i]>e21_arr[i])
+    trend_consistent_bull=bulls_5>=4
+    trend_consistent_bear=bulls_5<=1
 
     bull_impulse=price>highs[-2] and price>opens[-1] and (price-opens[-1])>atr*0.2
     bear_impulse=price<lows[-2] and price<opens[-1] and (opens[-1]-price)>atr*0.2
@@ -255,14 +272,6 @@ def analyze(sym, candles):
     elif cross_10_21_bear: cross_label="EMA10 < EMA21"
     else: cross_label=""
 
-    # Sinal de cruzamento: cross recente + confirmação mínima de volume e momentum
-    long_cross=(any_cross_bull and score>10 and adx>15 and
-                (macd_bull or ha_bull) and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97)
-    short_cross=(any_cross_bear and score<-10 and adx>15 and
-                 (macd_bear or ha_bear) and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03)
-
     # Swing levels para stop baseado em estrutura de mercado
     swing_low=min(lows[-5:]); swing_high=max(highs[-5:])
 
@@ -279,23 +288,37 @@ def analyze(sym, candles):
         (10 if kalman_up else -10 if kalman_down else 0)+
         (15 if obv_bull else -15 if obv_bear else 0)+
         (5 if above_vwap else -5)+
-        (10 if ha_bull else -10 if ha_bear else 0)
+        (10 if ha_bull else -10 if ha_bear else 0)+
+        (5 if kalman_accel_up else -5 if kalman_accel_down else 0)+
+        (5 if trend_consistent_bull else -5 if trend_consistent_bear else 0)
     )
     score=max(-145,min(145,score))
 
-    # ── SINAIS ELITE ──
+    # ── SINAIS ELITE ── (máxima assertividade: todos os filtros de qualidade)
     long_elite=(strong_trend and trend_bull and align_bull and e200_rising and
-                macd_bull and ha_bull and f_bull and f_strong and adx_long_ok and rsi_bull and
-                (v_strong or obv_bull) and not_ext_long and kalman_up and above_vwap and
-                (bull_impulse or liq_long) and score>55)
+                macd_bull3 and ha_bull and f_bull and f_strong and adx_long_ok and
+                rsi_bull_elite and (v_strong2 or obv_bull) and not_ext_long and
+                kalman_accel_up and above_vwap and trend_consistent_bull and
+                (bull_impulse or liq_long) and score>65)
     short_elite=(strong_trend and trend_bear and align_bear and e200_falling and
-                 macd_bear and ha_bear and f_bear and f_strong and adx_short_ok and rsi_bear and
-                 (v_strong or obv_bear) and not_ext_short and kalman_down and below_vwap and
-                 (bear_impulse or liq_short) and score<-55)
+                 macd_bear3 and ha_bear and f_bear and f_strong and adx_short_ok and
+                 rsi_bear_elite and (v_strong2 or obv_bear) and not_ext_short and
+                 kalman_accel_down and below_vwap and trend_consistent_bear and
+                 (bear_impulse or liq_short) and score<-65)
     early_long=(adx_long_ok and (v_strong or obv_bull) and sell_exhaust and liq_long and
-                bull_absorb and f_bull and trend_bull and e200_rising and kalman_up and above_vwap)
+                bull_absorb and f_bull and trend_bull and e200_rising and
+                kalman_up and above_vwap and macd_recovering)
     early_short=(adx_short_ok and (v_strong or obv_bear) and buy_exhaust and liq_short and
-                 bear_absorb and f_bear and trend_bear and e200_falling and kalman_down and below_vwap)
+                 bear_absorb and f_bear and trend_bear and e200_falling and
+                 kalman_down and below_vwap and macd_exhausting)
+
+    # Sinal de cruzamento (score já calculado — referência correta)
+    long_cross=(any_cross_bull and score>10 and adx>15 and
+                (macd_bull or ha_bull) and (f_bull or obv_bull) and
+                v_strong and not_ext_long and price>e200*0.97)
+    short_cross=(any_cross_bear and score<-10 and adx>15 and
+                 (macd_bear or ha_bear) and (f_bear or obv_bear) and
+                 v_strong and not_ext_short and price<e200*1.03)
 
     # ── SINAIS FLEX ──
     long_flex=(score>35 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
