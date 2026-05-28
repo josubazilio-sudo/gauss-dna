@@ -12,10 +12,14 @@ log = logging.getLogger("GAUSS+DNA")
 
 TG_TOKEN     = os.environ.get("TG_TOKEN", "")
 TG_CHATID    = os.environ.get("TG_CHATID", "")
-TIMEFRAME    = os.environ.get("TIMEFRAME", "15m")   # compatibilidade retroativa
+TIMEFRAME    = os.environ.get("TIMEFRAME", "15m")
 TIMEFRAMES   = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",")]
 SIGNAL_MODE  = os.environ.get("SIGNAL_MODE", "FLEX").upper()
 LOOP_MODE    = os.environ.get("LOOP_MODE", "false").lower() == "true"
+TEST_MODE    = os.environ.get("TEST_MODE", "false").lower() == "true"
+DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
+SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "20"))   # moedas selecionadas
+SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
 STATE_FILE   = Path("last_signals.json")
 
 def tf_to_minutes(tf):
@@ -251,6 +255,44 @@ def analyze(sym, candles):
     not_ext_long=(price-e50)/atr<2.5
     not_ext_short=(e50-price)/atr<2.5
 
+    # ── ANTI-TOPO / ANTI-FUNDO ───────────────────────────────────────────────
+    bb_range=max(bb_upper-bb_lower,1e-10)
+    price_bb_pos=(price-bb_lower)/bb_range
+
+    # Só bloqueia se literalmente no topo/fundo da banda (>97% ou <3%)
+    near_bb_top=price_bb_pos>0.97   # acima da banda superior — sobrecomprado na BB
+    near_bb_bot=price_bb_pos<0.03   # abaixo da banda inferior — sobrevendido na BB
+
+    # Preço muito esticado (>3 ATR da EMA21) — movimento já foi feito
+    ext_above_ema21=(price-e21)/atr>3.0
+    ext_below_ema21=(e21-price)/atr>3.0
+
+    # Volume secando: volume atual < 60% da média E < 70% das últimas 3 velas
+    vol3=[vols[-4],vols[-3],vols[-2]]
+    vol_drying=vols[-1]<vol_ma*0.6 and vols[-1]<min(vol3)*0.7
+
+    rsi_not_overbought=rsi<75
+    rsi_not_oversold=rsi>25
+
+    # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
+    def _low_touched_ema(ema_arr, n=5):
+        return any(lows[i]<=ema_arr[i]*1.008 for i in range(-n,-1))
+    def _high_touched_ema(ema_arr, n=5):
+        return any(highs[i]>=ema_arr[i]*0.992 for i in range(-n,-1))
+
+    pullback_bull=(_low_touched_ema(e10_arr) or _low_touched_ema(e21_arr)) and price>e10 and price>opens[-1] and ha_bull
+    pullback_bear=(_high_touched_ema(e10_arr) or _high_touched_ema(e21_arr)) and price<e10 and price<opens[-1] and ha_bear
+
+    # Candle de exaustão: sombra superior > 40% do range → possível reversão no topo
+    uwick_ratio=(highs[-1]-max(opens[-1],price))/max(highs[-1]-lows[-1],1e-10)
+    lwick_ratio=(min(opens[-1],price)-lows[-1])/max(highs[-1]-lows[-1],1e-10)
+    exhaustion_top=uwick_ratio>0.40 and price<(highs[-1]-bb_range*0.02)  # rejeição no topo
+    exhaustion_bot=lwick_ratio>0.40 and price>(lows[-1]+bb_range*0.02)    # rejeição no fundo
+
+    # Filtro combinado: evita entrar no topo ou no fundo de uma move
+    safe_long=not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought
+    safe_short=not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_oversold
+
     # Consistência de tendência: 4 das últimas 5 velas acima/abaixo da EMA21
     bulls_5=sum(1 for i in range(-5,0) if closes[i]>e21_arr[i])
     trend_consistent_bull=bulls_5>=4
@@ -317,20 +359,20 @@ def analyze(sym, candles):
                 macd_bull3 and ha_bull and f_bull and f_strong and adx_long_ok and
                 rsi_bull_elite and (v_strong2 or obv_bull) and not_ext_long and
                 kalman_accel_up and above_vwap and trend_consistent_bull and
-                (bull_impulse or liq_long) and score>65)
+                (bull_impulse or liq_long) and score>65 and safe_long)
     short_elite=(strong_trend and trend_bear and align_bear and e200_falling and
                  macd_bear3 and ha_bear and f_bear and f_strong and adx_short_ok and
                  rsi_bear_elite and (v_strong2 or obv_bear) and not_ext_short and
                  kalman_accel_down and below_vwap and trend_consistent_bear and
-                 (bear_impulse or liq_short) and score<-65)
+                 (bear_impulse or liq_short) and score<-65 and safe_short)
     early_long=(adx_long_ok and (v_strong or obv_bull) and sell_exhaust and liq_long and
                 bull_absorb and f_bull and trend_bull and e200_rising and
-                kalman_up and above_vwap and macd_recovering)
+                kalman_up and above_vwap and macd_recovering and safe_long)
     early_short=(adx_short_ok and (v_strong or obv_bear) and buy_exhaust and liq_short and
                  bear_absorb and f_bear and trend_bear and e200_falling and
-                 kalman_down and below_vwap and macd_exhausting)
+                 kalman_down and below_vwap and macd_exhausting and safe_short)
 
-    # Sinal de cruzamento (score já calculado — referência correta)
+    # Sinal de cruzamento
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 (macd_bull or ha_bull) and (f_bull or obv_bull) and
                 v_strong and not_ext_long and price>e200*0.97)
@@ -338,18 +380,28 @@ def analyze(sym, candles):
                  (macd_bear or ha_bear) and (f_bear or obv_bear) and
                  v_strong and not_ext_short and price<e200*1.03)
 
-    # ── SINAIS FLEX ──
-    long_flex=(score>35 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
-               adx>15 and (f_bull or obv_bull) and (v_strong or bb_expand))
-    short_flex=(score<-35 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
-                adx>15 and (f_bear or obv_bear) and (v_strong or bb_expand))
+    # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
+    long_pullback=(pullback_bull and trend_bull and (macd_bull or macd_recovering) and
+                   adx>18 and (f_bull or obv_bull) and v_strong and
+                   above_vwap and score>25 and not any_cross_bull)
+    short_pullback=(pullback_bear and trend_bear and (macd_bear or macd_exhausting) and
+                    adx>18 and (f_bear or obv_bear) and v_strong and
+                    below_vwap and score<-25 and not any_cross_bear)
+
+    # ── SINAIS FLEX ── (critérios essenciais; safe_long/safe_short apenas no ELITE)
+    long_flex=(score>20 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
+               adx>12 and (f_bull or obv_bull) and not_ext_long)
+    short_flex=(score<-20 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
+                adx>12 and (f_bear or obv_bear) and not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
         if long_elite or early_long: sig="LONG"; sig_source="ELITE"
         elif short_elite or early_short: sig="SHORT"; sig_source="ELITE"
-    else:  # FLEX — cruzamento tem prioridade, depois score
-        if long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
+    else:  # FLEX — pullback > cross > flex (prioridade melhor preço)
+        if long_pullback: sig="LONG"; sig_source="PULLBACK"
+        elif short_pullback: sig="SHORT"; sig_source="PULLBACK"
+        elif long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
         elif short_cross: sig="SHORT"; sig_source=f"CROSS:{cross_label}"
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
@@ -429,7 +481,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     }
     grade_label,risk_sug=grade_info[signal_grade]
 
-    if sig_source.startswith("CROSS"):
+    if sig_source=="PULLBACK":
+        mode_tag="🎯 DNA PULLBACK"; cross_info=""
+    elif sig_source.startswith("CROSS"):
         mode_tag="🔀 DNA CROSS"
         cross_info=sig_source.split(":",1)[1]
     elif SIGNAL_MODE=="ELITE":
@@ -492,13 +546,93 @@ def save_state(state):
     try: STATE_FILE.write_text(json.dumps(state))
     except: pass
 
+# ── RASTREADOR DINÂMICO DE MOEDAS ─────────────────────────────────────────────
+
+# Stablecoins e tokens alavancados para excluir
+_EXCLUDE = {"USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH",
+            "EUR","GBP","BRL","UST","USDD","FRAX"}
+_EXCLUDE_SUB = ("UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S")
+
+async def fetch_top_usdt_pairs(session, min_vol_m=3.0, max_pairs=100):
+    """Busca todos os pares USDT da Binance ordenados por volume 24h (USD)."""
+    url="https://api.binance.com/api/v3/ticker/24hr"
+    try:
+        async with session.get(url,timeout=aiohttp.ClientTimeout(total=15)) as r:
+            data=await r.json()
+        pairs=[]
+        for t in data:
+            sym=t["symbol"]
+            if not sym.endswith("USDT"): continue
+            base=sym[:-4]
+            if base in _EXCLUDE: continue
+            if any(sub in base for sub in _EXCLUDE_SUB): continue
+            try:
+                vol=float(t["quoteVolume"])
+                if vol < min_vol_m*1e6: continue
+                pairs.append((sym,base,vol))
+            except: continue
+        pairs.sort(key=lambda x:x[2],reverse=True)
+        return pairs[:max_pairs]
+    except Exception as e:
+        log.warning(f"Scanner: erro ao buscar pares — {e}"); return []
+
+def quick_rank(candles):
+    """Score rápido para ranquear moedas candidatas. Retorna 0 se não serve."""
+    if len(candles)<60: return 0
+    closes=[c["c"] for c in candles]
+    vols=[c["v"] for c in candles]
+    price=closes[-1]
+    # ATR%
+    atr=atr_series(candles,14)[-1]
+    atr_pct=(atr/price)*100
+    if atr_pct<0.25 or atr_pct>6.0: return 0   # muito quieto ou muito louco
+    # ADX
+    try: _,_,adx,_=dmi_adx(candles[-60:])
+    except: return 0
+    if adx<15: return 0   # sem tendência
+    # Trend
+    e200=ema_series(closes,200)[-1]
+    trend_ok=abs(price-e200)/e200>0.005  # preço não colado na EMA200
+    # Volume crescente
+    vol_ma=sum(vols[-20:])/20
+    vol_ok=vols[-1]>vol_ma*1.0
+    # Score composto
+    atr_ideal=max(0,25-abs(atr_pct-1.5)*8)
+    score=adx*0.40 + (20 if trend_ok else 0) + (15 if vol_ok else 0) + atr_ideal
+    return score
+
+async def scan_best_coins(session, tf="15m", top_n=20):
+    """Varre o mercado e retorna as top_n moedas com melhores condições agora."""
+    log.info(f"🔍 Rastreador iniciado — buscando melhores moedas [{tf}]...")
+    pairs=await fetch_top_usdt_pairs(session)
+    if not pairs:
+        log.warning("Rastreador: sem dados, mantendo lista atual"); return None
+
+    scored=[]
+    for sym,base,vol_usd in pairs:
+        candles=await fetch_candles(session,sym,tf,limit=250)
+        if candles:
+            s=quick_rank(candles)
+            if s>0:
+                scored.append((sym,f"{base}/USDT",base,s,vol_usd))
+                log.info(f"  ✓ {base:8s} | Score {s:.0f} | Vol ${vol_usd/1e6:.0f}M")
+        await asyncio.sleep(0.25)
+
+    scored.sort(key=lambda x:x[3],reverse=True)
+    top=[(s,l,b) for s,l,b,_,_ in scored[:top_n]]
+    if not top: return None
+
+    names=[b for _,_,b in top]
+    log.info(f"✅ Top {len(top)} selecionadas: {', '.join(names)}")
+    return top
+
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 
-async def run_cycle(session, last_sig, tf):
+async def run_cycle(session, last_sig, tf, coins):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     now=time.time(); sent=0
     cooldown=tf_to_minutes(tf)*60  # cooldown = duração de 1 vela neste TF
-    for sym,label,short in COINS:
+    for sym,label,short in coins:
         candles=await fetch_candles(session,sym,tf)
         if not candles: await asyncio.sleep(0.4); continue
         result=analyze(sym,candles)
@@ -519,33 +653,79 @@ async def run_cycle(session, last_sig, tf):
         await asyncio.sleep(0.4)
     return sent
 
+async def run_test(session):
+    """Modo de teste: analisa BTC e SOL em 15m com dados reais e manda sinal forçado."""
+    log.info("🧪 TEST MODE — Analisando BTC e SOL em 15m com dados reais...")
+    test_coins=[("BTCUSDT","BTC/USDT","BTC"),("SOLUSDT","SOL/USDT","SOL")]
+    for sym,label,short in test_coins:
+        candles=await fetch_candles(session,sym,"15m")
+        if not candles:
+            log.warning(f"❌ Sem dados para {short}"); continue
+        result=analyze(sym,candles)
+        if not result:
+            log.warning(f"❌ Análise falhou para {short}"); continue
+        grade=result.get("signal_grade","B")
+        # Em teste força envio independente de sinal real, usando direção do score
+        sig_force="LONG" if result["score"]>=0 else "SHORT"
+        sig_src=result["sig_source"] or f"TEST({result['score']:+d})"
+        log.info(f"🧪 {short} | Score {result['score']:+d} | Grade {grade} | Enviando sinal {sig_force}...")
+        await send_telegram(session,sym,label,short,sig_force,result["price"],
+                            result["atr"],result["score"],result["rsi"],result["adx"],
+                            result["trend"],result["kalman_up"],
+                            result["swing_low"],result["swing_high"],
+                            f"TESTE — {sig_src}","15m",grade)
+        await asyncio.sleep(1)
+    log.info("✅ Teste concluído — verifique o Telegram!")
+
 async def main():
     if not TG_TOKEN or not TG_CHATID:
         log.error("❌ Configure TG_TOKEN e TG_CHATID!"); return
 
-    tf_min_base=min(tf_to_minutes(tf) for tf in TIMEFRAMES)  # menor TF controla o loop
+    if TEST_MODE:
+        log.info("🧪 GAUSS+DNA — MODO TESTE ATIVADO")
+        async with aiohttp.ClientSession() as session:
+            await run_test(session)
+        return
+
+
+    tf_min_base=min(tf_to_minutes(tf) for tf in TIMEFRAMES)
+    scan_tf=TIMEFRAMES[0]  # usa o menor TF para o scanner
     mode_str="LOOP CONTÍNUO" if LOOP_MODE else "EXECUÇÃO ÚNICA"
-    log.info(f"🚀 GAUSS+DNA v2 | {SIGNAL_MODE} | TFs: {','.join(TIMEFRAMES)} | {len(COINS)} moedas | {mode_str}")
+    scan_str="DINÂMICO" if DYNAMIC_SCAN else "LISTA FIXA"
+    log.info(f"🚀 GAUSS+DNA v2 | {SIGNAL_MODE} | TFs: {','.join(TIMEFRAMES)} | Coins: {scan_str} | {mode_str}")
 
     last_sig=load_state()
     cycle=0
+    active_coins=list(COINS)   # começa com lista padrão
+    last_scan_cycle=0
 
     async with aiohttp.ClientSession() as session:
+        # Scanner inicial antes do primeiro ciclo
+        if DYNAMIC_SCAN:
+            result=await scan_best_coins(session,scan_tf,SCANNER_TOP)
+            if result: active_coins=result
+            last_scan_cycle=0
+
         while True:
             cycle+=1
 
             if LOOP_MODE:
-                # Aguarda o fechamento da vela no menor timeframe configurado
                 wait=seconds_to_candle_close(tf_min_base)
                 if wait>3:
                     log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
                     await asyncio.sleep(wait+2)
 
-            log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} ──")
+            # Rescan periódico (a cada SCAN_EVERY ciclos)
+            if DYNAMIC_SCAN and cycle>1 and (cycle-last_scan_cycle)>=SCAN_EVERY:
+                result=await scan_best_coins(session,scan_tf,SCANNER_TOP)
+                if result: active_coins=result
+                last_scan_cycle=cycle
+
+            log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
             try:
                 total=0
                 for tf in TIMEFRAMES:
-                    sent=await run_cycle(session,last_sig,tf)
+                    sent=await run_cycle(session,last_sig,tf,active_coins)
                     total+=sent
                 save_state(last_sig)
                 log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total} | TFs: {','.join(TIMEFRAMES)}")
