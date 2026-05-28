@@ -583,7 +583,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     }
     grade_label,risk_sug=grade_info[signal_grade]
 
-    if sig_source=="PULLBACK":
+    if sig_source.startswith("MTF"):
+        mode_tag="📡 MTF PULLBACK 1H→15M"; cross_info=""
+    elif sig_source=="PULLBACK":
         mode_tag="🎯 DNA PULLBACK"; cross_info=""
     elif sig_source.startswith("CROSS"):
         mode_tag="🔀 DNA CROSS"
@@ -846,10 +848,36 @@ async def main():
 
 
     tf_min_base=min(tf_to_minutes(tf) for tf in TIMEFRAMES)
-    scan_tf=TIMEFRAMES[0]  # usa o menor TF para o scanner
+    scan_tf=TIMEFRAMES[0]
     mode_str="LOOP CONTÍNUO" if LOOP_MODE else "EXECUÇÃO ÚNICA"
     scan_str="DINÂMICO" if DYNAMIC_SCAN else "LISTA FIXA"
     log.info(f"🚀 GAUSS+DNA v2 | {SIGNAL_MODE} | TFs: {','.join(TIMEFRAMES)} | Coins: {scan_str} | {mode_str}")
+
+    # Ping de inicialização — confirma que Telegram está funcionando
+    async with aiohttp.ClientSession() as _s:
+        try:
+            def _esc(v):
+                s=str(v)
+                for ch in r"_*[]()~`>#+=|{}.!\-": s=s.replace(ch,f"\\{ch}")
+                return s
+            ping_txt=(
+                f"🟢 *GAUSS\\+DNA INICIADO*\n\n"
+                f"🕐 Modo: {_esc(mode_str)}\n"
+                f"📊 Sinais: {_esc(SIGNAL_MODE)}\n"
+                f"⏱ Timeframes: {_esc(','.join(TIMEFRAMES))}\n"
+                f"🪙 Moedas: {_esc(scan_str)}\n"
+                f"⏰ {_esc(datetime.now().strftime('%H:%M — %d/%m/%Y'))}"
+            )
+            async with _s.post(
+                f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
+                json={"chat_id":TG_CHATID,"text":ping_txt,"parse_mode":"MarkdownV2"},
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as r:
+                d=await r.json()
+                if d.get("ok"): log.info("✅ Telegram ping OK — bot ativo e conectado")
+                else: log.warning(f"⚠️ Telegram ping falhou: {d.get('description')} — verifique TG_TOKEN e TG_CHATID")
+        except Exception as e:
+            log.error(f"Erro no ping Telegram: {e}")
 
     last_sig=load_state()
     cycle=0
@@ -881,14 +909,14 @@ async def main():
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
             try:
                 total=0
-                # MTF: 1h→15m quando ambos os timeframes configurados
+                # MTF premium: 1h→15m pullback (quando ambos os TFs configurados)
                 if "1h" in TIMEFRAMES and "15m" in TIMEFRAMES:
                     sent_mtf = await run_mtf_cycle(session, last_sig, active_coins)
                     total += sent_mtf
-                else:
-                    for tf in TIMEFRAMES:
-                        sent=await run_cycle(session,last_sig,tf,active_coins)
-                        total+=sent
+                # FLEX/CROSS/PULLBACK em cada TF (sempre roda como base)
+                for tf in TIMEFRAMES:
+                    sent=await run_cycle(session,last_sig,tf,active_coins)
+                    total+=sent
                 save_state(last_sig)
                 log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total} | TFs: {','.join(TIMEFRAMES)}")
             except Exception as e:
