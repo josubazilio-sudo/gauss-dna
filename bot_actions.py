@@ -12,9 +12,9 @@ log = logging.getLogger("GAUSS+DNA")
 
 TG_TOKEN     = os.environ.get("TG_TOKEN", "")
 TG_CHATID    = os.environ.get("TG_CHATID", "")
-TIMEFRAME    = os.environ.get("TIMEFRAME", "15m")
-COOLDOWN     = int(os.environ.get("COOLDOWN", "900"))
-SIGNAL_MODE  = os.environ.get("SIGNAL_MODE", "FLEX").upper()  # ELITE ou FLEX
+TIMEFRAME    = os.environ.get("TIMEFRAME", "15m")   # compatibilidade retroativa
+TIMEFRAMES   = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",")]
+SIGNAL_MODE  = os.environ.get("SIGNAL_MODE", "FLEX").upper()
 LOOP_MODE    = os.environ.get("LOOP_MODE", "false").lower() == "true"
 STATE_FILE   = Path("last_signals.json")
 
@@ -362,7 +362,7 @@ def analyze(sym, candles):
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
 async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
-                        rsi, adx, trend, kalman_up, swing_low, swing_high, sig_source):
+                        rsi, adx, trend, kalman_up, swing_low, swing_high, sig_source, tf):
     is_long=sig_type=="LONG"
     # Stop baseado em swing high/low com floor de ATR
     if is_long:
@@ -390,7 +390,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     cross_line=f"📉 Cross: {esc(cross_info)}\n" if cross_info else ""
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
-        f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| ⏱ {esc(TIMEFRAME)}\n"
+        f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| ⏱ {esc(tf)}\n"
         f"{cross_line}"
         f"💰 Entrada: `${esc(fmt_price(price))}`\n"
         f"🛑 Stop: `${esc(d(stop))}`\n"
@@ -433,25 +433,27 @@ def save_state(state):
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 
-async def run_cycle(session, last_sig):
-    """Executa um ciclo completo de análise em todas as moedas."""
+async def run_cycle(session, last_sig, tf):
+    """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     now=time.time(); sent=0
+    cooldown=tf_to_minutes(tf)*60  # cooldown = duração de 1 vela neste TF
     for sym,label,short in COINS:
-        candles=await fetch_candles(session,sym,TIMEFRAME)
+        candles=await fetch_candles(session,sym,tf)
         if not candles: await asyncio.sleep(0.4); continue
         result=analyze(sym,candles)
         if not result: await asyncio.sleep(0.4); continue
-        log.info(f"{short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | OBV:{'↑' if result['obv_bull'] else '↓'} | {result['sig_source'] or result['sig'] or '—'}")
+        log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            if now-last_sig.get(sym,0)>=COOLDOWN:
-                last_sig[sym]=now; sent+=1
+            key=f"{sym}_{tf}"  # chave única por moeda + timeframe
+            if now-last_sig.get(key,0)>=cooldown:
+                last_sig[key]=now; sent+=1
                 await send_telegram(session,sym,label,short,result["sig"],result["price"],
                                     result["atr"],result["score"],result["rsi"],result["adx"],
                                     result["trend"],result["kalman_up"],
-                                    result["swing_low"],result["swing_high"],result["sig_source"])
+                                    result["swing_low"],result["swing_high"],result["sig_source"],tf)
             else:
-                mins=int((COOLDOWN-(now-last_sig.get(sym,0)))/60)
-                log.info(f"  ⏳ {short} cooldown {mins}min")
+                mins=int((cooldown-(now-last_sig.get(key,0)))/60)
+                log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
         await asyncio.sleep(0.4)
     return sent
 
@@ -459,9 +461,9 @@ async def main():
     if not TG_TOKEN or not TG_CHATID:
         log.error("❌ Configure TG_TOKEN e TG_CHATID!"); return
 
-    tf_min=tf_to_minutes(TIMEFRAME)
+    tf_min_base=min(tf_to_minutes(tf) for tf in TIMEFRAMES)  # menor TF controla o loop
     mode_str="LOOP CONTÍNUO" if LOOP_MODE else "EXECUÇÃO ÚNICA"
-    log.info(f"🚀 GAUSS+DNA v2 | {SIGNAL_MODE} | TF: {TIMEFRAME} | {len(COINS)} moedas | {mode_str}")
+    log.info(f"🚀 GAUSS+DNA v2 | {SIGNAL_MODE} | TFs: {','.join(TIMEFRAMES)} | {len(COINS)} moedas | {mode_str}")
 
     last_sig=load_state()
     cycle=0
@@ -471,17 +473,20 @@ async def main():
             cycle+=1
 
             if LOOP_MODE:
-                # Aguarda o fechamento exato da próxima vela
-                wait=seconds_to_candle_close(tf_min)
+                # Aguarda o fechamento da vela no menor timeframe configurado
+                wait=seconds_to_candle_close(tf_min_base)
                 if wait>3:
-                    log.info(f"⏳ Próxima vela em {wait:.0f}s ({wait/60:.1f}min) — aguardando...")
-                    await asyncio.sleep(wait+2)  # +2s buffer para garantir que a vela fechou
+                    log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
+                    await asyncio.sleep(wait+2)
 
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} ──")
             try:
-                sent=await run_cycle(session,last_sig)
+                total=0
+                for tf in TIMEFRAMES:
+                    sent=await run_cycle(session,last_sig,tf)
+                    total+=sent
                 save_state(last_sig)
-                log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {sent} [{SIGNAL_MODE}]")
+                log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total} | TFs: {','.join(TIMEFRAMES)}")
             except Exception as e:
                 log.error(f"❌ Erro no ciclo #{cycle}: {e}")
 
