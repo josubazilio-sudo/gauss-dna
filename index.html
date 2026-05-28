@@ -948,20 +948,20 @@ async function startScan(){
   const status=document.getElementById('scanStatus');
   const list=document.getElementById('scanList');
   if(btn) btn.disabled=true;
-  // Open the scanner body
   document.getElementById('scanBody').classList.add('open');
+  list.innerHTML='<div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">⏳ Iniciando varredura...</div>';
 
-  // Combina COINS + extras (sem duplicatas)
-  const coinSyms=COINS.map(c=>c.sym);
-  const allSyms=[...coinSyms,...SCAN_POOL_EXTRA.filter(s=>!coinSyms.includes(s))];
-  const results=[];
-  let partial=[];
+  try{
+    const coinSyms=COINS.map(c=>c.sym);
+    const allSyms=[...coinSyms,...SCAN_POOL_EXTRA.filter(s=>!coinSyms.includes(s))];
+    let partial=[];
+    let fetchFailed=0;
 
-  for(let i=0;i<allSyms.length;i++){
-    const sym=allSyms[i];
-    if(status) status.textContent=`Analisando ${i+1}/${allSyms.length}: ${sym}`;
-    const candles=await fetchKlScan(sym);
-    if(candles){
+    for(let i=0;i<allSyms.length;i++){
+      const sym=allSyms[i];
+      if(status) status.textContent=`Analisando ${i+1}/${allSyms.length}: ${sym}`;
+      const candles=await fetchKlScan(sym);
+      if(!candles){fetchFailed++;continue;}
       const s=quickScore(candles);
       if(s>0){
         const{adx,bull}=sADX(candles);
@@ -971,22 +971,31 @@ async function startScan(){
         const lastVol=vols[vols.length-1]*closes[closes.length-1]/1e6;
         partial.push({sym,adx,bull,atrPct,vol:lastVol,score:s});
       }
+      if((i+1)%8===0&&partial.length){
+        partial.sort((a,b)=>b.score-a.score);
+        list.innerHTML=renderScanRows(partial)+'<div style="padding:.5rem 1rem;color:var(--muted2);font-size:.63rem">⏳ Analisando mais moedas...</div>';
+      }
+      await new Promise(r=>setTimeout(r,80));
     }
-    if((i+1)%8===0&&partial.length){
-      partial.sort((a,b)=>b.score-a.score);
-      list.innerHTML=renderScanRows(partial)+'<div style="padding:.5rem 1rem;color:var(--muted2);font-size:.63rem">⏳ Analisando mais moedas...</div>';
-    }
-    await new Promise(r=>setTimeout(r,60));
-  }
 
-  partial.sort((a,b)=>b.score-a.score);
-  const top=partial.filter(r=>r.score>0);
-  if(status) status.textContent=`${top.length} oportunidades encontradas`;
-  list.innerHTML=top.length
-    ? renderScanRows(top)
-    : '<div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">Nenhuma oportunidade clara no momento.</div>';
-  if(btn) btn.disabled=false;
-  scanRunning=false;
+    partial.sort((a,b)=>b.score-a.score);
+    const top=partial.filter(r=>r.score>0);
+    if(fetchFailed===allSyms.length){
+      if(status) status.textContent='❌ API Binance inacessível';
+      list.innerHTML='<div style="padding:1.2rem;text-align:center;color:var(--red);font-size:.7rem">Erro: não foi possível conectar à API da Binance.<br>Verifique sua conexão ou tente novamente.</div>';
+    }else{
+      if(status) status.textContent=top.length?`${top.length} oportunidades encontradas`:'Sem oportunidades claras agora';
+      list.innerHTML=top.length
+        ? renderScanRows(top)
+        : '<div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">Nenhuma oportunidade clara no momento.</div>';
+    }
+  }catch(e){
+    if(status) status.textContent='Erro no rastreador';
+    list.innerHTML='<div style="padding:1.2rem;text-align:center;color:var(--red);font-size:.7rem">Erro: '+e.message+'</div>';
+  }finally{
+    if(btn) btn.disabled=false;
+    scanRunning=false;
+  }
 }
 function renderScanRows(rows){
   return rows.slice(0,20).map((r,i)=>{
@@ -1015,7 +1024,7 @@ function renderScanRows(rows){
 // ── PWA SERVICE WORKER ──
 if('serviceWorker' in navigator){
   const swCode=`
-    const CACHE='gauss-dna-v8';
+    const CACHE='gauss-dna-v9';
     const ASSETS=[self.location.href];
     self.addEventListener('install',e=>{
       e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
