@@ -2,49 +2,48 @@ name: 🔔 Ping Telegram (Diagnóstico)
 
 on:
   workflow_dispatch:
+    inputs:
+      tg_token:
+        description: 'Token do bot Telegram'
+        required: false
+        default: ''
+      tg_chatid:
+        description: 'Chat ID do canal/grupo'
+        required: false
+        default: ''
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Verificar secrets
-        run: |
-          if [ -z "$TG_TOKEN" ]; then
-            echo "❌ ERRO: TG_TOKEN não está configurado nos secrets!"
-            echo "Vá em: Settings → Secrets and variables → Actions → New repository secret"
-            exit 1
-          fi
-          if [ -z "$TG_CHATID" ]; then
-            echo "❌ ERRO: TG_CHATID não está configurado nos secrets!"
-            exit 1
-          fi
-          echo "✅ Secrets encontrados. Enviando ping..."
-          TOKEN_PREVIEW="${TG_TOKEN:0:6}..."
-          echo "Token preview: $TOKEN_PREVIEW"
-          echo "Chat ID: $TG_CHATID"
-        env:
-          TG_TOKEN: ${{ secrets.TG_TOKEN }}
-          TG_CHATID: ${{ secrets.TG_CHATID }}
-
       - name: Enviar ping no Telegram
-        env:
-          TG_TOKEN: ${{ secrets.TG_TOKEN }}
-          TG_CHATID: ${{ secrets.TG_CHATID }}
         run: |
-          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+          # Usa input se fornecido, senão usa secret
+          TOKEN="${{ github.event.inputs.tg_token }}"
+          CHATID="${{ github.event.inputs.tg_chatid }}"
+          if [ -z "$TOKEN" ]; then TOKEN="${{ secrets.TG_TOKEN }}"; fi
+          if [ -z "$CHATID" ]; then CHATID="${{ secrets.TG_CHATID }}"; fi
+
+          if [ -z "$TOKEN" ] || [ -z "$CHATID" ]; then
+            echo "❌ Token ou Chat ID não fornecido"
+            exit 1
+          fi
+
+          echo "Token: ${TOKEN:0:8}..."
+          echo "Chat ID: $CHATID"
+
+          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\":\"${TG_CHATID}\",\"text\":\"🟢 GAUSS+DNA funcionando\! Token e Chat ID corretos. Bot pronto para rodar.\",\"parse_mode\":\"MarkdownV2\"}")
-          echo "Resposta Telegram: $RESPONSE"
-          OK=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok','false'))")
+            -d "{\"chat_id\":\"${CHATID}\",\"text\":\"✅ GAUSS+DNA conectado ao canal\\! Bot funcionando e pronto para enviar sinais.\",\"parse_mode\":\"MarkdownV2\"}")
+
+          echo "Resposta: $RESPONSE"
+
+          OK=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok',False))" 2>/dev/null)
           if [ "$OK" = "True" ]; then
-            echo "✅ Telegram OK — mensagem enviada com sucesso!"
+            echo "✅ SUCESSO — mensagem enviada no canal!"
           else
-            DESC=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('description','erro desconhecido'))")
-            echo "❌ Telegram ERRO: $DESC"
-            echo ""
-            echo "Possíveis causas:"
-            echo "  - Token inválido (verifique o token do BotFather)"
-            echo "  - Chat ID errado (use @userinfobot para obter o ID correto)"
+            DESC=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('description','erro'))" 2>/dev/null)
+            echo "❌ ERRO: $DESC"
             exit 1
           fi
