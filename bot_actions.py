@@ -390,7 +390,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     cross_line=f"📉 Cross: {esc(cross_info)}\n" if cross_info else ""
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
-        f"{'🟢' if is_long else '🔴'} *{esc(label)}*\n"
+        f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| ⏱ {esc(TIMEFRAME)}\n"
         f"{cross_line}"
         f"💰 Entrada: `${esc(fmt_price(price))}`\n"
         f"🛑 Stop: `${esc(d(stop))}`\n"
