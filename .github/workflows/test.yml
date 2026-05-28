@@ -1,7 +1,7 @@
 name: GAUSS+DNA Teste de Sinal
 
 on:
-  workflow_dispatch:   # Disparo manual — botão "Run workflow" no GitHub Actions
+  workflow_dispatch:
 
 jobs:
   test:
@@ -20,7 +20,49 @@ jobs:
       - name: Instalar dependências
         run: pip install aiohttp
 
-      - name: Enviar sinal de teste
+      - name: Verificar secrets configurados
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHATID: ${{ secrets.TG_CHATID }}
+        run: |
+          if [ -z "$TG_TOKEN" ]; then
+            echo "❌ ERRO: Secret TG_TOKEN não configurado!"
+            echo "Vá em: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          if [ -z "$TG_CHATID" ]; then
+            echo "❌ ERRO: Secret TG_CHATID não configurado!"
+            exit 1
+          fi
+          echo "✅ Secrets OK — TG_TOKEN e TG_CHATID encontrados"
+
+      - name: Ping Telegram (teste simples)
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHATID: ${{ secrets.TG_CHATID }}
+        run: |
+          python - <<'EOF'
+          import urllib.request, json, os, sys
+          token = os.environ["TG_TOKEN"]
+          chat  = os.environ["TG_CHATID"]
+          msg   = "✅ *GAUSS\\+DNA — Teste OK\\!*\n\nBot conectado e funcionando\\.\nEm breve você receberá os sinais automáticos\\."
+          url   = f"https://api.telegram.org/bot{token}/sendMessage"
+          data  = json.dumps({"chat_id": chat, "text": msg, "parse_mode": "MarkdownV2"}).encode()
+          req   = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+          try:
+              res = urllib.request.urlopen(req, timeout=10)
+              body = json.loads(res.read())
+              if body.get("ok"):
+                  print("✅ Mensagem enviada com sucesso no Telegram!")
+              else:
+                  print(f"❌ Erro Telegram: {body}")
+                  sys.exit(1)
+          except Exception as e:
+              print(f"❌ Erro de conexão: {e}")
+              sys.exit(1)
+          EOF
+
+      - name: Enviar sinal de teste real
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHATID: ${{ secrets.TG_CHATID }}
