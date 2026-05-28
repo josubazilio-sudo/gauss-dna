@@ -1087,7 +1087,7 @@ keepAlive();
 // ── PWA SERVICE WORKER ──
 if('serviceWorker' in navigator){
   const swCode=`
-    const CACHE='gauss-dna-elite-v5';
+    const CACHE='gauss-dna-elite-v6';
     const ASSETS=[self.location.href];
     self.addEventListener('install',e=>{
       e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
@@ -1121,16 +1121,11 @@ if('serviceWorker' in navigator){
 }
 
 // ── RASTREADOR DE MERCADO ─────────────────────────────────────────────────────
-// Pool de 60 candidatos — busca ticker só desses (payload pequeno, rápido)
-const SCAN_POOL=[
-  'BTCUSDT','ETHUSDT','BNBUSDT','XRPUSDT','SOLUSDT','ADAUSDT','DOGEUSDT','AVAXUSDT',
-  'DOTUSDT','LTCUSDT','TRXUSDT','LINKUSDT','NEARUSDT','MATICUSDT','UNIUSDT','ATOMUSDT',
-  'INJUSDT','APTUSDT','SUIUSDT','TONUSDT','ARBUSDT','OPUSDT','JUPUSDT','FETUSDT',
-  'RENDERUSDT','WLDUSDT','TIAUSDT','SEIUSDT','STRKUSDT','AAVEUSDT','WIFUSDT',
-  'PEPEUSDT','SHIBUSDT','BONKUSDT','FLOKIUSDT','NOTUSDT','EIGENUSDT','TAOUSDT',
-  'PYTHUSDT','JTOUSDT','MEMEUSDT','ORDIUSDT','SATSUSDT','PENDLEUSDT','GALAUPDT',
-  'SANDUSDT','MANAUSDT','AXSUSDT','APEUSDT','GALAUSDT','ALGOUSDT','ICPUSDT',
-  'FILUSDT','EGLDUSDT','XTZUSDT','VETUSDT','HBARUSDT','FLOWUSDT','RUNEUSDT','ENAUSDT'
+// Pool completo: as 25 moedas monitoradas + extras trending
+const SCAN_POOL_EXTRA=[
+  'TRXUSDT','MATICUSDT','RENDERUSDT','AAVEUSDT','WLDUSDT','TIAUSDT','SEIUSDT',
+  'STRKUSDT','BONKUSDT','FLOKIUSDT','PENDLEUSDT','GALAUSDT','SANDUSDT','ALGOUSDT',
+  'ICPUSDT','FILUSDT','RUNEUSDT','ENAUSDT','TAOUSDT','HBARUSDT','VETUSDT'
 ];
 let scanRunning=false;
 
@@ -1161,22 +1156,25 @@ function quickScore(candles){
   if(candles.length<60) return 0;
   const closes=candles.map(c=>c.c),vols=candles.map(c=>c.v),price=closes.at(-1);
   const atrPct=sATRpct(candles);
-  if(atrPct<0.2||atrPct>8) return 0;
   const adx=sADX(candles.slice(-60));
-  if(adx<12) return 0;
+  if(adx<10) return 0;
   const e200=emaS(closes,200).at(-1);
-  const trendOk=Math.abs(price-e200)/e200>0.003;
+  const trendOk=Math.abs(price-e200)/e200>0.002;
   const volMa=vols.slice(-20).reduce((a,b)=>a+b,0)/20;
-  const volOk=vols.at(-1)>volMa*0.9;
-  return adx*0.4+(trendOk?20:0)+(volOk?15:0)+Math.max(0,25-Math.abs(atrPct-1.5)*6);
+  const volOk=vols.at(-1)>volMa*0.8;
+  const atrScore=Math.max(0,25-Math.abs(atrPct-1.5)*5);
+  return adx*0.4+(trendOk?20:0)+(volOk?15:0)+atrScore;
 }
-async function fetchKl(sym){
+async function fetchKlScan(sym){
   try{
-    const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=15m&limit=250`,{signal:AbortSignal.timeout(8000)});
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),9000);
+    const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=15m&limit=250`,{signal:ctrl.signal});
+    clearTimeout(tid);
     const d=await r.json();
     if(!Array.isArray(d)||d.length<60) return null;
     return d.map(k=>({h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
-  }catch{return null;}
+  }catch(e){return null;}
 }
 async function startScan(){
   if(scanRunning) return;
@@ -1186,15 +1184,19 @@ async function startScan(){
   const status=document.getElementById('scanStatus');
   const list=document.getElementById('scanList');
   btn.disabled=true; btn.textContent='⏳';
-  status.textContent=`Analisando 0/${SCAN_POOL.length}...`;
+
+  // Combina COINS + extras (sem duplicatas)
+  const coinSyms=COINS.map(c=>c.sym);
+  const allSyms=[...coinSyms,...SCAN_POOL_EXTRA.filter(s=>!coinSyms.includes(s))];
+
   list.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--muted2);font-size:.7rem">🔍 Varrendo mercado...</div>';
 
   const scored=[];
-  for(let i=0;i<SCAN_POOL.length;i++){
-    const sym=SCAN_POOL[i];
+  for(let i=0;i<allSyms.length;i++){
+    const sym=allSyms[i];
     const base=sym.replace('USDT','');
-    status.textContent=`${base} — ${i+1}/${SCAN_POOL.length}`;
-    const candles=await fetchKl(sym);
+    status.textContent=`${base} — ${i+1}/${allSyms.length}`;
+    const candles=await fetchKlScan(sym);
     if(candles){
       const s=quickScore(candles);
       const atrPct=sATRpct(candles);
@@ -1205,22 +1207,19 @@ async function startScan(){
       const volM=candles.slice(-20).reduce((a,c)=>a+c.v*c.c,0)/20/1e6;
       scored.push({sym,base,score:s,adx,atrPct,trend,volM});
     }
-    // mostra resultado parcial a cada 10 moedas
-    if(i>0&&i%10===0&&scored.length>0){
+    if(scored.length>0&&i>0&&i%8===0){
       const partial=[...scored].sort((a,b)=>b.score-a.score).slice(0,10);
-      list.innerHTML=renderScanRows(partial)+'<div style="padding:.5rem;text-align:center;color:var(--muted2);font-size:.65rem">⏳ Carregando mais...</div>';
+      list.innerHTML=renderScanRows(partial)+'<div style="padding:.5rem 1rem;color:var(--muted2);font-size:.63rem">⏳ Analisando mais moedas...</div>';
     }
-    await new Promise(r=>setTimeout(r,80));
+    await new Promise(r=>setTimeout(r,60));
   }
 
   scored.sort((a,b)=>b.score-a.score);
   const top=scored.slice(0,20);
-  if(!top.length){
-    list.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--muted2);font-size:.7rem">Nenhuma moeda qualificada no momento.</div>';
-  } else {
-    list.innerHTML=renderScanRows(top);
-  }
-  status.textContent=`✅ Top ${top.length} de ${scored.length} moedas`;
+  list.innerHTML=top.length
+    ? renderScanRows(top)
+    : '<div style="padding:1.5rem;text-align:center;color:var(--muted2);font-size:.7rem">Sem dados no momento — verifique conexão.</div>';
+  status.textContent=`✅ ${top.length} melhores de ${scored.length} analisadas`;
   scanRunning=false; btn.disabled=false; btn.textContent='🔍 Rastrear';
 }
 function renderScanRows(rows){
@@ -1232,7 +1231,7 @@ function renderScanRows(rows){
       <span class="scan-badge ${c.trend==='BULL'?'bull':'bear'}">${c.trend}</span>
       <span style="color:var(--muted2);font-size:.63rem">ADX <b style="color:var(--text)">${c.adx.toFixed(0)}</b></span>
       <span style="color:var(--muted2);font-size:.63rem">ATR <b style="color:var(--text)">${c.atrPct.toFixed(2)}%</b></span>
-      <span style="color:var(--muted2);font-size:.63rem">Vol <b style="color:var(--text)">$${c.volM<1?c.volM.toFixed(1)+'M':c.volM.toFixed(0)+'M'}</b></span>
+      <span style="color:var(--muted2);font-size:.63rem">Vol <b style="color:var(--text)">$${c.volM<1?c.volM.toFixed(1):c.volM.toFixed(0)}M</b></span>
       <span class="scan-score" style="color:${gc(c.score)}">${c.score.toFixed(0)}</span>
     </div><div class="scan-divider"></div>`).join('');
 }

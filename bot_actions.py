@@ -256,24 +256,23 @@ def analyze(sym, candles):
     not_ext_short=(e50-price)/atr<2.5
 
     # ── ANTI-TOPO / ANTI-FUNDO ───────────────────────────────────────────────
-    # Posição do preço dentro das Bollinger Bands (0=fundo, 1=topo)
     bb_range=max(bb_upper-bb_lower,1e-10)
-    price_bb_pos=(price-bb_lower)/bb_range   # 0.0=fundo BB, 1.0=topo BB
+    price_bb_pos=(price-bb_lower)/bb_range
 
-    near_bb_top=price_bb_pos>0.88  # preço nos últimos 12% da BB → risco de topo
-    near_bb_bot=price_bb_pos<0.12  # preço nos primeiros 12% da BB → risco de fundo
+    # Só bloqueia se literalmente no topo/fundo da banda (>97% ou <3%)
+    near_bb_top=price_bb_pos>0.97   # acima da banda superior — sobrecomprado na BB
+    near_bb_bot=price_bb_pos<0.03   # abaixo da banda inferior — sobrevendido na BB
 
-    # Preço muito esticado acima/abaixo da EMA21 (movimento já feito)
-    ext_above_ema21=(price-e21)/atr>2.0   # comprou tarde demais
-    ext_below_ema21=(e21-price)/atr>2.0   # vendeu tarde demais
+    # Preço muito esticado (>3 ATR da EMA21) — movimento já foi feito
+    ext_above_ema21=(price-e21)/atr>3.0
+    ext_below_ema21=(e21-price)/atr>3.0
 
-    # Volume secando: últimas 3 velas com volume decrescente = momentum acabando
+    # Volume secando: volume atual < 60% da média E < 70% das últimas 3 velas
     vol3=[vols[-4],vols[-3],vols[-2]]
-    vol_drying=vols[-1]<min(vol3)*0.8 and vols[-1]<vol_ma*0.7
+    vol_drying=vols[-1]<vol_ma*0.6 and vols[-1]<min(vol3)*0.7
 
-    # RSI extremo (evitar entrar em sobrecompra/sobrevenda)
-    rsi_not_overbought=rsi<72
-    rsi_not_oversold=rsi>28
+    rsi_not_overbought=rsi<75
+    rsi_not_oversold=rsi>25
 
     # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
     def _low_touched_ema(ema_arr, n=5):
@@ -390,10 +389,10 @@ def analyze(sym, candles):
                     below_vwap and score<-25 and safe_short and not any_cross_bear)
 
     # ── SINAIS FLEX ── (inclui filtro anti-topo/fundo)
-    long_flex=(score>35 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
-               adx>15 and (f_bull or obv_bull) and (v_strong or bb_expand) and safe_long)
-    short_flex=(score<-35 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
-                adx>15 and (f_bear or obv_bear) and (v_strong or bb_expand) and safe_short)
+    long_flex=(score>25 and (trend_bull or kalman_up) and (macd_bull or ha_bull) and
+               adx>14 and (f_bull or obv_bull) and (v_strong or bb_expand) and safe_long)
+    short_flex=(score<-25 and (trend_bear or kalman_down) and (macd_bear or ha_bear) and
+                adx>14 and (f_bear or obv_bear) and (v_strong or bb_expand) and safe_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
