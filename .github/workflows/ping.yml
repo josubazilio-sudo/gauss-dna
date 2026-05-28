@@ -1,0 +1,50 @@
+name: 🔔 Ping Telegram (Diagnóstico)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verificar secrets
+        run: |
+          if [ -z "$TG_TOKEN" ]; then
+            echo "❌ ERRO: TG_TOKEN não está configurado nos secrets!"
+            echo "Vá em: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          if [ -z "$TG_CHATID" ]; then
+            echo "❌ ERRO: TG_CHATID não está configurado nos secrets!"
+            exit 1
+          fi
+          echo "✅ Secrets encontrados. Enviando ping..."
+          TOKEN_PREVIEW="${TG_TOKEN:0:6}..."
+          echo "Token preview: $TOKEN_PREVIEW"
+          echo "Chat ID: $TG_CHATID"
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHATID: ${{ secrets.TG_CHATID }}
+
+      - name: Enviar ping no Telegram
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHATID: ${{ secrets.TG_CHATID }}
+        run: |
+          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${TG_CHATID}\",\"text\":\"🟢 GAUSS+DNA funcionando\! Token e Chat ID corretos. Bot pronto para rodar.\",\"parse_mode\":\"MarkdownV2\"}")
+          echo "Resposta Telegram: $RESPONSE"
+          OK=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok','false'))")
+          if [ "$OK" = "True" ]; then
+            echo "✅ Telegram OK — mensagem enviada com sucesso!"
+          else
+            DESC=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('description','erro desconhecido'))")
+            echo "❌ Telegram ERRO: $DESC"
+            echo ""
+            echo "Possíveis causas:"
+            echo "  - Token inválido (verifique o token do BotFather)"
+            echo "  - Chat ID errado (use @userinfobot para obter o ID correto)"
+            exit 1
+          fi
