@@ -35,7 +35,7 @@ jobs:
 
           RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\":\"${CHATID}\",\"text\":\"✅ GAUSS+DNA conectado ao canal\\! Bot funcionando e pronto para enviar sinais.\",\"parse_mode\":\"MarkdownV2\"}")
+            -d "{\"chat_id\":\"${CHATID}\",\"text\":\"GAUSS DNA conectado! Bot funcionando e pronto para enviar sinais.\"}")
 
           echo "Resposta: $RESPONSE"
 
