@@ -606,9 +606,10 @@ function analyzeSymbol(sym){
   const n=closes.length;
   const price=closes[n-1]||s.price;
 
-  const e10=ema(closes.slice(-10),10);
-  const e21=ema(closes.slice(-21),21);
-  const e50=ema(closes.slice(-50),50);
+  // EMA calculada sobre todas as velas (warmup correto)
+  const e10=ema(closes,10);
+  const e21=ema(closes,21);
+  const e50=ema(closes,50);
   const e200=ema(closes,200);
   const tBull=price>e200&&e10>e21&&e21>e50;
   const tBear=price<e200&&e10<e21&&e21<e50;
@@ -617,9 +618,30 @@ function analyzeSymbol(sym){
   const mBull=ml>sl&&hist>histP;
   const mBear=ml<sl&&hist<histP;
 
+  // Heikin-Ashi como alternativa ao MACD
+  let haBull=false,haBear=false;
+  if(candles.length>=3){
+    let ho=(candles[0].o+candles[0].c)/2;
+    let hc=(candles[0].o+candles[0].h+candles[0].l+candles[0].c)/4;
+    let hPrev={o:ho,c:hc};
+    for(let i=1;i<candles.length;i++){
+      const no=(hPrev.o+hPrev.c)/2;
+      const nc=(candles[i].o+candles[i].h+candles[i].l+candles[i].c)/4;
+      const hCur={o:no,c:nc};
+      if(i===candles.length-2) haBull=hPrev.c>hPrev.o,haBear=hPrev.c<hPrev.o;
+      if(i===candles.length-1){
+        haBull=haBull&&hCur.c>hCur.o;
+        haBear=haBear&&hCur.c<hCur.o;
+      }
+      hPrev=hCur;
+    }
+  }
+
   const rsiV=rsiCalc(closes.slice(-30));
   const rsiBull=rsiV>45&&rsiV<70;
   const rsiBear=rsiV<55&&rsiV>30;
+  const notExtLong=rsiV<75;
+  const notExtShort=rsiV>25;
 
   const avgVol=vols.slice(-20).reduce((a,v)=>a+v,0)/20;
   const vStrong=vols[n-1]>avgVol;
@@ -661,11 +683,11 @@ function analyzeSymbol(sym){
   const lastT=lastSigTime[sym]||0;
   s.sig=null;
   if(now-lastT>cooldown){
-    if(score>30&&tBull&&mBull&&adxOk&&vStrong){
+    if(score>30&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong){
       s.sig='LONG';
       lastSigTime[sym]=now;
       triggerSignal(sym,'LONG',price,s.atr,score);
-    } else if(score<-30&&tBear&&mBear&&adxOk&&vStrong){
+    } else if(score<-30&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort){
       s.sig='SHORT';
       lastSigTime[sym]=now;
       triggerSignal(sym,'SHORT',price,s.atr,score);
