@@ -414,8 +414,8 @@ def analyze(sym, candles):
     # FLEX: score captura tendência (+35/-35), sem exigir alinhamento EMA extra
     flex_not_ext_long  = rsi < 75
     flex_not_ext_short = rsi > 25
-    long_flex =(flex_score>30 and macd_bull_r and adx>13 and flex_not_ext_long)
-    short_flex=(flex_score<-30 and macd_bear_r and adx>13 and flex_not_ext_short)
+    long_flex =(flex_score>65 and macd_bull_r and adx>15 and flex_not_ext_long)
+    short_flex=(flex_score<-65 and macd_bear_r and adx>15 and flex_not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -691,7 +691,7 @@ def save_state(state):
 
 # Stablecoins e tokens alavancados para excluir
 _EXCLUDE = {"USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH",
-            "EUR","GBP","BRL","UST","USDD","FRAX"}
+            "EUR","GBP","BRL","UST","USDD","FRAX","USD1","USDE","USDT0"}
 _EXCLUDE_SUB = ("UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S")
 
 async def fetch_top_usdt_pairs(session, min_vol_m=3.0, max_pairs=100):
