@@ -403,10 +403,13 @@ def analyze(sym, candles):
 
     # Melhoria: HA como alternativa ao MACD + OBV como alternativa ao volume
     # + RSI extremo bloqueia entradas em sobrecompra/sobrevenda
-    long_flex =(score>30 and tbull_r and (macd_bull_r or ha_bull) and adx>15 and
-                (vol_avg or obv_bull) and not_ext_long and rsi<75)
-    short_flex=(score<-30 and tbear_r and (macd_bear_r or ha_bear) and adx>15 and
-                (vol_avg or obv_bear) and not_ext_short and rsi>25)
+    # Zona RSI ideal: evita sobrecompra/sobrevenda e entradas tardias
+    rsi_zone_long  = 45 < rsi < 68
+    rsi_zone_short = 32 < rsi < 55
+    long_flex =(score>40 and tbull_r and (macd_bull_r or ha_bull) and adx>20 and
+                (vol_avg or obv_bull) and not_ext_long and rsi_zone_long)
+    short_flex=(score<-40 and tbear_r and (macd_bear_r or ha_bear) and adx>20 and
+                (vol_avg or obv_bear) and not_ext_short and rsi_zone_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -563,13 +566,13 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         stop=min(swing_high+atr*0.1, price+atr*1.5)
     risk=abs(price-stop)
 
-    # TP dinâmico por grade: S-tier deixa o winner correr mais
+    # TP dinâmico por grade: metas maiores = mais lucro por trade
     if signal_grade=="S":
-        r1,r2,r_final=2.0,3.0,6.0   # máximo potencial
+        r1,r2,r_final=3.0,5.0,8.0   # setup perfeito — deixa correr
     elif signal_grade=="A":
-        r1,r2,r_final=1.8,2.5,4.5
+        r1,r2,r_final=2.0,3.5,6.0   # setup sólido
     else:
-        r1,r2,r_final=1.5,2.0,3.5
+        r1,r2,r_final=1.5,2.5,4.0
 
     tp1  =price+risk*r1     if is_long else price-risk*r1
     tp2  =price+risk*r2     if is_long else price-risk*r2
@@ -744,16 +747,19 @@ async def run_cycle(session, last_sig, tf, coins):
         grade=result.get("signal_grade","B")
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            key=f"{sym}_{tf}"  # chave única por moeda + timeframe
-            if now-last_sig.get(key,0)>=cooldown:
-                last_sig[key]=now; sent+=1
-                await send_telegram(session,sym,label,short,result["sig"],result["price"],
-                                    result["atr"],result["score"],result["rsi"],result["adx"],
-                                    result["trend"],result["kalman_up"],
-                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+            if grade == "B":
+                log.info(f"  ⏭️  {short} [{tf}] Grade B ignorado (apenas A/S enviados)")
             else:
-                mins=int((cooldown-(now-last_sig.get(key,0)))/60)
-                log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
+                key=f"{sym}_{tf}"  # chave única por moeda + timeframe
+                if now-last_sig.get(key,0)>=cooldown:
+                    last_sig[key]=now; sent+=1
+                    await send_telegram(session,sym,label,short,result["sig"],result["price"],
+                                        result["atr"],result["score"],result["rsi"],result["adx"],
+                                        result["trend"],result["kalman_up"],
+                                        result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+                else:
+                    mins=int((cooldown-(now-last_sig.get(key,0)))/60)
+                    log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
         await asyncio.sleep(0.4)
     return sent
 
