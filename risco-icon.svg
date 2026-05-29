@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="76" fill="#060810"/>
+  <g stroke="rgba(59,158,255,0.09)" stroke-width="1">
+    <line x1="0" y1="128" x2="512" y2="128"/>
+    <line x1="0" y1="256" x2="512" y2="256"/>
+    <line x1="0" y1="384" x2="512" y2="384"/>
+    <line x1="128" y1="0" x2="128" y2="512"/>
+    <line x1="256" y1="0" x2="256" y2="512"/>
+    <line x1="384" y1="0" x2="384" y2="512"/>
+  </g>
+  <circle cx="245" cy="230" r="130" fill="rgba(59,158,255,0.04)" stroke="rgba(59,158,255,0.12)" stroke-width="1"/>
+  <text x="238" y="308" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="260" fill="#3b9eff" text-anchor="middle">G</text>
+  <text x="405" y="165" font-family="Arial,sans-serif" font-weight="700" font-size="95" fill="#00d4c8" text-anchor="middle">+</text>
+  <text x="256" y="434" font-family="Arial,sans-serif" font-weight="700" font-size="50" fill="#00d4c8" text-anchor="middle" letter-spacing="14">RISK</text>
+  <line x1="76" y1="455" x2="436" y2="455" stroke="rgba(0,212,200,0.25)" stroke-width="1"/>
+</svg>

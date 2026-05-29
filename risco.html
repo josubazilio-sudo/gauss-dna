@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAUSS+DNA — Calculadora de Risco</title>
+<!-- PWA -->
+<meta name="theme-color" content="#060810">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GAUSS Risk">
+<link rel="apple-touch-icon" id="pwaAppleIcon" href="risco-icon.svg">
+<link rel="manifest" href="risco-manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#060810;
+  --s1:#0b0f1a;
+  --s2:#101422;
+  --border:#1a2035;
+  --border2:#222840;
+  --blue:#3b9eff;
+  --cyan:#00d4c8;
+  --green:#00e090;
+  --orange:#ff8040;
+  --red:#ff3d5a;
+  --yellow:#ffcc44;
+  --purple:#b47fff;
+  --text:#ccd8ee;
+  --muted:#3a4d6a;
+  --muted2:#5a6d8a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
+
+/* GRID BG */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,158,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(59,158,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+
+.wrap{max-width:980px;margin:0 auto;padding:1.8rem 1rem 5rem;position:relative;z-index:1}
+
+/* ── TABS ── */
+.tabs-bar{display:flex;gap:0;background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.5rem}
+.tab-btn{flex:1;padding:.9rem 1rem;font-family:'Unbounded',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent;border:none;color:var(--muted2);cursor:pointer;transition:all .2s;border-right:1px solid var(--border)}
+.tab-btn:last-child{border-right:none}
+.tab-btn.active{background:var(--s2);color:var(--text)}
+.tab-btn.active.t1{box-shadow:inset 0 -2px 0 var(--blue);color:var(--blue)}
+.tab-btn.active.t2{box-shadow:inset 0 -2px 0 var(--green);color:var(--green)}
+
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── HEADER ── */
+.hdr{text-align:center;padding:1.5rem 0 1.8rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem}
+.hdr-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);background:rgba(59,158,255,.07);border:1px solid rgba(59,158,255,.18);padding:.28rem .8rem;border-radius:2px;margin-bottom:.9rem}
+.hdr-badge i{width:5px;height:5px;background:var(--blue);border-radius:50%;animation:blink 1.6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.hdr h1{font-family:'Unbounded',sans-serif;font-size:clamp(1.3rem,3.5vw,2rem);font-weight:900;letter-spacing:-.02em;line-height:1.1}
+.hdr h1 .c1{color:var(--blue)}.hdr h1 .c2{color:var(--cyan)}
+.hdr p{font-size:.68rem;color:var(--muted2);margin-top:.4rem}
+
+/* ── PROGRESS ── */
+.prog{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:1.3rem 1.4rem;margin-bottom:1rem}
+.prog-top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:1rem}
+.prog-banca label{font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2);display:block;margin-bottom:.25rem}
+.prog-banca-row{display:flex;align-items:center;gap:.3rem}
+.prog-banca-row .sym{font-family:'Unbounded',sans-serif;font-size:1.3rem;font-weight:700;color:var(--blue)}
+.prog-banca-row input{background:transparent;border:none;border-bottom:1px solid rgba(59,158,255,.3);font-family:'Unbounded',sans-serif;font-size:1.3rem;font-weight:700;color:var(--blue);width:110px;outline:none}
+.prog-pct-wrap{text-align:right}
+.prog-pct{font-family:'Unbounded',sans-serif;font-size:2rem;font-weight:900;color:var(--green);line-height:1}
+.prog-pct-sub{font-size:.6rem;color:var(--muted2);margin-top:.2rem}
+.bar-track{height:7px;background:rgba(255,255,255,.04);border-radius:99px;overflow:visible;position:relative}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1);position:relative}
+.bar-fill::after{content:'';position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:13px;height:13px;background:#fff;border-radius:50%;box-shadow:0 0 10px var(--blue),0 0 20px rgba(59,158,255,.4)}
+.prog-foot{display:flex;justify-content:space-between;margin-top:.55rem;font-size:.65rem;color:var(--muted2)}
+.prog-foot .now{color:var(--blue)}
+
+/* ── MÉTRICAS TOPO ── */
+.mets{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1rem}
+@media(max-width:580px){.mets{grid-template-columns:repeat(2,1fr)}}
+.met{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:.85rem;text-align:center}
+.met-l{font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:.3rem}
+.met-v{font-family:'Unbounded',sans-serif;font-size:.95rem;font-weight:700;line-height:1.2}
+.met-s{font-size:.6rem;color:var(--muted2);margin-top:.15rem}
+.cv{color:var(--green)}.cb{color:var(--blue)}.cy{color:var(--yellow)}.cr{color:var(--red)}.cp{color:var(--purple)}.co{color:var(--orange)}
+
+/* ── ALERT ── */
+.alert{display:none;background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.22);border-radius:8px;padding:.8rem 1rem;margin-bottom:1rem;font-size:.72rem;color:var(--red);line-height:1.7}
+.alert.show{display:block}
+.alert strong{display:block;font-family:'Unbounded',sans-serif;font-size:.7rem;margin-bottom:.2rem}
+
+/* ──────────────────────────────────────────────
+   TAB 1 — CALCULADORA
+────────────────────────────────────────────── */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media(max-width:560px){.calc-grid{grid-template-columns:1fr}}
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.2rem}
+.panel-ttl{font-size:.6rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted2);margin-bottom:.9rem;display:flex;align-items:center;gap:.4rem}
+.panel-ttl::before{content:'';display:inline-block;width:2px;height:.75rem;background:var(--blue);border-radius:99px}
+
+.sl-wrap{margin-bottom:.75rem}
+.sl-top{display:flex;justify-content:space-between;margin-bottom:.2rem}
+.sl-lbl{font-size:.72rem;color:var(--text)}
+.sl-val{font-size:.78rem;font-weight:500;color:var(--cyan)}
+input[type=range]{-webkit-appearance:none;width:100%;height:5px;background:rgba(255,255,255,.06);border-radius:99px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;background:var(--cyan);border-radius:50%;cursor:pointer;box-shadow:0 0 7px rgba(0,212,200,.5)}
+
+.fixed-targets{display:grid;gap:.5rem;margin-top:.3rem}
+.ft-row{display:flex;justify-content:space-between;align-items:center;padding:.55rem .75rem;border-radius:6px;font-size:.75rem}
+.ft-row.b1{background:rgba(59,158,255,.05);border:1px solid rgba(59,158,255,.12)}
+.ft-row.b2{background:rgba(0,224,144,.05);border:1px solid rgba(0,224,144,.12)}
+.ft-row.b3{background:rgba(255,204,68,.05);border:1px solid rgba(255,204,68,.12)}
+.ft-row.b4{background:rgba(180,127,255,.05);border:1px solid rgba(180,127,255,.12)}
+
+.rules-wrap{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:1rem}
+.rules-ttl{font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--cyan);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
+.rules-ttl::before{content:'';display:inline-block;width:14px;height:2px;background:var(--cyan)}
+.rule{display:grid;grid-template-columns:26px 1fr;gap:.6rem;padding:.7rem .85rem;background:rgba(255,255,255,.017);border:1px solid rgba(255,255,255,.04);border-radius:6px;margin-bottom:.5rem;font-size:.75rem;line-height:1.55;transition:border-color .2s}
+.rule:hover{border-color:rgba(59,158,255,.15)}
+.rule strong{color:var(--cyan)}
+.rule .note{display:block;font-size:.63rem;color:var(--muted2);margin-top:.15rem}
+
+/* ──────────────────────────────────────────────
+   TAB 2 — DIÁRIO
+────────────────────────────────────────────── */
+.diary-controls{display:flex;gap:.7rem;align-items:stretch;margin-bottom:1rem;flex-wrap:wrap}
+.dc-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;flex:1;min-width:160px}
+.dc-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2);margin-bottom:.5rem;display:block}
+.dc-row{display:flex;gap:.5rem;align-items:center}
+
+/* botões WIN / LOSS */
+.op-btns{display:flex;gap:.5rem;margin-bottom:1rem}
+.op-btn{flex:1;padding:.85rem;border:1px solid var(--border);border-radius:8px;background:var(--s1);font-family:'Unbounded',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .2s;color:var(--muted2)}
+.op-btn.win-btn:hover,.op-btn.win-btn.sel{background:rgba(0,224,144,.08);border-color:rgba(0,224,144,.35);color:var(--green)}
+.op-btn.loss-btn:hover,.op-btn.loss-btn.sel{background:rgba(255,61,90,.08);border-color:rgba(255,61,90,.35);color:var(--red)}
+
+/* input de valor personalizado */
+.custom-val-wrap{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1rem}
+.cv-ttl{font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2);margin-bottom:.7rem}
+.cv-row{display:flex;gap:.7rem;align-items:center;flex-wrap:wrap}
+.cv-opt{display:flex;align-items:center;gap:.4rem;padding:.55rem .85rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-size:.73rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cv-opt.sel.win-o{background:rgba(0,224,144,.06);border-color:rgba(0,224,144,.25);color:var(--green)}
+.cv-opt.sel.loss-o{background:rgba(255,61,90,.06);border-color:rgba(255,61,90,.25);color:var(--red)}
+.cv-opt input[type=radio]{display:none}
+.cv-custom-input{display:flex;align-items:center;gap:.4rem;flex:1;min-width:150px}
+.cv-custom-input span{font-size:.85rem;color:var(--muted2)}
+.cv-custom-input input[type=number]{background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:.88rem;padding:.45rem .65rem;width:100%;outline:none;transition:border-color .2s}
+.cv-custom-input input[type=number]:focus{border-color:var(--cyan)}
+
+.add-btn{width:100%;padding:.9rem;background:linear-gradient(90deg,rgba(59,158,255,.12),rgba(0,212,200,.12));border:1px solid rgba(59,158,255,.25);border-radius:8px;font-family:'Unbounded',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);cursor:pointer;transition:all .2s;margin-bottom:1rem}
+.add-btn:hover{background:linear-gradient(90deg,rgba(59,158,255,.2),rgba(0,212,200,.2));border-color:rgba(59,158,255,.4)}
+.add-btn:active{transform:scale(.98)}
+
+/* DIÁRIO TABLE */
+.diary-tbl-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1rem}
+.dtbl-head{padding:.9rem 1.2rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.dtbl-head h3{font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.dtbl-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:480px}
+thead tr{background:rgba(255,255,255,.02)}
+th{padding:.5rem 1rem;text-align:left;color:var(--muted2);font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;font-weight:400;border-bottom:1px solid var(--border)}
+td{padding:.6rem 1rem;border-bottom:1px solid rgba(255,255,255,.025);font-size:.74rem;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.012)}
+
+.badge{display:inline-block;padding:.1rem .42rem;border-radius:3px;font-size:.62rem;font-family:'Unbounded',sans-serif;font-weight:600}
+.bw{background:rgba(0,224,144,.1);color:var(--green)}
+.bl{background:rgba(255,61,90,.1);color:var(--red)}
+
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:.2rem .35rem;border-radius:4px;transition:color .15s}
+.del-btn:hover{color:var(--red)}
+
+.edit-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:.2rem .35rem;border-radius:4px;transition:color .15s}
+.edit-btn:hover{color:var(--blue)}
+
+/* inline edit */
+.inline-edit{background:var(--s2);border:1px solid var(--cyan);border-radius:5px;color:var(--text);font-family:'DM Mono',monospace;font-size:.74rem;padding:.3rem .5rem;width:90px;outline:none}
+
+.empty-diary{padding:2.5rem;text-align:center;color:var(--muted2);font-size:.75rem;line-height:2}
+
+/* resumo diário */
+.diary-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1rem}
+@media(max-width:560px){.diary-summary{grid-template-columns:repeat(2,1fr)}}
+
+/* MODAL CONFIRM */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:1.5rem;max-width:340px;width:90%;text-align:center}
+.modal h4{font-family:'Unbounded',sans-serif;font-size:.8rem;font-weight:700;margin-bottom:.6rem;color:var(--red)}
+.modal p{font-size:.76rem;color:var(--muted2);line-height:1.6;margin-bottom:1.1rem}
+.modal-btns{display:flex;gap:.7rem}
+.modal-btns button{flex:1;padding:.7rem;border-radius:7px;font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:var(--s2);color:var(--muted2);transition:all .2s}
+.modal-btns .mbtn-cancel:hover{border-color:var(--muted2);color:var(--text)}
+.modal-btns .mbtn-del{background:rgba(255,61,90,.08);border-color:rgba(255,61,90,.3);color:var(--red)}
+.modal-btns .mbtn-del:hover{background:rgba(255,61,90,.15)}
+
+/* FADE */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.wrap>*{animation:fadeUp .35s ease both}
+.wrap>*:nth-child(1){animation-delay:.04s}
+.wrap>*:nth-child(2){animation-delay:.08s}
+.wrap>*:nth-child(3){animation-delay:.12s}
+.wrap>*:nth-child(4){animation-delay:.16s}
+.wrap>*:nth-child(5){animation-delay:.2s}
+
+/* INSTALL BUTTON */
+#installBtn{display:none;position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#3b9eff,#00d4c8);border:none;border-radius:10px;padding:.7rem 1.6rem;font-family:'Unbounded',sans-serif;font-weight:700;font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;color:#060810;cursor:pointer;z-index:500;box-shadow:0 4px 24px rgba(59,158,255,.45);white-space:nowrap;animation:fadeUp .4s ease}
+#installBtn:active{transform:translateX(-50%) scale(.96)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-badge"><i></i> GAUSS+DNA v2 · Gestão de Risco</div>
+    <h1><span class="c1">Calculadora</span> + <span class="c2">Diário</span></h1>
+    <p>// Banca R$ 170 → Meta R$ 1.000 · ATR×1.5 stop · TP1 1.5R · Final 5R</p>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-bar">
+    <button class="tab-btn t1 active" onclick="showTab(1)">📐 Calculadora</button>
+    <button class="tab-btn t2" onclick="showTab(2)">📒 Diário de Operações</button>
+  </div>
+
+  <!-- PROGRESSO (global) -->
+  <div class="prog">
+    <div class="prog-top">
+      <div class="prog-banca">
+        <label>Banca Atual</label>
+        <div class="prog-banca-row">
+          <span class="sym">R$</span>
+          <input type="number" id="bancaInput" value="170" min="1" oninput="onBancaChange()">
+        </div>
+      </div>
+      <div class="prog-pct-wrap">
+        <div class="prog-pct" id="pctEl">17%</div>
+        <div class="prog-pct-sub">da meta R$ 1.000</div>
+      </div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="barFill" style="width:17%"></div></div>
+    <div class="prog-foot">
+      <span class="now" id="nowLbl">R$ 170,00</span>
+      <span>Meta: R$ 1.000,00</span>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert" id="alertEl">
+    <strong>⛔ STOP DA BANCA</strong>
+    Drawdown máximo atingido. Pause, revise o setup e retome apenas com banca recuperada.
+  </div>
+
+  <!-- MÉTRICAS GLOBAIS -->
+  <div class="mets">
+    <div class="met"><div class="met-l">Risco/Op.</div><div class="met-v cr" id="mR">R$ 5,10</div><div class="met-s" id="mRs">3% · ATR×1.5</div></div>
+    <div class="met"><div class="met-l">TP1 (1.5R)</div><div class="met-v cb" id="mT1">R$ 7,65</div><div class="met-s">30% posição</div></div>
+    <div class="met"><div class="met-l">Final (5R)</div><div class="met-v cv" id="mTF">R$ 25,50</div><div class="met-s">70% posição</div></div>
+    <div class="met"><div class="met-l">Stop Banca</div><div class="met-v cy" id="mSB">R$ 119,00</div><div class="met-s">30% drawdown</div></div>
+  </div>
+
+  <!-- ════════ TAB 1 — CALCULADORA ════════ -->
+  <div class="tab-panel active" id="tab1">
+
+    <div class="calc-grid">
+      <div class="panel">
+        <div class="panel-ttl">Parâmetros</div>
+        <div class="sl-wrap">
+          <div class="sl-top"><span class="sl-lbl">Risco por Op. (%)</span><span class="sl-val" id="rv">3%</span></div>
+          <input type="range" id="rr" min="1" max="10" value="3" step=".5" oninput="sv('rr','rv','%');calcAll()">
+        </div>
+        <div class="sl-wrap">
+          <div class="sl-top"><span class="sl-lbl">ATR Mult. Stop</span><span class="sl-val" id="av">1.5×</span></div>
+          <input type="range" id="ar" min=".5" max="3" value="1.5" step=".1" oninput="sv('ar','av','x');calcAll()">
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-ttl">Alvos do Setup (fixos)</div>
+        <div class="fixed-targets">
+          <div class="ft-row b1"><span>TP1 — parcial 30%</span><span class="cb">1.5 R</span></div>
+          <div class="ft-row b2"><span>Alvo Final — 70%</span><span class="cv">5.0 R</span></div>
+          <div class="ft-row b3"><span>Break Even após TP1</span><span class="cy">✓ Ativo</span></div>
+          <div class="ft-row b4"><span>Score mínimo entrada</span><span class="cp">&gt; 30 pts</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rules-wrap">
+      <div class="rules-ttl">Regras do GAUSS+DNA v2</div>
+      <div id="rulesEl"></div>
+    </div>
+
+  </div>
+
+  <!-- ════════ TAB 2 — DIÁRIO ════════ -->
+  <div class="tab-panel" id="tab2">
+
+    <!-- resumo diário -->
+    <div class="diary-summary">
+      <div class="met"><div class="met-l">Ops hoje</div><div class="met-v cb" id="dOps">0</div><div class="met-s">registradas</div></div>
+      <div class="met"><div class="met-l">Ganho/Perda</div><div class="met-v" id="dGL" style="color:var(--muted2)">R$ 0,00</div><div class="met-s">no diário</div></div>
+      <div class="met"><div class="met-l">Win Rate</div><div class="met-v cp" id="dWR">—</div><div class="met-s">acerto real</div></div>
+      <div class="met"><div class="met-l">Falta p/ Meta</div><div class="met-v cy" id="dFalta">R$ 830,00</div><div class="met-s">R$ 1.000</div></div>
+    </div>
+
+    <!-- TIPO -->
+    <div class="op-btns">
+      <button class="op-btn win-btn" id="btnWin" onclick="setTipo('win')">✓ &nbsp;WIN</button>
+      <button class="op-btn loss-btn" id="btnLoss" onclick="setTipo('loss')">✗ &nbsp;LOSS</button>
+    </div>
+
+    <!-- VALOR PERSONALIZADO -->
+    <div class="custom-val-wrap">
+      <div class="cv-ttl">Valor da operação</div>
+      <div class="cv-row" id="cvRow"></div>
+    </div>
+
+    <button class="add-btn" onclick="addOp()">+ Registrar Operação</button>
+
+    <!-- TABELA DIÁRIO -->
+    <div class="diary-tbl-card">
+      <div class="dtbl-head">
+        <h3>Histórico de Operações</h3>
+        <button onclick="clearSave()" style="font-size:.62rem;color:#ff3d5a;background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace">🗑️ Apagar tudo</button>
+      </div>
+      <div class="dtbl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Tipo</th><th>Valor</th><th>Banca Antes</th><th>Banca Depois</th><th>Risco Prox.</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="diaryBody"></tbody>
+        </table>
+        <div class="empty-diary" id="emptyDiary">
+          Nenhuma operação registrada ainda.<br>
+          Selecione WIN ou LOSS e clique em registrar.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- MODAL CONFIRMAR EXCLUSÃO -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h4>Excluir operação?</h4>
+    <p>Isso irá remover o registro e recalcular toda a banca a partir desse ponto.</p>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="mbtn-del" onclick="confirmDel()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTÃO INSTALAR APP -->
+<button id="installBtn" onclick="installPWA()">📲 Instalar App</button>
+
+<script>
+// ── STATE ──────────────────────────────────────
+const STATE = {
+  banca: 170,
+  riscoPct: 0.03,
+  ops: [],
+  selectedTipo: null,
+  delId: null,
+  editId: null,
+};
+const META = 1000;
+let opCounter = 0;
+
+// ── HELPERS ────────────────────────────────────
+const $=id=>document.getElementById(id);
+const fmt=v=>'R$ '+Math.abs(v).toFixed(2).replace('.',',');
+const fmtS=v=>(v>=0?'+':'-')+'R$ '+Math.abs(v).toFixed(2).replace('.',',');
+
+function sv(rid,vid,suf){
+  const v=parseFloat($(rid).value);
+  const lbl=suf==='x'?v.toFixed(1)+'×':suf==='%'?v.toFixed(1)+'%':v.toFixed(1);
+  $(vid).textContent=lbl;
+}
+
+// ── TABS ────────────────────────────────────────
+function showTab(n){
+  $('tab1').classList.toggle('active',n===1);
+  $('tab2').classList.toggle('active',n===2);
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===n-1));
+}
+
+// ── BANCA INPUT ─────────────────────────────────
+function onBancaChange(){
+  STATE.banca=parseFloat($('bancaInput').value)||170;
+  calcAll();
+  renderDiary();
+}
+
+// ── CALC ALL ────────────────────────────────────
+function calcAll(){
+  const b=STATE.banca;
+  STATE.riscoPct=parseFloat($('rr').value)/100;
+  const risco=b*STATE.riscoPct;
+  const tp1=risco*1.5;
+  const tfin=risco*5;
+  const stopBanca=b*0.70;
+
+  const pct=Math.min(100,Math.round((b/META)*100));
+  $('pctEl').textContent=pct+'%';
+  $('barFill').style.width=pct+'%';
+  $('nowLbl').textContent=fmt(b);
+  $('alertEl').classList.toggle('show',b<30);
+
+  $('mR').textContent=fmt(risco);
+  $('mRs').textContent=(STATE.riscoPct*100).toFixed(1)+'% · ATR×'+parseFloat($('ar').value).toFixed(1);
+  $('mT1').textContent=fmt(tp1);
+  $('mTF').textContent=fmt(tfin);
+  $('mSB').textContent=fmt(stopBanca);
+
+  const stopD=(risco*2).toFixed(2).replace('.',',');
+  const ganhoMed=(tp1*.3+tfin*.7);
+  $('rulesEl').innerHTML=`
+    <div class="rule"><span>🎯</span><div><strong>Risco fixo: ${(STATE.riscoPct*100).toFixed(1)}% por op.</strong> = ${fmt(risco)} na banca atual<span class="note">Stop ATR×${parseFloat($('ar').value).toFixed(1)} no gráfico — nunca mova após entrar</span></div></div>
+    <div class="rule"><span>🥇</span><div><strong>TP1 em 1.5R → sai 30%</strong> = ${fmt(tp1)} de ganho parcial<span class="note">Após TP1 o Break Even ativa — trade vira risco zero</span></div></div>
+    <div class="rule"><span>🏆</span><div><strong>Alvo Final em 5R → sai 70%</strong> = ${fmt(tfin)} · Ganho médio ponderado: ${fmt(ganhoMed)}<span class="note">Em tendência forte (ADX>30) trailing sem limite de alvo</span></div></div>
+    <div class="rule"><span>🛑</span><div><strong>Stop diário: máx 2 losses</strong> = R$ ${stopD} perdidos → encerre o dia<span class="note">Score > 30 obrigatório · Cooldown ativo em ADX baixo</span></div></div>
+    <div class="rule"><span>🔒</span><div><strong>Stop banca: 30% drawdown</strong> = ${fmt(stopBanca)} → pause e revise<span class="note">Faltam ${fmt(META-b)} para a meta de R$ 1.000</span></div></div>
+  `;
+
+  buildCVOptions();
+  updateDiarySummary();
+}
+
+// ── VALOR PERSONALIZADO ─────────────────────────
+function buildCVOptions(){
+  const b=STATE.banca;
+  const riscoPct=STATE.riscoPct;
+  const risco=b*riscoPct;
+  const tp1=risco*1.5;
+  const tfin=risco*5;
+  const ganhoMed=tp1*.3+tfin*.7;
+
+  const t=STATE.selectedTipo;
+  const opts=t==='win'
+    ? [{lbl:'TP1 (1.5R)',v:tp1},{lbl:'Final (5R)',v:tfin},{lbl:'Médio',v:ganhoMed}]
+    : t==='loss'
+    ? [{lbl:'Stop completo',v:-risco},{lbl:'Metade',v:-risco*.5}]
+    : [];
+
+  $('cvRow').innerHTML=opts.map(o=>`
+    <label class="cv-opt ${t?t+'-o':''}" onclick="selectOpt(${o.v.toFixed(2)})">
+      <input type="radio" name="cvopt">
+      ${o.lbl}: <strong>${fmtS(o.v)}</strong>
+    </label>
+  `).join('')+`
+    <div class="cv-custom-input">
+      <span>R$</span>
+      <input type="number" id="customValInput" placeholder="valor livre" step="0.01">
+    </div>
+  `;
+}
+
+function selectOpt(v){
+  const ci=$('customValInput');
+  if(ci) ci.value=Math.abs(v).toFixed(2);
+  document.querySelectorAll('.cv-opt input[type=radio]').forEach((r,i)=>{
+    const vals=document.querySelectorAll('.cv-opt');
+    vals[i].classList.toggle('sel', parseFloat(vals[i].querySelector('strong')?.textContent?.replace('R$','').replace(',','.').replace('+','').replace('-',''))==Math.abs(v));
+  });
+}
+
+// ── TIPO WIN/LOSS ───────────────────────────────
+function setTipo(t){
+  STATE.selectedTipo=t;
+  $('btnWin').classList.toggle('sel',t==='win');
+  $('btnLoss').classList.toggle('sel',t==='loss');
+  buildCVOptions();
+}
+
+// ── ADD OPERAÇÃO ────────────────────────────────
+function addOp(){
+  if(!STATE.selectedTipo){alert('Selecione WIN ou LOSS primeiro.');return;}
+  const ci=$('customValInput');
+  let v=ci?parseFloat(ci.value):NaN;
+  if(isNaN(v)||v<=0){alert('Informe um valor válido.');return;}
+  if(STATE.selectedTipo==='loss') v=-v;
+
+  const bancaAntes=STATE.banca;
+  const bancaDepois=bancaAntes+v;
+
+  opCounter++;
+  STATE.ops.push({id:opCounter,tipo:STATE.selectedTipo,valor:v,bancaAntes,bancaDepois});
+
+  STATE.banca=bancaDepois;
+  $('bancaInput').value=bancaDepois.toFixed(2);
+
+  calcAll();
+  renderDiary();
+
+  saveState();
+  showSaveToast('💾 Operação salva!');
+  STATE.selectedTipo=null;
+  $('btnWin').classList.remove('sel');
+  $('btnLoss').classList.remove('sel');
+  buildCVOptions();
+}
+
+// ── RENDER DIARY ────────────────────────────────
+function renderDiary(){
+  const ops=STATE.ops;
+  const tb=$('diaryBody');
+  const em=$('emptyDiary');
+
+  if(ops.length===0){
+    tb.innerHTML='';
+    em.style.display='block';
+    return;
+  }
+  em.style.display='none';
+
+  tb.innerHTML=ops.map((op,idx)=>{
+    const nextRisco=op.bancaDepois*STATE.riscoPct;
+    const winClass=op.tipo==='win'?'cv':'cr';
+    return `<tr>
+      <td style="color:var(--muted2)">${idx+1}</td>
+      <td><span class="badge ${op.tipo==='win'?'bw':'bl'}">${op.tipo==='win'?'✓ WIN':'✗ LOSS'}</span></td>
+      <td class="${winClass}" id="val_${op.id}">
+        ${fmtS(op.valor)}
+      </td>
+      <td style="color:var(--muted2)">${fmt(op.bancaAntes)}</td>
+      <td class="${winClass}">${fmt(op.bancaDepois)}</td>
+      <td style="color:var(--blue)">${fmt(nextRisco)}</td>
+      <td>
+        <button class="edit-btn" onclick="startEdit(${op.id})" title="Editar valor">✏️</button>
+        <button class="del-btn" onclick="askDel(${op.id})" title="Excluir">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── INLINE EDIT ─────────────────────────────────
+function startEdit(id){
+  const op=STATE.ops.find(o=>o.id===id);
+  if(!op)return;
+  const el=$('val_'+id);
+  if(!el)return;
+  const absV=Math.abs(op.valor).toFixed(2);
+  el.innerHTML=`<input class="inline-edit" id="ie_${id}" type="number" value="${absV}" step="0.01" min="0.01">
+    <button class="edit-btn" onclick="confirmEdit(${id})" title="Salvar" style="color:var(--green)">✓</button>
+    <button class="edit-btn" onclick="renderDiary()" title="Cancelar" style="color:var(--red)">✕</button>`;
+  const inp=$('ie_'+id);
+  if(inp){inp.focus();inp.select();}
+}
+
+function confirmEdit(id){
+  const inp=$('ie_'+id);
+  if(!inp)return;
+  let newV=parseFloat(inp.value);
+  if(isNaN(newV)||newV<=0){alert('Valor inválido.');return;}
+  const op=STATE.ops.find(o=>o.id===id);
+  if(!op)return;
+  if(op.tipo==='loss') newV=-newV;
+  op.valor=newV;
+  recalcChain();
+}
+
+function recalcChain(){
+  let b=STATE.ops[0].bancaAntes;
+  const initialBanca=STATE.ops[0].bancaAntes;
+  b=initialBanca;
+  for(const op of STATE.ops){
+    op.bancaAntes=b;
+    op.bancaDepois=b+op.valor;
+    b=op.bancaDepois;
+  }
+  STATE.banca=b;
+  $('bancaInput').value=b.toFixed(2);
+  saveState();
+  calcAll();
+  renderDiary();
+}
+
+// ── DELETE ───────────────────────────────────────
+function askDel(id){STATE.delId=id;$('modalBg').classList.add('show')}
+function closeModal(){$('modalBg').classList.remove('show');STATE.delId=null}
+function confirmDel(){
+  if(!STATE.delId)return;
+  const idx=STATE.ops.findIndex(o=>o.id===STATE.delId);
+  if(idx<0){closeModal();return;}
+  const bancaAntesDel=STATE.ops[idx].bancaAntes;
+  STATE.ops.splice(idx,1);
+  if(STATE.ops.length===0){
+    STATE.banca=bancaAntesDel;
+    $('bancaInput').value=bancaAntesDel.toFixed(2);
+  } else {
+    let b=STATE.ops[0].bancaAntes;
+    for(let i=idx;i<STATE.ops.length;i++){
+      STATE.ops[i].bancaAntes=b;
+      STATE.ops[i].bancaDepois=b+STATE.ops[i].valor;
+      b=STATE.ops[i].bancaDepois;
+    }
+    STATE.banca=STATE.ops[STATE.ops.length-1].bancaDepois;
+    $('bancaInput').value=STATE.banca.toFixed(2);
+  }
+  closeModal();
+  saveState();
+  calcAll();
+  renderDiary();
+}
+
+// ── DIARY SUMMARY ───────────────────────────────
+function setText(id,val){const el=$(id);if(el)el.textContent=val;}
+function setStyle(id,prop,val){const el=$(id);if(el)el.style[prop]=val;}
+
+function updateDiarySummary(){
+  const ops=STATE.ops;
+  const total=ops.reduce((a,o)=>a+o.valor,0);
+  const wins=ops.filter(o=>o.tipo==='win').length;
+  const wr=ops.length>0?Math.round((wins/ops.length)*100)+'%':'—';
+  setText('dOps',ops.length);
+  setText('dGL',fmtS(total));
+  setStyle('dGL','color',total>=0?'var(--green)':total<0?'var(--red)':'var(--muted2)');
+  setText('dWR',wr);
+  setText('dFalta',fmt(Math.max(0,META-STATE.banca)));
+  setText('histCount',ops.length+' ops');
+}
+
+// ── SAVE / LOAD ─────────────────────────────────
+function saveState(){
+  try{
+    const payload={
+      banca: STATE.banca,
+      ops: STATE.ops,
+      ctr: opCounter,
+      risco: $('rr').value,
+      atr: $('ar').value
+    };
+    localStorage.setItem('gauss_state', JSON.stringify(payload));
+  }catch(e){}
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem('gauss_state');
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(d.banca != null){ STATE.banca=parseFloat(d.banca); $('bancaInput').value=STATE.banca; }
+    if(d.ops)  { STATE.ops=d.ops; }
+    if(d.ctr)  { opCounter=parseInt(d.ctr); }
+    if(d.risco){ $('rr').value=d.risco; sv('rr','rv','%'); }
+    if(d.atr)  { $('ar').value=d.atr;   sv('ar','av','x'); }
+    const n=STATE.ops.length;
+    if(n>0) showSaveToast('✅ '+n+' operação(ões) carregada(s)!');
+  }catch(e){}
+}
+
+function clearSave(){
+  if(!confirm('Apagar todo o histórico salvo e resetar banca para R$ 170?')) return;
+  try{ localStorage.removeItem('gauss_state'); }catch(e){}
+  STATE.banca=170;STATE.ops=[];opCounter=0;
+  $('bancaInput').value=170;
+  calcAll();renderDiary();
+  showSaveToast('🗑️ Histórico apagado');
+}
+
+function showSaveToast(msg){
+  let t=document.getElementById('svToast');
+  if(!t){
+    t=document.createElement('div');t.id='svToast';
+    t.style.cssText='position:fixed;bottom:1.4rem;right:1rem;background:#0d1420;border:1px solid #1e2d47;border-radius:8px;padding:.6rem 1rem;font-size:.7rem;color:#ccd8ee;z-index:999;display:none;font-family:"DM Mono",monospace';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;t.style.display='block';
+  setTimeout(()=>{t.style.display='none';},2500);
+}
+
+// ── PWA ─────────────────────────────────────────
+let _pwaPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  $('installBtn').style.display = 'block';
+});
+
+window.addEventListener('appinstalled', () => {
+  $('installBtn').style.display = 'none';
+  _pwaPrompt = null;
+  showSaveToast('✅ App instalado com sucesso!');
+});
+
+async function installPWA() {
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  const { outcome } = await _pwaPrompt.userChoice;
+  _pwaPrompt = null;
+  $('installBtn').style.display = 'none';
+}
+
+// Gera ícone via canvas para apple-touch-icon (iOS)
+(function genPWAIcon() {
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 192;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#060810';
+    ctx.fillRect(0, 0, 192, 192);
+    ctx.strokeStyle = 'rgba(59,158,255,0.08)';
+    ctx.lineWidth = 1;
+    [48,96,144].forEach(p=>{
+      ctx.beginPath();ctx.moveTo(0,p);ctx.lineTo(192,p);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,192);ctx.stroke();
+    });
+    ctx.fillStyle = '#3b9eff';
+    ctx.font = '900 90px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('G', 88, 90);
+    ctx.fillStyle = '#00d4c8';
+    ctx.font = '700 30px Arial';
+    ctx.fillText('+', 152, 54);
+    ctx.font = '700 16px Arial';
+    ctx.fillText('RISK', 96, 152);
+    const ico = c.toDataURL('image/png');
+    const link = document.getElementById('pwaAppleIcon');
+    if (link) link.href = ico;
+  } catch(e) {}
+})();
+
+// Registra service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('risco-sw.js').catch(() => {});
+}
+
+// ── INIT ─────────────────────────────────────────
+(()=>{
+  sv('rr','rv','%');sv('ar','av','x');
+  loadState();
+  buildCVOptions();
+  calcAll();
+  renderDiary();
+})();
+</script>
+</body>
+</html>

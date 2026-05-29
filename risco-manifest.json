@@ -1,0 +1,20 @@
+{
+  "name": "GAUSS+DNA — Calculadora de Risco",
+  "short_name": "GAUSS Risk",
+  "description": "Calculadora de risco e diário de operações para traders",
+  "start_url": "./risco.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060810",
+  "theme_color": "#060810",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "risco-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
