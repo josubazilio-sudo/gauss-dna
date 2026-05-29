@@ -402,12 +402,21 @@ def analyze(sym, candles):
     # Tendência relaxada: sem exigir e50>e200
     tbull_r=price>e200 and e10>e21 and e21>e50
     tbear_r=price<e200 and e10<e21 and e21<e50
+    # Tendência ainda mais relaxada: só exige EMAs alinhadas (sem EMA200)
+    tbull_loose=e10>e21 and e21>e50
+    tbear_loose=e10<e21 and e21<e50
 
-    # FLEX: condições balanceadas — gera sinais sem sacrificar qualidade
-    vol_ok=vols[-1]>vol_ma          # volume acima da média (sem 1.1x)
-    long_flex =(score>28 and tbull_r and (macd_bull_r or ha_bull) and adx>15 and
+    # Score FLEX: credita tbull_r (+30) mesmo sem trend_bull completo (e50>e200)
+    # Isso resolve o caso onde e10>e21>e50 mas e50<e200 (recuperação de mercado)
+    flex_bonus_bull = 30 if (tbull_r and not trend_bull) else 0
+    flex_bonus_bear = 30 if (tbear_r and not trend_bear) else 0
+    flex_score = score + flex_bonus_bull - flex_bonus_bear
+
+    # FLEX: usa flex_score para não penalizar tendências em recuperação
+    vol_ok=vols[-1]>vol_ma
+    long_flex =(flex_score>25 and tbull_r and (macd_bull_r or ha_bull) and adx>13 and
                 (v_strong or vol_ok) and not_ext_long)
-    short_flex=(score<-28 and tbear_r and (macd_bear_r or ha_bear) and adx>15 and
+    short_flex=(flex_score<-25 and tbear_r and (macd_bear_r or ha_bear) and adx>13 and
                 (v_strong or vol_ok) and not_ext_short)
 
     sig=None; sig_source=""

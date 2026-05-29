@@ -750,10 +750,17 @@ function analyzeSymbol(sym){
     if(h1.dir==='bear'&&(nearE21Short||nearE50Short)&&bounceShort&&rsiV<72&&rsiV>26) mtfSig='SHORT';
   }
 
+  // Score FLEX: credita tBull (+30) mesmo sem e50>e200 (recuperação de mercado)
+  const tBullLoose=e10>e21&&e21>e50;
+  const tBearLoose=e10<e21&&e21<e50;
+  const flexBonusBull=(tBull?0:tBullLoose?30:0);
+  const flexBonusBear=(tBear?0:tBearLoose?30:0);
+  const flexScore=score+flexBonusBull-flexBonusBear;
+
   s.sig=null;
   if(now-lastT>cooldown){
-    const flexLong  = score>28&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
-    const flexShort = score<-28&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
+    const flexLong  = flexScore>25&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
+    const flexShort = flexScore<-25&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
     const finalSig  = mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
     if(finalSig){
       s.sig=finalSig;
