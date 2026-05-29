@@ -1,0 +1,16 @@
+{
+  "name": "tradingview-claude",
+  "version": "1.0.0",
+  "description": "Webhook TradingView + Claude AI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "node-telegram-bot-api": "^0.67.0"
+  }
+}
