@@ -254,8 +254,8 @@ def analyze(sym, candles):
     e200_rising=e200>e200p; e200_falling=e200<e200p
     strong_trend=abs(e21-e50)/atr>0.6
 
-    not_ext_long=(price-e50)/atr<2.5
-    not_ext_short=(e50-price)/atr<2.5
+    not_ext_long=(price-e50)/atr<4.0
+    not_ext_short=(e50-price)/atr<4.0
 
     # ── ANTI-TOPO / ANTI-FUNDO ───────────────────────────────────────────────
     bb_range=max(bb_upper-bb_lower,1e-10)
@@ -466,14 +466,26 @@ def analyze(sym, candles):
     elif quality_score >= 6:  signal_grade = "B"   # setup básico
     else:                     signal_grade = "B"
 
-    # Log de diagnóstico detalhado quando não há sinal
+    # Log de diagnóstico detalhado
     if not sig:
-        blockers=[]
-        if not (macd_bull or ha_bull): blockers.append(f"macd={macd_bull}/ha={ha_bull}")
-        if adx<=12: blockers.append(f"adx={adx:.1f}<12")
-        if not not_ext_long and score>0: blockers.append(f"ext_long={(price-e50)/atr:.1f}ATR")
-        if score<=25 and score>=-25: blockers.append(f"score={score}")
-        log.info(f"  no-sig {sym}: score={score:+d} tBull={trend_bull} kUp={kalman_up} macd={macd_bull} ha={ha_bull} adx={adx:.0f} | {'; '.join(blockers) if blockers else 'score insuf'}")
+        if score < -25:
+            b=[]
+            if not tbear_r: b.append(f"tbear_r=F(p{'<' if price<e200 else '>'}e200,e10{'<' if e10<e21 else '>'}e21{'<' if e21<e50 else '>'}e50)")
+            if not (macd_bear_r or ha_bear): b.append(f"macd_r={macd_bear_r}/ha={ha_bear}")
+            if adx<=13: b.append(f"adx={adx:.1f}<=13")
+            if not (v_strong or vol_ok): b.append("vol=F")
+            if not not_ext_short: b.append(f"ext={(e50-price)/atr:.1f}ATR>4")
+            log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} | {'; '.join(b) if b else 'ok?'}")
+        elif score > 25:
+            b=[]
+            if not tbull_r: b.append("tbull_r=F")
+            if not (macd_bull_r or ha_bull): b.append(f"macd_r={macd_bull_r}/ha={ha_bull}")
+            if adx<=13: b.append(f"adx={adx:.1f}<=13")
+            if not (v_strong or vol_ok): b.append("vol=F")
+            if not not_ext_long: b.append(f"ext={(price-e50)/atr:.1f}ATR>4")
+            log.info(f"  LONG-BLOCKED {sym}: score={score:+d} | {'; '.join(b) if b else 'ok?'}")
+        else:
+            log.info(f"  no-sig {sym}: score={score:+d} insuf")
 
     return {"price":price,"score":score,"atr":atr,"rsi":rsi,"adx":adx,
             "kalman_up":kalman_up,"trend":"BULL" if trend_bull else "BEAR" if trend_bear else "NEUTRO",
