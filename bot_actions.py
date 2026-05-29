@@ -412,14 +412,13 @@ def analyze(sym, candles):
     flex_bonus_bear = 30 if (tbear_r and not trend_bear) else 0
     flex_score = score + flex_bonus_bull - flex_bonus_bear
 
-    # FLEX: extensão via RSI (igual ao PWA) — sem bloqueio ATR
-    vol_ok=vols[-1]>vol_ma*0.7      # volume > 70% da média (não morto)
+    # FLEX: score já penaliza volume fraco (-5pts), sem filtro de volume extra
     flex_not_ext_long  = rsi < 75
     flex_not_ext_short = rsi > 25
     long_flex =(flex_score>25 and tbull_r and (macd_bull_r or ha_bull) and adx>13 and
-                vol_ok and flex_not_ext_long)
+                flex_not_ext_long)
     short_flex=(flex_score<-25 and tbear_r and (macd_bear_r or ha_bear) and adx>13 and
-                vol_ok and flex_not_ext_short)
+                flex_not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -956,7 +955,7 @@ async def main():
             diag_lines=[]
             for test_url,label in [
                 ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=5","MEXC 15m"),
-                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=5","MEXC 1h"),
+                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=60m&limit=5","MEXC 60m"),
             ]:
                 try:
                     async with session.get(test_url,timeout=aiohttp.ClientTimeout(total=8)) as _r:
