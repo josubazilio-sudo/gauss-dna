@@ -39,25 +39,41 @@ def seconds_to_candle_close(tf_min):
     return interval - elapsed
 
 COINS = [
-    # Mega caps — máxima liquidez e tendências confiáveis
+    # ── Mega caps ────────────────────────────────────────────────────────────
     ("BTCUSDT","BTC/USDT","BTC"),("ETHUSDT","ETH/USDT","ETH"),
     ("BNBUSDT","BNB/USDT","BNB"),("XRPUSDT","XRP/USDT","XRP"),
-    # L1 com boa volatilidade e volume
+    ("TRXUSDT","TRX/USDT","TRX"),("ADAUSDT","ADA/USDT","ADA"),
+    # ── L1 — alta volatilidade e tendências limpas ────────────────────────
     ("SOLUSDT","SOL/USDT","SOL"),("AVAXUSDT","AVAX/USDT","AVAX"),
     ("SUIUSDT","SUI/USDT","SUI"),("APTUSDT","APT/USDT","APT"),
     ("NEARUSDT","NEAR/USDT","NEAR"),("TONUSDT","TON/USDT","TON"),
-    # DeFi / infra — trending behavior consistente
+    ("SEIUSDT","SEI/USDT","SEI"),("TIAUSDT","TIA/USDT","TIA"),
+    ("ALGOUSDT","ALGO/USDT","ALGO"),("VETUSDT","VET/USDT","VET"),
+    ("HBARUSDT","HBAR/USDT","HBAR"),("STXUSDT","STX/USDT","STX"),
+    # ── DeFi / infra ─────────────────────────────────────────────────────
     ("LINKUSDT","LINK/USDT","LINK"),("INJUSDT","INJ/USDT","INJ"),
     ("JUPUSDT","JUP/USDT","JUP"),("ARBUSDT","ARB/USDT","ARB"),
     ("OPUSDT","OP/USDT","OP"),("UNIUSDT","UNI/USDT","UNI"),
-    # Meme coins com alta liquidez
+    ("AAVEUSDT","AAVE/USDT","AAVE"),("ENAUSDT","ENA/USDT","ENA"),
+    ("ONDOUSDT","ONDO/USDT","ONDO"),("GRTUSDT","GRT/USDT","GRT"),
+    # ── IA / narrativa ───────────────────────────────────────────────────
+    ("FETUSDT","FET/USDT","FET"),("TAOUSDT","TAO/USDT","TAO"),
+    ("RENDERUSDT","RENDER/USDT","RENDER"),("WLDUSDT","WLD/USDT","WLD"),
+    ("IMXUSDT","IMX/USDT","IMX"),
+    # ── Meme coins com alta liquidez ─────────────────────────────────────
     ("DOGEUSDT","DOGE/USDT","DOGE"),("PEPEUSDT","PEPE/USDT","PEPE"),
     ("WIFUSDT","WIF/USDT","WIF"),("SHIBUSDT","SHIB/USDT","SHIB"),
-    # High beta com volume consistente
-    ("ADAUSDT","ADA/USDT","ADA"),("DOTUSDT","DOT/USDT","DOT"),
-    ("ATOMUSDT","ATOM/USDT","ATOM"),("LTCUSDT","LTC/USDT","LTC"),
-    # IA / narrativa em alta
-    ("FETUSDT","FET/USDT","FET"),
+    ("FLOKIUSDT","FLOKI/USDT","FLOKI"),("BONKUSDT","BONK/USDT","BONK"),
+    # ── High beta estabelecidos ───────────────────────────────────────────
+    ("DOTUSDT","DOT/USDT","DOT"),("ATOMUSDT","ATOM/USDT","ATOM"),
+    ("LTCUSDT","LTC/USDT","LTC"),("FILUSDT","FIL/USDT","FIL"),
+    ("ARUSDT","AR/USDT","AR"),
+    # ── L2 / interop ─────────────────────────────────────────────────────
+    ("STRKUSDT","STRK/USDT","STRK"),("ZETAUSDT","ZETA/USDT","ZETA"),
+    ("PYTHUSDT","PYTH/USDT","PYTH"),
+    # ── Gaming / metaverso ───────────────────────────────────────────────
+    ("AXSUSDT","AXS/USDT","AXS"),("SANDUSDT","SAND/USDT","SAND"),
+    ("MANAUSDT","MANA/USDT","MANA"),
 ]
 
 # ── INDICADORES ──────────────────────────────────────────────────────────────
