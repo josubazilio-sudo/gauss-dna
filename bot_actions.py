@@ -1008,19 +1008,19 @@ async def main():
                 last_scan_cycle=cycle
 
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
-            # Heartbeat + teste Bybit
+            # Heartbeat — testa MEXC com BTC 15m
             try:
-                bybit_ok=False; bybit_msg="?"
+                mexc_ok=False; mexc_msg="?"
                 try:
-                    test_url="https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=15&limit=5"
+                    test_url="https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=5"
                     async with session.get(test_url, timeout=aiohttp.ClientTimeout(total=8)) as _r:
                         _d=await _r.json()
-                        bybit_ok=_d.get("retCode")==0
-                        bybit_msg=f"ok({len(_d.get('result',{}).get('list',[]))})" if bybit_ok else f"err{_d.get('retCode')}"
-                except Exception as _e: bybit_msg=str(_e)[:50]
+                        mexc_ok=isinstance(_d,list) and len(_d)>0
+                        mexc_msg=f"ok({len(_d)} velas)" if mexc_ok else f"err:{str(_d)[:30]}"
+                except Exception as _e: mexc_msg=str(_e)[:50]
                 hb_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
                 async with session.post(hb_url,json={"chat_id":TG_CHATID,
-                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | MEXC: {'✅ ' if bybit_ok else '❌ '}{bybit_msg} | {datetime.now().strftime('%H:%M')}"},
+                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | MEXC: {'✅ ' if mexc_ok else '❌ '}{mexc_msg} | {datetime.now().strftime('%H:%M')}"},
                     timeout=aiohttp.ClientTimeout(total=8)) as _r: await _r.json()
             except: pass
             # MTF e FLEX em try/except separados — falha num não bloqueia o outro
