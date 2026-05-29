@@ -61,6 +61,7 @@ jobs:
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
           TIMEFRAMES: '15m,1h'
           SIGNAL_MODE: 'FLEX'
+          DYNAMIC_SCAN: 'false'
           LOOP_MODE: ${{ github.event.inputs.test_mode == 'true' && 'false' || 'true' }}
           TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
         run: python bot_actions.py

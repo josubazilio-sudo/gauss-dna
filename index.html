@@ -749,8 +749,8 @@ function analyzeSymbol(sym){
 
   s.sig=null;
   if(now-lastT>cooldown){
-    const flexLong  = score>30&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
-    const flexShort = score<-30&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
+    const flexLong  = score>35&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
+    const flexShort = score<-35&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
     const finalSig  = mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
     if(finalSig){
       s.sig=finalSig;
