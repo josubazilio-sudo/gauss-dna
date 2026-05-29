@@ -648,18 +648,25 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
             else: log.warning(f"❌ {data.get('description')}")
     except Exception as e: log.error(f"Erro: {e}")
 
-# ── BINANCE ───────────────────────────────────────────────────────────────────
+# ── BYBIT (substitui Binance — sem bloqueio geográfico em cloud IPs) ──────────
+
+_BYBIT_TF = {"1m":"1","3m":"3","5m":"5","15m":"15","30m":"30",
+             "1h":"60","2h":"120","4h":"240","6h":"360","12h":"720","1d":"D"}
 
 async def fetch_candles(session, sym, tf, limit=250):
-    url=f"https://api.binance.com/api/v3/klines?symbol={sym}&interval={tf}&limit={limit}"
+    interval = _BYBIT_TF.get(tf, tf)
+    url = (f"https://api.bybit.com/v5/market/kline"
+           f"?category=linear&symbol={sym}&interval={interval}&limit={limit}")
     try:
-        async with session.get(url,timeout=aiohttp.ClientTimeout(total=10)) as r:
-            data=await r.json()
-            if not isinstance(data,list):
-                log.warning(f"fetch_candles {sym} [{tf}]: resposta inesperada → {str(data)[:80]}")
-                return None
-            if len(data)<60: return None
-            return [{"o":float(k[1]),"h":float(k[2]),"l":float(k[3]),"c":float(k[4]),"v":float(k[5])} for k in data]
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            data = await r.json()
+        if data.get("retCode") != 0:
+            log.warning(f"fetch_candles {sym} [{tf}]: Bybit err {data.get('retCode')} {data.get('retMsg','')[:60]}")
+            return None
+        rows = data["result"]["list"]   # ordem inversa: mais recente primeiro
+        if len(rows) < 60: return None
+        rows = list(reversed(rows))     # inverte para cronológico
+        return [{"o":float(k[1]),"h":float(k[2]),"l":float(k[3]),"c":float(k[4]),"v":float(k[5])} for k in rows]
     except Exception as e:
         log.warning(f"fetch_candles {sym} [{tf}]: {e}")
         return None
@@ -682,20 +689,21 @@ _EXCLUDE = {"USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH",
 _EXCLUDE_SUB = ("UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S")
 
 async def fetch_top_usdt_pairs(session, min_vol_m=3.0, max_pairs=100):
-    """Busca todos os pares USDT da Binance ordenados por volume 24h (USD)."""
-    url="https://api.binance.com/api/v3/ticker/24hr"
+    """Busca top pares USDT do Bybit ordenados por volume 24h (USD)."""
+    url="https://api.bybit.com/v5/market/tickers?category=linear"
     try:
         async with session.get(url,timeout=aiohttp.ClientTimeout(total=15)) as r:
             data=await r.json()
+        if data.get("retCode")!=0: return []
         pairs=[]
-        for t in data:
+        for t in data["result"]["list"]:
             sym=t["symbol"]
             if not sym.endswith("USDT"): continue
             base=sym[:-4]
             if base in _EXCLUDE: continue
             if any(sub in base for sub in _EXCLUDE_SUB): continue
             try:
-                vol=float(t["quoteVolume"])
+                vol=float(t.get("turnover24h","0"))
                 if vol < min_vol_m*1e6: continue
                 pairs.append((sym,base,vol))
             except: continue
