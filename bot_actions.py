@@ -660,7 +660,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"🏆 Final \\({esc(str(r_final))}R\\): `${esc(d(final))}`\n\n"
         f"📐 *Gestão de risco \\(3% de ${esc(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${esc(f'{risk_amount:.2f}')}`\n"
-        f"  Spot: `{esc(f'{contracts:.4f}')} {esc(short)}` \\(~`${esc(f'{pos_value:.2f}')} USDT`\\)\n"
+        f"  Spot: `{esc(f'{contracts:.4f}')} {esc(short)}` \\(aprox `${esc(f'{pos_value:.2f}')} USDT`\\)\n"
         f"  5x Lev: `${esc(f'{pos_5x:.2f}')} collateral`\n\n"
         f"📊 Score: *{esc(score)}/145* \\| RSI: {esc(f'{rsi:.0f}')} \\| ADX: {esc(f'{adx:.0f}')}\n"
         f"📈 Trend: {esc(trend)} \\| Kalman: {esc(k_str)}\n"
@@ -794,7 +794,8 @@ async def run_cycle(session, last_sig, tf, coins):
     now=time.time(); sent=0
     cooldown=tf_to_minutes(tf)*60
     _cycle_count["n"]+=1
-    candidates=[]  # (abs_score, short, score, rsi, adx, reason)
+    candidates=[]   # (abs_score, short, score, rsi, adx, reason) — sem sinal
+    signals_pending=[]  # (abs_score, args) — sinais qualificados aguardando envio
     for sym,label,short in coins:
         candles=await fetch_candles(session,sym,tf)
         if not candles: await asyncio.sleep(0.4); continue
@@ -805,11 +806,7 @@ async def run_cycle(session, last_sig, tf, coins):
         if result["sig"]:
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
-                last_sig[key]=now; sent+=1
-                await send_telegram(session,sym,label,short,result["sig"],result["price"],
-                                    result["atr"],result["score"],result["rsi"],result["adx"],
-                                    result["trend"],result["kalman_up"],
-                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+                signals_pending.append((abs(result["score"]),sym,label,short,result,grade,key))
             else:
                 mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
@@ -817,6 +814,15 @@ async def run_cycle(session, last_sig, tf, coins):
         else:
             candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.4)
+
+    # Envia só os 3 sinais mais fortes por ciclo
+    signals_pending.sort(reverse=True)
+    for abs_sc,sym,label,short,result,grade,key in signals_pending[:3]:
+        last_sig[key]=now; sent+=1
+        await send_telegram(session,sym,label,short,result["sig"],result["price"],
+                            result["atr"],result["score"],result["rsi"],result["adx"],
+                            result["trend"],result["kalman_up"],
+                            result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
 
     # Relatório Telegram a cada 4 ciclos (~1h) — evita spam
     if sent==0 and _cycle_count["n"]%4==0:
