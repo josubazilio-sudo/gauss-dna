@@ -430,8 +430,8 @@ def analyze(sym, candles):
     # FLEX: score captura tendência (+35/-35), sem exigir alinhamento EMA extra
     flex_not_ext_long  = rsi < 75
     flex_not_ext_short = rsi > 25
-    long_flex =(flex_score>65 and macd_bull_r and adx>15 and flex_not_ext_long)
-    short_flex=(flex_score<-65 and macd_bear_r and adx>15 and flex_not_ext_short)
+    long_flex =(flex_score>55 and macd_bull_r and adx>15 and flex_not_ext_long)
+    short_flex=(flex_score<-55 and macd_bear_r and adx>15 and flex_not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
