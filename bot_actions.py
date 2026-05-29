@@ -951,14 +951,15 @@ async def main():
             tg_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
             diag_lines=[]
             for test_url,label in [
-                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=5","MEXC 15m"),
-                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=60m&limit=5","MEXC 60m"),
+                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=250","MEXC 15m x250"),
+                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=60m&limit=250","MEXC 60m x250"),
             ]:
                 try:
                     async with session.get(test_url,timeout=aiohttp.ClientTimeout(total=8)) as _r:
                         _status=_r.status
-                        _body=await _r.text()
-                        diag_lines.append(f"{label}: HTTP {_status} | {_body[:80]}")
+                        _body=await _r.json()
+                        _count=len(_body) if isinstance(_body,list) else -1
+                        diag_lines.append(f"{label}: HTTP {_status} | {_count} velas")
                 except Exception as _e:
                     diag_lines.append(f"{label}: ERRO {str(_e)[:60]}")
             diag_txt="🔬 Diagnóstico de conectividade:\n"+"\n".join(diag_lines)
