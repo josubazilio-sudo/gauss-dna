@@ -949,20 +949,30 @@ async def main():
                 last_scan_cycle=cycle
 
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
+            # Heartbeat no Telegram a cada ciclo
+            try:
+                hb_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+                async with session.post(hb_url,json={"chat_id":TG_CHATID,
+                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | {datetime.now().strftime('%H:%M')}"},
+                    timeout=aiohttp.ClientTimeout(total=8)) as _r: await _r.json()
+            except: pass
+            # MTF e FLEX em try/except separados — falha num não bloqueia o outro
             try:
                 total=0
-                # MTF premium: 1h→15m pullback (quando ambos os TFs configurados)
                 if "1h" in TIMEFRAMES and "15m" in TIMEFRAMES:
                     sent_mtf = await run_mtf_cycle(session, last_sig, active_coins)
                     total += sent_mtf
-                # FLEX/CROSS/PULLBACK em cada TF (sempre roda como base)
+            except Exception as e:
+                log.error(f"❌ MTF erro ciclo #{cycle}: {e}")
+                total=0
+            try:
                 for tf in TIMEFRAMES:
                     sent=await run_cycle(session,last_sig,tf,active_coins)
                     total+=sent
                 save_state(last_sig)
                 log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total} | TFs: {','.join(TIMEFRAMES)}")
             except Exception as e:
-                log.error(f"❌ Erro no ciclo #{cycle}: {e}")
+                log.error(f"❌ FLEX erro ciclo #{cycle}: {e}")
 
             if not LOOP_MODE:
                 break
