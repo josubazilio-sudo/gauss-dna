@@ -412,12 +412,14 @@ def analyze(sym, candles):
     flex_bonus_bear = 30 if (tbear_r and not trend_bear) else 0
     flex_score = score + flex_bonus_bull - flex_bonus_bear
 
-    # FLEX: usa flex_score para não penalizar tendências em recuperação
+    # FLEX: extensão via RSI (igual ao PWA) — sem bloqueio ATR
     vol_ok=vols[-1]>vol_ma
+    flex_not_ext_long  = rsi < 75   # não sobrecomprado
+    flex_not_ext_short = rsi > 25   # não sobrevendido extremo
     long_flex =(flex_score>25 and tbull_r and (macd_bull_r or ha_bull) and adx>13 and
-                (v_strong or vol_ok) and not_ext_long)
+                (v_strong or vol_ok) and flex_not_ext_long)
     short_flex=(flex_score<-25 and tbear_r and (macd_bear_r or ha_bear) and adx>13 and
-                (v_strong or vol_ok) and not_ext_short)
+                (v_strong or vol_ok) and flex_not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -950,8 +952,8 @@ async def main():
             tg_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
             diag_lines=[]
             for test_url,label in [
-                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=5","MEXC kline"),
-                ("https://api.mexc.com/api/v3/ping","MEXC ping"),
+                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=5","MEXC 15m"),
+                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=5","MEXC 1h"),
             ]:
                 try:
                     async with session.get(test_url,timeout=aiohttp.ClientTimeout(total=8)) as _r:
@@ -1000,7 +1002,7 @@ async def main():
                 except Exception as _e: bybit_msg=str(_e)[:50]
                 hb_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
                 async with session.post(hb_url,json={"chat_id":TG_CHATID,
-                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | Bybit: {'✅ ' if bybit_ok else '❌ '}{bybit_msg} | {datetime.now().strftime('%H:%M')}"},
+                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | MEXC: {'✅ ' if bybit_ok else '❌ '}{bybit_msg} | {datetime.now().strftime('%H:%M')}"},
                     timeout=aiohttp.ClientTimeout(total=8)) as _r: await _r.json()
             except: pass
             # MTF e FLEX em try/except separados — falha num não bloqueia o outro
