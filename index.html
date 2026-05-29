@@ -306,8 +306,8 @@ tr:hover td{background:rgba(255,255,255,.01)}
 <script>
 const $=id=>document.getElementById(id);
 
-// ── PORTFOLIO ──
-const COINS=[
+// ── PORTFOLIO ── (lista padrão usada como fallback)
+let COINS=[
   // Mega caps
   {sym:'BTCUSDT',  label:'BTC/USDT',  short:'BTC'},
   {sym:'ETHUSDT',  label:'ETH/USDT',  short:'ETH'},
@@ -343,10 +343,11 @@ const COINS=[
 
 // ── STATE ──
 const state={};
-COINS.forEach(c=>{
+function initCoinState(c){
   state[c.sym]={price:0,change:0,prevPrice:0,score:0,trend:'—',macd:'—',rsi:0,vol:'—',adx:0,candles:[],atr:0,sig:null,loading:true,
     h1Setup:null,h1Candles:[],h1e21:0,h1e50:0};
-});
+}
+COINS.forEach(initCoinState);
 
 let monitoring=false;
 let wsList=[];
@@ -928,12 +929,38 @@ function loadTGConfig(){
   }catch(e){}
 }
 
-// ── INIT ──
-buildCards();
-renderHist();
-loadTGConfig();
-// Auto-inicia o monitor ao abrir o app
-setTimeout(startMonitor, 800);
+// ── INIT — carrega top 20 moedas do dia dinamicamente ──
+(async()=>{
+  $('portGrid').innerHTML='<div style="padding:2rem;text-align:center;color:var(--muted2);font-size:.8rem">🔍 Carregando top 20 moedas do dia...</div>';
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/ticker/24hr');
+    if(r.ok){
+      const data=await r.json();
+      const excl=new Set(['USDC','BUSD','TUSD','FDUSD','DAI','USDP','PAXG','WBTC','WETH','EUR','GBP','BRL','UST','USDD','FRAX']);
+      const excSub=['UP','DOWN','BULL','BEAR','3L','3S','2L','2S','5L','5S'];
+      const top=data
+        .filter(t=>{
+          if(!t.symbol.endsWith('USDT')) return false;
+          const b=t.symbol.slice(0,-4);
+          if(excl.has(b)) return false;
+          if(excSub.some(s=>b.includes(s))) return false;
+          return parseFloat(t.quoteVolume)>5e6;
+        })
+        .sort((a,b)=>parseFloat(b.quoteVolume)-parseFloat(a.quoteVolume))
+        .slice(0,20)
+        .map(t=>{const b=t.symbol.slice(0,-4);return{sym:t.symbol,label:b+'/USDT',short:b};});
+      if(top.length>=5){
+        COINS=top;
+        COINS.forEach(c=>{if(!state[c.sym])initCoinState(c);});
+        showToast('✅ Top 20 moedas do dia carregadas!');
+      }
+    }
+  }catch(e){console.warn('Usando lista padrão:',e);}
+  buildCards();
+  renderHist();
+  loadTGConfig();
+  setTimeout(startMonitor, 800);
+})();
 
 // ── RECONEXÃO AO VOLTAR PARA A TELA ──
 document.addEventListener('visibilitychange', () => {
