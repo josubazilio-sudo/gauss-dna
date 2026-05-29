@@ -413,13 +413,13 @@ def analyze(sym, candles):
     flex_score = score + flex_bonus_bull - flex_bonus_bear
 
     # FLEX: extensão via RSI (igual ao PWA) — sem bloqueio ATR
-    vol_ok=vols[-1]>vol_ma
-    flex_not_ext_long  = rsi < 75   # não sobrecomprado
-    flex_not_ext_short = rsi > 25   # não sobrevendido extremo
+    vol_ok=vols[-1]>vol_ma*0.7      # volume > 70% da média (não morto)
+    flex_not_ext_long  = rsi < 75
+    flex_not_ext_short = rsi > 25
     long_flex =(flex_score>25 and tbull_r and (macd_bull_r or ha_bull) and adx>13 and
-                (v_strong or vol_ok) and flex_not_ext_long)
+                vol_ok and flex_not_ext_long)
     short_flex=(flex_score<-25 and tbear_r and (macd_bear_r or ha_bear) and adx>13 and
-                (v_strong or vol_ok) and flex_not_ext_short)
+                vol_ok and flex_not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -663,9 +663,12 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     except Exception as e: log.error(f"Erro: {e}")
 
 # ── MEXC (formato igual ao Binance, sem bloqueio de IPs cloud) ───────────────
+# MEXC usa "60m" em vez de "1h" e "4h" em vez de "4H"
+_MEXC_TF={"1h":"60m","2h":"120m","4h":"4h","6h":"6h","8h":"8h","12h":"12h","1d":"1d"}
 
 async def fetch_candles(session, sym, tf, limit=250):
-    url=f"https://api.mexc.com/api/v3/klines?symbol={sym}&interval={tf}&limit={limit}"
+    interval=_MEXC_TF.get(tf,tf)
+    url=f"https://api.mexc.com/api/v3/klines?symbol={sym}&interval={interval}&limit={limit}"
     try:
         async with session.get(url,timeout=aiohttp.ClientTimeout(total=10)) as r:
             data=await r.json()
