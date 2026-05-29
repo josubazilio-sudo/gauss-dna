@@ -700,7 +700,7 @@ function analyzeSymbol(sym){
   const vStrong=vols[n-1]>avgVol;
 
   const adxV=adxCalc(candles.slice(-20));
-  const adxOk=adxV>18;
+  const adxOk=adxV>15;
 
   const lastC=candles[n-1];
   const sp=Math.max(lastC.h-lastC.l,0.0001);
@@ -746,14 +746,14 @@ function analyzeSymbol(sym){
     const nearE50Short = Math.abs(price-e50)<atrV*2.0 && price<e200;
     const bounceLong  = (mBull||haBull)&&lastC.c>lastC.o&&vStrong;
     const bounceShort = (mBear||haBear)&&lastC.c<lastC.o&&vStrong;
-    if(h1.dir==='bull'&&(nearE21Long||nearE50Long)&&bounceLong&&rsiV>35&&rsiV<68) mtfSig='LONG';
-    if(h1.dir==='bear'&&(nearE21Short||nearE50Short)&&bounceShort&&rsiV<65&&rsiV>32) mtfSig='SHORT';
+    if(h1.dir==='bull'&&(nearE21Long||nearE50Long)&&bounceLong&&rsiV>28&&rsiV<74) mtfSig='LONG';
+    if(h1.dir==='bear'&&(nearE21Short||nearE50Short)&&bounceShort&&rsiV<72&&rsiV>26) mtfSig='SHORT';
   }
 
   s.sig=null;
   if(now-lastT>cooldown){
-    const flexLong  = score>35&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
-    const flexShort = score<-35&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
+    const flexLong  = score>28&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
+    const flexShort = score<-28&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
     const finalSig  = mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
     if(finalSig){
       s.sig=finalSig;

@@ -403,11 +403,12 @@ def analyze(sym, candles):
     tbull_r=price>e200 and e10>e21 and e21>e50
     tbear_r=price<e200 and e10<e21 and e21<e50
 
-    # Condições idênticas ao PWA (que sabemos que encontra sinais)
-    long_flex =(score>35 and tbull_r and (macd_bull_r or ha_bull) and adx>18 and
-                v_strong and not_ext_long)
-    short_flex=(score<-35 and tbear_r and (macd_bear_r or ha_bear) and adx>18 and
-                v_strong and not_ext_short)
+    # FLEX: condições balanceadas — gera sinais sem sacrificar qualidade
+    vol_ok=vols[-1]>vol_ma          # volume acima da média (sem 1.1x)
+    long_flex =(score>28 and tbull_r and (macd_bull_r or ha_bull) and adx>15 and
+                (v_strong or vol_ok) and not_ext_long)
+    short_flex=(score<-28 and tbear_r and (macd_bear_r or ha_bear) and adx>15 and
+                (v_strong or vol_ok) and not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -529,9 +530,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_short = swing_high + atr * 0.3
 
     sig = None
-    if h1_bull and in_pullback_long  and bounce_long  and adx > 15 and 35 < rsi < 68:
+    if h1_bull and in_pullback_long  and bounce_long  and adx > 13 and 28 < rsi < 74:
         sig = "LONG"
-    elif h1_bear and in_pullback_short and bounce_short and adx > 15 and 32 < rsi < 65:
+    elif h1_bear and in_pullback_short and bounce_short and adx > 13 and 26 < rsi < 72:
         sig = "SHORT"
 
     if not sig:
