@@ -403,14 +403,11 @@ def analyze(sym, candles):
     tbull_r=price>e200 and e10>e21 and e21>e50
     tbear_r=price<e200 and e10<e21 and e21<e50
 
-    # Estratégia MTF Pullback: só entradas de alta qualidade
-    # RSI: evita sobrecompra/sobrevenda extrema
-    rsi_ok_long  = rsi < 72
-    rsi_ok_short = rsi > 28
-    long_flex =(score>40 and tbull_r and (macd_bull_r or ha_bull) and adx>20 and
-                (vol_avg or obv_bull) and not_ext_long and rsi_ok_long)
-    short_flex=(score<-40 and tbear_r and (macd_bear_r or ha_bear) and adx>20 and
-                (vol_avg or obv_bear) and not_ext_short and rsi_ok_short)
+    # Condições idênticas ao PWA (que sabemos que encontra sinais)
+    long_flex =(score>35 and tbull_r and (macd_bull_r or ha_bull) and adx>18 and
+                v_strong and not_ext_long)
+    short_flex=(score<-35 and tbear_r and (macd_bear_r or ha_bear) and adx>18 and
+                v_strong and not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -756,18 +753,15 @@ async def run_cycle(session, last_sig, tf, coins):
         grade=result.get("signal_grade","B")
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            if grade=="B":
-                log.info(f"  ⏭️  {short} [{tf}] Grade B ignorado (estratégia: só A/S)")
+            key=f"{sym}_{tf}"
+            if now-last_sig.get(key,0)>=cooldown:
+                last_sig[key]=now; sent+=1
+                await send_telegram(session,sym,label,short,result["sig"],result["price"],
+                                    result["atr"],result["score"],result["rsi"],result["adx"],
+                                    result["trend"],result["kalman_up"],
+                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
             else:
-                key=f"{sym}_{tf}"
-                if now-last_sig.get(key,0)>=cooldown:
-                    last_sig[key]=now; sent+=1
-                    await send_telegram(session,sym,label,short,result["sig"],result["price"],
-                                        result["atr"],result["score"],result["rsi"],result["adx"],
-                                        result["trend"],result["kalman_up"],
-                                        result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
-                else:
-                    mins=int((cooldown-(now-last_sig.get(key,0)))/60)
+                mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
         await asyncio.sleep(0.4)
     return sent

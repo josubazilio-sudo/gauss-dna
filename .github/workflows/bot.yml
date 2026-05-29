@@ -2,26 +2,26 @@ name: GAUSS+DNA Bot de Sinais
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # Inicia a cada 6 horas; loop interno cobre cada vela de 15m
-  workflow_dispatch:          # Permite iniciar manualmente a qualquer momento
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
     inputs:
       tg_token:
-        description: 'Token do bot (deixe vazio para usar Secret)'
+        description: 'Token do bot (vazio = usa Secret)'
         required: false
         default: ''
       tg_chatid:
-        description: 'Chat ID do canal (deixe vazio para usar Secret)'
+        description: 'Chat ID do canal (vazio = usa Secret)'
         required: false
         default: ''
       test_mode:
-        description: 'Modo teste: manda sinal forçado (true/false)'
+        description: 'Forçar sinal de teste? (true/false)'
         required: false
         default: 'false'
 
 jobs:
   scanner:
     runs-on: ubuntu-latest
-    timeout-minutes: 359      # Máximo permitido pelo GitHub Actions (~6 horas)
+    timeout-minutes: 359
 
     steps:
       - name: Checkout
@@ -35,7 +35,7 @@ jobs:
       - name: Instalar dependências
         run: pip install aiohttp
 
-      - name: Verificar credenciais Telegram
+      - name: Verificar credenciais
         env:
           TG_TOKEN_INPUT: ${{ github.event.inputs.tg_token }}
           TG_TOKEN_SECRET: ${{ secrets.TG_TOKEN }}
@@ -44,16 +44,13 @@ jobs:
         run: |
           TOKEN="${TG_TOKEN_INPUT:-$TG_TOKEN_SECRET}"
           CHATID="${TG_CHATID_INPUT:-$TG_CHATID_SECRET}"
-          if [ -z "$TOKEN" ]; then
-            echo "❌ TG_TOKEN não configurado! Vá em Settings → Secrets → Actions e adicione TG_TOKEN"
+          if [ -z "$TOKEN" ] || [ -z "$CHATID" ]; then
+            echo "❌ TG_TOKEN ou TG_CHATID não configurado!"
+            echo "   Preencha os campos ao rodar manualmente,"
+            echo "   ou configure em Settings → Secrets → Actions"
             exit 1
           fi
-          if [ -z "$CHATID" ]; then
-            echo "❌ TG_CHATID não configurado! Vá em Settings → Secrets → Actions e adicione TG_CHATID"
-            exit 1
-          fi
-          echo "✅ Token: ${TOKEN:0:8}..."
-          echo "✅ Chat ID: $CHATID"
+          echo "✅ Credenciais OK — Token: ${TOKEN:0:8}... | Chat: $CHATID"
 
       - name: Rodar bot
         env:
@@ -64,4 +61,6 @@ jobs:
           DYNAMIC_SCAN: 'false'
           LOOP_MODE: ${{ github.event.inputs.test_mode == 'true' && 'false' || 'true' }}
           TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
+          CAPITAL: '180'
+          RISK_PCT: '0.03'
         run: python bot_actions.py
