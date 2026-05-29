@@ -788,10 +788,13 @@ async def scan_best_coins(session, tf="15m", top_n=20):
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 
+_cycle_count={"n":0}  # contador global para throttle de relatórios
+
 async def run_cycle(session, last_sig, tf, coins):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     now=time.time(); sent=0
     cooldown=tf_to_minutes(tf)*60
+    _cycle_count["n"]+=1
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
     for sym,label,short in coins:
         candles=await fetch_candles(session,sym,tf)
@@ -816,8 +819,8 @@ async def run_cycle(session, last_sig, tf, coins):
             candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.4)
 
-    # Relatório Telegram a cada ciclo — texto simples sem formatação
-    if sent==0:
+    # Relatório Telegram a cada 4 ciclos (~1h) — evita spam
+    if sent==0 and _cycle_count["n"]%4==0:
         if candidates:
             candidates.sort(reverse=True)
             top3=candidates[:3]
@@ -825,7 +828,7 @@ async def run_cycle(session, last_sig, tf, coins):
             body="\n".join(lines)
         else:
             body="  nenhuma moeda analisada"
-        txt=(f"🔍 Ciclo {tf} sem sinais\n"
+        txt=(f"🔍 Sem sinais ({_cycle_count['n']} ciclos)\n"
              f"Top candidatos:\n{body}\n"
              f"⏰ {datetime.now().strftime('%H:%M')}")
         url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
@@ -1008,21 +1011,6 @@ async def main():
                 last_scan_cycle=cycle
 
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
-            # Heartbeat — testa MEXC com BTC 15m
-            try:
-                mexc_ok=False; mexc_msg="?"
-                try:
-                    test_url="https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=5"
-                    async with session.get(test_url, timeout=aiohttp.ClientTimeout(total=8)) as _r:
-                        _d=await _r.json()
-                        mexc_ok=isinstance(_d,list) and len(_d)>0
-                        mexc_msg=f"ok({len(_d)} velas)" if mexc_ok else f"err:{str(_d)[:30]}"
-                except Exception as _e: mexc_msg=str(_e)[:50]
-                hb_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-                async with session.post(hb_url,json={"chat_id":TG_CHATID,
-                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | MEXC: {'✅ ' if mexc_ok else '❌ '}{mexc_msg} | {datetime.now().strftime('%H:%M')}"},
-                    timeout=aiohttp.ClientTimeout(total=8)) as _r: await _r.json()
-            except: pass
             # MTF (1h→15m) + FLEX 15m — o 1h standalone é redundante e causa rate limit
             total=0
             try:
