@@ -983,10 +983,8 @@ function loadTGConfig(){
   }catch(e){}
 }
 
-// ── INIT — usa lista fixa de 50 moedas ──
+// ── INIT ──
 (async()=>{
-  $('portGrid').innerHTML='<div style="padding:2rem;text-align:center;color:var(--muted2);font-size:.8rem">⏳ Carregando 50 moedas...</div>';
-  try{
   buildCards();
   renderHist();
   loadTGConfig();
