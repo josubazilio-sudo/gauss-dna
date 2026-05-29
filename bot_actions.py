@@ -930,16 +930,16 @@ async def main():
     last_scan_cycle=0
 
     async with aiohttp.ClientSession() as session:
-        # Scanner inicial antes do primeiro ciclo
+        # Scanner inicial rápido (top 20) antes do primeiro ciclo
         if DYNAMIC_SCAN:
-            result=await scan_best_coins(session,scan_tf,SCANNER_TOP)
+            result=await scan_best_coins(session,scan_tf,min(20,SCANNER_TOP))
             if result: active_coins=result
             last_scan_cycle=0
 
         while True:
             cycle+=1
 
-            if LOOP_MODE:
+            if LOOP_MODE and cycle>1:   # ciclo 1 roda imediatamente
                 wait=seconds_to_candle_close(tf_min_base)
                 if wait>3:
                     log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
