@@ -655,9 +655,14 @@ async def fetch_candles(session, sym, tf, limit=250):
     try:
         async with session.get(url,timeout=aiohttp.ClientTimeout(total=10)) as r:
             data=await r.json()
-            if not isinstance(data,list) or len(data)<60: return None
+            if not isinstance(data,list):
+                log.warning(f"fetch_candles {sym} [{tf}]: resposta inesperada → {str(data)[:80]}")
+                return None
+            if len(data)<60: return None
             return [{"o":float(k[1]),"h":float(k[2]),"l":float(k[3]),"c":float(k[4]),"v":float(k[5])} for k in data]
-    except: return None
+    except Exception as e:
+        log.warning(f"fetch_candles {sym} [{tf}]: {e}")
+        return None
 
 def load_state():
     try:
@@ -949,11 +954,17 @@ async def main():
                 last_scan_cycle=cycle
 
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
-            # Heartbeat no Telegram a cada ciclo
+            # Heartbeat + teste Binance
             try:
+                bnc_ok=False; bnc_msg="?"
+                try:
+                    async with session.get("https://api.binance.com/api/v3/ping",
+                                           timeout=aiohttp.ClientTimeout(total=5)) as _r:
+                        bnc_ok=_r.status==200; bnc_msg=str(_r.status)
+                except Exception as _e: bnc_msg=str(_e)[:40]
                 hb_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
                 async with session.post(hb_url,json={"chat_id":TG_CHATID,
-                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | {datetime.now().strftime('%H:%M')}"},
+                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | Binance: {'✅' if bnc_ok else '❌ '+bnc_msg} | {datetime.now().strftime('%H:%M')}"},
                     timeout=aiohttp.ClientTimeout(total=8)) as _r: await _r.json()
             except: pass
             # MTF e FLEX em try/except separados — falha num não bloqueia o outro
