@@ -962,17 +962,19 @@ async def main():
                 last_scan_cycle=cycle
 
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
-            # Heartbeat + teste Binance
+            # Heartbeat + teste Bybit
             try:
-                bnc_ok=False; bnc_msg="?"
+                bybit_ok=False; bybit_msg="?"
                 try:
-                    async with session.get("https://api.binance.com/api/v3/ping",
-                                           timeout=aiohttp.ClientTimeout(total=5)) as _r:
-                        bnc_ok=_r.status==200; bnc_msg=str(_r.status)
-                except Exception as _e: bnc_msg=str(_e)[:40]
+                    test_url="https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=15&limit=5"
+                    async with session.get(test_url, timeout=aiohttp.ClientTimeout(total=8)) as _r:
+                        _d=await _r.json()
+                        bybit_ok=_d.get("retCode")==0
+                        bybit_msg=f"ok({len(_d.get('result',{}).get('list',[]))})" if bybit_ok else f"err{_d.get('retCode')}"
+                except Exception as _e: bybit_msg=str(_e)[:50]
                 hb_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
                 async with session.post(hb_url,json={"chat_id":TG_CHATID,
-                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | Binance: {'✅' if bnc_ok else '❌ '+bnc_msg} | {datetime.now().strftime('%H:%M')}"},
+                    "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | Bybit: {'✅ ' if bybit_ok else '❌ '}{bybit_msg} | {datetime.now().strftime('%H:%M')}"},
                     timeout=aiohttp.ClientTimeout(total=8)) as _r: await _r.json()
             except: pass
             # MTF e FLEX em try/except separados — falha num não bloqueia o outro
