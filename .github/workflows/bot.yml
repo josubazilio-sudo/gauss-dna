@@ -13,6 +13,10 @@ on:
         description: 'Chat ID do canal (deixe vazio para usar Secret)'
         required: false
         default: ''
+      test_mode:
+        description: 'Modo teste: manda sinal forçado (true/false)'
+        required: false
+        default: 'false'
 
 jobs:
   scanner:
@@ -51,11 +55,12 @@ jobs:
           echo "✅ Token: ${TOKEN:0:8}..."
           echo "✅ Chat ID: $CHATID"
 
-      - name: Rodar bot (loop contínuo)
+      - name: Rodar bot
         env:
           TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
           TIMEFRAMES: '15m,1h'
           SIGNAL_MODE: 'FLEX'
-          LOOP_MODE: 'true'
+          LOOP_MODE: ${{ github.event.inputs.test_mode == 'true' && 'false' || 'true' }}
+          TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
         run: python bot_actions.py
