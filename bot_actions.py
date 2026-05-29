@@ -779,24 +779,21 @@ async def run_cycle(session, last_sig, tf, coins):
             candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.4)
 
-    # Relatório Telegram a cada ciclo sem sinais — mostra top 3 candidatos
-    if sent==0 and candidates:
-        candidates.sort(reverse=True)
-        top3=candidates[:3]
-        def _esc(v):
-            s=str(v)
-            for ch in r"_*[]()~`>#+=|{}.!\-": s=s.replace(ch,f"\\{ch}")
-            return s
-        lines=[]
-        for _,sh,sc,rsi,adx,reason in top3:
-            lines.append(f"  {_esc(sh)}: score {_esc(f'{sc:+d}')} \\| RSI {_esc(f'{rsi:.0f}')} \\| ADX {_esc(f'{adx:.0f}')}")
-        body="\n".join(lines)
-        txt=(f"🔍 *Ciclo {_esc(tf)} sem sinais*\n"
+    # Relatório Telegram a cada ciclo — texto simples sem formatação
+    if sent==0:
+        if candidates:
+            candidates.sort(reverse=True)
+            top3=candidates[:3]
+            lines=[f"  {sh}: score {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top3]
+            body="\n".join(lines)
+        else:
+            body="  nenhuma moeda analisada"
+        txt=(f"🔍 Ciclo {tf} sem sinais\n"
              f"Top candidatos:\n{body}\n"
-             f"⏰ {_esc(datetime.now().strftime('%H:%M'))}")
+             f"⏰ {datetime.now().strftime('%H:%M')}")
         url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
         try:
-            async with session.post(url,json={"chat_id":TG_CHATID,"text":txt,"parse_mode":"MarkdownV2"},
+            async with session.post(url,json={"chat_id":TG_CHATID,"text":txt},
                                     timeout=aiohttp.ClientTimeout(total=10)) as r:
                 await r.json()
         except: pass
