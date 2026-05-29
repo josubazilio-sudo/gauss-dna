@@ -394,9 +394,9 @@ def analyze(sym, candles):
                     below_vwap and score<-15 and not any_cross_bear)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
-    # MACD relaxado: acima do sinal + histograma subindo (sem exigir hist>0)
-    macd_bull_r=ml>sl_v and hist>hist_p
-    macd_bear_r=ml<sl_v and hist<hist_p
+    # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
+    macd_bull_r=ml>sl_v
+    macd_bear_r=ml<sl_v
     # Volume: acima da média simples (sem multiplicador 1.1x)
     vol_avg=vols[-1]>vol_ma
     # Tendência relaxada: sem exigir e50>e200
