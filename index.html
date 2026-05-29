@@ -256,8 +256,10 @@ tr:hover td{background:rgba(255,255,255,.01)}
     </div>
     <div class="sa-levels">
       <div class="sa-lv sl"><div class="sa-lv-l">Stop Loss</div><div class="sa-lv-v" id="saStop" style="color:var(--red)">--</div></div>
-      <div class="sa-lv t1"><div class="sa-lv-l">TP1 (1.5R)</div><div class="sa-lv-v" id="saTP1" style="color:var(--blue)">--</div></div>
-      <div class="sa-lv tf"><div class="sa-lv-l">Final (5R)</div><div class="sa-lv-v" id="saFinal" style="color:var(--green)">--</div></div>
+      <div class="sa-lv t1"><div class="sa-lv-l">TP1 (2R)</div><div class="sa-lv-v" id="saTP1" style="color:var(--blue)">--</div></div>
+      <div class="sa-lv t1"><div class="sa-lv-l">TP2 (3.5R)</div><div class="sa-lv-v" id="saTP2" style="color:var(--blue)">--</div></div>
+      <div class="sa-lv tf"><div class="sa-lv-l">Final (6R)</div><div class="sa-lv-v" id="saFinal" style="color:var(--green)">--</div></div>
+      <div class="sa-lv" style="grid-column:1/-1"><div class="sa-lv-l">📐 Risco 3% de $180</div><div class="sa-lv-v" id="saRisk" style="color:var(--yellow);font-size:.7rem">--</div></div>
     </div>
     <div class="sa-btns">
       <button class="sa-btn sa-tg" onclick="sendTG()">📲 Telegram</button>
@@ -777,11 +779,20 @@ function triggerSignal(sym,type,price,atrVal,score){
   const swHigh=recentCandles?Math.max(...recentCandles.map(c=>c.h)):price+a*1.5;
   const stop=isL?Math.min(swLow-a*0.3, price-a*1.5):Math.max(swHigh+a*0.3, price+a*1.5);
   const risk=Math.abs(price-stop);
-  const isMTF=s15&&s15.sigSource==='MTF';
-  const tp1=isL?price+risk*(isMTF?2.0:1.5):price-risk*(isMTF?2.0:1.5);
-  const final=isL?price+risk*(isMTF?6:5):price-risk*(isMTF?6:5);
+  // TPs: Grade A mínimo — 2R / 3.5R / 6R
+  const tp1  =isL?price+risk*2.0  :price-risk*2.0;
+  const tp2  =isL?price+risk*3.5  :price-risk*3.5;
+  const final=isL?price+risk*6.0  :price-risk*6.0;
 
-  activeSignal={sym,coin:coin.label,type,price,stop,tp1,final,score,time:new Date()};
+  // Gestão de risco: $180 capital, 3% por trade
+  const CAPITAL=180, RISK_PCT=0.03;
+  const riskAmt=(CAPITAL*RISK_PCT).toFixed(2);         // $5.40
+  const contracts=(risk>0?(CAPITAL*RISK_PCT/risk):0);
+  const posVal=(contracts*price).toFixed(2);
+  const pos5x=(contracts*price/5).toFixed(2);
+  const riskStr=`$${riskAmt} risco · ${contracts.toFixed(4)} ${coin.short} (~$${posVal}) · 5x: $${pos5x}`;
+
+  activeSignal={sym,coin:coin.label,type,price,stop,tp1,tp2,final,score,riskStr,contracts,posVal,pos5x,time:new Date()};
   sigCount++;
   $('sumSigs').textContent=sigCount;
 
@@ -792,15 +803,19 @@ function triggerSignal(sym,type,price,atrVal,score){
   $('saCoin').textContent=coin.label+' · $'+fmtPrice(price,sym);
   $('saStop').textContent='$'+stop.toFixed(stop<1?5:2);
   $('saTP1').textContent='$'+tp1.toFixed(tp1<1?5:2);
+  $('saTP2').textContent='$'+tp2.toFixed(tp2<1?5:2);
   $('saFinal').textContent='$'+final.toFixed(final<1?5:2);
+  $('saRisk').textContent=riskStr;
 
   const msg=encodeURIComponent(
-    `🚨 GAUSS+DNA v2 — SINAL ${type}\n`+
+    `🚨 GAUSS+DNA — SINAL ${type}\n`+
     `Par: ${coin.label}\n`+
     `Entrada: $${fmtPrice(price,sym)}\n`+
     `Stop: $${stop.toFixed(stop<1?5:2)}\n`+
-    `TP1 (1.5R): $${tp1.toFixed(tp1<1?5:2)}\n`+
-    `Final (5R): $${final.toFixed(final<1?5:2)}\n`+
+    `TP1 (2R): $${tp1.toFixed(tp1<1?5:2)}\n`+
+    `TP2 (3.5R): $${tp2.toFixed(tp2<1?5:2)}\n`+
+    `Final (6R): $${final.toFixed(final<1?5:2)}\n`+
+    `📐 Risco 3% de $180: $${riskAmt}\n`+
     `Score: ${score}/145\n`+
     `⏰ ${new Date().toLocaleTimeString('pt-BR')}`
   );
@@ -842,13 +857,18 @@ async function sendTGMsg(tok,cid,sig){
   const isL=sig.type==='LONG';
   // Escape all MarkdownV2 reserved characters
   function esc(v){return String(v).replace(/[_*[\]()~`>#+=|{}.!\\-]/g,'\\$&');}
+  const d=n=>n.toFixed(n<1?5:2);
   const text=
-    `🚨 *GAUSS\\+DNA v2 — SINAL ${sig.type}*\n\n`+
-    `📌 Par: ${esc(sig.coin)}\n`+
+    `🚨 *GAUSS\\+DNA — SINAL ${sig.type}*\n\n`+
+    `${'🟢'} *${esc(sig.coin)}*\n\n`+
     `💰 Entrada: \`$${esc(fmtPrice(sig.price,sig.sym))}\`\n`+
-    `🛑 Stop Loss: \`$${esc(sig.stop.toFixed(sig.stop<1?5:2))}\`\n`+
-    `🎯 TP1 \\(1\\.5R\\): \`$${esc(sig.tp1.toFixed(sig.tp1<1?5:2))}\`\n`+
-    `🏆 Final \\(5R\\): \`$${esc(sig.final.toFixed(sig.final<1?5:2))}\`\n`+
+    `🛑 Stop: \`$${esc(d(sig.stop))}\`\n`+
+    `🎯 TP1 \\(2R\\): \`$${esc(d(sig.tp1))}\`\n`+
+    `✨ TP2 \\(3\\.5R\\): \`$${esc(d(sig.tp2))}\`\n`+
+    `🏆 Final \\(6R\\): \`$${esc(d(sig.final))}\`\n\n`+
+    `📐 *Risco 3% de \\$180*\n`+
+    `  Risco: \`$${esc(sig.riskStr.split(' ')[0].replace('$',''))}\` \\| Spot: \`$${esc(sig.posVal)} USDT\`\n`+
+    `  5x Lev: \`$${esc(sig.pos5x)} collateral\`\n\n`+
     `📊 Score: *${esc(sig.score)}/145*\n`+
     `⏰ ${esc(sig.time.toLocaleTimeString('pt-BR'))} — ${esc(sig.time.toLocaleDateString('pt-BR'))}`;
   try{
