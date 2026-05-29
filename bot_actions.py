@@ -406,18 +406,17 @@ def analyze(sym, candles):
     tbull_loose=e10>e21 and e21>e50
     tbear_loose=e10<e21 and e21<e50
 
-    # Score FLEX: credita tbull_r (+30) mesmo sem trend_bull completo (e50>e200)
-    # Isso resolve o caso onde e10>e21>e50 mas e50<e200 (recuperação de mercado)
-    flex_bonus_bull = 30 if (tbull_r and not trend_bull) else 0
-    flex_bonus_bear = 30 if (tbear_r and not trend_bear) else 0
+    # Score FLEX: credita alinhamento EMA mesmo sem EMA200
+    flex_bonus_bull = 30 if (tbull_loose and not trend_bull) else 0
+    flex_bonus_bear = 30 if (tbear_loose and not trend_bear) else 0
     flex_score = score + flex_bonus_bull - flex_bonus_bear
 
-    # FLEX: score já penaliza volume fraco (-5pts), sem filtro de volume extra
+    # FLEX: usa tbull_loose (e10>e21>e50 sem exigir price>EMA200)
     flex_not_ext_long  = rsi < 75
     flex_not_ext_short = rsi > 25
-    long_flex =(flex_score>25 and tbull_r and (macd_bull_r or ha_bull) and adx>13 and
+    long_flex =(flex_score>25 and tbull_loose and macd_bull_r and adx>13 and
                 flex_not_ext_long)
-    short_flex=(flex_score<-25 and tbear_r and (macd_bear_r or ha_bear) and adx>13 and
+    short_flex=(flex_score<-25 and tbear_loose and macd_bear_r and adx>13 and
                 flex_not_ext_short)
 
     sig=None; sig_source=""
