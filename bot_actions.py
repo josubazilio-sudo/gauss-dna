@@ -402,14 +402,13 @@ def analyze(sym, candles):
     tbear_r=price<e200 and e10<e21 and e21<e50
 
     # Melhoria: HA como alternativa ao MACD + OBV como alternativa ao volume
-    # + RSI extremo bloqueia entradas em sobrecompra/sobrevenda
-    # Zona RSI moderada: bloqueia apenas extremos claros
-    rsi_zone_long  = 42 < rsi < 72
-    rsi_zone_short = 28 < rsi < 58
+    # Moderado: bloqueia apenas sobrecompra/sobrevenda extrema (sem piso inferior)
+    rsi_ok_long  = rsi < 72   # evita entrar no topo claro
+    rsi_ok_short = rsi > 28   # evita entrar no fundo claro
     long_flex =(score>35 and tbull_r and (macd_bull_r or ha_bull) and adx>18 and
-                (vol_avg or obv_bull) and not_ext_long and rsi_zone_long)
+                (vol_avg or obv_bull) and not_ext_long and rsi_ok_long)
     short_flex=(score<-35 and tbear_r and (macd_bear_r or ha_bear) and adx>18 and
-                (vol_avg or obv_bear) and not_ext_short and rsi_zone_short)
+                (vol_avg or obv_bear) and not_ext_short and rsi_ok_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":

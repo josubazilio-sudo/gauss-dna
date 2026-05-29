@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '0 */6 * * *'   # Inicia a cada 6 horas; loop interno cobre cada vela de 15m
   workflow_dispatch:          # Permite iniciar manualmente a qualquer momento
+    inputs:
+      tg_token:
+        description: 'Token do bot (deixe vazio para usar Secret)'
+        required: false
+        default: ''
+      tg_chatid:
+        description: 'Chat ID do canal (deixe vazio para usar Secret)'
+        required: false
+        default: ''
 
 jobs:
   scanner:
@@ -22,10 +31,30 @@ jobs:
       - name: Instalar dependências
         run: pip install aiohttp
 
+      - name: Verificar credenciais Telegram
+        env:
+          TG_TOKEN_INPUT: ${{ github.event.inputs.tg_token }}
+          TG_TOKEN_SECRET: ${{ secrets.TG_TOKEN }}
+          TG_CHATID_INPUT: ${{ github.event.inputs.tg_chatid }}
+          TG_CHATID_SECRET: ${{ secrets.TG_CHATID }}
+        run: |
+          TOKEN="${TG_TOKEN_INPUT:-$TG_TOKEN_SECRET}"
+          CHATID="${TG_CHATID_INPUT:-$TG_CHATID_SECRET}"
+          if [ -z "$TOKEN" ]; then
+            echo "❌ TG_TOKEN não configurado! Vá em Settings → Secrets → Actions e adicione TG_TOKEN"
+            exit 1
+          fi
+          if [ -z "$CHATID" ]; then
+            echo "❌ TG_CHATID não configurado! Vá em Settings → Secrets → Actions e adicione TG_CHATID"
+            exit 1
+          fi
+          echo "✅ Token: ${TOKEN:0:8}..."
+          echo "✅ Chat ID: $CHATID"
+
       - name: Rodar bot (loop contínuo)
         env:
-          TG_TOKEN: ${{ secrets.TG_TOKEN }}
-          TG_CHATID: ${{ secrets.TG_CHATID }}
+          TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
+          TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
           TIMEFRAMES: '15m,1h'
           SIGNAL_MODE: 'FLEX'
           LOOP_MODE: 'true'
