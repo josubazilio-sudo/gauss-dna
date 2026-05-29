@@ -427,11 +427,13 @@ def analyze(sym, candles):
     flex_bonus_bear = 30 if (tbear_loose and not trend_bear) else 0
     flex_score = score + flex_bonus_bull - flex_bonus_bear
 
-    # FLEX: score captura tendência (+35/-35), sem exigir alinhamento EMA extra
+    # FLEX: alinhado com app HTML — threshold ±30, exige EMAs alinhadas + MACD
     flex_not_ext_long  = rsi < 75
     flex_not_ext_short = rsi > 25
-    long_flex =(flex_score>55 and macd_bull_r and adx>15 and flex_not_ext_long)
-    short_flex=(flex_score<-55 and macd_bear_r and adx>15 and flex_not_ext_short)
+    long_flex =(flex_score>30 and (tbull_loose or trend_bull) and
+                macd_bull_r and adx>15 and flex_not_ext_long)
+    short_flex=(flex_score<-30 and (tbear_loose or trend_bear) and
+                macd_bear_r and adx>15 and flex_not_ext_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
