@@ -18,7 +18,7 @@ SIGNAL_MODE  = os.environ.get("SIGNAL_MODE", "FLEX").upper()
 LOOP_MODE    = os.environ.get("LOOP_MODE", "false").lower() == "true"
 TEST_MODE    = os.environ.get("TEST_MODE", "false").lower() == "true"
 DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
-SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "20"))   # moedas selecionadas
+SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top 50 por volume
 SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
 STATE_FILE   = Path("last_signals.json")
 CAPITAL      = float(os.environ.get("CAPITAL", "180"))   # capital total em USD

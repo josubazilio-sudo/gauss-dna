@@ -967,11 +967,39 @@ keepAlive();
 
 <script>
 // ── RASTREADOR DE MERCADO ─────────────────────────────────────────────────────
+// Lista de reserva caso a API de ticker falhe
 const SCAN_POOL_EXTRA=[
   'TRXUSDT','MATICUSDT','RENDERUSDT','AAVEUSDT','WLDUSDT','TIAUSDT','SEIUSDT',
   'STRKUSDT','BONKUSDT','FLOKIUSDT','PENDLEUSDT','GALAUSDT','SANDUSDT','ALGOUSDT',
   'ICPUSDT','FILUSDT','RUNEUSDT','ENAUSDT','TAOUSDT','HBARUSDT','VETUSDT'
 ];
+
+const _EXCLUDE_STABLE=new Set(['USDC','BUSD','TUSD','FDUSD','DAI','USDP','PAXG','WBTC','WETH','EUR','GBP','BRL','UST','USDD','FRAX']);
+const _EXCLUDE_SUB=['UP','DOWN','BULL','BEAR','3L','3S','2L','2S','5L','5S'];
+
+async function fetchTop50Binance(){
+  // Busca top 50 pares USDT por volume 24h diretamente da Binance
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/ticker/24hr');
+    if(!r.ok) throw new Error('ticker falhou');
+    const data=await r.json();
+    const pairs=data
+      .filter(t=>{
+        if(!t.symbol.endsWith('USDT')) return false;
+        const base=t.symbol.slice(0,-4);
+        if(_EXCLUDE_STABLE.has(base)) return false;
+        if(_EXCLUDE_SUB.some(s=>base.includes(s))) return false;
+        return parseFloat(t.quoteVolume)>3e6; // mínimo $3M volume
+      })
+      .sort((a,b)=>parseFloat(b.quoteVolume)-parseFloat(a.quoteVolume))
+      .slice(0,50)
+      .map(t=>t.symbol);
+    return pairs;
+  }catch(e){
+    console.warn('fetchTop50Binance falhou, usando lista fixa:',e.message);
+    return null;
+  }
+}
 let scanRunning=false;
 
 function toggleScanner(){
@@ -1046,8 +1074,18 @@ async function startScan(){
   list.innerHTML='<div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">⏳ Iniciando varredura...</div>';
 
   try{
+    if(status) status.textContent='🔍 Buscando top 50 por volume na Binance...';
+    const top50=await fetchTop50Binance();
     const coinSyms=COINS.map(c=>c.sym);
-    const allSyms=[...coinSyms,...SCAN_POOL_EXTRA.filter(s=>!coinSyms.includes(s))];
+    let allSyms;
+    if(top50 && top50.length>=10){
+      // Usa top 50 dinâmico + garante que as moedas fixas também estão
+      const extra=coinSyms.filter(s=>!top50.includes(s));
+      allSyms=[...top50,...extra];
+    } else {
+      // Fallback para lista fixa + SCAN_POOL_EXTRA
+      allSyms=[...coinSyms,...SCAN_POOL_EXTRA.filter(s=>!coinSyms.includes(s))];
+    }
     let partial=[];
     let fetchFailed=0;
 
