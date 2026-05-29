@@ -311,36 +311,63 @@ const $=id=>document.getElementById(id);
 // ── PORTFOLIO ── (lista padrão usada como fallback)
 let COINS=[
   // Mega caps
-  {sym:'BTCUSDT',  label:'BTC/USDT',  short:'BTC'},
-  {sym:'ETHUSDT',  label:'ETH/USDT',  short:'ETH'},
-  {sym:'BNBUSDT',  label:'BNB/USDT',  short:'BNB'},
-  {sym:'XRPUSDT',  label:'XRP/USDT',  short:'XRP'},
-  // L1
-  {sym:'SOLUSDT',  label:'SOL/USDT',  short:'SOL'},
-  {sym:'AVAXUSDT', label:'AVAX/USDT', short:'AVAX'},
-  {sym:'SUIUSDT',  label:'SUI/USDT',  short:'SUI'},
-  {sym:'APTUSDT',  label:'APT/USDT',  short:'APT'},
-  {sym:'NEARUSDT', label:'NEAR/USDT', short:'NEAR'},
-  {sym:'TONUSDT',  label:'TON/USDT',  short:'TON'},
+  {sym:'BTCUSDT',     label:'BTC/USDT',     short:'BTC'},
+  {sym:'ETHUSDT',     label:'ETH/USDT',     short:'ETH'},
+  {sym:'BNBUSDT',     label:'BNB/USDT',     short:'BNB'},
+  {sym:'XRPUSDT',     label:'XRP/USDT',     short:'XRP'},
+  {sym:'TRXUSDT',     label:'TRX/USDT',     short:'TRX'},
+  {sym:'ADAUSDT',     label:'ADA/USDT',     short:'ADA'},
+  // L1 — alta volatilidade e tendências limpas
+  {sym:'SOLUSDT',     label:'SOL/USDT',     short:'SOL'},
+  {sym:'AVAXUSDT',    label:'AVAX/USDT',    short:'AVAX'},
+  {sym:'SUIUSDT',     label:'SUI/USDT',     short:'SUI'},
+  {sym:'APTUSDT',     label:'APT/USDT',     short:'APT'},
+  {sym:'NEARUSDT',    label:'NEAR/USDT',    short:'NEAR'},
+  {sym:'TONUSDT',     label:'TON/USDT',     short:'TON'},
+  {sym:'SEIUSDT',     label:'SEI/USDT',     short:'SEI'},
+  {sym:'TIAUSDT',     label:'TIA/USDT',     short:'TIA'},
+  {sym:'ALGOUSDT',    label:'ALGO/USDT',    short:'ALGO'},
+  {sym:'VETUSDT',     label:'VET/USDT',     short:'VET'},
+  {sym:'HBARUSDT',    label:'HBAR/USDT',    short:'HBAR'},
+  {sym:'STXUSDT',     label:'STX/USDT',     short:'STX'},
   // DeFi / infra
-  {sym:'LINKUSDT', label:'LINK/USDT', short:'LINK'},
-  {sym:'INJUSDT',  label:'INJ/USDT',  short:'INJ'},
-  {sym:'JUPUSDT',  label:'JUP/USDT',  short:'JUP'},
-  {sym:'ARBUSDT',  label:'ARB/USDT',  short:'ARB'},
-  {sym:'OPUSDT',   label:'OP/USDT',   short:'OP'},
-  {sym:'UNIUSDT',  label:'UNI/USDT',  short:'UNI'},
-  // Meme
-  {sym:'DOGEUSDT', label:'DOGE/USDT', short:'DOGE'},
-  {sym:'PEPEUSDT', label:'PEPE/USDT', short:'PEPE'},
-  {sym:'WIFUSDT',  label:'WIF/USDT',  short:'WIF'},
-  {sym:'SHIBUSDT', label:'SHIB/USDT', short:'SHIB'},
-  // Estabelecidas
-  {sym:'ADAUSDT',  label:'ADA/USDT',  short:'ADA'},
-  {sym:'DOTUSDT',  label:'DOT/USDT',  short:'DOT'},
-  {sym:'ATOMUSDT', label:'ATOM/USDT', short:'ATOM'},
-  {sym:'LTCUSDT',  label:'LTC/USDT',  short:'LTC'},
-  // IA
-  {sym:'FETUSDT',  label:'FET/USDT',  short:'FET'},
+  {sym:'LINKUSDT',    label:'LINK/USDT',    short:'LINK'},
+  {sym:'INJUSDT',     label:'INJ/USDT',     short:'INJ'},
+  {sym:'JUPUSDT',     label:'JUP/USDT',     short:'JUP'},
+  {sym:'ARBUSDT',     label:'ARB/USDT',     short:'ARB'},
+  {sym:'OPUSDT',      label:'OP/USDT',      short:'OP'},
+  {sym:'UNIUSDT',     label:'UNI/USDT',     short:'UNI'},
+  {sym:'AAVEUSDT',    label:'AAVE/USDT',    short:'AAVE'},
+  {sym:'ENAUSDT',     label:'ENA/USDT',     short:'ENA'},
+  {sym:'ONDOUSDT',    label:'ONDO/USDT',    short:'ONDO'},
+  {sym:'GRTUSDT',     label:'GRT/USDT',     short:'GRT'},
+  // IA / narrativa
+  {sym:'FETUSDT',     label:'FET/USDT',     short:'FET'},
+  {sym:'TAOUSDT',     label:'TAO/USDT',     short:'TAO'},
+  {sym:'RENDERUSDT',  label:'RENDER/USDT',  short:'RENDER'},
+  {sym:'WLDUSDT',     label:'WLD/USDT',     short:'WLD'},
+  {sym:'IMXUSDT',     label:'IMX/USDT',     short:'IMX'},
+  // Meme coins com alta liquidez
+  {sym:'DOGEUSDT',    label:'DOGE/USDT',    short:'DOGE'},
+  {sym:'PEPEUSDT',    label:'PEPE/USDT',    short:'PEPE'},
+  {sym:'WIFUSDT',     label:'WIF/USDT',     short:'WIF'},
+  {sym:'SHIBUSDT',    label:'SHIB/USDT',    short:'SHIB'},
+  {sym:'FLOKIUSDT',   label:'FLOKI/USDT',   short:'FLOKI'},
+  {sym:'BONKUSDT',    label:'BONK/USDT',    short:'BONK'},
+  // High beta estabelecidos
+  {sym:'DOTUSDT',     label:'DOT/USDT',     short:'DOT'},
+  {sym:'ATOMUSDT',    label:'ATOM/USDT',    short:'ATOM'},
+  {sym:'LTCUSDT',     label:'LTC/USDT',     short:'LTC'},
+  {sym:'FILUSDT',     label:'FIL/USDT',     short:'FIL'},
+  {sym:'ARUSDT',      label:'AR/USDT',      short:'AR'},
+  // L2 / interop
+  {sym:'STRKUSDT',    label:'STRK/USDT',    short:'STRK'},
+  {sym:'ZETAUSDT',    label:'ZETA/USDT',    short:'ZETA'},
+  {sym:'PYTHUSDT',    label:'PYTH/USDT',    short:'PYTH'},
+  // Gaming / metaverso
+  {sym:'AXSUSDT',     label:'AXS/USDT',     short:'AXS'},
+  {sym:'SANDUSDT',    label:'SAND/USDT',    short:'SAND'},
+  {sym:'MANAUSDT',    label:'MANA/USDT',    short:'MANA'},
 ];
 
 // ── STATE ──
@@ -732,7 +759,7 @@ function analyzeSymbol(sym){
 
   // SIGNAL
   const now=Date.now();
-  const cooldown=120000;
+  const cooldown=900000;
   const lastT=lastSigTime[sym]||0;
 
   // MTF check: 1h setup + 15m pullback entry
@@ -759,8 +786,8 @@ function analyzeSymbol(sym){
 
   s.sig=null;
   if(now-lastT>cooldown){
-    const flexLong  = flexScore>25&&tBull&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
-    const flexShort = flexScore<-25&&tBear&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
+    const flexLong  = flexScore>25&&(tBull||tBullLoose)&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong;
+    const flexShort = flexScore<-25&&(tBear||tBearLoose)&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort;
     const finalSig  = mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
     if(finalSig){
       s.sig=finalSig;
