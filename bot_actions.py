@@ -1023,21 +1023,19 @@ async def main():
                     "text":f"⚙️ Ciclo #{cycle} | {len(active_coins)} moedas | MEXC: {'✅ ' if mexc_ok else '❌ '}{mexc_msg} | {datetime.now().strftime('%H:%M')}"},
                     timeout=aiohttp.ClientTimeout(total=8)) as _r: await _r.json()
             except: pass
-            # MTF e FLEX em try/except separados — falha num não bloqueia o outro
+            # MTF (1h→15m) + FLEX 15m — o 1h standalone é redundante e causa rate limit
+            total=0
             try:
-                total=0
-                if "1h" in TIMEFRAMES and "15m" in TIMEFRAMES:
-                    sent_mtf = await run_mtf_cycle(session, last_sig, active_coins)
-                    total += sent_mtf
+                sent_mtf = await run_mtf_cycle(session, last_sig, active_coins)
+                total += sent_mtf
             except Exception as e:
                 log.error(f"❌ MTF erro ciclo #{cycle}: {e}")
-                total=0
             try:
-                for tf in TIMEFRAMES:
-                    sent=await run_cycle(session,last_sig,tf,active_coins)
-                    total+=sent
+                # Só 15m standalone — 1h já é coberto pelo MTF
+                sent=await run_cycle(session, last_sig, "15m", active_coins)
+                total+=sent
                 save_state(last_sig)
-                log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total} | TFs: {','.join(TIMEFRAMES)}")
+                log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total}")
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{cycle}: {e}")
 
