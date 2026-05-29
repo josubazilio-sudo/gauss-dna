@@ -489,16 +489,14 @@ def analyze(sym, candles):
             if not tbear_r: b.append(f"tbear_r=F(p{'<' if price<e200 else '>'}e200,e10{'<' if e10<e21 else '>'}e21{'<' if e21<e50 else '>'}e50)")
             if not (macd_bear_r or ha_bear): b.append(f"macd_r={macd_bear_r}/ha={ha_bear}")
             if adx<=13: b.append(f"adx={adx:.1f}<=13")
-            if not (v_strong or vol_ok): b.append("vol=F")
-            if not not_ext_short: b.append(f"ext={(e50-price)/atr:.1f}ATR>4")
+            if not (v_strong or vol_avg): b.append("vol=F")
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} | {'; '.join(b) if b else 'ok?'}")
         elif score > 25:
             b=[]
             if not tbull_r: b.append("tbull_r=F")
             if not (macd_bull_r or ha_bull): b.append(f"macd_r={macd_bull_r}/ha={ha_bull}")
             if adx<=13: b.append(f"adx={adx:.1f}<=13")
-            if not (v_strong or vol_ok): b.append("vol=F")
-            if not not_ext_long: b.append(f"ext={(price-e50)/atr:.1f}ATR>4")
+            if not (v_strong or vol_avg): b.append("vol=F")
             log.info(f"  LONG-BLOCKED {sym}: score={score:+d} | {'; '.join(b) if b else 'ok?'}")
         else:
             log.info(f"  no-sig {sym}: score={score:+d} insuf")
