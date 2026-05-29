@@ -754,7 +754,8 @@ async def scan_best_coins(session, tf="15m", top_n=20):
 async def run_cycle(session, last_sig, tf, coins):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     now=time.time(); sent=0
-    cooldown=tf_to_minutes(tf)*60  # cooldown = duração de 1 vela neste TF
+    cooldown=tf_to_minutes(tf)*60
+    candidates=[]  # (abs_score, short, score, rsi, adx, reason)
     for sym,label,short in coins:
         candles=await fetch_candles(session,sym,tf)
         if not candles: await asyncio.sleep(0.4); continue
@@ -773,7 +774,32 @@ async def run_cycle(session, last_sig, tf, coins):
             else:
                 mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
+                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"cooldown"))
+        else:
+            candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.4)
+
+    # Relatório Telegram a cada ciclo sem sinais — mostra top 3 candidatos
+    if sent==0 and candidates:
+        candidates.sort(reverse=True)
+        top3=candidates[:3]
+        def _esc(v):
+            s=str(v)
+            for ch in r"_*[]()~`>#+=|{}.!\-": s=s.replace(ch,f"\\{ch}")
+            return s
+        lines=[]
+        for _,sh,sc,rsi,adx,reason in top3:
+            lines.append(f"  {_esc(sh)}: score {_esc(f'{sc:+d}')} \\| RSI {_esc(f'{rsi:.0f}')} \\| ADX {_esc(f'{adx:.0f}')}")
+        body="\n".join(lines)
+        txt=(f"🔍 *Ciclo {_esc(tf)} sem sinais*\n"
+             f"Top candidatos:\n{body}\n"
+             f"⏰ {_esc(datetime.now().strftime('%H:%M'))}")
+        url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+        try:
+            async with session.post(url,json={"chat_id":TG_CHATID,"text":txt,"parse_mode":"MarkdownV2"},
+                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
+                await r.json()
+        except: pass
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
