@@ -430,9 +430,9 @@ def analyze(sym, candles):
     # FLEX: alinhado com app HTML — threshold ±30, exige EMAs alinhadas + MACD
     flex_not_ext_long  = rsi < 75
     flex_not_ext_short = rsi > 25
-    long_flex =(flex_score>30 and (tbull_loose or trend_bull) and
+    long_flex =(flex_score>50 and (tbull_loose or trend_bull) and
                 (macd_bull_r or ha_bull) and adx>15 and flex_not_ext_long)
-    short_flex=(flex_score<-30 and (tbear_loose or trend_bear) and
+    short_flex=(flex_score<-50 and (tbear_loose or trend_bear) and
                 (macd_bear_r or ha_bear) and adx>15 and flex_not_ext_short)
 
     sig=None; sig_source=""
@@ -640,7 +640,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     def d(v): return f"{v:.6f}" if v<0.01 else f"{v:.4f}" if v<1 else f"{v:.2f}"
     def esc(v):
         s=str(v)
-        for ch in r"_*[]()~`>#+=|{}.!\-": s=s.replace(ch,f"\\{ch}")
+        s=s.replace('\\','\\\\')  # backslash PRIMEIRO — evita double-escape
+        for ch in r"_*[]()~`>#+=|{}.!-": s=s.replace(ch,f"\\{ch}")
         return s
 
     now=datetime.now().strftime("%H:%M — %d/%m/%Y")
