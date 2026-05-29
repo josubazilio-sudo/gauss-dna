@@ -21,6 +21,8 @@ DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
 SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "20"))   # moedas selecionadas
 SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
 STATE_FILE   = Path("last_signals.json")
+CAPITAL      = float(os.environ.get("CAPITAL", "180"))   # capital total em USD
+RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%)
 
 def tf_to_minutes(tf):
     """Converte '15m', '1h', '4h' em minutos."""
@@ -401,13 +403,13 @@ def analyze(sym, candles):
     tbull_r=price>e200 and e10>e21 and e21>e50
     tbear_r=price<e200 and e10<e21 and e21<e50
 
-    # Melhoria: HA como alternativa ao MACD + OBV como alternativa ao volume
-    # Moderado: bloqueia apenas sobrecompra/sobrevenda extrema (sem piso inferior)
-    rsi_ok_long  = rsi < 72   # evita entrar no topo claro
-    rsi_ok_short = rsi > 28   # evita entrar no fundo claro
-    long_flex =(score>35 and tbull_r and (macd_bull_r or ha_bull) and adx>18 and
+    # Estratégia MTF Pullback: só entradas de alta qualidade
+    # RSI: evita sobrecompra/sobrevenda extrema
+    rsi_ok_long  = rsi < 72
+    rsi_ok_short = rsi > 28
+    long_flex =(score>40 and tbull_r and (macd_bull_r or ha_bull) and adx>20 and
                 (vol_avg or obv_bull) and not_ext_long and rsi_ok_long)
-    short_flex=(score<-35 and tbear_r and (macd_bear_r or ha_bear) and adx>18 and
+    short_flex=(score<-40 and tbear_r and (macd_bear_r or ha_bear) and adx>20 and
                 (vol_avg or obv_bear) and not_ext_short and rsi_ok_short)
 
     sig=None; sig_source=""
@@ -565,25 +567,30 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         stop=min(swing_high+atr*0.1, price+atr*1.5)
     risk=abs(price-stop)
 
-    # TP dinâmico por grade: moderado — equilibrio entre segurança e lucro
+    # TP dinâmico por grade — mínimo 2R no TP1 (protege capital)
     if signal_grade=="S":
-        r1,r2,r_final=2.5,4.0,7.0
+        r1,r2,r_final=2.5,4.5,8.0   # setup perfeito — deixa correr
     elif signal_grade=="A":
-        r1,r2,r_final=1.8,3.0,5.0
+        r1,r2,r_final=2.0,3.5,6.0   # setup sólido
     else:
-        r1,r2,r_final=1.5,2.0,3.5
+        r1,r2,r_final=2.0,3.0,5.0   # grade B com R/R mínimo 2:1
 
     tp1  =price+risk*r1     if is_long else price-risk*r1
     tp2  =price+risk*r2     if is_long else price-risk*r2
     final=price+risk*r_final if is_long else price-risk*r_final
 
-    # Risk sugerido por grade
+    # Cálculo de posição baseado em capital e risco 3%
+    risk_amount = CAPITAL * RISK_PCT          # ex: $5.40
+    contracts   = risk_amount / risk if risk > 0 else 0  # unidades da moeda
+    pos_value   = contracts * price           # valor em USD (spot)
+    pos_5x      = pos_value / 5               # collateral com 5x alavancagem
+
     grade_info={
-        "S": ("🏆 GRADE S — Setup perfeito","5\\-10% do capital"),
-        "A": ("⭐ GRADE A — Setup sólido",  "3\\-5% do capital"),
-        "B": ("📊 GRADE B — Setup básico",  "1\\-3% do capital"),
+        "S": ("🏆 GRADE S — Setup perfeito",),
+        "A": ("⭐ GRADE A — Setup sólido",),
+        "B": ("📊 GRADE B — Setup básico",),
     }
-    grade_label,risk_sug=grade_info[signal_grade]
+    grade_label=grade_info[signal_grade][0]
 
     if sig_source.startswith("MTF"):
         mode_tag="📡 MTF PULLBACK 1H→15M"; cross_info=""
@@ -611,13 +618,16 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
         f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| ⏱ {esc(tf)}\n"
         f"{cross_line}"
-        f"{esc(grade_label)}\n"
-        f"💵 Risco sugerido: *{risk_sug}*\n\n"
+        f"{esc(grade_label)}\n\n"
         f"💰 Entrada: `${esc(fmt_price(price))}`\n"
         f"🛑 Stop: `${esc(d(stop))}`\n"
         f"🎯 TP1 \\({esc(str(r1))}R\\): `${esc(d(tp1))}`\n"
         f"✨ TP2 \\({esc(str(r2))}R\\): `${esc(d(tp2))}`\n"
         f"🏆 Final \\({esc(str(r_final))}R\\): `${esc(d(final))}`\n\n"
+        f"📐 *Gestão de risco \\(3% de ${esc(f'{CAPITAL:.0f}')}\\)*\n"
+        f"  Risco: `${esc(f'{risk_amount:.2f}')}`\n"
+        f"  Spot: `{esc(f'{contracts:.4f}')} {esc(short)}` \\(~`${esc(f'{pos_value:.2f}')} USDT`\\)\n"
+        f"  5x Lev: `${esc(f'{pos_5x:.2f}')} collateral`\n\n"
         f"📊 Score: *{esc(score)}/145* \\| RSI: {esc(f'{rsi:.0f}')} \\| ADX: {esc(f'{adx:.0f}')}\n"
         f"📈 Trend: {esc(trend)} \\| Kalman: {esc(k_str)}\n"
         f"⏰ {esc(now)}"
@@ -746,15 +756,18 @@ async def run_cycle(session, last_sig, tf, coins):
         grade=result.get("signal_grade","B")
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            key=f"{sym}_{tf}"  # chave única por moeda + timeframe
-            if now-last_sig.get(key,0)>=cooldown:
-                last_sig[key]=now; sent+=1
-                await send_telegram(session,sym,label,short,result["sig"],result["price"],
-                                    result["atr"],result["score"],result["rsi"],result["adx"],
-                                    result["trend"],result["kalman_up"],
-                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+            if grade=="B":
+                log.info(f"  ⏭️  {short} [{tf}] Grade B ignorado (estratégia: só A/S)")
             else:
-                mins=int((cooldown-(now-last_sig.get(key,0)))/60)
+                key=f"{sym}_{tf}"
+                if now-last_sig.get(key,0)>=cooldown:
+                    last_sig[key]=now; sent+=1
+                    await send_telegram(session,sym,label,short,result["sig"],result["price"],
+                                        result["atr"],result["score"],result["rsi"],result["adx"],
+                                        result["trend"],result["kalman_up"],
+                                        result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+                else:
+                    mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
         await asyncio.sleep(0.4)
     return sent
