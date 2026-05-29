@@ -936,10 +936,31 @@ async def main():
 
     last_sig=load_state()
     cycle=0
-    active_coins=list(COINS)   # começa com lista padrão
+    active_coins=list(COINS)
     last_scan_cycle=0
 
     async with aiohttp.ClientSession() as session:
+        # ── Teste de conectividade antes de tudo ──────────────────────────────
+        try:
+            tg_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+            diag_lines=[]
+            for test_url,label in [
+                ("https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=15&limit=5","Bybit kline"),
+                ("https://api.bybit.com/v5/market/serverTime","Bybit time"),
+            ]:
+                try:
+                    async with session.get(test_url,timeout=aiohttp.ClientTimeout(total=8)) as _r:
+                        _status=_r.status
+                        _body=await _r.text()
+                        diag_lines.append(f"{label}: HTTP {_status} | {_body[:80]}")
+                except Exception as _e:
+                    diag_lines.append(f"{label}: ERRO {str(_e)[:60]}")
+            diag_txt="🔬 Diagnóstico de conectividade:\n"+"\n".join(diag_lines)
+            async with session.post(tg_url,json={"chat_id":TG_CHATID,"text":diag_txt},
+                                    timeout=aiohttp.ClientTimeout(total=10)) as _r: await _r.json()
+        except Exception as e:
+            log.error(f"Diagnóstico falhou: {e}")
+
         # Scanner inicial rápido (top 20) antes do primeiro ciclo
         if DYNAMIC_SCAN:
             result=await scan_best_coins(session,scan_tf,min(20,SCANNER_TOP))
