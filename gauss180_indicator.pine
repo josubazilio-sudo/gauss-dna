@@ -1,35 +1,35 @@
-// ════════════════════════════════════════════════════════════════════════════
-// GAUSS+DNA $180 — ELITE COMBINADO
+// ============================================================================
+// GAUSS+DNA $180 - ELITE COMBINADO
 // Combina: Trendilo + DNA Institucional Elite + Kalman + Sinais de Movimento Pro
 // Pine Script v6
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 //@version=6
-indicator("GAUSS+DNA $180 — ELITE COMBINADO", shorttitle="GAUSS $180", overlay=false,
+indicator("GAUSS+DNA $180 - ELITE COMBINADO", shorttitle="GAUSS $180", overlay=false,
      max_bars_back=500, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
 
-// ════════════════════════════════════════════════════════════════════════════
-// INPUTS — TENDÊNCIA
-// ════════════════════════════════════════════════════════════════════════════
-var GRP_TREND = "TENDÊNCIA"
-emaFastLen  = input.int(8,    "EMA Rápida",      minval=1,   group=GRP_TREND)
-emaMidLen   = input.int(21,   "EMA Média",       minval=1,   group=GRP_TREND)
+// ============================================================================
+// INPUTS - TENDENCIA
+// ============================================================================
+var GRP_TREND = "TENDENCIA"
+emaFastLen  = input.int(8,    "EMA Rapida",      minval=1,   group=GRP_TREND)
+emaMidLen   = input.int(21,   "EMA Media",       minval=1,   group=GRP_TREND)
 emaSlowLen  = input.int(50,   "EMA Lenta",       minval=1,   group=GRP_TREND)
 emaTrendLen = input.int(200,  "EMA 200",         minval=1,   group=GRP_TREND)
 atrLen      = input.int(14,   "ATR Length",      minval=1,   group=GRP_TREND)
-maxDistATR  = input.float(3.5,"Dist. Máx ATR",  minval=0.1, group=GRP_TREND)
+maxDistATR  = input.float(3.5,"Dist. Max ATR",  minval=0.1, group=GRP_TREND)
 enableShort = input.bool(false, "Habilitar SHORT", group=GRP_TREND)
 
-// ════════════════════════════════════════════════════════════════════════════
-// INPUTS — MACD HA
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// INPUTS - MACD HA
+// ============================================================================
 var GRP_MACD = "MACD HA"
-macdFast   = input.int(8,  "MACD Rápido", minval=1, group=GRP_MACD)
+macdFast   = input.int(8,  "MACD Rapido", minval=1, group=GRP_MACD)
 macdSlow   = input.int(21, "MACD Lento",  minval=1, group=GRP_MACD)
 macdSignal = input.int(5,  "MACD Signal", minval=1, group=GRP_MACD)
 
-// ════════════════════════════════════════════════════════════════════════════
-// INPUTS — FILTROS
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// INPUTS - FILTROS
+// ============================================================================
 var GRP_FILT = "FILTROS"
 adxLen      = input.int(14,     "ADX Length",         minval=1,   group=GRP_FILT)
 adxSmooth   = input.int(14,     "ADX Smooth",         minval=1,   group=GRP_FILT)
@@ -38,53 +38,53 @@ adxMinShort = input.float(18.0, "ADX Min (Short)",    minval=1.0, group=GRP_FILT
 adxStrong   = input.float(28.0, "ADX Forte",          minval=1.0, group=GRP_FILT)
 volLen      = input.int(20,     "Volume MA Length",   minval=1,   group=GRP_FILT)
 volMult     = input.float(0.9,  "Vol. Multiplicador", minval=0.1, group=GRP_FILT)
-scoreMin    = input.int(40,     "Score Mínimo",       minval=0,   group=GRP_FILT)
+scoreMin    = input.int(40,     "Score Minimo",       minval=0,   group=GRP_FILT)
 
-// ════════════════════════════════════════════════════════════════════════════
-// INPUTS — KALMAN
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// INPUTS - KALMAN
+// ============================================================================
 var GRP_KALMAN = "KALMAN"
 useKalman     = input.bool(true, "Usar Filtro Kalman",  group=GRP_KALMAN)
-kFastLen      = input.int(50,   "Kalman Rápido (per)", minval=1, group=GRP_KALMAN)
+kFastLen      = input.int(50,   "Kalman Rapido (per)", minval=1, group=GRP_KALMAN)
 kSlowLen      = input.int(150,  "Kalman Lento (per)",  minval=1, group=GRP_KALMAN)
 showKalmanCdl = input.bool(true, "Candles Kalman",     group=GRP_KALMAN)
 
-// ════════════════════════════════════════════════════════════════════════════
-// INPUTS — TRENDILO
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// INPUTS - TRENDILO
+// ============================================================================
 var GRP_TR = "TRENDILO"
 useTrendilo = input.bool(true,  "Usar Trendilo",       group=GRP_TR)
-trSmooth    = input.int(1,      "Suavização (smooth)", minval=1,   group=GRP_TR)
+trSmooth    = input.int(1,      "Suavizacao (smooth)", minval=1,   group=GRP_TR)
 trLen       = input.int(50,     "Comprimento",         minval=2,   group=GRP_TR)
 trOffset    = input.float(0.85, "ALMA Offset",         minval=0.0, maxval=1.0, group=GRP_TR)
 trSigma     = input.float(6.0,  "ALMA Sigma",          minval=0.1, group=GRP_TR)
 trBmult     = input.float(1.0,  "RMS Band Mult",       minval=0.1, group=GRP_TR)
 
-// ════════════════════════════════════════════════════════════════════════════
-// INPUTS — VISUAL
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// INPUTS - VISUAL
+// ============================================================================
 var GRP_VIS = "VISUAL"
 bullColor   = input.color(color.new(color.lime,    0), "Cor BULL",  group=GRP_VIS)
 bearColor   = input.color(color.new(color.red,     0), "Cor BEAR",  group=GRP_VIS)
 upperCol    = input.color(color.new(color.teal,    0), "Kalman UP", group=GRP_VIS)
 lowerCol    = input.color(color.new(color.fuchsia, 0), "Kalman DN", group=GRP_VIS)
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // EMAs
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 ema10  = ta.ema(close, emaFastLen)
 ema21  = ta.ema(close, emaMidLen)
 ema50  = ta.ema(close, emaSlowLen)
 ema200 = ta.ema(close, emaTrendLen)
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // ATR
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 atr = math.max(ta.atr(atrLen), syminfo.mintick)
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // KALMAN FILTER
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 kalman(src, length, R, Q) =>
     var float estimate  = na
     var float error_est = 1.0
@@ -99,17 +99,17 @@ kalman(src, length, R, Q) =>
 kFast = kalman(close, kFastLen, 0.01, 0.1)
 kSlow = kalman(close, kSlowLen, 0.01, 0.1)
 
-// ════════════════════════════════════════════════════════════════════════════
-// TRENDILO — ALMA MOMENTUM OSCILLATOR
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// TRENDILO - ALMA MOMENTUM OSCILLATOR
+// ============================================================================
 pch   = ta.change(close, trSmooth) / close * 100
 avpch = ta.alma(pch, trLen, trOffset, trSigma)
 rmsT  = trBmult * math.sqrt(math.sum(avpch * avpch, trLen) / trLen)
 cdir  = avpch > rmsT ? 1 : avpch < -rmsT ? -1 : 0
 
-// ════════════════════════════════════════════════════════════════════════════
-// MACD + MACD HA (Elite — histograma nos wicks)
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// MACD + MACD HA (Elite - histograma nos wicks)
+// ============================================================================
 [macdLine, signalLine, histLine] = ta.macd(close, macdFast, macdSlow, macdSignal)
 
 haClose           = (macdLine + signalLine) / 2.0
@@ -119,7 +119,7 @@ haOpen           := na(haOpen) ? haClose : (haOpen + haClose[1]) / 2.0
 haHighBase = math.max(math.max(macdLine, signalLine), math.max(haOpen, haClose))
 haLowBase  = math.min(math.min(macdLine, signalLine), math.min(haOpen, haClose))
 
-// Extender wicks com histograma (versão Elite)
+// Extender wicks com histograma (versao Elite)
 haHigh = histLine > 0 ? math.max(haHighBase, histLine) : haHighBase
 haLow  = histLine < 0 ? math.min(haLowBase,  histLine) : haLowBase
 
@@ -131,9 +131,9 @@ haBear2 = haBear and haBear[1]
 macdBull = macdLine > signalLine and histLine > histLine[1] and histLine > 0 and haBull2
 macdBear = macdLine < signalLine and histLine < histLine[1] and histLine < 0 and haBear2
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // RSI
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 rsi       = ta.rsi(close, 14)
 rsiSmooth = ta.ema(rsi, 5)
 
@@ -142,23 +142,23 @@ rsiMomBear = rsiSmooth < 50 and rsiSmooth > 30
 rsiBullZ   = rsiSmooth < 30
 rsiBearZ   = rsiSmooth > 70
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // ADX + DI
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 [pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
 
 adxLongOk  = adx > adxMin      and pdi > mdi
 adxShortOk = adx > adxMinShort and mdi > pdi
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // VOLUME
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 volMa     = ta.sma(volume, volLen)
 volStrong = volume > volMa * volMult
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // FLOW (ordem institucional)
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 spread     = math.max(high - low, syminfo.mintick)
 flowRaw    = ((close - open) / spread) * volume
 flow       = ta.ema(flowRaw, 13)
@@ -166,24 +166,24 @@ flowBull   = flow > 0
 flowBear   = flow < 0
 flowStrong = math.abs(flow) > ta.sma(math.abs(flow), 20) * 1.2
 
-// ════════════════════════════════════════════════════════════════════════════
-// TENDÊNCIA — Alinhamento de EMAs
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// TENDENCIA - Alinhamento de EMAs
+// ============================================================================
 trendBull = close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
 trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema200
 alignBull = close > ema10  and close > ema21  and close > ema50
 ema200Up  = ema200 > ema200[3]
 
-// ════════════════════════════════════════════════════════════════════════════
-// DISTÂNCIA / IMPULSO / SWEEP
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// DISTANCIA / IMPULSO / SWEEP
+// ============================================================================
 notExtLong   = (close - ema50) / atr < maxDistATR
 bullImpulse  = close > high[1] and close > open and (close - open) > atr * 0.15
 liqSweepLong = low < low[1]   and close > low[1]  and close > open
 
-// ════════════════════════════════════════════════════════════════════════════
-// SCORE — Sistema composto (Scripts 2+3 + Trendilo)
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// SCORE - Sistema composto (Scripts 2+3 + Trendilo)
+// ============================================================================
 // Componentes ADX-based (Long / Short Score)
 sAdxA = adx > adx[1]         ? 20 : adx > adx[1] * 0.95 ? 5 : -10
 sAdxS = adx > adxStrong      ? 20 : 0
@@ -192,8 +192,8 @@ sDIL  = pdi > mdi            ? 15 : -10
 sDIS  = mdi > pdi            ? 15 : -10
 sMomL = close > close[2]     ? 10 : -5
 sMomS = close < close[2]     ? 10 : -5
-sTrL  = cdir == 1            ? 10 : -5   // Trendilo — Long
-sTrS  = cdir == -1           ? 10 : -5   // Trendilo — Short
+sTrL  = cdir == 1            ? 10 : -5   // Trendilo - Long
+sTrS  = cdir == -1           ? 10 : -5   // Trendilo - Short
 
 longScore  = sAdxA + sAdxS + sVol + sDIL + sMomL + sTrL
 shortScore = sAdxA + sAdxS + sVol + sDIS + sMomS + sTrS
@@ -210,9 +210,9 @@ score = (trendBull ? 35 : trendBear ? -35 : 0)                       +
         (kFast > kSlow ? 10 : -10)                                    +
         (cdir == 1 ? 15 : cdir == -1 ? -15 : 0)
 
-// ════════════════════════════════════════════════════════════════════════════
-// COOLDOWN — Evita sinais consecutivos (por lado)
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// COOLDOWN - Evita sinais consecutivos (por lado)
+// ============================================================================
 var int lastLongBar  = na
 var int lastShortBar = na
 
@@ -220,17 +220,17 @@ cdBars  = adx > 35 ? 1 : adx > 25 ? 2 : 3
 cdLong  = na(lastLongBar)  or bar_index - lastLongBar  > cdBars
 cdShort = na(lastShortBar) or bar_index - lastShortBar > cdBars
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // FILTROS KALMAN + TRENDILO
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 kOkL = not useKalman   or (kFast > kSlow)
 kOkS = not useKalman   or (kFast < kSlow)
 tOkL = not useTrendilo or (cdir == 1)
 tOkS = not useTrendilo or (cdir == -1)
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // SINAIS LONG / SHORT
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 longSig =
     barstate.isconfirmed and cdLong     and
     trendBull             and alignBull and ema200Up   and
@@ -260,9 +260,9 @@ if newLong
 if newShort
     lastShortBar := bar_index
 
-// ════════════════════════════════════════════════════════════════════════════
-// VISUAL — Painel MACD HA (pane principal — overlay=false)
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// VISUAL - Painel MACD HA (pane principal - overlay=false)
+// ============================================================================
 
 // 1. Histograma MACD
 histCol = histLine >= 0
@@ -309,14 +309,14 @@ plotshape(newLong,  "LONG Pane",  style=shape.triangleup,   location=location.bo
 plotshape(newShort, "SHORT Pane", style=shape.triangledown, location=location.top,
      color=bearColor, size=size.small)
 
-// ════════════════════════════════════════════════════════════════════════════
-// VISUAL — Overlay (force_overlay=true)
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// VISUAL - Overlay (force_overlay=true)
+// ============================================================================
 
 // 1+2. Kalman plots
 kColFast = kFast > kFast[2] ? upperCol : lowerCol
 kColSlow = kFast > kSlow    ? upperCol : lowerCol
-kp1 = plot(kFast, "Kalman Rápido", color=kColFast, linewidth=1, force_overlay=true)
+kp1 = plot(kFast, "Kalman Rapido", color=kColFast, linewidth=1, force_overlay=true)
 kp2 = plot(kSlow, "Kalman Lento",  color=kColSlow, linewidth=2, force_overlay=true)
 
 // 3. Fill entre Kalmans
@@ -330,8 +330,8 @@ candleCol = showKalmanCdl ?
 plotcandle(open, high, low, close, "Candles", color=candleCol,
      wickcolor=candleCol, bordercolor=candleCol, force_overlay=true)
 
-// 5–8. EMAs overlay
-plot(ema10,  "EMA Rápida", color=color.green,  linewidth=1, force_overlay=true)
+// 5-8. EMAs overlay
+plot(ema10,  "EMA Rapida", color=color.green,  linewidth=1, force_overlay=true)
 plot(ema21,  "EMA21",      color=color.red,    linewidth=1, force_overlay=true)
 plot(ema50,  "EMA50",      color=color.yellow, linewidth=2, force_overlay=true)
 plot(ema200, "EMA200",     color=color.white,  linewidth=2, force_overlay=true)
@@ -346,66 +346,66 @@ plotshape(newShort, "SELL Label", style=shape.labeldown, location=location.above
      color=bearColor, text="SELL", textcolor=color.white,
      size=size.small, force_overlay=true)
 
-// ════════════════════════════════════════════════════════════════════════════
-// TABELA — Dashboard (top_right, 2 cols × 8 rows)
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
+// TABELA - Dashboard (top_right, 2 cols x 8 rows)
+// ============================================================================
 var table dash = table.new(position.top_right, 2, 8,
      bgcolor=color.new(color.black, 70),
      border_color=color.new(color.gray, 50), border_width=1,
      frame_color=color.new(color.gray, 30),  frame_width=1)
 
 if barstate.islast
-    // ── faixa de cores ──────────────────────────────────────────────────
+    // -- faixa de cores --------------------------------------------------
     scoreCol  = score > 50  ? color.lime  : score < -50  ? color.red  : color.white
     lScoreCol = longScore  >= scoreMin ? color.lime  : color.gray
     sScoreCol = shortScore >= scoreMin ? color.red   : color.gray
-    trStr     = cdir == 1  ? "▲ BULL" : cdir == -1 ? "▼ BEAR" : "— NEUTRO"
+    trStr     = cdir == 1  ? "^ BULL" : cdir == -1 ? "v BEAR" : "- NEUTRO"
     trCol     = cdir == 1  ? color.lime : cdir == -1 ? color.red : color.gray
-    kStr      = kFast > kSlow ? "▲ UP" : "▼ DOWN"
+    kStr      = kFast > kSlow ? "^ UP" : "v DOWN"
     kCol      = kFast > kSlow ? color.lime : color.red
     adxCol    = adx > adxStrong ? color.lime : adx > adxMin ? color.orange : color.gray
-    haStr     = haBull ? "▲ BULL" : "▼ BEAR"
+    haStr     = haBull ? "^ BULL" : "v BEAR"
     haCol     = haBull ? color.lime : color.red
-    flowStr   = flowBull ? (flowStrong ? "▲ BULL★" : "▲ BULL") :
-                flowBear ? (flowStrong ? "▼ BEAR★" : "▼ BEAR") : "— NEUTRO"
+    flowStr   = flowBull ? (flowStrong ? "^ BULL*" : "^ BULL") :
+                flowBear ? (flowStrong ? "v BEAR*" : "v BEAR") : "- NEUTRO"
     flowCol   = flowBull ? color.lime : flowBear ? color.red : color.gray
 
-    // ── Linha 0: Score global ────────────────────────────────────────────
+    // -- Linha 0: Score global --------------------------------------------
     table.cell(dash, 0, 0, "Score",             text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
     table.cell(dash, 1, 0, str.tostring(score), text_color=scoreCol,    text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // ── Linha 1: Long Score ──────────────────────────────────────────────
+    // -- Linha 1: Long Score ----------------------------------------------
     table.cell(dash, 0, 1, "L Score",                                                                            text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
     table.cell(dash, 1, 1, str.tostring(longScore)  + " (" + str.tostring(scoreMin) + ")", text_color=lScoreCol, text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // ── Linha 2: Short Score ─────────────────────────────────────────────
+    // -- Linha 2: Short Score ---------------------------------------------
     table.cell(dash, 0, 2, "S Score",                                                                             text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
     table.cell(dash, 1, 2, str.tostring(shortScore) + " (" + str.tostring(scoreMin) + ")", text_color=sScoreCol, text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // ── Linha 3: Trendilo ────────────────────────────────────────────────
+    // -- Linha 3: Trendilo ------------------------------------------------
     table.cell(dash, 0, 3, "Trendilo", text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
     table.cell(dash, 1, 3, trStr,      text_color=trCol,       text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // ── Linha 4: Kalman ──────────────────────────────────────────────────
+    // -- Linha 4: Kalman --------------------------------------------------
     table.cell(dash, 0, 4, "Kalman", text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
     table.cell(dash, 1, 4, kStr,     text_color=kCol,        text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // ── Linha 5: ADX ─────────────────────────────────────────────────────
+    // -- Linha 5: ADX -----------------------------------------------------
     table.cell(dash, 0, 5, "ADX",                           text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
     table.cell(dash, 1, 5, str.tostring(adx, "#.#"), text_color=adxCol,      text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // ── Linha 6: MACD HA ─────────────────────────────────────────────────
+    // -- Linha 6: MACD HA -------------------------------------------------
     table.cell(dash, 0, 6, "MACD HA", text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
     table.cell(dash, 1, 6, haStr,     text_color=haCol,       text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // ── Linha 7: Flow ────────────────────────────────────────────────────
+    // -- Linha 7: Flow ----------------------------------------------------
     table.cell(dash, 0, 7, "Flow",  text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
     table.cell(dash, 1, 7, flowStr, text_color=flowCol,     text_size=size.small, bgcolor=color.new(color.black, 75))
 
-// ════════════════════════════════════════════════════════════════════════════
+// ============================================================================
 // ALERTAS
-// ════════════════════════════════════════════════════════════════════════════
-alertcondition(newLong,  "LONG",  "🟢 COMPRA — GAUSS $180 ELITE")
-alertcondition(newShort, "SHORT", "🔴 VENDA — GAUSS $180 ELITE")
+// ============================================================================
+alertcondition(newLong,  "LONG",  " COMPRA - GAUSS $180 ELITE")
+alertcondition(newShort, "SHORT", " VENDA - GAUSS $180 ELITE")
 alertcondition(not longSig[1] and longSig or not shortSig[1] and shortSig,
-     "SINAL", "📊 SINAL — GAUSS $180 ELITE")
+     "SINAL", " SINAL - GAUSS $180 ELITE")

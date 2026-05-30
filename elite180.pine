@@ -2,10 +2,10 @@
 indicator("ELITE 180-1000 INSTITUCIONAL", shorttitle="ELITE180", overlay=true,
      max_labels_count=500, max_lines_count=500)
 
-//══════════════════════════════════════
+//======================================
 // INPUTS
-//══════════════════════════════════════
-groupTrend    = "TENDÊNCIA"
+//======================================
+groupTrend    = "TENDENCIA"
 groupTrendilo = "TRENDILO"
 groupFilters  = "FILTROS"
 groupMACD     = "MACD HA"
@@ -15,7 +15,7 @@ ema21Len  = input.int(21,  "EMA21",  group=groupTrend)
 ema50Len  = input.int(50,  "EMA50",  group=groupTrend)
 ema200Len = input.int(200, "EMA200", group=groupTrend)
 
-kalmanFast = input.int(50,  "Kalman Rápido", group=groupTrend)
+kalmanFast = input.int(50,  "Kalman Rapido", group=groupTrend)
 kalmanSlow = input.int(150, "Kalman Lento",  group=groupTrend)
 
 trendiloLen    = input.int(50,   "Lookback", group=groupTrendilo)
@@ -27,15 +27,15 @@ trendiloBand   = input.float(1.0,"RMS Mult", group=groupTrendilo)
 adxLen    = input.int(14, "ADX",          group=groupFilters)
 adxSmooth = input.int(14, "ADX Smooth",   group=groupFilters)
 rsiLen    = input.int(14, "RSI",          group=groupFilters)
-volLen    = input.int(20, "Volume Média", group=groupFilters)
+volLen    = input.int(20, "Volume Media", group=groupFilters)
 
 macdFast   = input.int(8,  "MACD Fast",   group=groupMACD)
 macdSlow   = input.int(21, "MACD Slow",   group=groupMACD)
 macdSignal = input.int(5,  "MACD Signal", group=groupMACD)
 
-//══════════════════════════════════════
+//======================================
 // EMAs
-//══════════════════════════════════════
+//======================================
 ema10  = ta.ema(close, ema10Len)
 ema21  = ta.ema(close, ema21Len)
 ema50  = ta.ema(close, ema50Len)
@@ -46,9 +46,9 @@ plot(ema21,  color=color.red,    linewidth=1)
 plot(ema50,  color=color.yellow, linewidth=2)
 plot(ema200, color=color.white,  linewidth=2)
 
-//══════════════════════════════════════
+//======================================
 // TRENDILO
-//══════════════════════════════════════
+//======================================
 pch   = ta.change(close, trendiloSmooth) / close * 100
 avpch = ta.alma(pch, trendiloLen, trendiloOffset, trendiloSigma)
 rms   = trendiloBand * math.sqrt(math.sum(avpch * avpch, trendiloLen) / trendiloLen)
@@ -56,9 +56,9 @@ rms   = trendiloBand * math.sqrt(math.sum(avpch * avpch, trendiloLen) / trendilo
 trendiloBullOk = avpch > rms
 trendiloBearOk = avpch < -rms
 
-//══════════════════════════════════════
+//======================================
 // KALMAN
-//══════════════════════════════════════
+//======================================
 kalman_filter(src, length, R=0.01, Q=0.1) =>
     var float estimate  = na
     var float error_est = 1.0
@@ -80,9 +80,9 @@ kalmanBearOk = fastKalman < slowKalman
 plot(fastKalman, color=color.new(color.green, 0))
 plot(slowKalman, color=color.new(color.red,   0))
 
-//══════════════════════════════════════
+//======================================
 // MACD HA
-//══════════════════════════════════════
+//======================================
 [macdLine, signalLine, histLine] =
     ta.macd(close, macdFast, macdSlow, macdSignal)
 
@@ -100,18 +100,18 @@ haBear = haClose < haOpen
 macdBullOk = macdLine > signalLine and histLine > 0 and haBull  and haBull[1]
 macdBearOk = macdLine < signalLine and histLine < 0 and haBear and haBear[1]
 
-//══════════════════════════════════════
+//======================================
 // ADX
-//══════════════════════════════════════
+//======================================
 [pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
 
 adxBullOk = adx > 20 and pdi > mdi
 adxBearOk = adx > 20 and mdi > pdi
 adxStrong = adx > 30
 
-//══════════════════════════════════════
+//======================================
 // RSI
-//══════════════════════════════════════
+//======================================
 rsi       = ta.rsi(close, rsiLen)
 rsiSmooth = ta.ema(rsi, 5)
 
@@ -120,17 +120,17 @@ rsiBearOk      = rsiSmooth < 50 and rsiSmooth > 30
 rsiOverBought  = rsiSmooth >= 70
 rsiOverSold    = rsiSmooth <= 30
 
-//══════════════════════════════════════
+//======================================
 // VOLUME
-//══════════════════════════════════════
+//======================================
 volMA        = ta.sma(volume, volLen)
 volStrong    = volume > volMA
 volVeryStrong= volume > volMA * 1.5
 volWeak      = volume < volMA * 0.85
 
-//══════════════════════════════════════
+//======================================
 // FLUXO INSTITUCIONAL
-//══════════════════════════════════════
+//======================================
 spread    = math.max(high - low, syminfo.mintick)
 flowRaw   = ((close - open) / spread) * volume
 flow      = ta.ema(flowRaw, 13)
@@ -138,9 +138,9 @@ flowBull  = flow > 0
 flowBear  = flow < 0
 flowStrong= math.abs(flow) > ta.sma(math.abs(flow), 20) * 1.2
 
-//══════════════════════════════════════
-// TENDÊNCIA
-//══════════════════════════════════════
+//======================================
+// TENDENCIA
+//======================================
 trendBull =
     close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
 
@@ -153,9 +153,9 @@ trendAlignmentBull =
 trendAlignmentBear =
     close < ema10 and close < ema21 and close < ema50
 
-//══════════════════════════════════════
+//======================================
 // SCORE ELITE
-//══════════════════════════════════════
+//======================================
 scoreTrendilo = trendiloBullOk ? 25 : 0
 scoreKalman   = kalmanBullOk   ? 25 : 0
 scoreMACD     = macdBullOk     ? 25 : 0
@@ -169,9 +169,9 @@ eliteScore =
     scoreTrendilo + scoreKalman + scoreMACD +
     scoreADX + scoreFlow + scoreVolume + scoreRSI + scoreEMA
 
-//══════════════════════════════════════
+//======================================
 // PULLBACK + ROMPIMENTO + FILTROS
-//══════════════════════════════════════
+//======================================
 pullbackEMA10 = low <= ema10 and close > ema10
 pullbackEMA21 = low <= ema21 and close > ema21
 pullbackLong  = pullbackEMA10 or pullbackEMA21
@@ -186,9 +186,9 @@ notExtended = distEMA50 < 2.5
 liqSweepLong  = low  < low[1]  and close > low[1]  and close > open
 liqSweepShort = high > high[1] and close < high[1] and close < open
 
-//══════════════════════════════════════
+//======================================
 // ENTRADA LONG ELITE
-//══════════════════════════════════════
+//======================================
 longEliteSignal =
     eliteScore >= 90 and
     trendBull and trendAlignmentBull and
@@ -199,9 +199,9 @@ longEliteSignal =
     (pullbackLong or liqSweepLong) and
     breakoutLong
 
-//══════════════════════════════════════
-// SAÍDA ELITE
-//══════════════════════════════════════
+//======================================
+// SAIDA ELITE
+//======================================
 exitElite =
     (trendiloBearOk or macdBearOk or flowBear) and
     ema10 < ema21
@@ -209,16 +209,16 @@ exitElite =
 newLong = longEliteSignal and not longEliteSignal[1]
 newExit = exitElite       and not exitElite[1]
 
-//══════════════════════════════════════
+//======================================
 // CORES DE FUNDO
-//══════════════════════════════════════
+//======================================
 bgcolor(longEliteSignal ? color.new(color.lime, 93) : na)
 bgcolor(exitElite       ? color.new(color.red,  93) : na)
 bgcolor(eliteScore >= 90 and not longEliteSignal ? color.new(color.lime, 96) : na)
 
-//══════════════════════════════════════
+//======================================
 // SINAIS VISUAIS
-//══════════════════════════════════════
+//======================================
 plotshape(newLong, title="LONG ELITE",
      style=shape.labelup, location=location.belowbar,
      color=color.lime, text="LONG\nELITE", textcolor=color.black, size=size.normal)
@@ -227,10 +227,10 @@ plotshape(newExit, title="EXIT ELITE",
      style=shape.labeldown, location=location.abovebar,
      color=color.red, text="EXIT", textcolor=color.white, size=size.normal)
 
-//══════════════════════════════════════
-// PAINEL DE SCORE (tabela 2×12)
-// FIX: tabela criada com 12 linhas para acomodar linhas 0–11
-//══════════════════════════════════════
+//======================================
+// PAINEL DE SCORE (tabela 2x12)
+// FIX: tabela criada com 12 linhas para acomodar linhas 0-11
+//======================================
 okColor = color.lime
 xColor  = color.red
 
@@ -241,14 +241,14 @@ var table painel = table.new(
 
 if barstate.islast
 
-    // ── Linha 0: Score total ─────────────
+    // -- Linha 0: Score total -------------
     table.cell(painel, 0, 0, "SCORE",
          text_color=color.white, text_size=size.small)
     table.cell(painel, 1, 0, str.tostring(eliteScore),
          text_color=eliteScore >= 90 ? color.lime : eliteScore >= 75 ? color.yellow : color.red,
          text_size=size.small)
 
-    // ── Linhas 1–8: componentes ──────────
+    // -- Linhas 1-8: componentes ----------
     table.cell(painel, 0, 1, "Trendilo",
          text_color=color.gray,  text_size=size.small)
     table.cell(painel, 1, 1, trendiloBullOk ? "OK" : "X",
@@ -289,7 +289,7 @@ if barstate.islast
     table.cell(painel, 1, 8, trendBull ? "OK" : "X",
          text_color=trendBull ? okColor : xColor, text_size=size.small)
 
-    // ── Linha 9: Status ──────────────────
+    // -- Linha 9: Status ------------------
     table.cell(painel, 0, 9, "Status",
          text_color=color.gray, text_size=size.small)
     table.cell(painel, 1, 9,
@@ -297,15 +297,15 @@ if barstate.islast
          text_color=eliteScore >= 90 ? color.lime : eliteScore >= 75 ? color.yellow : color.red,
          text_size=size.small)
 
-    // ── Linha 10: Força ──────────────────
-    table.cell(painel, 0, 10, "Força",
+    // -- Linha 10: Forca ------------------
+    table.cell(painel, 0, 10, "Forca",
          text_color=color.gray, text_size=size.small)
     table.cell(painel, 1, 10,
          eliteScore >= 90 ? "INSTITUCIONAL" : eliteScore >= 75 ? "FORTE" : "FRACA",
          text_color=eliteScore >= 90 ? color.lime : eliteScore >= 75 ? color.yellow : color.red,
          text_size=size.small)
 
-    // ── Linha 11: Sinal atual ────────────
+    // -- Linha 11: Sinal atual ------------
     table.cell(painel, 0, 11, "Sinal",
          text_color=color.gray, text_size=size.small)
     table.cell(painel, 1, 11,
@@ -313,8 +313,8 @@ if barstate.islast
          text_color=newLong ? color.lime : newExit ? color.red : color.white,
          text_size=size.small)
 
-//══════════════════════════════════════
+//======================================
 // ALERTAS
-//══════════════════════════════════════
+//======================================
 alertcondition(newLong, title="LONG ELITE",  message="LONG ELITE CONFIRMADO")
 alertcondition(newExit, title="EXIT ELITE",  message="EXIT ELITE CONFIRMADO")
