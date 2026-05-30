@@ -1,0 +1,238 @@
+//@version=6
+strategy("GAUSS FLEX $180 [BACKTEST]", shorttitle="GAUSS BT",
+     overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=10,
+     commission_type=strategy.commission.percent,
+     commission_value=0.1,
+     slippage=2,
+     max_bars_back=500)
+
+// ==================================================
+// INPUTS
+// ==================================================
+grpTrend    = "TENDENCIA"
+grpKalman   = "KALMAN"
+grpTrendilo = "TRENDILO"
+grpFilters  = "FILTROS"
+grpRisk     = "RISCO"
+
+ema10Len  = input.int(10,  "EMA10",  group=grpTrend)
+ema21Len  = input.int(21,  "EMA21",  group=grpTrend)
+ema50Len  = input.int(50,  "EMA50",  group=grpTrend)
+ema200Len = input.int(200, "EMA200", group=grpTrend)
+
+macdFastLen = input.int(12,    "MACD Fast",   group=grpFilters)
+macdSlowLen = input.int(26,    "MACD Slow",   group=grpFilters)
+macdSigLen  = input.int(9,     "MACD Signal", group=grpFilters)
+adxLen      = input.int(14,    "ADX",         group=grpFilters)
+adxSmooth   = input.int(14,    "ADX Smooth",  group=grpFilters)
+rsiLen      = input.int(14,    "RSI",         group=grpFilters)
+volLen      = input.int(20,    "Volume MA",   group=grpFilters)
+flexThresh  = input.int(30,    "Score min",   group=grpFilters)
+adxThresh   = input.float(13.0,"ADX min",     step=0.5, group=grpFilters)
+
+kalmanFastLen = input.int(50,  "Kalman Rapido", group=grpKalman)
+kalmanSlowLen = input.int(150, "Kalman Lento",  group=grpKalman)
+
+trLen    = input.int(50,    "Lookback",  group=grpTrendilo)
+trSmooth = input.int(1,     "Smooth",    group=grpTrendilo)
+trOffset = input.float(0.85,"Offset",    group=grpTrendilo)
+trSigma  = input.int(6,     "Sigma",     group=grpTrendilo)
+trBmult  = input.float(1.0, "Band Mult", group=grpTrendilo)
+useTrendilo = input.bool(true, "Trendilo como filtro", group=grpTrendilo)
+
+stopMult = input.float(1.5, "Stop (ATR x)", step=0.1, group=grpRisk)
+tp1Mult  = input.float(2.0, "TP1  (R x)",  step=0.1, group=grpRisk)
+tp2Mult  = input.float(3.5, "TP2  (R x)",  step=0.1, group=grpRisk)
+useShort = input.bool(true, "Operar SHORT tambem", group=grpRisk)
+
+// ==================================================
+// INDICADORES
+// ==================================================
+ema10  = ta.ema(close, ema10Len)
+ema21  = ta.ema(close, ema21Len)
+ema50  = ta.ema(close, ema50Len)
+ema200 = ta.ema(close, ema200Len)
+
+plot(ema10,  "EMA10",  color=color.new(color.green,  20), linewidth=1)
+plot(ema21,  "EMA21",  color=color.new(color.red,    20), linewidth=1)
+plot(ema50,  "EMA50",  color=color.new(color.yellow,  0), linewidth=2)
+plot(ema200, "EMA200", color=color.new(color.white,   0), linewidth=3)
+
+kalman(src, length) =>
+    var float est  = na
+    var float eErr = 1.0
+    float mErr     = 0.01 * length
+    if na(est)
+        est := src
+    float gain = eErr / (eErr + mErr)
+    est       := est + gain * (src - est)
+    eErr      := (1 - gain) * eErr + 0.1 / length
+    est
+
+kFast = kalman(close, kalmanFastLen)
+kSlow = kalman(close, kalmanSlowLen)
+kSpread     = kFast - kSlow
+kSpreadPrev = kFast[1] - kSlow[1]
+kalmanUp        = kFast > kSlow
+kalmanDown      = kFast < kSlow
+kalmanAccelUp   = kSpread > kSpreadPrev and kSpread > 0
+kalmanAccelDown = kSpread < kSpreadPrev and kSpread < 0
+
+pch   = ta.change(close, trSmooth) / close * 100
+avpch = ta.alma(pch, trLen, trOffset, trSigma)
+rmsT  = trBmult * math.sqrt(math.sum(avpch * avpch, trLen) / trLen)
+cdir  = avpch > rmsT ? 1 : avpch < -rmsT ? -1 : 0
+trendiloLong  = cdir == 1
+trendiloShort = cdir == -1
+
+[macdLine, signalLine, histLine] = ta.macd(close, macdFastLen, macdSlowLen, macdSigLen)
+macdBull  = macdLine > signalLine and histLine > histLine[1] and histLine > 0
+macdBear  = macdLine < signalLine and histLine < histLine[1] and histLine < 0
+macdBullR = macdLine > signalLine
+macdBearR = macdLine < signalLine
+
+haClose_p = (open + high + low + close) / 4
+var float haOpen_p = na
+haOpen_p := na(haOpen_p[1]) ? (open + close) / 2 : (haOpen_p[1] + haClose_p[1]) / 2
+haBull = haClose_p > haOpen_p and haClose_p[1] > haOpen_p[1]
+haBear = haClose_p < haOpen_p and haClose_p[1] < haOpen_p[1]
+
+[pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
+
+rsi           = ta.rsi(close, rsiLen)
+rsiBull        = rsi > 50 and rsi < 70
+rsiBear        = rsi > 30 and rsi < 50
+rsiNotExtLong  = rsi < 75
+rsiNotExtShort = rsi > 25
+
+volMA   = ta.sma(volume, volLen)
+vStrong = volume > volMA * 1.1
+
+spread  = math.max(high - low, syminfo.mintick)
+flowRaw = ((close - open) / spread) * volume
+flow    = ta.ema(flowRaw, 13)
+flowSMA = ta.sma(math.abs(flow), 20)
+fBull   = flow > 0
+fBear   = flow < 0
+fStrong = math.abs(flow) > flowSMA * 1.2
+
+obv_    = ta.obv
+obvEMA  = ta.ema(obv_, 20)
+obvBull = obv_ > obvEMA and obv_ > obv_[5]
+obvBear = obv_ < obvEMA and obv_ < obv_[5]
+
+aboveVwap = close > ta.vwap
+
+e200Rising  = ema200 > ema200[4]
+e200Falling = ema200 < ema200[4]
+
+trendBull = close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
+trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema200
+tbullLoose = ema10 > ema21 and ema21 > ema50
+tbearLoose = ema10 < ema21 and ema21 < ema50
+
+bullsCount = (close > ema21 ? 1 : 0) + (close[1] > ema21[1] ? 1 : 0) + (close[2] > ema21[2] ? 1 : 0) + (close[3] > ema21[3] ? 1 : 0) + (close[4] > ema21[4] ? 1 : 0)
+trendConsistentBull = bullsCount >= 4
+trendConsistentBear = bullsCount <= 1
+
+// ==================================================
+// SCORE
+// ==================================================
+sTrend    = trendBull           ?  35 : trendBear           ? -35 : 0
+sFlow     = fBull               ?  15 : fBear               ? -15 : 0
+sFlowStr  = fStrong             ?  10 : 0
+sMacd     = macdBull            ?  20 : macdBear            ? -20 : 0
+sAdx      = adx > 30            ?  20 : adx > 22            ?  10 : 0
+sVol      = vStrong             ?  10 : -5
+sRsi      = rsiBull             ?  10 : rsiBear             ? -10 : 0
+sE200     = e200Rising          ?  10 : e200Falling         ? -10 : 0
+sKalman   = kalmanUp            ?  10 : kalmanDown          ? -10 : 0
+sObv      = obvBull             ?  15 : obvBear             ? -15 : 0
+sVwap     = aboveVwap           ?   5 : -5
+sHa       = haBull              ?  10 : haBear              ? -10 : 0
+sKaAccel  = kalmanAccelUp       ?   5 : kalmanAccelDown     ?  -5 : 0
+sTrCons   = trendConsistentBull ?   5 : trendConsistentBear ?  -5 : 0
+sTrendilo = trendiloLong        ?  10 : trendiloShort       ? -10 : 0
+
+baseScore = math.max(-145, math.min(145, sTrend + sFlow + sFlowStr + sMacd + sAdx + sVol + sRsi + sE200 + sKalman + sObv + sVwap + sHa + sKaAccel + sTrCons + sTrendilo))
+
+flexBonusBull = (tbullLoose and not trendBull) ? 30 : 0
+flexBonusBear = (tbearLoose and not trendBear) ? 30 : 0
+flexScore     = baseScore + flexBonusBull - flexBonusBear
+
+// ==================================================
+// SINAL FLEX
+// ==================================================
+trendiloOkL = not useTrendilo or trendiloLong
+trendiloOkS = not useTrendilo or trendiloShort
+
+longFlex  = flexScore > flexThresh  and macdBullR and adx > adxThresh and rsiNotExtLong  and trendiloOkL
+shortFlex = flexScore < -flexThresh and macdBearR and adx > adxThresh and rsiNotExtShort and trendiloOkS
+
+newLong  = longFlex  and not longFlex[1]  and barstate.isconfirmed
+newShort = shortFlex and not shortFlex[1] and barstate.isconfirmed
+
+// ==================================================
+// GESTAO DE RISCO — ATR-based stop e TP
+// ==================================================
+atr14 = ta.atr(14)
+
+// Stop e TP calculados na entrada
+var float entryPrice = na
+var float stopLevel  = na
+var float tp1Level   = na
+var float tp2Level   = na
+
+if newLong
+    entryPrice := close
+    stopLevel  := close - atr14 * stopMult
+    float risk  = close - stopLevel
+    tp1Level   := close + risk * tp1Mult
+    tp2Level   := close + risk * tp2Mult
+
+if newShort
+    entryPrice := close
+    stopLevel  := close + atr14 * stopMult
+    float risk  = stopLevel - close
+    tp1Level   := close - risk * tp1Mult
+    tp2Level   := close - risk * tp2Mult
+
+// ==================================================
+// ENTRADAS E SAIDAS
+// ==================================================
+if newLong
+    strategy.entry("LONG", strategy.long, comment="FLEX L")
+    strategy.exit("SL/TP LONG", "LONG",
+         stop  = stopLevel,
+         limit = tp2Level)
+
+if newShort and useShort
+    strategy.entry("SHORT", strategy.short, comment="FLEX S")
+    strategy.exit("SL/TP SHORT", "SHORT",
+         stop  = stopLevel,
+         limit = tp2Level)
+
+// Fecha LONG se sinal SHORT chegar (e vice-versa)
+if newShort and strategy.position_size > 0
+    strategy.close("LONG", comment="Reverse")
+if newLong and strategy.position_size < 0
+    strategy.close("SHORT", comment="Reverse")
+
+// ==================================================
+// SINAIS VISUAIS
+// ==================================================
+plotshape(newLong,  "LONG",  style=shape.labelup,   location=location.belowbar, color=color.lime, text="L", textcolor=color.black, size=size.small)
+plotshape(newShort, "SHORT", style=shape.labeldown, location=location.abovebar, color=color.red,  text="S", textcolor=color.white, size=size.small)
+
+// Linhas de stop e TP na posicao aberta
+plot(strategy.position_size > 0 ? stopLevel : na,  "Stop L",  color=color.red,    style=plot.style_linebr, linewidth=1)
+plot(strategy.position_size > 0 ? tp1Level  : na,  "TP1 L",   color=color.yellow, style=plot.style_linebr, linewidth=1)
+plot(strategy.position_size > 0 ? tp2Level  : na,  "TP2 L",   color=color.lime,   style=plot.style_linebr, linewidth=2)
+plot(strategy.position_size < 0 ? stopLevel : na,  "Stop S",  color=color.red,    style=plot.style_linebr, linewidth=1)
+plot(strategy.position_size < 0 ? tp1Level  : na,  "TP1 S",   color=color.yellow, style=plot.style_linebr, linewidth=1)
+plot(strategy.position_size < 0 ? tp2Level  : na,  "TP2 S",   color=color.lime,   style=plot.style_linebr, linewidth=2)
+
+bgcolor(longFlex  and not newLong  ? color.new(color.lime,   92) : na)
+bgcolor(shortFlex and not newShort ? color.new(color.red,    92) : na)
