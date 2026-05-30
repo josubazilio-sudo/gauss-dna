@@ -2,10 +2,10 @@
 indicator("GAUSS+DNA FLEX $180", shorttitle="GAUSS FLEX", overlay=true,
      max_labels_count=500, max_lines_count=500)
 
-//══════════════════════════════════════
+//======================================
 // INPUTS
-//══════════════════════════════════════
-grpTrend    = "TENDÊNCIA"
+//======================================
+grpTrend    = "TENDENCIA"
 grpKalman   = "KALMAN"
 grpTrendilo = "TRENDILO"
 grpFilters  = "FILTROS"
@@ -35,9 +35,9 @@ trSigma     = input.int(6,     "Sigma",     group=grpTrendilo)
 trBmult     = input.float(1.0, "Band Mult", group=grpTrendilo)
 useTrendilo = input.bool(true, "Trendilo como filtro", group=grpTrendilo)
 
-//══════════════════════════════════════
+//======================================
 // EMAs
-//══════════════════════════════════════
+//======================================
 ema10  = ta.ema(close, ema10Len)
 ema21  = ta.ema(close, ema21Len)
 ema50  = ta.ema(close, ema50Len)
@@ -48,9 +48,9 @@ plot(ema21,  "EMA21",  color=color.new(color.red,    20), linewidth=1)
 plot(ema50,  "EMA50",  color=color.new(color.yellow,  0), linewidth=2)
 plot(ema200, "EMA200", color=color.new(color.white,   0), linewidth=3)
 
-//══════════════════════════════════════
+//======================================
 // KALMAN
-//══════════════════════════════════════
+//======================================
 kalman(src, length) =>
     var float est  = na
     var float eErr = 1.0
@@ -75,9 +75,9 @@ kalmanAccelDown = kSpread < kSpreadPrev and kSpread < 0
 plot(kFast, "Kalman Rapido", color=color.new(color.aqua,   55), linewidth=1)
 plot(kSlow, "Kalman Lento",  color=color.new(color.orange, 55), linewidth=1)
 
-//══════════════════════════════════════
+//======================================
 // TRENDILO
-//══════════════════════════════════════
+//======================================
 pch   = ta.change(close, trSmooth) / close * 100
 avpch = ta.alma(pch, trLen, trOffset, trSigma)
 rmsT  = trBmult * math.sqrt(math.sum(avpch * avpch, trLen) / trLen)
@@ -85,27 +85,27 @@ cdir  = avpch > rmsT ? 1 : avpch < -rmsT ? -1 : 0
 trendiloLong  = cdir == 1
 trendiloShort = cdir == -1
 
-//══════════════════════════════════════
+//======================================
 // MACD
-//══════════════════════════════════════
+//======================================
 [macdLine, signalLine, histLine] = ta.macd(close, macdFastLen, macdSlowLen, macdSigLen)
 macdBull  = macdLine > signalLine and histLine > histLine[1] and histLine > 0
 macdBear  = macdLine < signalLine and histLine < histLine[1] and histLine < 0
 macdBullR = macdLine > signalLine
 macdBearR = macdLine < signalLine
 
-//══════════════════════════════════════
+//======================================
 // HEIKIN ASHI
-//══════════════════════════════════════
+//======================================
 haClose_p = (open + high + low + close) / 4
 var float haOpen_p = na
 haOpen_p := na(haOpen_p[1]) ? (open + close) / 2 : (haOpen_p[1] + haClose_p[1]) / 2
 haBull = haClose_p > haOpen_p and haClose_p[1] > haOpen_p[1]
 haBear = haClose_p < haOpen_p and haClose_p[1] < haOpen_p[1]
 
-//══════════════════════════════════════
+//======================================
 // ADX / RSI / VOLUME
-//══════════════════════════════════════
+//======================================
 [pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
 
 rsi           = ta.rsi(close, rsiLen)
@@ -117,9 +117,9 @@ rsiNotExtShort = rsi > 25
 volMA   = ta.sma(volume, volLen)
 vStrong = volume > volMA * 1.1
 
-//══════════════════════════════════════
+//======================================
 // FLUXO / OBV / VWAP
-//══════════════════════════════════════
+//======================================
 spread  = math.max(high - low, syminfo.mintick)
 flowRaw = ((close - open) / spread) * volume
 flow    = ta.ema(flowRaw, 13)
@@ -136,9 +136,9 @@ obvBear = obv_ < obvEMA and obv_ < obv_[5]
 aboveVwap = close > ta.vwap
 belowVwap = close < ta.vwap
 
-//══════════════════════════════════════
+//======================================
 // EMA200 DIRECAO / TENDENCIA
-//══════════════════════════════════════
+//======================================
 e200Rising  = ema200 > ema200[4]
 e200Falling = ema200 < ema200[4]
 
@@ -151,9 +151,9 @@ bullsCount = (close > ema21 ? 1 : 0) + (close[1] > ema21[1] ? 1 : 0) + (close[2]
 trendConsistentBull = bullsCount >= 4
 trendConsistentBear = bullsCount <= 1
 
-//══════════════════════════════════════
+//======================================
 // SCORE
-//══════════════════════════════════════
+//======================================
 sTrend    = trendBull           ?  35 : trendBear           ? -35 : 0
 sFlow     = fBull               ?  15 : fBear               ? -15 : 0
 sFlowStr  = fStrong             ?  10 : 0
@@ -176,9 +176,9 @@ flexBonusBull = (tbullLoose and not trendBull) ? 30 : 0
 flexBonusBear = (tbearLoose and not trendBear) ? 30 : 0
 flexScore     = baseScore + flexBonusBull - flexBonusBear
 
-//══════════════════════════════════════
+//======================================
 // SINAL FLEX
-//══════════════════════════════════════
+//======================================
 trendiloOkL = not useTrendilo or trendiloLong
 trendiloOkS = not useTrendilo or trendiloShort
 
@@ -188,15 +188,15 @@ shortFlex = flexScore < -flexThresh and macdBearR and adx > adxThresh and rsiNot
 newLong  = longFlex  and not longFlex[1]  and barstate.isconfirmed
 newShort = shortFlex and not shortFlex[1] and barstate.isconfirmed
 
-//══════════════════════════════════════
+//======================================
 // SINAIS VISUAIS
-//══════════════════════════════════════
+//======================================
 plotshape(newLong,  "FLEX LONG",  style=shape.labelup,   location=location.belowbar, color=color.lime, text="L", textcolor=color.black, size=size.small)
 plotshape(newShort, "FLEX SHORT", style=shape.labeldown, location=location.abovebar, color=color.red,  text="S", textcolor=color.white, size=size.small)
 
-//══════════════════════════════════════
+//======================================
 // FUNDO
-//══════════════════════════════════════
+//======================================
 bgcolor(newLong                      ? color.new(color.lime,   75) : na)
 bgcolor(newShort                     ? color.new(color.red,    75) : na)
 bgcolor(longFlex  and not newLong    ? color.new(color.lime,   88) : na)
@@ -204,10 +204,10 @@ bgcolor(shortFlex and not newShort   ? color.new(color.red,    88) : na)
 bgcolor(trendBull and not longFlex   ? color.new(color.lime,   96) : na)
 bgcolor(tbullLoose and not trendBull ? color.new(color.yellow, 96) : na)
 
-//══════════════════════════════════════
+//======================================
 // PRE-CALCULO DAS CELULAS DO PAINEL
 // (tudo em linha unica para evitar erros de continuacao no Pine Script v6)
-//══════════════════════════════════════
+//======================================
 G  = color.lime
 Y  = color.yellow
 R  = color.red
@@ -267,9 +267,9 @@ c15b = longFlex or shortFlex ? color.new(c15c, 75) : na
 c16t = longFlex or shortFlex ? "-" : flexScore > flexThresh ? (not macdBullR ? "MACD X" : adx <= adxThresh ? "ADX X" : not rsiNotExtLong ? "RSI X" : not trendiloOkL ? "Trendilo X" : "-") : flexScore < -flexThresh ? (not macdBearR ? "MACD X" : adx <= adxThresh ? "ADX X" : not rsiNotExtShort ? "RSI X" : not trendiloOkS ? "Trendilo X" : "-") : "Score " + str.tostring(flexScore)
 c16c = c16t == "-" ? Gr : R
 
-//══════════════════════════════════════
+//======================================
 // PAINEL 2x17
-//══════════════════════════════════════
+//======================================
 var table painel = table.new(position.top_right, 2, 17, bgcolor=color.new(color.black, 72), border_width=1, border_color=color.new(color.gray, 60))
 
 if barstate.islast
@@ -308,8 +308,8 @@ if barstate.islast
     table.cell(painel, 0, 16, "Bloqueio",   text_color=Gr,  text_size=size.small)
     table.cell(painel, 1, 16, c16t, text_color=c16c, text_size=size.small)
 
-//══════════════════════════════════════
+//======================================
 // ALERTAS
-//══════════════════════════════════════
+//======================================
 alertcondition(newLong,  "FLEX LONG",  "LONG FLEX - GAUSS $180")
 alertcondition(newShort, "FLEX SHORT", "SHORT FLEX - GAUSS $180")
