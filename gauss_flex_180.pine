@@ -242,6 +242,15 @@ R  = color.red
 W  = color.white
 Gr = color.gray
 
+// Strings calculadas fora do if (evita line-continuation com ':' e '=')
+statusTxt = newLong ? "▲ COMPRAR" : newShort ? "▼ VENDER" : longFlex ? "LONG ativo" : shortFlex ? "SHORT ativo" : "AGUARDAR"
+statusCol = newLong ? G : newShort ? R : longFlex ? G : shortFlex ? R : Y
+
+blockReasonL = not macdBullR ? "MACD direc ✗" : adx <= adxThresh ? "ADX " + str.tostring(adx,"#.#") + " ✗" : not rsiNotExtLong ? "RSI extrem ✗" : not trendiloOkL ? "Trendilo ✗" : "—"
+blockReasonS = not macdBearR ? "MACD direc ✗" : adx <= adxThresh ? "ADX " + str.tostring(adx,"#.#") + " ✗" : not rsiNotExtShort ? "RSI extrem ✗" : not trendiloOkS ? "Trendilo ✗" : "—"
+blockTxt = longFlex or shortFlex ? "—" : flexScore > flexThresh ? blockReasonL : flexScore < -flexThresh ? blockReasonS : "Score " + str.tostring(flexScore)
+blockCol = blockTxt == "—" ? Gr : R
+
 var table painel = table.new(
      position.top_right, 2, 17,
      bgcolor=color.new(color.black, 72),
@@ -334,11 +343,6 @@ if barstate.islast
          text_color=trendiloLong ? G : trendiloShort ? R : Gr, text_size=size.small)
 
     // ── Linha 15: STATUS ─────────────────────────────────────────────────────
-    statusTxt = newLong   ? "▲ COMPRAR" :
-                newShort  ? "▼ VENDER"  :
-                longFlex  ? "LONG ativo" :
-                shortFlex ? "SHORT ativo" : "AGUARDAR"
-    statusCol = newLong ? G : newShort ? R : longFlex ? G : shortFlex ? R : Y
     table.cell(painel, 0, 15, "STATUS", text_color=W, text_size=size.small)
     table.cell(painel, 1, 15, statusTxt,
          text_color=statusCol,
@@ -346,21 +350,6 @@ if barstate.islast
          text_size=size.small)
 
     // ── Linha 16: Bloqueio — por que o sinal não disparou ────────────────────
-    // Mostra a condição que está faltando quando o score já passou do limiar
-    blockTxt =
-        longFlex or shortFlex ? "—" :
-        flexScore > flexThresh ?
-            (not macdBullR      ? "MACD direc ✗" :
-             adx <= adxThresh   ? "ADX " + str.tostring(adx,"#.#") + " ✗" :
-             not rsiNotExtLong  ? "RSI extrem ✗" :
-             not trendiloOkL    ? "Trendilo ✗"   : "—") :
-        flexScore < -flexThresh ?
-            (not macdBearR      ? "MACD direc ✗" :
-             adx <= adxThresh   ? "ADX " + str.tostring(adx,"#.#") + " ✗" :
-             not rsiNotExtShort ? "RSI extrem ✗" :
-             not trendiloOkS    ? "Trendilo ✗"   : "—") :
-        "Score " + str.tostring(flexScore)
-    blockCol = blockTxt == "—" ? Gr : R
     table.cell(painel, 0, 16, "Bloqueio", text_color=Gr, text_size=size.small)
     table.cell(painel, 1, 16, blockTxt, text_color=blockCol, text_size=size.small)
 
