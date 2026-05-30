@@ -34,7 +34,7 @@ trSmooth    = input.int(1,     "Smooth",    group=grpTrendilo)
 trOffset    = input.float(0.85,"Offset",    group=grpTrendilo)
 trSigma     = input.int(6,     "Sigma",     group=grpTrendilo)
 trBmult     = input.float(1.0, "Band Mult", group=grpTrendilo)
-useTrendilo = input.bool(false, "Usar Trendilo como filtro extra", group=grpTrendilo)
+useTrendilo = input.bool(true, "Usar Trendilo como filtro extra", group=grpTrendilo)
 
 //══════════════════════════════════════
 // EMAs
@@ -204,11 +204,12 @@ sObv     = obvBull       ?  15 : obvBear       ? -15 : 0
 sVwap    = aboveVwap     ?   5 : -5
 sHa      = haBull        ?  10 : haBear        ? -10 : 0
 sKaAccel = kalmanAccelUp ?   5 : kalmanAccelDown ?  -5 : 0
-sTrCons  = trendConsistentBull ? 5 : trendConsistentBear ? -5 : 0
+sTrCons   = trendConsistentBull ? 5 : trendConsistentBear ? -5 : 0
+sTrendilo = trendiloLong ? 10 : trendiloShort ? -10 : 0   // Trendilo ALMA
 
 baseScore = math.max(-145, math.min(145,
     sTrend + sFlow + sFlowStr + sMacd + sAdx + sVol +
-    sRsi + sE200 + sKalman + sObv + sVwap + sHa + sKaAccel + sTrCons))
+    sRsi + sE200 + sKalman + sObv + sVwap + sHa + sKaAccel + sTrCons + sTrendilo))
 
 // Bônus FLEX: +30 quando EMA alinhadas sem EMA200 (bot linhas 410-412)
 flexBonusBull = (tbullLoose and not trendBull) ? 30 : 0
@@ -338,7 +339,8 @@ if barstate.islast
 
     table.cell(painel, 0, 14, "Trendilo", text_color=Gr, text_size=size.small)
     table.cell(painel, 1, 14,
-         trendiloLong ? "▲ BULL" : trendiloShort ? "▼ BEAR" : "NEUTRO",
+         trendiloLong  ? "▲ BULL  +10" :
+         trendiloShort ? "▼ BEAR  −10" : "NEUTRO   0",
          text_color=trendiloLong ? G : trendiloShort ? R : Gr, text_size=size.small)
 
     table.cell(painel, 0, 15, "STATUS", text_color=W, text_size=size.small)
