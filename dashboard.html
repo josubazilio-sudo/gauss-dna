@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAUSS+DNA Bot</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    background:#0d1117;
+    color:#c9d1d9;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+/* HEADER */
+header {
+    background:linear-gradient(135deg,#161b22,#0d1117);
+    border-bottom:1px solid #21262d;
+    padding:14px 24px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+.logo {
+    font-size:20px;
+    font-weight:800;
+    background:linear-gradient(90deg,#00e676,#00bcd4);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    letter-spacing:1px;
+}
+.badge {
+    display:flex;
+    align-items:center;
+    gap:7px;
+    padding:4px 13px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:600;
+    transition:all .3s;
+}
+.badge.off { background:rgba(244,67,54,.12); border:1px solid rgba(244,67,54,.35); color:#f44336; }
+.badge.on  { background:rgba(0,230,118,.12); border:1px solid rgba(0,230,118,.35); color:#00e676; }
+.dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+.on .dot { animation:blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+.hdr-right { margin-left:auto; font-size:12px; color:#484f58; }
+
+/* LAYOUT */
+.main {
+    display:grid;
+    grid-template-columns:320px 1fr;
+    flex:1;
+    overflow:hidden;
+    height:calc(100vh - 57px);
+}
+
+/* SIDEBAR */
+.side {
+    background:#161b22;
+    border-right:1px solid #21262d;
+    padding:18px 16px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+.sec-lbl {
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:1.8px;
+    color:#484f58;
+    margin-bottom:2px;
+}
+.fgroup { display:flex; flex-direction:column; gap:5px; }
+.fgroup label { font-size:12px; color:#8b949e; }
+input, select {
+    background:#0d1117;
+    border:1px solid #21262d;
+    border-radius:6px;
+    color:#c9d1d9;
+    padding:7px 11px;
+    font-size:13px;
+    outline:none;
+    transition:border-color .2s;
+    width:100%;
+}
+input:focus, select:focus { border-color:#00e676; }
+input[type=password] { font-family:monospace; letter-spacing:3px; }
+.row2 { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.hint {
+    background:rgba(0,188,212,.07);
+    border:1px solid rgba(0,188,212,.18);
+    border-radius:6px;
+    padding:9px 11px;
+    font-size:11px;
+    color:#8b949e;
+    line-height:1.6;
+}
+.hint strong { color:#00bcd4; }
+hr { border:none; border-top:1px solid #21262d; }
+
+/* BUTTONS */
+.btn-go {
+    background:linear-gradient(135deg,#00e676,#00c853);
+    border:none;
+    border-radius:8px;
+    color:#000;
+    font-size:14px;
+    font-weight:800;
+    padding:11px;
+    cursor:pointer;
+    width:100%;
+    transition:all .2s;
+    letter-spacing:.5px;
+}
+.btn-go:hover { box-shadow:0 4px 18px rgba(0,230,118,.35); transform:translateY(-1px); }
+.btn-stop {
+    background:linear-gradient(135deg,#f44336,#d32f2f);
+    border:none;
+    border-radius:8px;
+    color:#fff;
+    font-size:14px;
+    font-weight:800;
+    padding:11px;
+    cursor:pointer;
+    width:100%;
+    transition:all .2s;
+    display:none;
+}
+.btn-stop:hover { box-shadow:0 4px 18px rgba(244,67,54,.35); transform:translateY(-1px); }
+.btn-test {
+    background:transparent;
+    border:1px solid #21262d;
+    border-radius:8px;
+    color:#484f58;
+    font-size:12px;
+    padding:8px;
+    cursor:pointer;
+    width:100%;
+    transition:all .2s;
+}
+.btn-test:hover { border-color:#00bcd4; color:#00bcd4; }
+
+/* TERMINAL */
+.term-wrap {
+    display:flex;
+    flex-direction:column;
+    background:#0d1117;
+    overflow:hidden;
+}
+.term-bar {
+    background:#161b22;
+    border-bottom:1px solid #21262d;
+    padding:9px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-shrink:0;
+}
+.term-title { font-size:12px; color:#484f58; display:flex; align-items:center; gap:7px; }
+.btn-clr {
+    background:transparent;
+    border:1px solid #21262d;
+    border-radius:4px;
+    color:#484f58;
+    font-size:11px;
+    padding:3px 9px;
+    cursor:pointer;
+}
+.btn-clr:hover { color:#c9d1d9; border-color:#444; }
+#log {
+    flex:1;
+    overflow-y:auto;
+    padding:10px 16px;
+    font-family:'Consolas','Courier New',monospace;
+    font-size:12px;
+    line-height:1.65;
+}
+.l { display:block; white-space:pre-wrap; word-break:break-all; }
+.l-n  { color:#8b949e; }
+.l-ok { color:#c9d1d9; }
+.l-w  { color:#ffeb3b; }
+.l-e  { color:#f44336; }
+.l-L  { color:#00e676; font-weight:600; }
+.l-S  { color:#f44336; font-weight:600; }
+.l-s  { color:#00bcd4; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#21262d; border-radius:3px; }
+
+@media(max-width:700px){
+    .main { grid-template-columns:1fr; }
+    .term-wrap { height:300px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <div class="logo">⚡ GAUSS+DNA</div>
+    <div class="badge off" id="badge"><div class="dot"></div><span id="badge-txt">Parado</span></div>
+    <div class="hdr-right">Scanner MEXC • Sinais Telegram</div>
+</header>
+
+<div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="side">
+
+        <div>
+            <div class="sec-lbl">Telegram</div>
+            <div class="fgroup">
+                <label>Bot Token</label>
+                <input type="password" id="tg_token" placeholder="123456:ABCdef..." autocomplete="off">
+            </div>
+            <div class="fgroup" style="margin-top:9px">
+                <label>Chat ID</label>
+                <input type="text" id="tg_chatid" placeholder="-1001234567890">
+            </div>
+            <div class="hint" style="margin-top:9px">
+                Token → <strong>@BotFather</strong> → /newbot<br>
+                Chat ID → <strong>@userinfobot</strong> → qualquer msg
+            </div>
+        </div>
+
+        <hr>
+
+        <div>
+            <div class="sec-lbl">Risco</div>
+            <div class="row2">
+                <div class="fgroup">
+                    <label>Capital ($)</label>
+                    <input type="number" id="capital" value="180" min="10">
+                </div>
+                <div class="fgroup">
+                    <label>Risco/trade (%)</label>
+                    <input type="number" id="risk_pct" value="3" min="0.5" max="10" step="0.5">
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <div>
+            <div class="sec-lbl">Estrategia</div>
+            <div class="fgroup">
+                <label>Timeframe</label>
+                <select id="timeframes">
+                    <option value="15m">15 minutos</option>
+                    <option value="1h">1 hora</option>
+                    <option value="4h">4 horas</option>
+                    <option value="15m,1h">15m + 1h  (MTF)</option>
+                    <option value="1h,4h">1h + 4h   (MTF)</option>
+                </select>
+            </div>
+            <div class="fgroup" style="margin-top:9px">
+                <label>Modo de sinal</label>
+                <select id="signal_mode">
+                    <option value="FLEX">FLEX — mais sinais</option>
+                    <option value="ELITE">ELITE — sinais precisos</option>
+                </select>
+            </div>
+            <div class="fgroup" style="margin-top:9px">
+                <label>Moedas para varrer</label>
+                <select id="scanner_top">
+                    <option value="20">Top 20</option>
+                    <option value="30" selected>Top 30</option>
+                    <option value="50">Top 50</option>
+                    <option value="100">Top 100</option>
+                </select>
+            </div>
+        </div>
+
+        <hr>
+
+        <button class="btn-go"   id="btn-go"   onclick="startBot()">▶ INICIAR BOT</button>
+        <button class="btn-stop" id="btn-stop"  onclick="stopBot()">■ PARAR BOT</button>
+        <button class="btn-test"               onclick="runTest()">🧪 Testar Telegram</button>
+
+    </div>
+
+    <!-- TERMINAL -->
+    <div class="term-wrap">
+        <div class="term-bar">
+            <div class="term-title"><span style="color:#00e676">●</span> Logs do bot</div>
+            <button class="btn-clr" onclick="clearLog()">Limpar</button>
+        </div>
+        <div id="log">
+            <span class="l l-s">GAUSS+DNA Dashboard — aguardando inicio...</span><br>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const KEYS = ['tg_token','tg_chatid','capital','risk_pct','timeframes','signal_mode','scanner_top'];
+
+function save() {
+    const c={};
+    KEYS.forEach(k => c[k] = document.getElementById(k).value);
+    localStorage.setItem('gauss_cfg', JSON.stringify(c));
+}
+function load() {
+    try {
+        const c = JSON.parse(localStorage.getItem('gauss_cfg')||'{}');
+        KEYS.forEach(k => { if(c[k]!=null && document.getElementById(k)) document.getElementById(k).value=c[k]; });
+    } catch(e){}
+}
+KEYS.forEach(k => { const el=document.getElementById(k); if(el) el.addEventListener('change',save); });
+
+// WebSocket
+let ws=null;
+function connectWS() {
+    const proto = location.protocol==='https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onmessage = e => {
+        const d = JSON.parse(e.data);
+        if(d.type==='log') addLog(d.msg);
+        if(d.type==='status') setStatus(d.running);
+    };
+    ws.onclose = () => setTimeout(connectWS, 2000);
+    ws.onerror = () => ws.close();
+}
+
+function addLog(msg) {
+    const el = document.getElementById('log');
+    const s = document.createElement('span');
+    s.className = 'l ' + classify(msg);
+    s.textContent = msg;
+    el.appendChild(s);
+    el.appendChild(document.createElement('br'));
+    el.scrollTop = el.scrollHeight;
+}
+function classify(m) {
+    const t = m.toLowerCase();
+    if(t.includes(' long ') || t.includes('compra') || t.includes('▲')) return 'l-L';
+    if(t.includes(' short') || t.includes('venda') || t.includes('▼')) return 'l-S';
+    if(t.includes('warn') || t.includes('⚠') || t.includes('aviso')) return 'l-w';
+    if(t.includes('erro') || t.includes('error') || t.includes('❌')) return 'l-e';
+    if(t.includes('✅') || t.includes('🚀') || t.includes('iniciado') || t.includes('conectado')) return 'l-s';
+    if(t.includes('ciclo') || t.includes('score') || t.includes('rsi')) return 'l-n';
+    return 'l-ok';
+}
+function clearLog() {
+    document.getElementById('log').innerHTML='<span class="l l-s">Log limpo.</span><br>';
+}
+
+function setStatus(on) {
+    const badge    = document.getElementById('badge');
+    const txt      = document.getElementById('badge-txt');
+    const btnGo    = document.getElementById('btn-go');
+    const btnStop  = document.getElementById('btn-stop');
+    badge.className = on ? 'badge on' : 'badge off';
+    txt.textContent = on ? 'Rodando' : 'Parado';
+    btnGo.style.display   = on ? 'none'  : 'block';
+    btnStop.style.display = on ? 'block' : 'none';
+}
+
+async function post(url, body) {
+    const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    return r.json();
+}
+
+async function startBot() {
+    const tok = document.getElementById('tg_token').value.trim();
+    const cid = document.getElementById('tg_chatid').value.trim();
+    if(!tok){ alert('Preencha o Bot Token!'); return; }
+    if(!cid){ alert('Preencha o Chat ID!'); return; }
+    save();
+    addLog('▶ Iniciando bot...');
+    const d = await post('/start',{
+        tg_token:   tok,
+        tg_chatid:  cid,
+        capital:    document.getElementById('capital').value,
+        risk_pct:   String(parseFloat(document.getElementById('risk_pct').value)/100),
+        timeframes: document.getElementById('timeframes').value,
+        signal_mode:document.getElementById('signal_mode').value,
+        scanner_top:document.getElementById('scanner_top').value,
+    });
+    if(d.ok) setStatus(true);
+    else addLog('❌ ' + (d.error||'Erro ao iniciar'));
+}
+
+async function stopBot() {
+    addLog('■ Parando bot...');
+    await fetch('/stop',{method:'POST'});
+    setStatus(false);
+}
+
+async function runTest() {
+    const tok = document.getElementById('tg_token').value.trim();
+    const cid = document.getElementById('tg_chatid').value.trim();
+    if(!tok||!cid){ alert('Preencha Token e Chat ID primeiro!'); return; }
+    save();
+    addLog('🧪 Rodando teste — verifique o Telegram...');
+    const d = await post('/start',{
+        tg_token:tok, tg_chatid:cid,
+        capital:'180', risk_pct:'0.03',
+        timeframes:'15m', signal_mode:'FLEX', scanner_top:'5', test_mode:true,
+    });
+    if(!d.ok) addLog('❌ '+(d.error||'Erro'));
+}
+
+// Status polling fallback
+setInterval(async()=>{
+    try{ const r=await fetch('/status'); const d=await r.json(); setStatus(d.running); }catch(e){}
+},5000);
+
+load();
+connectWS();
+</script>
+</body>
+</html>
