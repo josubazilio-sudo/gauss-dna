@@ -72,6 +72,20 @@ def rma_series(arr, p):
     for v in arr[p:]: out.append((out[-1]*(p-1)+v)/p)
     return out
 
+def alma_series(src, length=50, offset=0.85, sigma=6):
+    """Arnaud Legoux Moving Average — idêntico ao ta.alma() do Pine Script."""
+    import math
+    n = len(src)
+    m = math.floor(offset * (length - 1))
+    s = length / sigma
+    w = [math.exp(-((i - m) ** 2) / (2 * s * s)) for i in range(length)]
+    w_sum = sum(w)
+    out = [float('nan')] * (length - 1)
+    for i in range(length - 1, n):
+        val = sum(w[j] * src[i - length + 1 + j] for j in range(length)) / w_sum
+        out.append(val)
+    return out
+
 def kalman_filter(src, length, R=0.01, Q=0.1):
     est=src[0]; err=1.0; out=[]
     for s in src:
@@ -337,6 +351,16 @@ def analyze(sym, candles):
     # Swing levels para stop baseado em estrutura de mercado
     swing_low=min(lows[-5:]); swing_high=max(highs[-5:])
 
+    # ── TRENDILO (ALMA do % de variação + bandas RMS) ─────────────────────────
+    pch = [0.0] + [(closes[i]-closes[i-1])/closes[i]*100 for i in range(1,n)]
+    avpch = alma_series(pch, 50, 0.85, 6)
+    # RMS rolling dos últimos 50 valores de avpch
+    import math as _math
+    rms_vals = [_math.sqrt(sum(v*v for v in avpch[max(0,i-49):i+1])/min(i+1,50))
+                for i in range(len(avpch))]
+    trendilo_long  = not _math.isnan(avpch[-1]) and avpch[-1] > rms_vals[-1]
+    trendilo_short = not _math.isnan(avpch[-1]) and avpch[-1] < -rms_vals[-1]
+
     # Score (capped ±145)
     score=(
         (35 if trend_bull else -35 if trend_bear else 0)+
@@ -352,7 +376,8 @@ def analyze(sym, candles):
         (5 if above_vwap else -5)+
         (10 if ha_bull else -10 if ha_bear else 0)+
         (5 if kalman_accel_up else -5 if kalman_accel_down else 0)+
-        (5 if trend_consistent_bull else -5 if trend_consistent_bear else 0)
+        (5 if trend_consistent_bull else -5 if trend_consistent_bear else 0)+
+        (10 if trendilo_long else -10 if trendilo_short else 0)
     )
     score=max(-145,min(145,score))
 
@@ -414,8 +439,8 @@ def analyze(sym, candles):
     # FLEX: score captura tendência (+35/-35), sem exigir alinhamento EMA extra
     flex_not_ext_long  = rsi < 75
     flex_not_ext_short = rsi > 25
-    long_flex =(flex_score>30 and macd_bull_r and adx>13 and flex_not_ext_long)
-    short_flex=(flex_score<-30 and macd_bear_r and adx>13 and flex_not_ext_short)
+    long_flex =(flex_score>30 and macd_bull_r and adx>13 and flex_not_ext_long and trendilo_long)
+    short_flex=(flex_score<-30 and macd_bear_r and adx>13 and flex_not_ext_short and trendilo_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
