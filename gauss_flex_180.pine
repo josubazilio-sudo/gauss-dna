@@ -165,11 +165,9 @@ e200Falling = ema200 < ema200[4]
 //══════════════════════════════════════
 // TENDÊNCIA
 //══════════════════════════════════════
-trendBull =
-    close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
+trendBull = close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
 
-trendBear =
-    close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema200
+trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema200
 
 tbullLoose = ema10 > ema21 and ema21 > ema50   // sem EMA200 (bot linha 406)
 tbearLoose = ema10 < ema21 and ema21 < ema50
@@ -178,8 +176,7 @@ tbearLoose = ema10 < ema21 and ema21 < ema50
 // TENDÊNCIA CONSISTENTE (bot linha 299-301)
 // trend_consistent_bull = 4+ das últimas 5 velas fecham acima da EMA21
 //══════════════════════════════════════
-bullsCount =
-    (close    > ema21    ? 1 : 0) +
+bullsCount = (close    > ema21    ? 1 : 0) +
     (close[1] > ema21[1] ? 1 : 0) +
     (close[2] > ema21[2] ? 1 : 0) +
     (close[3] > ema21[3] ? 1 : 0) +
@@ -224,18 +221,16 @@ flexScore     = baseScore + flexBonusBull - flexBonusBear
 trendiloOkL = not useTrendilo or trendiloLong
 trendiloOkS = not useTrendilo or trendiloShort
 
-longFlex =
-    flexScore  >  flexThresh and
-    macdBullR              and
-    adx        >  adxThresh and
-    rsiNotExtLong          and
+longFlex = flexScore > flexThresh and
+    macdBullR and
+    adx > adxThresh and
+    rsiNotExtLong and
     trendiloOkL
 
-shortFlex =
-    flexScore  < -flexThresh and
-    macdBearR              and
-    adx        >  adxThresh and
-    rsiNotExtShort         and
+shortFlex = flexScore < -flexThresh and
+    macdBearR and
+    adx > adxThresh and
+    rsiNotExtShort and
     trendiloOkS
 
 newLong  = longFlex  and not longFlex[1]
