@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GAUSS FLEX — Top 50</title>
+<title>GAUSS FLEX — Top 50 Binance</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#0d1117;--bg2:#161b22;--border:#21262d;--txt:#c9d1d9;--muted:#484f58;--green:#00e676;--red:#f44336;--yellow:#ffeb3b;--cyan:#00bcd4}
@@ -168,8 +168,7 @@ td{padding:8px 10px;white-space:nowrap;vertical-align:middle}
 // ── EXCLUSIONS ─────────────────────────────────────────────────────────
 const STABLE=new Set(["USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH","EUR","GBP","BRL","UST","USDD","FRAX","USDT"]);
 const BAD_SUB=["UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S"];
-const MEXC_TF={"1h":"60m","4h":"4h","1d":"1d"};
-const API="https://api.mexc.com/api/v3";
+const API="https://api.binance.com/api/v3";
 
 // ── INDICATORS ─────────────────────────────────────────────────────────
 function ema(a,n){const k=2/(n+1);const o=[a[0]];for(let i=1;i<a.length;i++)o.push(a[i]*k+o[i-1]*(1-k));return o}
@@ -281,9 +280,8 @@ async function getTop(n){
 }
 
 async function fetchCandles(sym,tf){
-  const iv=MEXC_TF[tf]||tf;
   try{
-    const r=await fetch(`${API}/klines?symbol=${sym}&interval=${iv}&limit=250`,{signal:AbortSignal.timeout(10000)});
+    const r=await fetch(`${API}/klines?symbol=${sym}&interval=${tf}&limit=250`,{signal:AbortSignal.timeout(10000)});
     if(!r.ok)return null;
     const d=await r.json();
     if(!Array.isArray(d)||d.length<200)return null;
@@ -343,7 +341,7 @@ function render(){
     }
 
     const base=r.sym.replace('USDT','');
-    const tvLink=`https://www.tradingview.com/chart/?symbol=MEXC:${base}USDT`;
+    const tvLink=`https://www.tradingview.com/chart/?symbol=BINANCE:${base}USDT`;
     const sigHtml=r.sig
       ?`<span class="sig ${r.sig==='LONG'?'sig-L':'sig-S'}">${r.sig==='LONG'?'▲':'▼'} ${r.sig}</span>`
       :`<span class="sig sig-N">—</span>`;
