@@ -1,90 +1,90 @@
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // GAUSS+DNA $180 — ELITE COMBINADO
 // Combina: Trendilo + DNA Institucional Elite + Kalman + Sinais de Movimento Pro
 // Pine Script v6
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 //@version=6
 indicator("GAUSS+DNA $180 — ELITE COMBINADO", shorttitle="GAUSS $180", overlay=false,
      max_bars_back=500, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // INPUTS — TENDÊNCIA
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 var GRP_TREND = "TENDÊNCIA"
-emaFastLen  = input.int(8,   "EMA Rápida",     minval=1,  group=GRP_TREND)
-emaMidLen   = input.int(21,  "EMA Média",      minval=1,  group=GRP_TREND)
-emaSlowLen  = input.int(50,  "EMA Lenta",      minval=1,  group=GRP_TREND)
-emaTrendLen = input.int(200, "EMA 200",        minval=1,  group=GRP_TREND)
-atrLen      = input.int(14,  "ATR Length",     minval=1,  group=GRP_TREND)
-maxDistATR  = input.float(3.5,"Dist. Máx ATR", minval=0.1, group=GRP_TREND)
+emaFastLen  = input.int(8,    "EMA Rápida",      minval=1,   group=GRP_TREND)
+emaMidLen   = input.int(21,   "EMA Média",       minval=1,   group=GRP_TREND)
+emaSlowLen  = input.int(50,   "EMA Lenta",       minval=1,   group=GRP_TREND)
+emaTrendLen = input.int(200,  "EMA 200",         minval=1,   group=GRP_TREND)
+atrLen      = input.int(14,   "ATR Length",      minval=1,   group=GRP_TREND)
+maxDistATR  = input.float(3.5,"Dist. Máx ATR",  minval=0.1, group=GRP_TREND)
 enableShort = input.bool(false, "Habilitar SHORT", group=GRP_TREND)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // INPUTS — MACD HA
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 var GRP_MACD = "MACD HA"
-macdFast    = input.int(8,  "MACD Rápido",  minval=1, group=GRP_MACD)
-macdSlow    = input.int(21, "MACD Lento",   minval=1, group=GRP_MACD)
-macdSignal  = input.int(5,  "MACD Signal",  minval=1, group=GRP_MACD)
+macdFast   = input.int(8,  "MACD Rápido", minval=1, group=GRP_MACD)
+macdSlow   = input.int(21, "MACD Lento",  minval=1, group=GRP_MACD)
+macdSignal = input.int(5,  "MACD Signal", minval=1, group=GRP_MACD)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // INPUTS — FILTROS
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 var GRP_FILT = "FILTROS"
-adxLen       = input.int(14,  "ADX Length",         minval=1,   group=GRP_FILT)
-adxSmooth    = input.int(14,  "ADX Smooth",         minval=1,   group=GRP_FILT)
-adxMin       = input.float(16.0, "ADX Min (Long)",  minval=1.0, group=GRP_FILT)
-adxMinShort  = input.float(18.0, "ADX Min (Short)", minval=1.0, group=GRP_FILT)
-adxStrong    = input.float(28.0, "ADX Forte",       minval=1.0, group=GRP_FILT)
-volLen       = input.int(20,  "Volume MA Length",   minval=1,   group=GRP_FILT)
-volMult      = input.float(0.9,"Vol. Multiplicador",minval=0.1, group=GRP_FILT)
-scoreMin     = input.int(40,  "Score Mínimo",       minval=0,   group=GRP_FILT)
+adxLen      = input.int(14,     "ADX Length",         minval=1,   group=GRP_FILT)
+adxSmooth   = input.int(14,     "ADX Smooth",         minval=1,   group=GRP_FILT)
+adxMin      = input.float(16.0, "ADX Min (Long)",     minval=1.0, group=GRP_FILT)
+adxMinShort = input.float(18.0, "ADX Min (Short)",    minval=1.0, group=GRP_FILT)
+adxStrong   = input.float(28.0, "ADX Forte",          minval=1.0, group=GRP_FILT)
+volLen      = input.int(20,     "Volume MA Length",   minval=1,   group=GRP_FILT)
+volMult     = input.float(0.9,  "Vol. Multiplicador", minval=0.1, group=GRP_FILT)
+scoreMin    = input.int(40,     "Score Mínimo",       minval=0,   group=GRP_FILT)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // INPUTS — KALMAN
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 var GRP_KALMAN = "KALMAN"
-useKalman     = input.bool(true,  "Usar Filtro Kalman",  group=GRP_KALMAN)
-kFastLen      = input.int(50,     "Kalman Rápido (per)", minval=1, group=GRP_KALMAN)
-kSlowLen      = input.int(150,    "Kalman Lento (per)",  minval=1, group=GRP_KALMAN)
-showKalmanCdl = input.bool(true,  "Candles Kalman",      group=GRP_KALMAN)
+useKalman     = input.bool(true, "Usar Filtro Kalman",  group=GRP_KALMAN)
+kFastLen      = input.int(50,   "Kalman Rápido (per)", minval=1, group=GRP_KALMAN)
+kSlowLen      = input.int(150,  "Kalman Lento (per)",  minval=1, group=GRP_KALMAN)
+showKalmanCdl = input.bool(true, "Candles Kalman",     group=GRP_KALMAN)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // INPUTS — TRENDILO
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 var GRP_TR = "TRENDILO"
-useTrendilo = input.bool(true,   "Usar Trendilo",        group=GRP_TR)
-trSmooth    = input.int(1,       "Suavização (smooth)",  minval=1,   group=GRP_TR)
-trLen       = input.int(50,      "Comprimento",          minval=2,   group=GRP_TR)
-trOffset    = input.float(0.85,  "ALMA Offset",          minval=0.0, maxval=1.0, group=GRP_TR)
-trSigma     = input.float(6.0,   "ALMA Sigma",           minval=0.1, group=GRP_TR)
-trBmult     = input.float(1.0,   "RMS Band Mult",        minval=0.1, group=GRP_TR)
+useTrendilo = input.bool(true,  "Usar Trendilo",       group=GRP_TR)
+trSmooth    = input.int(1,      "Suavização (smooth)", minval=1,   group=GRP_TR)
+trLen       = input.int(50,     "Comprimento",         minval=2,   group=GRP_TR)
+trOffset    = input.float(0.85, "ALMA Offset",         minval=0.0, maxval=1.0, group=GRP_TR)
+trSigma     = input.float(6.0,  "ALMA Sigma",          minval=0.1, group=GRP_TR)
+trBmult     = input.float(1.0,  "RMS Band Mult",       minval=0.1, group=GRP_TR)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // INPUTS — VISUAL
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 var GRP_VIS = "VISUAL"
-bullColor   = input.color(color.new(color.lime,  0),  "Cor BULL",  group=GRP_VIS)
-bearColor   = input.color(color.new(color.red,   0),  "Cor BEAR",  group=GRP_VIS)
-upperCol    = input.color(color.new(color.teal,  0),  "Kalman UP", group=GRP_VIS)
-lowerCol    = input.color(color.new(color.fuchsia,0), "Kalman DN", group=GRP_VIS)
+bullColor   = input.color(color.new(color.lime,    0), "Cor BULL",  group=GRP_VIS)
+bearColor   = input.color(color.new(color.red,     0), "Cor BEAR",  group=GRP_VIS)
+upperCol    = input.color(color.new(color.teal,    0), "Kalman UP", group=GRP_VIS)
+lowerCol    = input.color(color.new(color.fuchsia, 0), "Kalman DN", group=GRP_VIS)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // EMAs
-// ══════════════════════════════════════════════════════════════════════════════
-ema10   = ta.ema(close, emaFastLen)
-ema21   = ta.ema(close, emaMidLen)
-ema50   = ta.ema(close, emaSlowLen)
-ema200  = ta.ema(close, emaTrendLen)
+// ════════════════════════════════════════════════════════════════════════════
+ema10  = ta.ema(close, emaFastLen)
+ema21  = ta.ema(close, emaMidLen)
+ema50  = ta.ema(close, emaSlowLen)
+ema200 = ta.ema(close, emaTrendLen)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // ATR
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 atr = math.max(ta.atr(atrLen), syminfo.mintick)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // KALMAN FILTER
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 kalman(src, length, R, Q) =>
     var float estimate  = na
     var float error_est = 1.0
@@ -99,22 +99,22 @@ kalman(src, length, R, Q) =>
 kFast = kalman(close, kFastLen, 0.01, 0.1)
 kSlow = kalman(close, kSlowLen, 0.01, 0.1)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // TRENDILO — ALMA MOMENTUM OSCILLATOR
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 pch   = ta.change(close, trSmooth) / close * 100
 avpch = ta.alma(pch, trLen, trOffset, trSigma)
 rmsT  = trBmult * math.sqrt(math.sum(avpch * avpch, trLen) / trLen)
 cdir  = avpch > rmsT ? 1 : avpch < -rmsT ? -1 : 0
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // MACD + MACD HA (Elite — histograma nos wicks)
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 [macdLine, signalLine, histLine] = ta.macd(close, macdFast, macdSlow, macdSignal)
 
-haClose   = (macdLine + signalLine) / 2.0
-var float haOpen = na
-haOpen   := na(haOpen) ? haClose : (haOpen + haClose[1]) / 2.0
+haClose           = (macdLine + signalLine) / 2.0
+var float haOpen  = na
+haOpen           := na(haOpen) ? haClose : (haOpen + haClose[1]) / 2.0
 
 haHighBase = math.max(math.max(macdLine, signalLine), math.max(haOpen, haClose))
 haLowBase  = math.min(math.min(macdLine, signalLine), math.min(haOpen, haClose))
@@ -131,9 +131,9 @@ haBear2 = haBear and haBear[1]
 macdBull = macdLine > signalLine and histLine > histLine[1] and histLine > 0 and haBull2
 macdBear = macdLine < signalLine and histLine < histLine[1] and histLine < 0 and haBear2
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // RSI
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 rsi       = ta.rsi(close, 14)
 rsiSmooth = ta.ema(rsi, 5)
 
@@ -142,77 +142,77 @@ rsiMomBear = rsiSmooth < 50 and rsiSmooth > 30
 rsiBullZ   = rsiSmooth < 30
 rsiBearZ   = rsiSmooth > 70
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // ADX + DI
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 [pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
 
-adxLongOk  = adx > adxMin       and pdi > mdi
-adxShortOk = adx > adxMinShort  and mdi > pdi
+adxLongOk  = adx > adxMin      and pdi > mdi
+adxShortOk = adx > adxMinShort and mdi > pdi
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // VOLUME
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 volMa     = ta.sma(volume, volLen)
 volStrong = volume > volMa * volMult
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // FLOW (ordem institucional)
-// ══════════════════════════════════════════════════════════════════════════════
-spread      = math.max(high - low, syminfo.mintick)
-flowRaw     = ((close - open) / spread) * volume
-flow        = ta.ema(flowRaw, 13)
-flowBull    = flow > 0
-flowBear    = flow < 0
-flowStrong  = math.abs(flow) > ta.sma(math.abs(flow), 20) * 1.2
+// ════════════════════════════════════════════════════════════════════════════
+spread     = math.max(high - low, syminfo.mintick)
+flowRaw    = ((close - open) / spread) * volume
+flow       = ta.ema(flowRaw, 13)
+flowBull   = flow > 0
+flowBear   = flow < 0
+flowStrong = math.abs(flow) > ta.sma(math.abs(flow), 20) * 1.2
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // TENDÊNCIA — Alinhamento de EMAs
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 trendBull = close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
 trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema200
-alignBull = close > ema10 and close > ema21 and close > ema50
+alignBull = close > ema10  and close > ema21  and close > ema50
 ema200Up  = ema200 > ema200[3]
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // DISTÂNCIA / IMPULSO / SWEEP
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 notExtLong   = (close - ema50) / atr < maxDistATR
 bullImpulse  = close > high[1] and close > open and (close - open) > atr * 0.15
-liqSweepLong = low < low[1] and close > low[1] and close > open
+liqSweepLong = low < low[1]   and close > low[1]  and close > open
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // SCORE — Sistema composto (Scripts 2+3 + Trendilo)
-// ══════════════════════════════════════════════════════════════════════════════
-// Componentes de Long/Short Score (ADX-based)
-sAdxA  = adx > adx[1]         ? 20 : adx > adx[1] * 0.95 ? 5 : -10
-sAdxS  = adx > adxStrong      ? 20 : 0
-sVol   = volume > volMa * 1.5 ? 15 : 0
-sDIL   = pdi > mdi            ? 15 : -10
-sDIS   = mdi > pdi            ? 15 : -10
-sMomL  = close > close[2]     ? 10 : -5
-sMomS  = close < close[2]     ? 10 : -5
-sTrL   = (cdir == 1)          ? 10 : -5
-sTrS   = (cdir == -1)         ? 10 : -5
+// ════════════════════════════════════════════════════════════════════════════
+// Componentes ADX-based (Long / Short Score)
+sAdxA = adx > adx[1]         ? 20 : adx > adx[1] * 0.95 ? 5 : -10
+sAdxS = adx > adxStrong      ? 20 : 0
+sVol  = volume > volMa * 1.5 ? 15 : 0
+sDIL  = pdi > mdi            ? 15 : -10
+sDIS  = mdi > pdi            ? 15 : -10
+sMomL = close > close[2]     ? 10 : -5
+sMomS = close < close[2]     ? 10 : -5
+sTrL  = cdir == 1            ? 10 : -5   // Trendilo — Long
+sTrS  = cdir == -1           ? 10 : -5   // Trendilo — Short
 
 longScore  = sAdxA + sAdxS + sVol + sDIL + sMomL + sTrL
 shortScore = sAdxA + sAdxS + sVol + sDIS + sMomS + sTrS
 
 // Score global composto
-score = (trendBull ? 35 : trendBear ? -35 : 0) +
-     (flowBull  ? 20 : flowBear  ? -20 : 0)  +
-     (flowStrong ? 10 : 0)                    +
-     (macdBull  ? 20 : macdBear  ? -20 : 0)  +
-     (adx > adxStrong ? 20 : adx > adxMin ? 10 : 0) +
-     (volStrong  ?  10 : -5)                  +
-     (rsiMomBull ?  10 : rsiMomBear ? -10 : 0) +
-     (ema200Up   ?  10 : ema200 < ema200[3] ? -10 : 0) +
-     (kFast > kSlow ? 10 : -10)              +
-     (cdir == 1 ? 15 : cdir == -1 ? -15 : 0)
+score = (trendBull ? 35 : trendBear ? -35 : 0)                       +
+        (flowBull  ? 20 : flowBear  ? -20 : 0)                       +
+        (flowStrong ? 10 : 0)                                         +
+        (macdBull  ? 20 : macdBear  ? -20 : 0)                       +
+        (adx > adxStrong ? 20 : adx > adxMin ? 10 : 0)               +
+        (volStrong   ?  10 : -5)                                      +
+        (rsiMomBull  ?  10 : rsiMomBear ? -10 : 0)                   +
+        (ema200Up    ?  10 : ema200 < ema200[3] ? -10 : 0)           +
+        (kFast > kSlow ? 10 : -10)                                    +
+        (cdir == 1 ? 15 : cdir == -1 ? -15 : 0)
 
-// ══════════════════════════════════════════════════════════════════════════════
-// COOLDOWN — Evita sinais consecutivos
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+// COOLDOWN — Evita sinais consecutivos (por lado)
+// ════════════════════════════════════════════════════════════════════════════
 var int lastLongBar  = na
 var int lastShortBar = na
 
@@ -220,36 +220,36 @@ cdBars  = adx > 35 ? 1 : adx > 25 ? 2 : 3
 cdLong  = na(lastLongBar)  or bar_index - lastLongBar  > cdBars
 cdShort = na(lastShortBar) or bar_index - lastShortBar > cdBars
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // FILTROS KALMAN + TRENDILO
-// ══════════════════════════════════════════════════════════════════════════════
-kOkL = not useKalman  or (kFast > kSlow)
-kOkS = not useKalman  or (kFast < kSlow)
+// ════════════════════════════════════════════════════════════════════════════
+kOkL = not useKalman   or (kFast > kSlow)
+kOkS = not useKalman   or (kFast < kSlow)
 tOkL = not useTrendilo or (cdir == 1)
 tOkS = not useTrendilo or (cdir == -1)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // SINAIS LONG / SHORT
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 longSig =
-     barstate.isconfirmed and cdLong        and
-     trendBull             and alignBull    and ema200Up  and
-     macdBull              and flowBull     and
-     adxLongOk             and volStrong    and notExtLong and
-     (bullImpulse or liqSweepLong)          and
-     kOkL and tOkL and longScore >= scoreMin
+    barstate.isconfirmed and cdLong     and
+    trendBull             and alignBull and ema200Up   and
+    macdBull              and flowBull  and
+    adxLongOk             and volStrong and notExtLong and
+    (bullImpulse or liqSweepLong)       and
+    kOkL and tOkL and longScore >= scoreMin
 
 shortSig =
-     enableShort           and barstate.isconfirmed and cdShort          and
-     trendBear             and
-     (close < ema10 and close < ema21 and close < ema50) and
-     (ema200 < ema200[3])  and
-     macdBear              and flowBear     and
-     adxShortOk            and (volume > volMa * volMult) and
-     ((ema50 - close) / atr < maxDistATR)   and
-     ((close < low[1] and close < open and (open - close) > atr * 0.15) or
-      (high > high[1] and close < high[1] and close < open))              and
-     kOkS and tOkS and shortScore >= scoreMin
+    enableShort            and barstate.isconfirmed and cdShort          and
+    trendBear              and
+    (close < ema10 and close < ema21 and close < ema50) and
+    (ema200 < ema200[3])   and
+    macdBear               and flowBear              and
+    adxShortOk             and (volume > volMa * volMult)                and
+    ((ema50 - close) / atr < maxDistATR)             and
+    ((close < low[1]  and close < open and (open - close) > atr * 0.15) or
+     (high  > high[1] and close < high[1] and close < open))            and
+    kOkS and tOkS and shortScore >= scoreMin
 
 newLong  = longSig  and not longSig[1]
 newShort = shortSig and not shortSig[1]
@@ -260,9 +260,9 @@ if newLong
 if newShort
     lastShortBar := bar_index
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // VISUAL — Painel MACD HA (pane principal — overlay=false)
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 
 // 1. Histograma MACD
 histCol = histLine >= 0
@@ -279,7 +279,7 @@ haColor = haBull ? color.new(color.lime, 20) : color.new(color.red, 20)
 plotcandle(haOpen, haHigh, haLow, haClose, "MACD HA",
      color=haColor, wickcolor=haColor, bordercolor=haColor)
 
-// 4. Zero line
+// 4. Linha zero
 hline(0, "Zero", color=color.gray, linestyle=hline.style_solid)
 
 // 5. Fix de escala (evita candles HA cortados)
@@ -290,7 +290,7 @@ plot(-scaleFix * 2.0, display=display.none)
 // 6. RSI normalizado para o painel
 rsiVis    = ((rsiSmooth - 50) / 50.0) * scaleFix * 0.6
 rsiVisCol = rsiBullZ ? color.new(color.lime, 30) :
-     rsiBearZ ? color.new(color.red,  30) : color.new(color.gray, 40)
+            rsiBearZ ? color.new(color.red,  30) : color.new(color.gray, 40)
 plot(rsiVis, "RSI Norm", color=rsiVisCol, linewidth=1, style=plot.style_line)
 
 // 7. Background RSI extremos
@@ -299,7 +299,7 @@ bgcolor(rsiBearZ ? color.new(color.red,  92) : na, title="BG RSI Sobrecomprado")
 
 // 8. Background Trendilo
 bgcolor(cdir == 1  ? color.new(color.lime, 96) :
-     cdir == -1 ? color.new(color.red,  96) : na, title="BG Trendilo")
+        cdir == -1 ? color.new(color.red,  96) : na, title="BG Trendilo")
 
 // 9. Sinal LONG no painel
 plotshape(newLong,  "LONG Pane",  style=shape.triangleup,   location=location.bottom,
@@ -309,9 +309,9 @@ plotshape(newLong,  "LONG Pane",  style=shape.triangleup,   location=location.bo
 plotshape(newShort, "SHORT Pane", style=shape.triangledown, location=location.top,
      color=bearColor, size=size.small)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // VISUAL — Overlay (force_overlay=true)
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 
 // 1+2. Kalman plots
 kColFast = kFast > kFast[2] ? upperCol : lowerCol
@@ -319,12 +319,12 @@ kColSlow = kFast > kSlow    ? upperCol : lowerCol
 kp1 = plot(kFast, "Kalman Rápido", color=kColFast, linewidth=1, force_overlay=true)
 kp2 = plot(kSlow, "Kalman Lento",  color=kColSlow, linewidth=2, force_overlay=true)
 
-// 3. Fill Kalman
+// 3. Fill entre Kalmans
 fill(kp1, kp2, color=color.new(kFast > kSlow ? upperCol : lowerCol, 80))
 
-// 4. Candles Kalman
+// 4. Candles coloridos por Kalman
 candleCol = showKalmanCdl ?
-     (kFast > kSlow and kFast > kFast[2]    ? upperCol :
+     (kFast > kSlow and kFast > kFast[2]       ? upperCol :
       not (kFast > kSlow) and kFast < kFast[2] ? lowerCol : color.gray)
      : na
 plotcandle(open, high, low, close, "Candles", color=candleCol,
@@ -342,75 +342,69 @@ plotshape(newLong,  "BUY Label",  style=shape.labelup,   location=location.below
      size=size.small, force_overlay=true)
 
 // 10. SELL label overlay
-plotshape(newShort, "SELL Label", style=shape.labeldown,  location=location.abovebar,
+plotshape(newShort, "SELL Label", style=shape.labeldown, location=location.abovebar,
      color=bearColor, text="SELL", textcolor=color.white,
      size=size.small, force_overlay=true)
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // TABELA — Dashboard (top_right, 2 cols × 8 rows)
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+var table dash = table.new(position.top_right, 2, 8,
+     bgcolor=color.new(color.black, 70),
+     border_color=color.new(color.gray, 50), border_width=1,
+     frame_color=color.new(color.gray, 30),  frame_width=1)
+
 if barstate.islast
-    var table dash = table.new(position.top_right, 2, 8,
-         bgcolor=color.new(color.black, 70),
-         border_color=color.new(color.gray, 50), border_width=1,
-         frame_color=color.new(color.gray, 30), frame_width=1)
+    // ── faixa de cores ──────────────────────────────────────────────────
+    scoreCol  = score > 50  ? color.lime  : score < -50  ? color.red  : color.white
+    lScoreCol = longScore  >= scoreMin ? color.lime  : color.gray
+    sScoreCol = shortScore >= scoreMin ? color.red   : color.gray
+    trStr     = cdir == 1  ? "▲ BULL" : cdir == -1 ? "▼ BEAR" : "— NEUTRO"
+    trCol     = cdir == 1  ? color.lime : cdir == -1 ? color.red : color.gray
+    kStr      = kFast > kSlow ? "▲ UP" : "▼ DOWN"
+    kCol      = kFast > kSlow ? color.lime : color.red
+    adxCol    = adx > adxStrong ? color.lime : adx > adxMin ? color.orange : color.gray
+    haStr     = haBull ? "▲ BULL" : "▼ BEAR"
+    haCol     = haBull ? color.lime : color.red
+    flowStr   = flowBull ? (flowStrong ? "▲ BULL★" : "▲ BULL") :
+                flowBear ? (flowStrong ? "▼ BEAR★" : "▼ BEAR") : "— NEUTRO"
+    flowCol   = flowBull ? color.lime : flowBear ? color.red : color.gray
 
-    // Helpers
-    scoreCol    = score > 50  ? color.lime  : score < -50  ? color.red  : color.white
-    lScoreCol   = longScore  >= scoreMin ? color.lime  : color.gray
-    sScoreCol   = shortScore >= scoreMin ? color.red   : color.gray
-    trStr       = cdir == 1 ? "▲ BULL" : cdir == -1 ? "▼ BEAR" : "— NEUTRO"
-    trCol       = cdir == 1 ? color.lime : cdir == -1 ? color.red : color.gray
-    kStr        = kFast > kSlow ? "▲ UP" : "▼ DOWN"
-    kCol        = kFast > kSlow ? color.lime : color.red
-    adxCol      = adx > adxStrong ? color.lime : adx > adxMin ? color.orange : color.gray
-    haStr       = haBull ? "▲ BULL" : "▼ BEAR"
-    haCol       = haBull ? color.lime : color.red
-    flowStr     = flowBull ? (flowStrong ? "▲ BULL★" : "▲ BULL") :
-                 flowBear ? (flowStrong ? "▼ BEAR★" : "▼ BEAR") : "— NEUTRO"
-    flowCol     = flowBull ? color.lime : flowBear ? color.red : color.gray
+    // ── Linha 0: Score global ────────────────────────────────────────────
+    table.cell(dash, 0, 0, "Score",             text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
+    table.cell(dash, 1, 0, str.tostring(score), text_color=scoreCol,    text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // Função de atalho para preencher célula
-    setCell(int r, int c, string txt, color col) =>
-        table.cell(dash, c, r, txt,
-             text_color=col, text_size=size.small,
-             bgcolor=color.new(color.black, 75))
+    // ── Linha 1: Long Score ──────────────────────────────────────────────
+    table.cell(dash, 0, 1, "L Score",                                                                            text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
+    table.cell(dash, 1, 1, str.tostring(longScore)  + " (" + str.tostring(scoreMin) + ")", text_color=lScoreCol, text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // Linha 0: Score global
-    setCell(0, 0, "Score",   color.white)
-    setCell(0, 1, str.tostring(score), scoreCol)
+    // ── Linha 2: Short Score ─────────────────────────────────────────────
+    table.cell(dash, 0, 2, "S Score",                                                                             text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
+    table.cell(dash, 1, 2, str.tostring(shortScore) + " (" + str.tostring(scoreMin) + ")", text_color=sScoreCol, text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // Linha 1: Long Score
-    setCell(1, 0, "L Score", color.white)
-    setCell(1, 1, str.tostring(longScore) + " (" + str.tostring(scoreMin) + ")", lScoreCol)
+    // ── Linha 3: Trendilo ────────────────────────────────────────────────
+    table.cell(dash, 0, 3, "Trendilo", text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
+    table.cell(dash, 1, 3, trStr,      text_color=trCol,       text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // Linha 2: Short Score
-    setCell(2, 0, "S Score", color.white)
-    setCell(2, 1, str.tostring(shortScore) + " (" + str.tostring(scoreMin) + ")", sScoreCol)
+    // ── Linha 4: Kalman ──────────────────────────────────────────────────
+    table.cell(dash, 0, 4, "Kalman", text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
+    table.cell(dash, 1, 4, kStr,     text_color=kCol,        text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // Linha 3: Trendilo
-    setCell(3, 0, "Trendilo", color.white)
-    setCell(3, 1, trStr, trCol)
+    // ── Linha 5: ADX ─────────────────────────────────────────────────────
+    table.cell(dash, 0, 5, "ADX",                           text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
+    table.cell(dash, 1, 5, str.tostring(adx, "#.#"), text_color=adxCol,      text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // Linha 4: Kalman
-    setCell(4, 0, "Kalman", color.white)
-    setCell(4, 1, kStr, kCol)
+    // ── Linha 6: MACD HA ─────────────────────────────────────────────────
+    table.cell(dash, 0, 6, "MACD HA", text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
+    table.cell(dash, 1, 6, haStr,     text_color=haCol,       text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // Linha 5: ADX
-    setCell(5, 0, "ADX", color.white)
-    setCell(5, 1, str.tostring(math.round(adx, 1)), adxCol)
+    // ── Linha 7: Flow ────────────────────────────────────────────────────
+    table.cell(dash, 0, 7, "Flow",  text_color=color.white, text_size=size.small, bgcolor=color.new(color.black, 75))
+    table.cell(dash, 1, 7, flowStr, text_color=flowCol,     text_size=size.small, bgcolor=color.new(color.black, 75))
 
-    // Linha 6: MACD HA
-    setCell(6, 0, "MACD HA", color.white)
-    setCell(6, 1, haStr, haCol)
-
-    // Linha 7: Flow
-    setCell(7, 0, "Flow", color.white)
-    setCell(7, 1, flowStr, flowCol)
-
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // ALERTAS
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 alertcondition(newLong,  "LONG",  "🟢 COMPRA — GAUSS $180 ELITE")
 alertcondition(newShort, "SHORT", "🔴 VENDA — GAUSS $180 ELITE")
 alertcondition(not longSig[1] and longSig or not shortSig[1] and shortSig,
