@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GAUSS+DNA — Scanner 50 Moedas</title>
+<meta name="theme-color" content="#3b9eff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Scanner">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Unbounded:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060810;--s1:#0b0f1a;--s2:#101422;--border:#1a2035;--border2:#222840;--blue:#3b9eff;--cyan:#00d4c8;--green:#00e090;--orange:#ff8040;--red:#ff3d5a;--yellow:#ffcc44;--purple:#b47fff;--text:#ccd8ee;--muted:#3a4d6a;--muted2:#5a6d8a}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,158,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(59,158,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+.wrap{max-width:980px;margin:0 auto;padding:1.2rem 1rem 4rem;position:relative;z-index:1}
+
+/* HEADER */
+.hdr{text-align:center;margin-bottom:1.2rem}
+.hdr-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(59,158,255,.08);border:1px solid rgba(59,158,255,.2);border-radius:20px;padding:.28rem .85rem;font-size:.62rem;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.6rem}
+.hdr-badge i{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hdr h1{font-family:'Unbounded',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:.3rem}
+.hdr h1 .c1{color:var(--blue)}.hdr h1 .c2{color:var(--cyan)}
+.hdr p{font-size:.68rem;color:var(--muted2);letter-spacing:.04em}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+.toolbar input{flex:1;min-width:140px;background:var(--s1);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:.74rem;padding:.55rem .8rem;outline:none}
+.toolbar input:focus{border-color:var(--blue)}
+.sort-btn{padding:.5rem .85rem;background:var(--s1);border:1px solid var(--border2);border-radius:8px;color:var(--muted2);font-family:'DM Mono',monospace;font-size:.66rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.sort-btn.active{border-color:var(--blue);color:var(--blue);background:rgba(59,158,255,.1)}
+.refresh-btn{padding:.5rem .85rem;background:rgba(0,212,200,.08);border:1px solid rgba(0,212,200,.25);border-radius:8px;color:var(--cyan);font-family:'DM Mono',monospace;font-size:.66rem;cursor:pointer;transition:all .2s}
+.refresh-btn:hover{background:rgba(0,212,200,.15)}
+.refresh-btn.spinning{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#statusBar{font-size:.65rem;color:var(--muted2);text-align:right;flex:none}
+
+/* FILTRO TABS */
+.filter-tabs{display:flex;gap:.4rem;margin-bottom:.9rem;flex-wrap:wrap}
+.ftab{padding:.38rem .75rem;background:var(--s1);border:1px solid var(--border);border-radius:6px;color:var(--muted2);font-size:.64rem;cursor:pointer;transition:all .15s}
+.ftab.on{background:rgba(59,158,255,.12);border-color:rgba(59,158,255,.4);color:var(--blue)}
+
+/* TABELA */
+.tbl-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;min-width:600px}
+thead tr{background:var(--s2)}
+th{padding:.65rem .8rem;font-size:.6rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);text-align:right;cursor:pointer;user-select:none;white-space:nowrap}
+th:first-child{text-align:left}
+th:hover{color:var(--text)}
+th.sorted{color:var(--blue)}
+tbody tr{border-top:1px solid var(--border);transition:background .15s;cursor:pointer}
+tbody tr:hover{background:rgba(59,158,255,.04)}
+tbody tr.bull-row{border-left:2px solid var(--green)}
+tbody tr.bear-row{border-left:2px solid var(--red)}
+td{padding:.6rem .8rem;font-size:.74rem;text-align:right;white-space:nowrap}
+td:first-child{text-align:left}
+
+/* COIN CELL */
+.coin-cell{display:flex;align-items:center;gap:.55rem}
+.coin-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-size:.5rem;font-weight:700;flex-shrink:0;border:1px solid rgba(255,255,255,.08)}
+.coin-name{display:flex;flex-direction:column;gap:1px}
+.coin-sym{font-family:'Unbounded',sans-serif;font-size:.68rem;font-weight:700;color:var(--text)}
+.coin-pair{font-size:.58rem;color:var(--muted2)}
+
+/* BADGE VARIAÇÃO */
+.chg{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .5rem;border-radius:5px;font-size:.72rem;font-weight:500}
+.chg.up{background:rgba(0,224,144,.12);color:var(--green)}
+.chg.dn{background:rgba(255,61,90,.12);color:var(--red)}
+.chg.flat{background:rgba(255,255,255,.06);color:var(--muted2)}
+
+/* VOLUME BAR */
+.vol-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.vol-num{font-size:.72rem}
+.vol-bar-bg{width:60px;height:4px;background:rgba(255,255,255,.06);border-radius:2px}
+.vol-bar{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width .4s}
+
+/* RANGE BAR (posição no range 24h) */
+.range-wrap{display:flex;align-items:center;gap:.4rem}
+.range-bg{width:50px;height:6px;background:rgba(255,255,255,.06);border-radius:3px;position:relative;overflow:visible}
+.range-dot{position:absolute;top:-2px;width:10px;height:10px;border-radius:50%;transform:translateX(-50%);border:1.5px solid var(--bg)}
+
+/* TREND BADGE */
+.trend{display:inline-flex;align-items:center;gap:.25rem;font-size:.65rem;padding:.18rem .5rem;border-radius:4px}
+.trend.bull{background:rgba(0,224,144,.1);color:var(--green)}
+.trend.bear{background:rgba(255,61,90,.1);color:var(--red)}
+.trend.neu{background:rgba(255,255,255,.05);color:var(--muted2)}
+
+/* LOADING */
+.loading{text-align:center;padding:3rem;color:var(--muted2);font-size:.78rem}
+.loading::after{content:'';display:inline-block;width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-left:.6rem;vertical-align:middle}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1rem;padding:.7rem .9rem;background:var(--s1);border:1px solid var(--border);border-radius:10px}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat-l{font-size:.58rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em}
+.stat-v{font-size:.78rem;font-weight:500}
+
+@media(max-width:640px){
+  th,td{padding:.5rem .5rem}
+  .vol-bar-bg{width:40px}
+  .range-bg{width:36px}
+  .hdr h1{font-size:1rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="hdr-badge"><i></i> GAUSS+DNA · Scanner ao Vivo · Binance</div>
+    <h1><span class="c1">50 Moedas</span> <span class="c2">Monitoradas</span></h1>
+    <p>// Volume 24h · Variação · Range · Tendência · Atualiza a cada 30s</p>
+  </div>
+
+  <div class="stats-bar" id="statsBar">
+    <div class="stat"><span class="stat-l">Total Moedas</span><span class="stat-v" id="stTotal">50</span></div>
+    <div class="stat"><span class="stat-l">Alta 24h</span><span class="stat-v" id="stBull" style="color:var(--green)">—</span></div>
+    <div class="stat"><span class="stat-l">Baixa 24h</span><span class="stat-v" id="stBear" style="color:var(--red)">—</span></div>
+    <div class="stat"><span class="stat-l">Vol. Total 24h</span><span class="stat-v" id="stVol" style="color:var(--blue)">—</span></div>
+    <div class="stat"><span class="stat-l">Melhor 24h</span><span class="stat-v" id="stBest" style="color:var(--green)">—</span></div>
+    <div class="stat"><span class="stat-l">Pior 24h</span><span class="stat-v" id="stWorst" style="color:var(--red)">—</span></div>
+    <div class="stat" style="margin-left:auto"><span class="stat-l">Próx. atualização</span><span class="stat-v" id="stNext" style="color:var(--muted2)">—</span></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="🔍  Filtrar moeda..." oninput="renderTable()">
+    <button class="sort-btn active" id="sVol" onclick="setSort('vol')">📊 Volume</button>
+    <button class="sort-btn" id="sChg" onclick="setSort('chg')">📈 Variação</button>
+    <button class="sort-btn" id="sPrc" onclick="setSort('prc')">💰 Preço</button>
+    <button class="sort-btn" id="sRng" onclick="setSort('rng')">📏 Range</button>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadData(true)">↻ Atualizar</button>
+    <span id="statusBar">Carregando...</span>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="ftab on" onclick="setFilter('all',this)">Todos (50)</button>
+    <button class="ftab" onclick="setFilter('mega',this)">🏆 Mega Caps</button>
+    <button class="ftab" onclick="setFilter('l1',this)">⛓ L1</button>
+    <button class="ftab" onclick="setFilter('defi',this)">🌊 DeFi</button>
+    <button class="ftab" onclick="setFilter('ai',this)">🤖 IA</button>
+    <button class="ftab" onclick="setFilter('meme',this)">🐸 Meme</button>
+    <button class="ftab" onclick="setFilter('high',this)">🚀 High Beta</button>
+    <button class="ftab" onclick="setFilter('l2',this)">🔗 L2</button>
+    <button class="ftab" onclick="setFilter('game',this)">🎮 Gaming</button>
+    <button class="ftab on2" onclick="setFilter('bull',this)" style="border-color:rgba(0,224,144,.3);color:var(--green)">↑ Alta</button>
+    <button class="ftab" onclick="setFilter('bear',this)" style="">↓ Baixa</button>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="loading" id="loadingEl">Buscando dados da Binance</div>
+    <table id="mainTable" style="display:none">
+      <thead>
+        <tr>
+          <th onclick="setSort('name')" style="text-align:left">#  Moeda</th>
+          <th onclick="setSort('prc')">Preço</th>
+          <th onclick="setSort('chg')">24h %</th>
+          <th onclick="setSort('vol')">Volume 24h</th>
+          <th onclick="setSort('rng')">Range 24h</th>
+          <th>Tendência</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+// ── LISTA DE MOEDAS (igual ao bot) ──────────────────────────────────────────
+const COINS = [
+  {s:"BTCUSDT",  n:"BTC",  cat:"mega",  color:"#f7931a"},
+  {s:"ETHUSDT",  n:"ETH",  cat:"mega",  color:"#627eea"},
+  {s:"BNBUSDT",  n:"BNB",  cat:"mega",  color:"#f3ba2f"},
+  {s:"XRPUSDT",  n:"XRP",  cat:"mega",  color:"#00aae4"},
+  {s:"TRXUSDT",  n:"TRX",  cat:"mega",  color:"#ef0027"},
+  {s:"ADAUSDT",  n:"ADA",  cat:"mega",  color:"#0d1e2d"},
+  {s:"SOLUSDT",  n:"SOL",  cat:"l1",    color:"#9945ff"},
+  {s:"AVAXUSDT", n:"AVAX", cat:"l1",    color:"#e84142"},
+  {s:"SUIUSDT",  n:"SUI",  cat:"l1",    color:"#4da2ff"},
+  {s:"APTUSDT",  n:"APT",  cat:"l1",    color:"#00c2a8"},
+  {s:"NEARUSDT", n:"NEAR", cat:"l1",    color:"#00c08b"},
+  {s:"TONUSDT",  n:"TON",  cat:"l1",    color:"#0088cc"},
+  {s:"SEIUSDT",  n:"SEI",  cat:"l1",    color:"#9d4edd"},
+  {s:"TIAUSDT",  n:"TIA",  cat:"l1",    color:"#7b2d8b"},
+  {s:"ALGOUSDT", n:"ALGO", cat:"l1",    color:"#00b4d8"},
+  {s:"VETUSDT",  n:"VET",  cat:"l1",    color:"#15bdff"},
+  {s:"HBARUSDT", n:"HBAR", cat:"l1",    color:"#222222"},
+  {s:"STXUSDT",  n:"STX",  cat:"l1",    color:"#5546ff"},
+  {s:"LINKUSDT", n:"LINK", cat:"defi",  color:"#2a5ada"},
+  {s:"INJUSDT",  n:"INJ",  cat:"defi",  color:"#00a3ff"},
+  {s:"JUPUSDT",  n:"JUP",  cat:"defi",  color:"#c8a951"},
+  {s:"ARBUSDT",  n:"ARB",  cat:"defi",  color:"#2d374b"},
+  {s:"OPUSDT",   n:"OP",   cat:"defi",  color:"#ff0420"},
+  {s:"UNIUSDT",  n:"UNI",  cat:"defi",  color:"#ff007a"},
+  {s:"AAVEUSDT", n:"AAVE", cat:"defi",  color:"#b6509e"},
+  {s:"ENAUSDT",  n:"ENA",  cat:"defi",  color:"#7b3fe4"},
+  {s:"ONDOUSDT", n:"ONDO", cat:"defi",  color:"#1a56db"},
+  {s:"GRTUSDT",  n:"GRT",  cat:"defi",  color:"#6747ed"},
+  {s:"FETUSDT",  n:"FET",  cat:"ai",    color:"#1b1c2e"},
+  {s:"TAOUSDT",  n:"TAO",  cat:"ai",    color:"#56b4e9"},
+  {s:"RENDERUSDT",n:"RNDR",cat:"ai",   color:"#d12d2d"},
+  {s:"WLDUSDT",  n:"WLD",  cat:"ai",    color:"#ffffff"},
+  {s:"IMXUSDT",  n:"IMX",  cat:"ai",    color:"#17b1e8"},
+  {s:"DOGEUSDT", n:"DOGE", cat:"meme",  color:"#c3a634"},
+  {s:"PEPEUSDT", n:"PEPE", cat:"meme",  color:"#4fa24f"},
+  {s:"WIFUSDT",  n:"WIF",  cat:"meme",  color:"#9b59b6"},
+  {s:"SHIBUSDT", n:"SHIB", cat:"meme",  color:"#ffa409"},
+  {s:"FLOKIUSDT",n:"FLOKI",cat:"meme",  color:"#f0a500"},
+  {s:"BONKUSDT", n:"BONK", cat:"meme",  color:"#ff6b35"},
+  {s:"DOTUSDT",  n:"DOT",  cat:"high",  color:"#e6007a"},
+  {s:"ATOMUSDT", n:"ATOM", cat:"high",  color:"#2e3148"},
+  {s:"LTCUSDT",  n:"LTC",  cat:"high",  color:"#bebebe"},
+  {s:"FILUSDT",  n:"FIL",  cat:"high",  color:"#0090ff"},
+  {s:"ARUSDT",   n:"AR",   cat:"high",  color:"#394e5a"},
+  {s:"STRKUSDT", n:"STRK", cat:"l2",    color:"#2d1f6e"},
+  {s:"ZETAUSDT", n:"ZETA", cat:"l2",    color:"#00bc8c"},
+  {s:"PYTHUSDT", n:"PYTH", cat:"l2",    color:"#8246e4"},
+  {s:"AXSUSDT",  n:"AXS",  cat:"game",  color:"#0055d5"},
+  {s:"SANDUSDT", n:"SAND", cat:"game",  color:"#00adef"},
+  {s:"MANAUSDT", n:"MANA", cat:"game",  color:"#ff2d55"},
+];
+
+const CAT_LABELS = {
+  mega:"Mega Cap", l1:"L1", defi:"DeFi", ai:"IA / AI",
+  meme:"Meme", high:"High Beta", l2:"L2 / Interop", game:"Gaming"
+};
+
+let _data   = {};     // sym → ticker data
+let _sort   = "vol";  // coluna de ordenação
+let _sortAsc= false;
+let _filter = "all";
+let _maxVol = 1;
+let _countdownTimer = null;
+let _countdown = 30;
+
+// ── FETCH BINANCE ────────────────────────────────────────────────────────────
+async function loadData(manual=false) {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  document.getElementById('statusBar').textContent = 'Buscando...';
+
+  // Usa endpoint batch — 1 request para todos
+  const syms = JSON.stringify(COINS.map(c=>c.s));
+  const url  = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(syms)}`;
+
+  try {
+    const r = await fetch(url, {signal: AbortSignal.timeout(10000)});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const tickers = await r.json();
+
+    tickers.forEach(t => { _data[t.symbol] = t; });
+    _maxVol = Math.max(...Object.values(_data).map(t => parseFloat(t.quoteVolume)||0));
+
+    const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('statusBar').textContent = `✅ ${now}`;
+
+    updateStats();
+    renderTable();
+    startCountdown();
+  } catch(e) {
+    document.getElementById('statusBar').textContent = `❌ Erro: ${e.message}`;
+  }
+
+  btn.classList.remove('spinning');
+  document.getElementById('loadingEl').style.display = 'none';
+  document.getElementById('mainTable').style.display  = '';
+}
+
+// ── COUNTDOWN ────────────────────────────────────────────────────────────────
+function startCountdown() {
+  clearInterval(_countdownTimer);
+  _countdown = 30;
+  _countdownTimer = setInterval(() => {
+    _countdown--;
+    document.getElementById('stNext').textContent = `${_countdown}s`;
+    if (_countdown <= 0) { clearInterval(_countdownTimer); loadData(); }
+  }, 1000);
+}
+
+// ── STATS BAR ────────────────────────────────────────────────────────────────
+function updateStats() {
+  const vals = COINS.map(c => _data[c.s]).filter(Boolean);
+  const bulls = vals.filter(t => parseFloat(t.priceChangePercent) > 0).length;
+  const bears = vals.length - bulls;
+  const totalVol = vals.reduce((s,t) => s + parseFloat(t.quoteVolume||0), 0);
+  const sorted = [...vals].sort((a,b) => parseFloat(b.priceChangePercent)-parseFloat(a.priceChangePercent));
+  const best  = sorted[0];
+  const worst = sorted[sorted.length-1];
+
+  document.getElementById('stTotal').textContent = `${vals.length}`;
+  document.getElementById('stBull').textContent  = `${bulls} ↑`;
+  document.getElementById('stBear').textContent  = `${bears} ↓`;
+  document.getElementById('stVol').textContent   = fmtVol(totalVol);
+  if (best)  document.getElementById('stBest').textContent  = `${_data2coin(best.symbol)} +${parseFloat(best.priceChangePercent).toFixed(1)}%`;
+  if (worst) document.getElementById('stWorst').textContent = `${_data2coin(worst.symbol)} ${parseFloat(worst.priceChangePercent).toFixed(1)}%`;
+}
+function _data2coin(sym) { return (COINS.find(c=>c.s===sym)||{n:sym}).n; }
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderTable() {
+  const q   = document.getElementById('searchInput').value.trim().toLowerCase();
+  let list  = COINS.filter(c => {
+    if (q && !c.n.toLowerCase().includes(q) && !c.s.toLowerCase().includes(q)) return false;
+    const d = _data[c.s];
+    const chg = d ? parseFloat(d.priceChangePercent) : 0;
+    if (_filter === 'bull') return chg > 0;
+    if (_filter === 'bear') return chg < 0;
+    if (_filter !== 'all') return c.cat === _filter;
+    return true;
+  });
+
+  // Ordenar
+  list.sort((a,b) => {
+    const da = _data[a.s], db = _data[b.s];
+    if (!da||!db) return 0;
+    let va, vb;
+    if (_sort==='vol') { va=parseFloat(da.quoteVolume); vb=parseFloat(db.quoteVolume); }
+    else if (_sort==='chg') { va=parseFloat(da.priceChangePercent); vb=parseFloat(db.priceChangePercent); }
+    else if (_sort==='prc') { va=parseFloat(da.lastPrice); vb=parseFloat(db.lastPrice); }
+    else if (_sort==='rng') {
+      const ra=(parseFloat(da.lastPrice)-parseFloat(da.lowPrice))/(parseFloat(da.highPrice)-parseFloat(da.lowPrice)||1);
+      const rb=(parseFloat(db.lastPrice)-parseFloat(db.lowPrice))/(parseFloat(db.highPrice)-parseFloat(db.lowPrice)||1);
+      va=ra; vb=rb;
+    } else { va=a.n; vb=b.n; }
+    if (_sort==='name') return _sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return _sortAsc ? va-vb : vb-va;
+  });
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = list.map((c,i) => rowHTML(c, i+1)).join('');
+}
+
+function rowHTML(coin, idx) {
+  const d   = _data[coin.s];
+  if (!d) return `<tr><td colspan="6" style="color:var(--muted2);font-size:.65rem;padding:.5rem .8rem">${coin.n} — sem dados</td></tr>`;
+
+  const price   = parseFloat(d.lastPrice);
+  const chgPct  = parseFloat(d.priceChangePercent);
+  const vol     = parseFloat(d.quoteVolume);
+  const hi      = parseFloat(d.highPrice);
+  const lo      = parseFloat(d.lowPrice);
+  const rng     = hi - lo;
+  const rangePct= rng > 0 ? ((price-lo)/rng*100) : 50;
+  const volPct  = Math.min(vol/_maxVol*100, 100);
+
+  const isUp    = chgPct >= 0;
+  const chgAbs  = Math.abs(chgPct);
+  const chgCls  = chgAbs < 0.3 ? 'flat' : isUp ? 'up' : 'dn';
+  const chgArrow= isUp ? '↑' : '↓';
+
+  // Tendência simples: posição no range
+  let trendCls='neu', trendLbl='→ Neutro';
+  if (rangePct >= 65 && chgPct > 1)  { trendCls='bull'; trendLbl='↑ Alta'; }
+  else if (rangePct <= 35 && chgPct < -1) { trendCls='bear'; trendLbl='↓ Baixa'; }
+
+  const rowCls  = trendCls==='bull' ? 'bull-row' : trendCls==='bear' ? 'bear-row' : '';
+
+  // Cor do dot de range
+  const dotColor = rangePct>70 ? 'var(--green)' : rangePct<30 ? 'var(--red)' : 'var(--yellow)';
+  const dotLeft  = Math.max(4, Math.min(46, rangePct/2));
+
+  // Ícone da moeda (iniciais)
+  const initials = coin.n.substring(0,3);
+  const bgAlpha  = coin.color + '33';
+
+  return `
+  <tr class="${rowCls}">
+    <td>
+      <div class="coin-cell">
+        <div class="coin-icon" style="background:${bgAlpha};border-color:${coin.color}40">
+          <span style="color:${coin.color}">${initials}</span>
+        </div>
+        <div class="coin-name">
+          <span class="coin-sym">${coin.n}</span>
+          <span class="coin-pair">${CAT_LABELS[coin.cat]||coin.cat}</span>
+        </div>
+      </div>
+    </td>
+    <td style="color:var(--text);font-weight:500">${fmtPrice(price)}</td>
+    <td><span class="chg ${chgCls}">${chgArrow} ${chgAbs.toFixed(2)}%</span></td>
+    <td>
+      <div class="vol-wrap">
+        <span class="vol-num" style="color:var(--blue)">${fmtVol(vol)}</span>
+        <div class="vol-bar-bg"><div class="vol-bar" style="width:${volPct.toFixed(1)}%"></div></div>
+      </div>
+    </td>
+    <td>
+      <div class="range-wrap">
+        <span style="font-size:.62rem;color:var(--muted2)">${fmtPrice(lo)}</span>
+        <div class="range-bg">
+          <div class="range-dot" style="left:${dotLeft}px;background:${dotColor};box-shadow:0 0 4px ${dotColor}"></div>
+        </div>
+        <span style="font-size:.62rem;color:var(--muted2)">${fmtPrice(hi)}</span>
+      </div>
+    </td>
+    <td><span class="trend ${trendCls}">${trendLbl}</span></td>
+  </tr>`;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function fmtPrice(v) {
+  if (v < 0.0001)  return v.toFixed(8);
+  if (v < 0.01)    return v.toFixed(6);
+  if (v < 1)       return v.toFixed(4);
+  if (v < 1000)    return v.toFixed(2);
+  return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function fmtVol(v) {
+  if (v >= 1e9) return `$${(v/1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v/1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `$${(v/1e3).toFixed(0)}K`;
+  return `$${v.toFixed(0)}`;
+}
+
+function setSort(col) {
+  if (_sort === col) { _sortAsc = !_sortAsc; }
+  else { _sort = col; _sortAsc = col==='name'; }
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('s'+col[0].toUpperCase()+col.slice(1));
+  if (btn) btn.classList.add('active');
+  renderTable();
+}
+
+function setFilter(f, el) {
+  _filter = f;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderTable();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
