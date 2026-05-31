@@ -51,7 +51,7 @@ COINS = [
     ("ALGOUSDT","ALGO/USDT","ALGO"),("VETUSDT","VET/USDT","VET"),
     ("HBARUSDT","HBAR/USDT","HBAR"),("STXUSDT","STX/USDT","STX"),
     ("ICPUSDT","ICP/USDT","ICP"),("XLMUSDT","XLM/USDT","XLM"),
-    ("KASUSDT","KAS/USDT","KAS"),("FTMUSDT","FTM/USDT","FTM"),
+    ("KASUSDT","KAS/USDT","KAS"),("EGLDUSDT","EGLD/USDT","EGLD"),
     ("FLOWUSDT","FLOW/USDT","FLOW"),("CFXUSDT","CFX/USDT","CFX"),
     # ── DeFi / infra ─────────────────────────────────────────────────────
     ("LINKUSDT","LINK/USDT","LINK"),("INJUSDT","INJ/USDT","INJ"),
@@ -60,7 +60,7 @@ COINS = [
     ("AAVEUSDT","AAVE/USDT","AAVE"),("ENAUSDT","ENA/USDT","ENA"),
     ("ONDOUSDT","ONDO/USDT","ONDO"),("GRTUSDT","GRT/USDT","GRT"),
     ("LDOUSDT","LDO/USDT","LDO"),("RUNEUSDT","RUNE/USDT","RUNE"),
-    ("PENDLEUSDT","PENDLE/USDT","PENDLE"),("MKRUSDT","MKR/USDT","MKR"),
+    ("PENDLEUSDT","PENDLE/USDT","PENDLE"),("CAKEUSDT","CAKE/USDT","CAKE"),
     ("CRVUSDT","CRV/USDT","CRV"),("DYDXUSDT","DYDX/USDT","DYDX"),
     ("SNXUSDT","SNX/USDT","SNX"),("GMXUSDT","GMX/USDT","GMX"),
     ("COMPUSDT","COMP/USDT","COMP"),("STGUSDT","STG/USDT","STG"),
@@ -84,7 +84,7 @@ COINS = [
     # ── L2 / interop ─────────────────────────────────────────────────────
     ("STRKUSDT","STRK/USDT","STRK"),("ZETAUSDT","ZETA/USDT","ZETA"),
     ("PYTHUSDT","PYTH/USDT","PYTH"),("WUSDT","W/USDT","W"),
-    ("ZKUSDT","ZK/USDT","ZK"),("ALTUSDT","ALT/USDT","ALT"),
+    ("ZKUSDT","ZK/USDT","ZK"),("MNTUSDT","MNT/USDT","MNT"),
     ("ZROUSDT","ZRO/USDT","ZRO"),("SAGAUSDT","SAGA/USDT","SAGA"),
     ("BLURUSDT","BLUR/USDT","BLUR"),("ORDIUSDT","ORDI/USDT","ORDI"),
     # ── Gaming / metaverso ───────────────────────────────────────────────
