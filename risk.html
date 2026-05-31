@@ -211,9 +211,9 @@ tr:hover td{background:rgba(255,255,255,.012)}
   <!-- MÉTRICAS -->
   <div class="mets">
     <div class="met"><div class="met-l">Risco/Op.</div><div class="met-v cr" id="mR">$5.40</div><div class="met-s" id="mRs">3% · Stop swing</div></div>
-    <div class="met"><div class="met-l">TP1 (2R)</div><div class="met-v cb" id="mT1">$10.80</div><div class="met-s">fechar 50%</div></div>
-    <div class="met"><div class="met-l">TP2 (3.5R)</div><div class="met-v cc" id="mT2">$18.90</div><div class="met-s">fechar 30%</div></div>
-    <div class="met"><div class="met-l">Final (6R)</div><div class="met-v cv" id="mTF">$32.40</div><div class="met-s">últimos 20%</div></div>
+    <div class="met"><div class="met-l">TP1 (2R)</div><div class="met-v cb" id="mT1">$10.80</div><div class="met-s">fechar 40%</div></div>
+    <div class="met"><div class="met-l">TP2 (3.5R)</div><div class="met-v cc" id="mT2">$18.90</div><div class="met-s">fechar 35%</div></div>
+    <div class="met"><div class="met-l">Final (6R)</div><div class="met-v cv" id="mTF">$32.40</div><div class="met-s">últimos 25%</div></div>
   </div>
 
   <!-- TAB 1 — CALCULADORA -->
@@ -233,11 +233,11 @@ tr:hover td{background:rgba(255,255,255,.012)}
       <div class="panel">
         <div class="panel-ttl">Estrutura MTF Pullback</div>
         <div class="fixed-targets">
-          <div class="ft-row b1"><span>TP1 — fechar 50%</span><span class="cb">2.0 R</span></div>
-          <div class="ft-row b2"><span>TP2 — fechar 30%</span><span class="cc">3.5 R</span></div>
-          <div class="ft-row b3"><span>Final — últimos 20%</span><span class="cv">6.0 R</span></div>
+          <div class="ft-row b1"><span>TP1 — fechar 40%</span><span class="cb">2.0 R</span></div>
+          <div class="ft-row b2"><span>TP2 — fechar 35%</span><span class="cc">3.5 R</span></div>
+          <div class="ft-row b3"><span>Final — últimos 25%</span><span class="cv">6.0 R</span></div>
           <div class="ft-row b4"><span>Break Even após TP1</span><span class="cy">✓ Obrigatório</span></div>
-          <div class="ft-row b5"><span>Score mínimo entrada</span><span class="cp">&gt; 35 pts</span></div>
+          <div class="ft-row b5"><span>Score &gt; 45 · ADX &gt; 20 · Grade A+S</span><span class="cp">Institucional</span></div>
         </div>
       </div>
     </div>
@@ -362,15 +362,17 @@ function calcAll(){
   $('mT2').textContent=fmt(tp2);
   $('mTF').textContent=fmt(tfin);
 
-  const ganhoMed=(tp1*.5+tp2*.3+tfin*.2);
+  const ganhoMed=(tp1*.4+tp2*.35+tfin*.25);
   const stopD=(risco*2).toFixed(2);
   $('rulesEl').innerHTML=`
-    <div class="rule"><span>🔍</span><div><strong>Filtro de entrada: Score > 35 + ADX > 18</strong><span class="note">1h confirma tendência → 15m encontra pullback na EMA21/EMA50</span></div></div>
+    <div class="rule"><span>🔍</span><div><strong>Filtro: Score &gt; 45 · ADX &gt; 20 · ADX subindo</strong><span class="note">1h confirma tendência → 15m encontra pullback na EMA21/EMA50 · Grade A+S apenas</span></div></div>
+    <div class="rule"><span>⏰</span><div><strong>Horário: 09h–13h e 14h–21h BRT</strong><span class="note">Sem operar na abertura dos EUA (13–14h) nem fora do horário de liquidez</span></div></div>
+    <div class="rule"><span>🚫</span><div><strong>Evitar mercado lateral · Não comprar no topo · Não vender no fundo</strong><span class="note">BB squeeze + ADX &lt; 25 = sem sinal · Preço &gt; 2.5 ATR da EMA21 = extensão, aguardar</span></div></div>
     <div class="rule"><span>💰</span><div><strong>Risco fixo: ${(STATE.riscoPct*100).toFixed(1)}% por operação = ${fmt(risco)}</strong><span class="note">Stop no swing low/high da estrutura — nunca mova após entrar</span></div></div>
-    <div class="rule"><span>🎯</span><div><strong>TP1 em 2R → fechar 50% = ${fmt(tp1)} de ganho parcial</strong><span class="note">Após TP1 ative Break Even — trade vira risco zero</span></div></div>
-    <div class="rule"><span>✨</span><div><strong>TP2 em 3.5R → fechar 30% = ${fmt(tp2)}</strong><span class="note">Move stop para TP1 e deixa última parte correr</span></div></div>
-    <div class="rule"><span>🏆</span><div><strong>Final em 6R → últimos 20% = ${fmt(tfin)} · Ganho médio: ${fmt(ganhoMed)}</strong><span class="note">Em tendência forte (ADX>30) trailing stop sem limite</span></div></div>
-    <div class="rule"><span>🛑</span><div><strong>Stop diário: máx 2 losses = $${stopD} perdidos → encerre o dia</strong><span class="note">Apenas Grade A e S do bot · Nunca vá contra a tendência 1h</span></div></div>
+    <div class="rule"><span>🎯</span><div><strong>TP1 em 2R = ${fmt(tp1)} → fechar 40% da posição</strong><span class="note">Após TP1 ative Break Even — trade vira risco zero</span></div></div>
+    <div class="rule"><span>✨</span><div><strong>TP2 em 3.5R = ${fmt(tp2)} → fechar 35% da posição</strong><span class="note">Move stop para TP1 e deixa última parte correr</span></div></div>
+    <div class="rule"><span>🏆</span><div><strong>Final em 6R = ${fmt(tfin)} → últimos 25% · Ganho médio: ${fmt(ganhoMed)}</strong><span class="note">Em tendência forte (ADX &gt; 30) usar trailing stop sem limite</span></div></div>
+    <div class="rule"><span>🛑</span><div><strong>Stop diário: máx 2 losses = $${stopD} perdidos → encerre o dia</strong><span class="note">Grade A+S obrigatório · ADX subindo · Nunca contra tendência 1h</span></div></div>
     <div class="rule"><span>🔒</span><div><strong>Stop banca: 30% drawdown = ${fmt(stopBanca)} → pause e revise</strong><span class="note">Faltam ${fmt(META-b)} para a meta de $1.000</span></div></div>
   `;
   buildCVOptions();
@@ -381,7 +383,7 @@ function buildCVOptions(){
   const b=STATE.banca;
   const risco=b*STATE.riscoPct;
   const tp1=risco*2.0, tp2=risco*3.5, tfin=risco*6.0;
-  const ganhoMed=tp1*.5+tp2*.3+tfin*.2;
+  const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
   const t=STATE.selectedTipo;
   const opts=t==='win'
     ?[{lbl:'TP1 (2R)',v:tp1},{lbl:'TP2 (3.5R)',v:tp2},{lbl:'Final (6R)',v:tfin},{lbl:'Médio',v:ganhoMed}]
@@ -507,7 +509,7 @@ function simCalc(){
   const opsDay=parseFloat($('simOps').value)||2;
   const risco=banca*STATE.riscoPct;
   const tp1=risco*2.0, tp2=risco*3.5, tfin=risco*6.0;
-  const ganhoMed=tp1*.5+tp2*.3+tfin*.2;
+  const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
   const perdaMed=risco;
   const ev=wr*ganhoMed-(1-wr)*perdaMed;
   const evPct=ev/banca*100;
