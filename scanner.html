@@ -383,7 +383,8 @@ function initCoinState(c){
 }
 COINS.forEach(initCoinState);
 
-let monitoring=false, wsList=[], fetchTimers=[], signals=[], activeSignal=null, sigCount=0, audioCtx=null, lastSigTime={}, currentTF='30m';
+let monitoring=false, wsList=[], fetchTimers=[], signals=[], activeSignal=null, sigCount=0, audioCtx=null, currentTF='30m';
+let lastSigTime=(()=>{try{return JSON.parse(localStorage.getItem('lastSigTime')||'{}')}catch(e){return{}}})();
 const TF_INTERVALS={'5m':10000,'15m':20000,'30m':30000,'1h':60000,'4h':120000};
 
 function setTF(tf){
@@ -697,6 +698,7 @@ function analyzeSymbol(sym){
       if(grade){
         s.sig=finalSig; s.sigSource=mtfSig?'MTF':'FLEX';
         lastSigTime[sym]=now;
+        try{localStorage.setItem('lastSigTime',JSON.stringify(lastSigTime));}catch(e){}
         triggerSignal(sym,finalSig,price,s.atr,flexScore,grade);
       }
     }
