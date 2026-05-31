@@ -370,7 +370,7 @@ function updateCard(sym){
   const rCol=s.rsi>70?'var(--red)':s.rsi<30?'var(--green)':'var(--cyan)';
   setBar('bRSI_'+sym,'vRSI_'+sym,rPct,rCol,s.rsi.toFixed(0),rCol);
   const adxPct=Math.min(100,s.adx*2);
-  const adxCol=s.adx>22?'var(--orange)':'var(--muted)';
+  const adxCol=s.adx>20?'var(--orange)':'var(--muted)';
   setBar('bADX_'+sym,'vADX_'+sym,adxPct,adxCol,s.adx.toFixed(0),adxCol);
   const sc=s.score;
   const scEl=$('scr_'+sym); scEl.textContent=sc; scEl.style.color=sc>50?'var(--green)':sc<-50?'var(--red)':'var(--yellow)';
@@ -384,7 +384,7 @@ function updateCard(sym){
   else if(sc>50){stEl.textContent='✅ Score OK — aguardando confirmação ADX/MACD';stEl.className='cc-status long-sig';}
   else if(sc<-50){stEl.textContent='⚠️ Score SHORT — aguardando';stEl.className='cc-status short-sig';}
   else if(s.h1Setup){stEl.textContent=`📡 Setup 1H ${s.h1Setup.dir==='bull'?'🟡 BULL':'🟡 BEAR'} — aguardando pullback 30m`;stEl.className='cc-status wait';}
-  else{stEl.textContent='⏳ Aguardando alinhamento (score < 50)';stEl.className='cc-status wait';}
+  else{stEl.textContent='⏳ Aguardando alinhamento (score < 40)';stEl.className='cc-status wait';}
 }
 
 function setBar(bid,vid,pct,bgColor,lbl,txtColor){
@@ -584,7 +584,7 @@ function analyzeSymbol(sym){
   const vStrong=vols[n-1]>avgVol*1.1;
 
   const{adx:adxV,pdiBull}=adxFull(candles.slice(-60));
-  const adxOk=adxV>22;
+  const adxOk=adxV>20;
 
   const lastC=candles[n-1];
   const sp=Math.max(lastC.h-lastC.l,0.0001);
@@ -628,8 +628,8 @@ function analyzeSymbol(sym){
   const now=Date.now(), cooldown=14400000; // 4h
   const lastT=lastSigTime[sym]||0;
   if(now-lastT>cooldown&&inSession()){
-    const flexLong=flexScore>50&&tBull&&(mBull||haBull)&&adxOk&&pdiBull&&vStrong&&notExtLong&&rsiBull;
-    const flexShort=flexScore<-50&&tBear&&(mBear||haBear)&&adxOk&&!pdiBull&&vStrong&&notExtShort&&rsiBear;
+    const flexLong=flexScore>40&&tBull&&(mBull||haBull)&&adxOk&&pdiBull&&vStrong&&notExtLong&&rsiBull;
+    const flexShort=flexScore<-40&&tBear&&(mBear||haBear)&&adxOk&&!pdiBull&&vStrong&&notExtShort&&rsiBear;
     const finalSig=mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
     if(finalSig){
       const gradeL=finalSig==='LONG'?(gradeS_L?'S':gradeA_L?'A':null):null;
