@@ -191,15 +191,10 @@ flexScore     = baseScore + flexBonusBull - flexBonusBear
 // ══════════════════════════════════════════════════
 // GRADE DO SINAL (S / A / B)
 // ══════════════════════════════════════════════════
-qualLong = (trendBull ? 3 : 0) + (adxLongOK  ? 3 : 0) + (macdBull ? 2 : 0) +
-           (haBull ? 2 : 0) + (obvBull ? 1 : 0) + (aboveVwap ? 1 : 0) +
-           (vStrong2 ? 2 : vStrong ? 1 : 0) + (kalmanAccUp ? 1 : 0) +
-           (e200Rising ? 1 : 0) + (fStrong ? 1 : 0) + (trendConsBull ? 1 : 0)
-
-qualShort = (trendBear ? 3 : 0) + (adxShortOK ? 3 : 0) + (macdBear ? 2 : 0) +
-            (haBear ? 2 : 0) + (obvBear ? 1 : 0) + (not aboveVwap ? 1 : 0) +
-            (vStrong2 ? 2 : vStrong ? 1 : 0) + (kalmanAccDn ? 1 : 0) +
-            (e200Falling ? 1 : 0) + (fStrong ? 1 : 0) + (trendConsBear ? 1 : 0)
+var int qualLong  = 0
+var int qualShort = 0
+qualLong  := (trendBull?3:0)+(adxLongOK?3:0)+(macdBull?2:0)+(haBull?2:0)+(obvBull?1:0)+(aboveVwap?1:0)+(vStrong2?2:vStrong?1:0)+(kalmanAccUp?1:0)+(e200Rising?1:0)+(fStrong?1:0)+(trendConsBull?1:0)
+qualShort := (trendBear?3:0)+(adxShortOK?3:0)+(macdBear?2:0)+(haBear?2:0)+(obvBear?1:0)+(aboveVwap?0:1)+(vStrong2?2:vStrong?1:0)+(kalmanAccDn?1:0)+(e200Falling?1:0)+(fStrong?1:0)+(trendConsBear?1:0)
 
 gradeS_L = qualLong  >= 12
 gradeA_L = qualLong  >= 8  and not gradeS_L
