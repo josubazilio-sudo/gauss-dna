@@ -3,12 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>GAUSS+DNA · Scanner 50 Moedas</title>
+<title>GAUSS+DNA · Scanner 100 Moedas</title>
+<meta name="description" content="Monitor ao vivo de 100 criptomoedas com sinais GAUSS+DNA">
 <meta name="theme-color" content="#060810">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Scanner">
+<meta name="apple-mobile-web-app-title" content="GAUSS Scanner">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
@@ -158,11 +161,11 @@ tr:hover td{background:rgba(255,255,255,.01)}
 <div class="wrap">
 
   <div class="hdr">
-    <div class="hdr-badge"><span class="dot"></span>GAUSS+DNA v2 · 50 Moedas Monitoradas</div>
+    <div class="hdr-badge"><span class="dot"></span>GAUSS+DNA v2 · 100 Moedas Monitoradas</div>
     <h1><span class="c1">Scanner</span> <span class="c2">Ao Vivo</span> <span class="c3">⚡</span></h1>
-    <p>BTC · ETH · BNB · XRP · TRX · ADA · SOL · AVAX · SUI · APT · NEAR · TON · SEI · TIA · ALGO · VET · HBAR · STX<br>
-       LINK · INJ · JUP · ARB · OP · UNI · AAVE · ENA · ONDO · GRT · FET · TAO · RNDR · WLD · IMX<br>
-       DOGE · PEPE · WIF · SHIB · FLOKI · BONK · DOT · ATOM · LTC · FIL · AR · STRK · ZETA · PYTH · AXS · SAND · MANA</p>
+    <p>BTC · ETH · SOL · XRP · BNB · ADA · AVAX · SUI · NEAR · TON · DOGE · PEPE · WIF · SHIB · LINK · INJ<br>
+       TAO · FET · RENDER · ARB · OP · UNI · AAVE · LDO · RUNE · PENDLE · MKR · ORDI · ZK · EIGEN · +mais</p>
+    <button id="installBtn" style="display:none;margin-top:.8rem;padding:.5rem 1.4rem;background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.35);border-radius:20px;color:var(--blue);font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.08em;cursor:pointer;text-transform:uppercase" onclick="installApp()">⬇ Instalar App</button>
   </div>
 
   <div class="tg-card">
@@ -941,6 +944,34 @@ function keepAlive(){
   _lastTick=now; setTimeout(keepAlive,10000);
 }
 keepAlive();
+
+// ── PWA INSTALL ──
+let _deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); _deferredPrompt=e;
+  const btn=$('installBtn'); if(btn) btn.style.display='inline-block';
+});
+window.addEventListener('appinstalled',()=>{
+  const btn=$('installBtn'); if(btn) btn.style.display='none';
+  _deferredPrompt=null;
+});
+function installApp(){
+  if(_deferredPrompt){
+    _deferredPrompt.prompt();
+    _deferredPrompt.userChoice.then(()=>{_deferredPrompt=null;$('installBtn').style.display='none';});
+  } else {
+    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    const msg=ios
+      ? 'iOS: toque em Compartilhar (⬆) → "Adicionar à Tela de Início"'
+      : 'Android: toque no menu ⋮ → "Adicionar à tela inicial"\n\nOu abra no Chrome e aguarde o banner de instalação aparecer.';
+    alert(msg);
+  }
+}
+
+// ── SERVICE WORKER ──
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 </script>
 </body>
 </html>

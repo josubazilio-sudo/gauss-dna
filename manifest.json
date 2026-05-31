@@ -1,12 +1,12 @@
 {
-  "name": "GAUSS+DNA · Risco $180",
-  "short_name": "GAUSS+DNA",
-  "description": "Calculadora de risco, diário de operações e simulador GAUSS+DNA MTF Pullback",
-  "start_url": "/gauss-dna/risk.html",
+  "name": "GAUSS+DNA Scanner",
+  "short_name": "GAUSS Scanner",
+  "description": "Monitor ao vivo de 100 criptomoedas com sinais GAUSS+DNA MTF Pullback",
+  "start_url": "/gauss-dna/scanner.html",
   "scope": "/gauss-dna/",
   "display": "standalone",
   "background_color": "#060810",
-  "theme_color": "#3b9eff",
+  "theme_color": "#060810",
   "orientation": "portrait-primary",
   "lang": "pt-BR",
   "categories": ["finance", "productivity"],
@@ -19,16 +19,16 @@
   ],
   "shortcuts": [
     {
-      "name": "Calculadora",
-      "short_name": "Calc",
-      "url": "/gauss-dna/risk.html#tab1",
-      "description": "Abrir calculadora de risco"
+      "name": "Scanner",
+      "short_name": "Scanner",
+      "url": "/gauss-dna/scanner.html",
+      "description": "Monitor 100 moedas ao vivo"
     },
     {
-      "name": "Diário",
-      "short_name": "Diário",
-      "url": "/gauss-dna/risk.html#tab2",
-      "description": "Abrir diário de operações"
+      "name": "Calculadora",
+      "short_name": "Calc",
+      "url": "/gauss-dna/risk.html",
+      "description": "Calculadora de risco"
     }
   ]
 }
