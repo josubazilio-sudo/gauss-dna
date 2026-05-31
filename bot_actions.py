@@ -94,7 +94,7 @@ COINS = [
     ("GMTUSDT","GMT/USDT","GMT"),("MAGICUSDT","MAGIC/USDT","MAGIC"),
     # ── DePIN / outros ───────────────────────────────────────────────────
     ("IOUSDT","IO/USDT","IO"),("ROSEUSDT","ROSE/USDT","ROSE"),
-    ("THETAUSDT","THETA/USDT","THETA"),("CELOUSDT","CELO/USDT","CELO"),
+    ("IOTXUSDT","IOTX/USDT","IOTX"),("CELOUSDT","CELO/USDT","CELO"),
     ("JASMYUSDT","JASMY/USDT","JASMY"),("LPTUSDT","LPT/USDT","LPT"),
     ("AEVOUSDT","AEVO/USDT","AEVO"),("BERAUSDT","BERA/USDT","BERA"),
     ("LISTAUSDT","LISTA/USDT","LISTA"),("REZUSDT","REZ/USDT","REZ"),
