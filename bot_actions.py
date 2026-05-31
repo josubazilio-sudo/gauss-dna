@@ -756,7 +756,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     grade_label=grade_info[signal_grade][0]
 
     if sig_source.startswith("MTF"):
-        mode_tag="📡 MTF PULLBACK 1H→15M"; cross_info=""
+        mode_tag=f"📡 MTF PULLBACK 1H→{tf.upper()}"; cross_info=""
     elif sig_source=="PULLBACK":
         mode_tag="🎯 DNA PULLBACK"; cross_info=""
     elif sig_source.startswith("CROSS"):
