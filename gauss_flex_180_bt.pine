@@ -20,11 +20,15 @@ grpTrendilo = "TRENDILO"
 grpVisual   = "VISUAL"
 
 // Filtros de qualidade
-scoreMin    = input.int(45,    "Score mínimo (45=institucional)",  group=grpFilter, minval=20, maxval=100)
-adxMin      = input.float(20,  "ADX mínimo",                       group=grpFilter, step=0.5)
-adxRisingOK = input.bool(true, "Exigir ADX subindo",               group=grpFilter)
+scoreMin    = input.int(50,    "Score mínimo",                      group=grpFilter, minval=20, maxval=100)
+adxMin      = input.float(22,  "ADX mínimo",                        group=grpFilter, step=0.5)
+adxRisingOK = input.bool(true, "Exigir ADX subindo",                group=grpFilter)
 gradeFilter = input.string("A+S","Grade mínima", options=["A+S","S apenas","Todos"], group=grpFilter)
 sessionOnly = input.bool(true,  "Só horário principal (09-13h e 14-21h BRT)", group=grpFilter)
+use4H       = input.bool(true,  "Filtro 4H obrigatório",            group=grpFilter)
+useBTC      = input.bool(true,  "Filtro BTC (não contra BTC)",      group=grpFilter)
+useRsiZone  = input.bool(true,  "RSI zone 40-68 long / 32-62 short",group=grpFilter)
+useBBFilter = input.bool(true,  "Evitar extremos Bollinger",        group=grpFilter)
 
 // EMAs
 ema10Len  = input.int(10,  "EMA10",  group=grpEntry)
@@ -152,6 +156,36 @@ trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema20
 tbullLoose = ema10 > ema21 and ema21 > ema50
 tbearLoose = ema10 < ema21 and ema21 < ema50
 
+// Força da tendência: spread EMA21-EMA50 significativo
+trendStrong = math.abs(ema21 - ema50) / atr14 > 0.35
+
+// Bollinger Bands — posição do preço na banda
+[bbUpper, bbBasis, bbLower] = ta.bb(close, 20, 2.0)
+bbRange  = math.max(bbUpper - bbLower, syminfo.mintick)
+bbPos    = (close - bbLower) / bbRange
+notBBTop = not useBBFilter or bbPos < 0.88
+notBBBot = not useBBFilter or bbPos > 0.12
+
+// Filtro 4H — tendência no timeframe superior
+ema21_4h    = request.security(syminfo.tickerid, "240", ta.ema(close, 21),  lookahead=barmerge.lookahead_off)
+ema50_4h    = request.security(syminfo.tickerid, "240", ta.ema(close, 50),  lookahead=barmerge.lookahead_off)
+ema200_4h   = request.security(syminfo.tickerid, "240", ta.ema(close, 200), lookahead=barmerge.lookahead_off)
+close_4h    = request.security(syminfo.tickerid, "240", close,              lookahead=barmerge.lookahead_off)
+trendBull4h = close_4h > ema21_4h and ema21_4h > ema50_4h
+trendBear4h = close_4h < ema21_4h and ema21_4h < ema50_4h
+
+// Filtro BTC — não operar altcoin contra BTC
+btcClose  = request.security("BINANCE:BTCUSDT", timeframe.period, close,          lookahead=barmerge.lookahead_off)
+btcEma21  = request.security("BINANCE:BTCUSDT", timeframe.period, ta.ema(close,21),lookahead=barmerge.lookahead_off)
+btcEma200 = request.security("BINANCE:BTCUSDT", timeframe.period, ta.ema(close,200),lookahead=barmerge.lookahead_off)
+btcBull   = btcClose > btcEma21 and btcClose > btcEma200 * 0.98
+btcBear   = btcClose < btcEma21 and btcClose < btcEma200 * 1.02
+isBTC     = syminfo.ticker == "BTCUSDT" or syminfo.ticker == "BTCBUSD"
+
+// RSI zone precisa
+rsiOkLong  = not useRsiZone or (rsiVal > 40 and rsiVal < 68)
+rsiOkShort = not useRsiZone or (rsiVal > 32 and rsiVal < 62)
+
 // Consistência de tendência (últimas 5 velas)
 bullsCount = (close>ema21?1:0)+(close[1]>ema21[1]?1:0)+(close[2]>ema21[2]?1:0)+(close[3]>ema21[3]?1:0)+(close[4]>ema21[4]?1:0)
 trendConsBull = bullsCount >= 4
@@ -213,13 +247,17 @@ inSession = not sessionOnly or ((hourBRT >= 9 and hourBRT < 13) or (hourBRT >= 1
 // ══════════════════════════════════════════════════
 // CONDICOES DE ENTRADA
 // ══════════════════════════════════════════════════
-trendiloOkL = not useTrendilo or trendiloLong
-trendiloOkS = not useTrendilo or trendiloShort
+trendiloOkL  = not useTrendilo or trendiloLong
+trendiloOkS  = not useTrendilo or trendiloShort
 adxRisingOkL = not adxRisingOK or adxRising
 adxRisingOkS = not adxRisingOK or adxRising
+t4hOkL       = not use4H or trendBull4h
+t4hOkS       = not use4H or trendBear4h
+btcOkL       = not useBTC or isBTC or btcBull
+btcOkS       = not useBTC or isBTC or btcBear
 
-longCond  = flexScore > scoreMin and macdBullR and adxVal > adxMin and rsiNotExtLong and trendiloOkL and gradeOkLong and adxRisingOkL and inSession
-shortCond = flexScore < -scoreMin and macdBearR and adxVal > adxMin and rsiNotExtShort and trendiloOkS and gradeOkShort and adxRisingOkS and inSession
+longCond  = flexScore > scoreMin and macdBullR and adxVal > adxMin and rsiNotExtLong and rsiOkLong and trendiloOkL and gradeOkLong and adxRisingOkL and inSession and t4hOkL and btcOkL and notBBTop and trendStrong
+shortCond = flexScore < -scoreMin and macdBearR and adxVal > adxMin and rsiNotExtShort and rsiOkShort and trendiloOkS and gradeOkShort and adxRisingOkS and inSession and t4hOkS and btcOkS and notBBBot and trendStrong
 
 newLong  = longCond  and not longCond[1]  and barstate.isconfirmed
 newShort = shortCond and not shortCond[1] and barstate.isconfirmed and useShort
@@ -230,8 +268,8 @@ newShort = shortCond and not shortCond[1] and barstate.isconfirmed and useShort
 // Stop: swing estrutural das últimas 8 velas + buffer ATR
 // Se swing estiver muito próximo, usa mínimo de ATR * stopMult
 
-swingLow8  = ta.lowest(low,  8)
-swingHigh8 = ta.highest(high, 8)
+swingLow8  = ta.lowest(low,  12)
+swingHigh8 = ta.highest(high, 12)
 
 var float entryPx  = na
 var float stopLv   = na
@@ -242,9 +280,9 @@ var float riskSize = na
 
 if newLong
     entryPx  := close
-    float swStop = swingLow8 - atr14 * 0.25          // swing low com buffer
+    float swStop = swingLow8 - atr14 * 0.5            // swing low com buffer 0.5 ATR
     float atrStop = close - atr14 * stopMult          // fallback ATR
-    stopLv   := useSwingStop ? math.max(swStop, close - atr14 * 2.5) : atrStop
+    stopLv   := useSwingStop ? math.max(swStop, close - atr14 * 3.0) : atrStop
     riskSize := math.max(close - stopLv, atr14 * 0.5) // risco mínimo = 0.5 ATR
     tp1Lv    := close + riskSize * tp1R
     tp2Lv    := close + riskSize * tp2R
@@ -252,9 +290,9 @@ if newLong
 
 if newShort
     entryPx  := close
-    float swStop = swingHigh8 + atr14 * 0.25
+    float swStop = swingHigh8 + atr14 * 0.5            // swing high com buffer 0.5 ATR
     float atrStop = close + atr14 * stopMult
-    stopLv   := useSwingStop ? math.min(swStop, close + atr14 * 2.5) : atrStop
+    stopLv   := useSwingStop ? math.min(swStop, close + atr14 * 3.0) : atrStop
     riskSize := math.max(stopLv - close, atr14 * 0.5)
     tp1Lv    := close - riskSize * tp1R
     tp2Lv    := close - riskSize * tp2R
@@ -314,7 +352,7 @@ plot(showLevels and (isLong or isShort) ? tp3Lv  : na, "TP3",   color=color.new(
 // PAINEL — Score e Grade
 // ══════════════════════════════════════════════════
 if showPanel and barstate.islast
-    var table panel = table.new(position.top_right, 2, 7, bgcolor=color.new(color.black, 70), border_color=color.new(color.gray, 50), border_width=1)
+    var table panel = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 70), border_color=color.new(color.gray, 50), border_width=1)
     gradeStr = isLong  ? (gradeS_L ? "S" : gradeA_L ? "A" : "B") :
                isShort ? (gradeS_S ? "S" : gradeA_S ? "A" : "B") :
                (gradeS_L or gradeS_S ? "S" : gradeA_L or gradeA_S ? "A" : "B")
@@ -332,6 +370,57 @@ if showPanel and barstate.islast
     table.cell(panel, 0, 4, "RSI", text_color=color.gray, text_size=size.tiny)
     table.cell(panel, 1, 4, str.tostring(math.round(rsiVal, 1)), text_color=rsiVal > 70 ? color.red : rsiVal < 30 ? color.lime : color.white, text_size=size.tiny)
     table.cell(panel, 0, 5, "Kalman", text_color=color.gray, text_size=size.tiny)
-    table.cell(panel, 1, 5, kalmanUp ? "↑ BULL" : "↓ BEAR", text_color=kalmanUp ? color.lime : color.red, text_size=size.tiny)
-    table.cell(panel, 0, 6, "Sessão", text_color=color.gray, text_size=size.tiny)
-    table.cell(panel, 1, 6, inSession ? "✓ Ativa" : "✗ Fora", text_color=inSession ? color.lime : color.orange, text_size=size.tiny)
+    table.cell(panel, 1, 5, kalmanAccUp ? "↑↑ ACC" : kalmanUp ? "↑ BULL" : kalmanAccDn ? "↓↓ ACC" : "↓ BEAR", text_color=kalmanUp ? color.lime : color.red, text_size=size.tiny)
+    table.cell(panel, 0, 6, "Trendilo", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 6, trendiloLong ? "↑ LONG" : trendiloShort ? "↓ SHORT" : "→ NEU", text_color=trendiloLong ? color.lime : trendiloShort ? color.red : color.gray, text_size=size.tiny)
+    table.cell(panel, 0, 7, "4H", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 7, trendBull4h ? "↑ BULL" : trendBear4h ? "↓ BEAR" : "→ NEU", text_color=trendBull4h ? color.lime : trendBear4h ? color.red : color.gray, text_size=size.tiny)
+    table.cell(panel, 0, 8, "BTC", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 8, btcBull ? "↑ BULL" : btcBear ? "↓ BEAR" : "→ NEU", text_color=btcBull ? color.lime : btcBear ? color.red : color.gray, text_size=size.tiny)
+    table.cell(panel, 0, 9, "BB Pos", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 9, str.tostring(math.round(bbPos * 100)) + "%", text_color=bbPos > 0.88 ? color.red : bbPos < 0.12 ? color.lime : color.white, text_size=size.tiny)
+    table.cell(panel, 0, 10, "Trend Str", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 10, trendStrong ? "✓ Forte" : "✗ Fraca", text_color=trendStrong ? color.lime : color.orange, text_size=size.tiny)
+    table.cell(panel, 0, 11, "VWAP", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 11, aboveVwap ? "↑ Acima" : "↓ Abaixo", text_color=aboveVwap ? color.lime : color.red, text_size=size.tiny)
+    table.cell(panel, 0, 12, "Sessão", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 12, inSession ? "✓ Ativa" : "✗ Fora", text_color=inSession ? color.lime : color.orange, text_size=size.tiny)
+
+// ══════════════════════════════════════════════════
+// DNA MACD — Kalman Source (pane separado)
+// Usa preço suavizado pelo Kalman — elimina ruído e
+// produz cruzamentos mais limpos que o MACD padrão.
+// ══════════════════════════════════════════════════
+showDNAmacd = input.bool(true, "Mostrar DNA MACD", group=grpVisual)
+
+// MACD calculado sobre kFast (Kalman suavizado) em vez de close
+[dnaML, dnaSig, dnaHist] = ta.macd(kFast, 12, 26, 9)
+
+// Força do histograma: 3 barras consecutivas = momentum confirmado
+dnaBull3 = dnaHist > dnaHist[1] and dnaHist[1] > dnaHist[2] and dnaHist > 0
+dnaBear3 = dnaHist < dnaHist[1] and dnaHist[1] < dnaHist[2] and dnaHist < 0
+dnaBull1 = dnaHist > dnaHist[1] and dnaHist > 0
+dnaBear1 = dnaHist < dnaHist[1] and dnaHist < 0
+dnaBullW = dnaHist > 0 and not dnaBull1  // acima do zero mas fraquejando
+dnaBearW = dnaHist < 0 and not dnaBear1  // abaixo do zero mas recuperando
+
+// Cor do histograma: intensidade = confirmação do momentum
+dnaHistCol = dnaBull3 ? color.new(#00e090, 0)  :   // verde forte — 3 barras ↑
+             dnaBull1 ? color.new(#00e090, 45) :   // verde médio — crescendo
+             dnaBullW ? color.new(#00e090, 75) :   // verde fraco — perdendo força
+             dnaBear3 ? color.new(#ff3d5a, 0)  :   // vermelho forte — 3 barras ↓
+             dnaBear1 ? color.new(#ff3d5a, 45) :   // vermelho médio — caindo
+             dnaBearW ? color.new(#ff3d5a, 75) : color.new(color.gray, 60)
+
+// Linha MACD: azul quando bull, laranja quando bear
+dnaMLcol  = dnaML > dnaSig ? color.new(#3b9eff, 0) : color.new(#ff8040, 0)
+dnaSigCol = color.new(color.white, 40)
+
+plot(showDNAmacd ? dnaHist : na, "DNA Hist", color=dnaHistCol, style=plot.style_histogram, linewidth=3)
+plot(showDNAmacd ? dnaML   : na, "DNA MACD", color=dnaMLcol,   linewidth=2)
+plot(showDNAmacd ? dnaSig  : na, "DNA Sig",  color=dnaSigCol,  linewidth=1)
+hline(0, "Zero", color=color.new(color.gray, 55), linestyle=hline.style_dashed)
+
+// Sinais de cruzamento MACD no pane
+plotshape(showDNAmacd and ta.crossover(dnaML,  dnaSig), "MACD Cross↑", style=shape.triangleup,   location=location.bottom, color=color.lime, size=size.tiny)
+plotshape(showDNAmacd and ta.crossunder(dnaML, dnaSig), "MACD Cross↓", style=shape.triangledown, location=location.top,    color=color.red,  size=size.tiny)

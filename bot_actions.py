@@ -600,6 +600,35 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     trendilo_long_mtf  = not _math.isnan(avpch_m[-1]) and avpch_m[-1] >  rms_m[-1]
     trendilo_short_mtf = not _math.isnan(avpch_m[-1]) and avpch_m[-1] < -rms_m[-1]
 
+    # Kalman Filter — confirma momentum direcional no 30m
+    ks_m = kalman_filter(closes, 50); kl_m = kalman_filter(closes, 150)
+    kalman_up_mtf   = ks_m[-1] > kl_m[-1]
+    kalman_down_mtf = ks_m[-1] < kl_m[-1]
+    ks_spread = ks_m[-1] - kl_m[-1]; ks_spread_p = ks_m[-2] - kl_m[-2]
+    kalman_accel_up_mtf = ks_spread > ks_spread_p > 0
+    kalman_accel_dn_mtf = ks_spread < ks_spread_p < 0
+
+    # VWAP — suporte/resistência dinâmica por volume
+    vwap_mtf      = vwap_calc(candles_15m)
+    above_vwap_mtf = price > vwap_mtf
+    below_vwap_mtf = price < vwap_mtf
+
+    # Flow (pressão de vela — body-weighted volume)
+    flow_raw_m = [((c["c"]-c["o"])/max(c["h"]-c["l"],1e-10))*c["v"] for c in candles_15m]
+    flow_ema_m = ema_series(flow_raw_m, 13)
+    flow_sma_m = sum(abs(f) for f in flow_ema_m[-20:]) / 20
+    f_bull_mtf = flow_ema_m[-1] > 0 and abs(flow_ema_m[-1]) > flow_sma_m * 0.8
+    f_bear_mtf = flow_ema_m[-1] < 0 and abs(flow_ema_m[-1]) > flow_sma_m * 0.8
+
+    # Bollinger Bands — não entrar em extremo da banda
+    bb_u_m, bb_l_m, _, _, _ = bb_calc(closes)
+    bb_pos_m = (price - bb_l_m) / max(bb_u_m - bb_l_m, 1e-10)
+    not_bb_top = bb_pos_m < 0.88
+    not_bb_bot = bb_pos_m > 0.12
+
+    # Força da tendência: EMA21 suficientemente afastada da EMA50
+    trend_strong_mtf = abs(e21 - e50) / atr > 0.35
+
     # Zona de pullback: entrada só quando preço está próximo da EMA
     near_ema21_long  = abs(price - e21) < atr * 0.9 and price > e200
     near_ema50_long  = abs(price - e50) < atr * 1.2 and price > e200
@@ -631,12 +660,16 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     if (h1_bull and in_pullback_long and bounce_long and
             adx > 22 and adx_rising_mtf and not sideways_mtf and
             not_chasing_long and rsi_ok_long and trendilo_long_mtf and
-            e200_rising_mtf and came_from_above and ema_aligned_long):
+            e200_rising_mtf and came_from_above and ema_aligned_long and
+            kalman_up_mtf and above_vwap_mtf and f_bull_mtf and
+            not_bb_top and trend_strong_mtf):
         sig = "LONG"
     elif (h1_bear and in_pullback_short and bounce_short and
               adx > 22 and adx_rising_mtf and not sideways_mtf and
               not_chasing_short and rsi_ok_short and trendilo_short_mtf and
-              e200_falling_mtf and came_from_below and ema_aligned_short):
+              e200_falling_mtf and came_from_below and ema_aligned_short and
+              kalman_down_mtf and below_vwap_mtf and f_bear_mtf and
+              not_bb_bot and trend_strong_mtf):
         sig = "SHORT"
 
     if not sig:
@@ -646,13 +679,35 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop    = stop_long if is_long else stop_short
     near21  = near_ema21_long if is_long else near_ema21_short
 
+    # Quality score MTF (0–10)
+    quality_mtf = 0
+    if is_long:
+        quality_mtf += 2 if kalman_accel_up_mtf else (1 if kalman_up_mtf else 0)
+        quality_mtf += 2 if vol_surge else (1 if vols[-1] > vol_ma else 0)
+        quality_mtf += 1 if above_vwap_mtf else 0
+        quality_mtf += 1 if f_bull_mtf else 0
+        quality_mtf += 1 if obv_bull else 0
+        quality_mtf += 1 if trendilo_long_mtf else 0
+        quality_mtf += 1 if trend_strong_mtf else 0
+        quality_mtf += 1 if kalman_accel_up_mtf else 0
+    else:
+        quality_mtf += 2 if kalman_accel_dn_mtf else (1 if kalman_down_mtf else 0)
+        quality_mtf += 2 if vol_surge else (1 if vols[-1] > vol_ma else 0)
+        quality_mtf += 1 if below_vwap_mtf else 0
+        quality_mtf += 1 if f_bear_mtf else 0
+        quality_mtf += 1 if obv_bear else 0
+        quality_mtf += 1 if trendilo_short_mtf else 0
+        quality_mtf += 1 if trend_strong_mtf else 0
+        quality_mtf += 1 if kalman_accel_dn_mtf else 0
+    grade_mtf = "S" if quality_mtf >= 7 else "A" if quality_mtf >= 5 else "B"
+
     return {
-        "sig": sig, "sig_source": f"MTF_PULLBACK [1h→15m] EMA{'21' if near21 else '50'}",
+        "sig": sig, "sig_source": f"MTF_PULLBACK [1h→30m] EMA{'21' if near21 else '50'}",
         "price": price, "atr": atr,
         "swing_low": swing_low, "swing_high": swing_high,
         "rsi": rsi, "adx": adx, "score": 0,
-        "kalman_up": False, "trend": "BULL" if is_long else "BEAR",
-        "signal_grade": "A",
+        "kalman_up": kalman_up_mtf, "trend": "BULL" if is_long else "BEAR",
+        "signal_grade": grade_mtf, "quality_score": quality_mtf,
     }
 
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
@@ -938,13 +993,26 @@ async def run_cycle(session, last_sig, tf, coins):
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
-    """Ciclo MTF: 1h confirma direção → 15m encontra entrada no pullback EMA21/50."""
+    """Ciclo MTF: 1h confirma direção → 30m encontra entrada no pullback EMA21/50."""
     if not in_trading_hours():
         log.info("[MTF] Fora do horário de operação — pulando ciclo MTF")
         return 0
     now = time.time()
     sent = 0
     cooldown_mtf = 3600  # 1h entre sinais MTF por moeda
+
+    # BTC trend — não operar altcoins contra tendência do BTC
+    btc_bull_filter = btc_bear_filter = False
+    btc_candles = await fetch_candles(session, "BTCUSDT", "1h")
+    if btc_candles and len(btc_candles) >= 50:
+        btc_c = [c["c"] for c in btc_candles]
+        btc_e21  = ema_series(btc_c, 21)[-1]
+        btc_e50  = ema_series(btc_c, 50)[-1]
+        btc_e200 = ema_series(btc_c, 200)[-1]
+        btc_p    = btc_c[-1]
+        btc_bull_filter = btc_p > btc_e21 > btc_e50 and btc_p > btc_e200 * 0.98
+        btc_bear_filter = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02
+        log.info(f"[MTF] BTC: {'BULL ↑' if btc_bull_filter else 'BEAR ↓' if btc_bear_filter else 'NEUTRO'} | ${btc_p:.0f}")
 
     for sym, label, short in coins:
         # 1h — direção e setup
@@ -962,8 +1030,33 @@ async def run_mtf_cycle(session, last_sig, coins):
             await asyncio.sleep(0.5)
             continue
 
+        # Pseudo-4H: usa últimas 4 velas de 1h para confirmar tendência de 4h
+        c1h_arr = [c["c"] for c in candles_1h]
+        if len(c1h_arr) >= 10:
+            e21_1h_v = ema_series(c1h_arr, 21)
+            e50_1h_v = ema_series(c1h_arr, 50)
+            h4_bull = c1h_arr[-1] > e21_1h_v[-1] > e50_1h_v[-1] and c1h_arr[-1] > c1h_arr[-5]
+            h4_bear = c1h_arr[-1] < e21_1h_v[-1] < e50_1h_v[-1] and c1h_arr[-1] < c1h_arr[-5]
+        else:
+            h4_bull = h4_bear = True
+        if h1_bull and not h4_bull:
+            log.info(f"[MTF] {short:7s} | LONG bloqueado — 4H não confirma")
+            await asyncio.sleep(0.3); continue
+        if h1_bear and not h4_bear:
+            log.info(f"[MTF] {short:7s} | SHORT bloqueado — 4H não confirma")
+            await asyncio.sleep(0.3); continue
+
+        # BTC filter: não operar altcoin contra BTC (exceto BTC e USDT pairs de stablecoins)
+        if short not in ("BTC", "WBTC"):
+            if h1_bull and btc_bear_filter:
+                log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC em queda")
+                await asyncio.sleep(0.2); continue
+            if h1_bear and btc_bull_filter:
+                log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC em alta")
+                await asyncio.sleep(0.2); continue
+
         direction = "BULL" if h1_bull else "BEAR"
-        log.info(f"[MTF] {short:7s} | 1h {direction} setup | Score {r1h['score']:+d} → buscando entrada 15m...")
+        log.info(f"[MTF] {short:7s} | 1h {direction} ✓4H ✓BTC | Score {r1h['score']:+d} → buscando entrada 30m...")
 
         # 15m — entrada no pullback
         candles_15m = await fetch_candles(session, sym, "15m")
@@ -975,7 +1068,13 @@ async def run_mtf_cycle(session, last_sig, coins):
             await asyncio.sleep(0.5)
             continue
 
-        log.info(f"[MTF] {short:7s} | ✅ 15m {result['sig']} | {result['sig_source']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
+        mtf_grade = result.get("signal_grade", "A")
+        mtf_quality = result.get("quality_score", 0)
+        log.info(f"[MTF] {short:7s} | ✅ 30m {result['sig']} Grade:{mtf_grade} Q:{mtf_quality}/10 | {result['sig_source']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
+
+        if mtf_grade == "B":
+            log.info(f"[MTF] {short:7s} | Grade B ignorado — setup insuficiente")
+            await asyncio.sleep(0.3); continue
 
         key = f"{sym}_MTF"
         if now - last_sig.get(key, 0) >= cooldown_mtf:
@@ -984,9 +1083,9 @@ async def run_mtf_cycle(session, last_sig, coins):
             await send_telegram(session, sym, label, short, result["sig"],
                                 result["price"], result["atr"], r1h["score"],
                                 result["rsi"], result["adx"], result["trend"],
-                                r1h["kalman_up"],
+                                result["kalman_up"],
                                 result["swing_low"], result["swing_high"],
-                                result["sig_source"], "15m", "A")
+                                result["sig_source"], "30m", mtf_grade)
         else:
             mins = int((cooldown_mtf - (now - last_sig.get(key, 0))) / 60)
             log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
