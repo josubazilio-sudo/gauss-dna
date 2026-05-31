@@ -966,7 +966,11 @@ async def run_cycle(session, last_sig, tf, coins):
                 await asyncio.sleep(0.2); continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
-                signals_pending.append((abs(result["score"]),sym,label,short,result,grade,key))
+                last_sig[key]=now; sent+=1
+                await send_telegram(session,sym,label,short,result["sig"],result["price"],
+                                    result["atr"],result["score"],result["rsi"],result["adx"],
+                                    result["trend"],result["kalman_up"],
+                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
             else:
                 mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
@@ -975,30 +979,15 @@ async def run_cycle(session, last_sig, tf, coins):
             candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.4)
 
-    # Envia só os 3 sinais mais fortes por ciclo
-    signals_pending.sort(reverse=True)
-    for abs_sc,sym,label,short,result,grade,key in signals_pending[:3]:
-        last_sig[key]=now; sent+=1
-        await send_telegram(session,sym,label,short,result["sig"],result["price"],
-                            result["atr"],result["score"],result["rsi"],result["adx"],
-                            result["trend"],result["kalman_up"],
-                            result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
-
-    # Relatório Telegram a cada 4 ciclos (~1h) — evita spam
-    if sent==0 and _cycle_count["n"]%4==0:
-        if candidates:
-            candidates.sort(reverse=True)
-            top3=candidates[:3]
-            lines=[f"  {sh}: score {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top3]
-            body="\n".join(lines)
-        else:
-            body="  nenhuma moeda analisada"
-        txt=(f"🔍 Sem sinais ({_cycle_count['n']} ciclos)\n"
-             f"Top candidatos:\n{body}\n"
-             f"⏰ {datetime.now().strftime('%H:%M')}")
-        url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    if sent == 0 and candidates:
+        candidates.sort(reverse=True)
+        top3 = candidates[:3]
+        lines = [f"  {sh}: score {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top3]
+        txt = (f"🔍 [{tf}] Sem sinais no ciclo\nTop candidatos:\n" + "\n".join(lines) +
+               f"\n⏰ {datetime.now().strftime('%H:%M')}")
+        url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
         try:
-            async with session.post(url,json={"chat_id":TG_CHATID,"text":txt},
+            async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
                                     timeout=aiohttp.ClientTimeout(total=10)) as r:
                 await r.json()
         except: pass
