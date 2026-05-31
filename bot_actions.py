@@ -50,30 +50,54 @@ COINS = [
     ("SEIUSDT","SEI/USDT","SEI"),("TIAUSDT","TIA/USDT","TIA"),
     ("ALGOUSDT","ALGO/USDT","ALGO"),("VETUSDT","VET/USDT","VET"),
     ("HBARUSDT","HBAR/USDT","HBAR"),("STXUSDT","STX/USDT","STX"),
+    ("ICPUSDT","ICP/USDT","ICP"),("XLMUSDT","XLM/USDT","XLM"),
+    ("KASUSDT","KAS/USDT","KAS"),("FTMUSDT","FTM/USDT","FTM"),
+    ("FLOWUSDT","FLOW/USDT","FLOW"),("CFXUSDT","CFX/USDT","CFX"),
     # ── DeFi / infra ─────────────────────────────────────────────────────
     ("LINKUSDT","LINK/USDT","LINK"),("INJUSDT","INJ/USDT","INJ"),
     ("JUPUSDT","JUP/USDT","JUP"),("ARBUSDT","ARB/USDT","ARB"),
     ("OPUSDT","OP/USDT","OP"),("UNIUSDT","UNI/USDT","UNI"),
     ("AAVEUSDT","AAVE/USDT","AAVE"),("ENAUSDT","ENA/USDT","ENA"),
     ("ONDOUSDT","ONDO/USDT","ONDO"),("GRTUSDT","GRT/USDT","GRT"),
+    ("LDOUSDT","LDO/USDT","LDO"),("RUNEUSDT","RUNE/USDT","RUNE"),
+    ("PENDLEUSDT","PENDLE/USDT","PENDLE"),("MKRUSDT","MKR/USDT","MKR"),
+    ("CRVUSDT","CRV/USDT","CRV"),("DYDXUSDT","DYDX/USDT","DYDX"),
+    ("SNXUSDT","SNX/USDT","SNX"),("GMXUSDT","GMX/USDT","GMX"),
+    ("COMPUSDT","COMP/USDT","COMP"),("STGUSDT","STG/USDT","STG"),
     # ── IA / narrativa ───────────────────────────────────────────────────
     ("FETUSDT","FET/USDT","FET"),("TAOUSDT","TAO/USDT","TAO"),
     ("RENDERUSDT","RENDER/USDT","RENDER"),("WLDUSDT","WLD/USDT","WLD"),
-    ("IMXUSDT","IMX/USDT","IMX"),
+    ("IMXUSDT","IMX/USDT","IMX"),("EIGENUSDT","EIGEN/USDT","EIGEN"),
     # ── Meme coins com alta liquidez ─────────────────────────────────────
     ("DOGEUSDT","DOGE/USDT","DOGE"),("PEPEUSDT","PEPE/USDT","PEPE"),
     ("WIFUSDT","WIF/USDT","WIF"),("SHIBUSDT","SHIB/USDT","SHIB"),
     ("FLOKIUSDT","FLOKI/USDT","FLOKI"),("BONKUSDT","BONK/USDT","BONK"),
+    ("NOTUSDT","NOT/USDT","NOT"),("POPCATUSDT","POPCAT/USDT","POPCAT"),
+    ("BRETTUSDT","BRETT/USDT","BRETT"),("TURBOUSDT","TURBO/USDT","TURBO"),
+    ("MEWUSDT","MEW/USDT","MEW"),("BOMEUSDT","BOME/USDT","BOME"),
     # ── High beta estabelecidos ───────────────────────────────────────────
     ("DOTUSDT","DOT/USDT","DOT"),("ATOMUSDT","ATOM/USDT","ATOM"),
     ("LTCUSDT","LTC/USDT","LTC"),("FILUSDT","FIL/USDT","FIL"),
-    ("ARUSDT","AR/USDT","AR"),
+    ("ARUSDT","AR/USDT","AR"),("BCHUSDT","BCH/USDT","BCH"),
+    ("EOSUSDT","EOS/USDT","EOS"),("XTZUSDT","XTZ/USDT","XTZ"),
+    ("QNTUSDT","QNT/USDT","QNT"),("BATUSDT","BAT/USDT","BAT"),
     # ── L2 / interop ─────────────────────────────────────────────────────
     ("STRKUSDT","STRK/USDT","STRK"),("ZETAUSDT","ZETA/USDT","ZETA"),
-    ("PYTHUSDT","PYTH/USDT","PYTH"),
+    ("PYTHUSDT","PYTH/USDT","PYTH"),("WUSDT","W/USDT","W"),
+    ("ZKUSDT","ZK/USDT","ZK"),("ALTUSDT","ALT/USDT","ALT"),
+    ("ZROUSDT","ZRO/USDT","ZRO"),("SAGAUSDT","SAGA/USDT","SAGA"),
+    ("BLURUSDT","BLUR/USDT","BLUR"),("ORDIUSDT","ORDI/USDT","ORDI"),
     # ── Gaming / metaverso ───────────────────────────────────────────────
     ("AXSUSDT","AXS/USDT","AXS"),("SANDUSDT","SAND/USDT","SAND"),
-    ("MANAUSDT","MANA/USDT","MANA"),
+    ("MANAUSDT","MANA/USDT","MANA"),("GALAUSDT","GALA/USDT","GALA"),
+    ("CHZUSDT","CHZ/USDT","CHZ"),("APEUSDT","APE/USDT","APE"),
+    ("GMTUSDT","GMT/USDT","GMT"),("MAGICUSDT","MAGIC/USDT","MAGIC"),
+    # ── DePIN / outros ───────────────────────────────────────────────────
+    ("IOUSDT","IO/USDT","IO"),("ROSEUSDT","ROSE/USDT","ROSE"),
+    ("THETAUSDT","THETA/USDT","THETA"),("CELOUSDT","CELO/USDT","CELO"),
+    ("JASMYUSDT","JASMY/USDT","JASMY"),("LPTUSDT","LPT/USDT","LPT"),
+    ("AEVOUSDT","AEVO/USDT","AEVO"),("BERAUSDT","BERA/USDT","BERA"),
+    ("LISTAUSDT","LISTA/USDT","LISTA"),("REZUSDT","REZ/USDT","REZ"),
 ]
 
 # ── INDICADORES ──────────────────────────────────────────────────────────────
