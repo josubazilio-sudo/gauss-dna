@@ -1058,13 +1058,13 @@ async def run_mtf_cycle(session, last_sig, coins):
         direction = "BULL" if h1_bull else "BEAR"
         log.info(f"[MTF] {short:7s} | 1h {direction} ✓4H ✓BTC | Score {r1h['score']:+d} → buscando entrada 30m...")
 
-        # 15m — entrada no pullback
-        candles_15m = await fetch_candles(session, sym, "15m")
+        # 30m — entrada no pullback
+        candles_15m = await fetch_candles(session, sym, "30m")
         if not candles_15m: await asyncio.sleep(0.5); continue
 
         result = analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear)
         if not result:
-            log.info(f"[MTF] {short:7s} | 15m sem entrada (não está no pullback)")
+            log.info(f"[MTF] {short:7s} | 30m sem entrada (não está no pullback)")
             await asyncio.sleep(0.5)
             continue
 
@@ -1229,7 +1229,7 @@ async def main():
             # MTF e FLEX em try/except separados — falha num não bloqueia o outro
             try:
                 total=0
-                if "1h" in TIMEFRAMES and "15m" in TIMEFRAMES:
+                if "1h" in TIMEFRAMES and ("30m" in TIMEFRAMES or "15m" in TIMEFRAMES):
                     sent_mtf = await run_mtf_cycle(session, last_sig, active_coins)
                     total += sent_mtf
             except Exception as e:
