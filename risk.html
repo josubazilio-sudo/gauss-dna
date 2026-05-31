@@ -216,7 +216,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
   <div class="hdr">
     <div class="hdr-badge"><i></i> GAUSS+DNA · MTF Pullback Strategy</div>
     <h1><span class="c1">Calculadora</span> + <span class="c2">Diário</span></h1>
-    <p>// Banca $180 → Meta $1.000 · Risco 3% · TP1 2R · TP2 3.5R · Final 6R</p>
+    <p>// Banca $180 → Meta $1.000 · Risco 3% · Grade A: 2R/3.5R/6R · Grade S: 2.5R/4.5R/8R</p>
   </div>
 
   <div class="tabs-bar">
@@ -277,12 +277,18 @@ tr:hover td{background:rgba(255,255,255,.012)}
     Drawdown máximo atingido. Pause, revise o setup e retome apenas com banca recuperada.
   </div>
 
+  <!-- GRADE SELECTOR -->
+  <div style="display:flex;gap:.5rem;margin-bottom:.8rem">
+    <button id="gradeABtn" onclick="setGrade('A')" style="flex:1;padding:.55rem;font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;border-radius:8px;border:1px solid var(--blue);background:rgba(59,158,255,.18);color:var(--blue);cursor:pointer">⭐ GRADE A</button>
+    <button id="gradeSBtn" onclick="setGrade('S')" style="flex:1;padding:.55rem;font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);cursor:pointer">🏆 GRADE S</button>
+  </div>
+
   <!-- MÉTRICAS -->
   <div class="mets">
     <div class="met"><div class="met-l">Risco/Op.</div><div class="met-v cr" id="mR">$5.40</div><div class="met-s" id="mRs">3% · Stop swing</div></div>
-    <div class="met"><div class="met-l">TP1 (2R)</div><div class="met-v cb" id="mT1">$10.80</div><div class="met-s">fechar 40%</div></div>
-    <div class="met"><div class="met-l">TP2 (3.5R)</div><div class="met-v cc" id="mT2">$18.90</div><div class="met-s">fechar 35%</div></div>
-    <div class="met"><div class="met-l">Final (6R)</div><div class="met-v cv" id="mTF">$32.40</div><div class="met-s">últimos 25%</div></div>
+    <div class="met"><div class="met-l" id="mT1L">TP1 (2R)</div><div class="met-v cb" id="mT1">$10.80</div><div class="met-s">fechar 40%</div></div>
+    <div class="met"><div class="met-l" id="mT2L">TP2 (3.5R)</div><div class="met-v cc" id="mT2">$18.90</div><div class="met-s">fechar 35%</div></div>
+    <div class="met"><div class="met-l" id="mTFL">Final (6R)</div><div class="met-v cv" id="mTF">$32.40</div><div class="met-s">últimos 25%</div></div>
   </div>
 
   <!-- TAB 1 — CALCULADORA -->
@@ -302,11 +308,13 @@ tr:hover td{background:rgba(255,255,255,.012)}
       <div class="panel">
         <div class="panel-ttl">Estrutura MTF Pullback</div>
         <div class="fixed-targets">
-          <div class="ft-row b1"><span>TP1 — fechar 40%</span><span class="cb">2.0 R</span></div>
-          <div class="ft-row b2"><span>TP2 — fechar 35%</span><span class="cc">3.5 R</span></div>
-          <div class="ft-row b3"><span>Final — últimos 25%</span><span class="cv">6.0 R</span></div>
+          <div class="ft-row b1"><span>TP1 — fechar 40%</span><span class="cb" id="ftTP1">2.0 R</span></div>
+          <div class="ft-row b2"><span>TP2 — fechar 35%</span><span class="cc" id="ftTP2">3.5 R</span></div>
+          <div class="ft-row b3"><span>Final — últimos 25%</span><span class="cv" id="ftTPF">6.0 R</span></div>
           <div class="ft-row b4"><span>Break Even após TP1</span><span class="cy">✓ Obrigatório</span></div>
-          <div class="ft-row b5"><span>Score &gt; 45 · ADX &gt; 20 · Grade A+S</span><span class="cp">Institucional</span></div>
+          <div class="ft-row b5"><span>Score &gt; 50 · ADX &gt; 22 · Grade A+S</span><span class="cp">Institucional</span></div>
+          <div class="ft-row b5"><span>Stop: swing ± 0.5 ATR · max 3 ATR</span><span class="cp">Estrutural</span></div>
+          <div class="ft-row b5"><span>Sessão: 09-13h e 14-21h BRT</span><span class="cy">✓ Ativo</span></div>
         </div>
       </div>
     </div>
@@ -412,7 +420,25 @@ const $=id=>document.getElementById(id);
 const fmt=v=>'$'+Math.abs(v).toFixed(2);
 const fmtS=v=>(v>=0?'+':'-')+'$'+Math.abs(v).toFixed(2);
 
-function sv(rid,vid,suf){
+let _grade = 'A';
+const GRADE_R = {
+  A: {r1:2.0, r2:3.5, rf:6.0},
+  S: {r1:2.5, r2:4.5, rf:8.0}
+};
+
+function setGrade(g) {
+  _grade = g;
+  const isS = g === 'S';
+  document.getElementById('gradeABtn').style.borderColor    = isS ? 'var(--border)'  : 'var(--blue)';
+  document.getElementById('gradeABtn').style.background     = isS ? 'transparent'    : 'rgba(59,158,255,.18)';
+  document.getElementById('gradeABtn').style.color          = isS ? 'var(--muted2)'  : 'var(--blue)';
+  document.getElementById('gradeSBtn').style.borderColor    = isS ? 'var(--yellow)'  : 'var(--border)';
+  document.getElementById('gradeSBtn').style.background     = isS ? 'rgba(255,204,68,.12)' : 'transparent';
+  document.getElementById('gradeSBtn').style.color          = isS ? 'var(--yellow)'  : 'var(--muted2)';
+  calcAll();
+}
+
+
   const v=parseFloat($(rid).value);
   $(vid).textContent=suf==='x'?v.toFixed(0)+'×':suf==='%'?v.toFixed(1)+'%':v.toFixed(1);
 }
@@ -433,12 +459,22 @@ function calcAll(){
   STATE.riscoPct=parseFloat($('rr').value)/100;
   const lev=parseFloat($('lr').value)||5;
   const risco=b*STATE.riscoPct;
-  const tp1=risco*2.0;
-  const tp2=risco*3.5;
-  const tfin=risco*6.0;
+  const {r1,r2,rf}=GRADE_R[_grade]||GRADE_R.A;
+  const tp1=risco*r1;
+  const tp2=risco*r2;
+  const tfin=risco*rf;
   const stopBanca=b*0.70;
-  const colateral=(risco/0.02); // posição ao arriscar 2% de distância de SL
+  const colateral=(risco/0.02);
   const pct=Math.min(100,Math.round((b/META)*100));
+  // Atualiza labels das métricas e painel de estrutura
+  const mT1L=$('mT1L'),mT2L=$('mT2L'),mTFL=$('mTFL');
+  if(mT1L) mT1L.textContent=`TP1 (${r1}R)`;
+  if(mT2L) mT2L.textContent=`TP2 (${r2}R)`;
+  if(mTFL) mTFL.textContent=`Final (${rf}R)`;
+  const ftTP1=$('ftTP1'),ftTP2=$('ftTP2'),ftTPF=$('ftTPF');
+  if(ftTP1) ftTP1.textContent=r1+' R';
+  if(ftTP2) ftTP2.textContent=r2+' R';
+  if(ftTPF) ftTPF.textContent=rf+' R';
 
   $('pctEl').textContent=pct+'%';
   $('barFill').style.width=pct+'%';
@@ -453,13 +489,13 @@ function calcAll(){
   const ganhoMed=(tp1*.4+tp2*.35+tfin*.25);
   const stopD=(risco*2).toFixed(2);
   $('rulesEl').innerHTML=`
-    <div class="rule"><span>🔍</span><div><strong>Filtro: Score &gt; 45 · ADX &gt; 20 · ADX subindo</strong><span class="note">1h confirma tendência → 15m encontra pullback na EMA21/EMA50 · Grade A+S apenas</span></div></div>
+    <div class="rule"><span>🔍</span><div><strong>Filtro: Score &gt; 50 · ADX &gt; 22 · ADX subindo</strong><span class="note">1h confirma tendência → 30m encontra pullback na EMA21/EMA50 · Grade A+S apenas</span></div></div>
     <div class="rule"><span>⏰</span><div><strong>Horário: 09h–13h e 14h–21h BRT</strong><span class="note">Sem operar na abertura dos EUA (13–14h) nem fora do horário de liquidez</span></div></div>
     <div class="rule"><span>🚫</span><div><strong>Evitar mercado lateral · Não comprar no topo · Não vender no fundo</strong><span class="note">BB squeeze + ADX &lt; 25 = sem sinal · Preço &gt; 2.5 ATR da EMA21 = extensão, aguardar</span></div></div>
     <div class="rule"><span>💰</span><div><strong>Risco fixo: ${(STATE.riscoPct*100).toFixed(1)}% por operação = ${fmt(risco)}</strong><span class="note">Stop no swing low/high da estrutura — nunca mova após entrar</span></div></div>
-    <div class="rule"><span>🎯</span><div><strong>TP1 em 2R = ${fmt(tp1)} → fechar 40% da posição</strong><span class="note">Após TP1 ative Break Even — trade vira risco zero</span></div></div>
-    <div class="rule"><span>✨</span><div><strong>TP2 em 3.5R = ${fmt(tp2)} → fechar 35% da posição</strong><span class="note">Move stop para TP1 e deixa última parte correr</span></div></div>
-    <div class="rule"><span>🏆</span><div><strong>Final em 6R = ${fmt(tfin)} → últimos 25% · Ganho médio: ${fmt(ganhoMed)}</strong><span class="note">Em tendência forte (ADX &gt; 30) usar trailing stop sem limite</span></div></div>
+    <div class="rule"><span>🎯</span><div><strong>TP1 em ${r1}R = ${fmt(tp1)} → fechar 40% da posição</strong><span class="note">Após TP1 ative Break Even — trade vira risco zero</span></div></div>
+    <div class="rule"><span>✨</span><div><strong>TP2 em ${r2}R = ${fmt(tp2)} → fechar 35% da posição</strong><span class="note">Move stop para TP1 e deixa última parte correr</span></div></div>
+    <div class="rule"><span>🏆</span><div><strong>Final em ${rf}R = ${fmt(tfin)} → últimos 25% · Ganho médio: ${fmt(ganhoMed)}</strong><span class="note">Em tendência forte (ADX &gt; 30) usar trailing stop sem limite</span></div></div>
     <div class="rule"><span>🛑</span><div><strong>Stop diário: máx 2 losses = $${stopD} perdidos → encerre o dia</strong><span class="note">Grade A+S obrigatório · ADX subindo · Nunca contra tendência 1h</span></div></div>
     <div class="rule"><span>🔒</span><div><strong>Stop banca: 30% drawdown = ${fmt(stopBanca)} → pause e revise</strong><span class="note">Faltam ${fmt(META-b)} para a meta de $1.000</span></div></div>
   `;
@@ -470,11 +506,12 @@ function calcAll(){
 function buildCVOptions(){
   const b=STATE.banca;
   const risco=b*STATE.riscoPct;
-  const tp1=risco*2.0, tp2=risco*3.5, tfin=risco*6.0;
+  const {r1,r2,rf}=GRADE_R[_grade]||GRADE_R.A;
+  const tp1=risco*r1, tp2=risco*r2, tfin=risco*rf;
   const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
   const t=STATE.selectedTipo;
   const opts=t==='win'
-    ?[{lbl:'TP1 (2R)',v:tp1},{lbl:'TP2 (3.5R)',v:tp2},{lbl:'Final (6R)',v:tfin},{lbl:'Médio',v:ganhoMed}]
+    ?[{lbl:`TP1 (${r1}R)`,v:tp1},{lbl:`TP2 (${r2}R)`,v:tp2},{lbl:`Final (${rf}R)`,v:tfin},{lbl:'Médio',v:ganhoMed}]
     :t==='loss'
     ?[{lbl:'Stop completo',v:-risco},{lbl:'Metade',v:-risco*.5}]
     :t==='be'
@@ -596,7 +633,8 @@ function simCalc(){
   const wr=parseFloat($('simWR').value)/100||0.62;
   const opsDay=parseFloat($('simOps').value)||2;
   const risco=banca*STATE.riscoPct;
-  const tp1=risco*2.0, tp2=risco*3.5, tfin=risco*6.0;
+  const {r1:sr1,r2:sr2,rf:srf}=GRADE_R[_grade]||GRADE_R.A;
+  const tp1=risco*sr1, tp2=risco*sr2, tfin=risco*srf;
   const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
   const perdaMed=risco;
   const ev=wr*ganhoMed-(1-wr)*perdaMed;
