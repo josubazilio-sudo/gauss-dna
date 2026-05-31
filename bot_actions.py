@@ -91,7 +91,7 @@ COINS = [
     ("AXSUSDT","AXS/USDT","AXS"),("SANDUSDT","SAND/USDT","SAND"),
     ("MANAUSDT","MANA/USDT","MANA"),("GALAUSDT","GALA/USDT","GALA"),
     ("CHZUSDT","CHZ/USDT","CHZ"),("APEUSDT","APE/USDT","APE"),
-    ("GMTUSDT","GMT/USDT","GMT"),("MAGICUSDT","MAGIC/USDT","MAGIC"),
+    ("YGGUSDT","YGG/USDT","YGG"),("MAGICUSDT","MAGIC/USDT","MAGIC"),
     # ── DePIN / outros ───────────────────────────────────────────────────
     ("IOUSDT","IO/USDT","IO"),("ROSEUSDT","ROSE/USDT","ROSE"),
     ("IOTXUSDT","IOTX/USDT","IOTX"),("CELOUSDT","CELO/USDT","CELO"),
