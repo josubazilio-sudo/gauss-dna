@@ -487,11 +487,11 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    long_flex = (flex_score > 40 and macd_bull_r and adx > 17 and
+    long_flex = (flex_score > 40 and macd_bull_r and adx >= 17 and
                  not sideways and not_ext_long_tight and
                  safe_long and ha_bull and vol_ok and
                  38 < rsi < 68)
-    short_flex = (flex_score < -40 and macd_bear_r and adx > 17 and
+    short_flex = (flex_score < -40 and macd_bear_r and adx >= 17 and
                   not sideways and not_ext_short_tight and
                   safe_short and ha_bear and vol_ok_s and
                   32 < rsi < 62)
@@ -549,7 +549,7 @@ def analyze(sym, candles):
             b=[]
             if not macd_bull_r: b.append(f"macd_r=F(ml{'>' if ml>sl_v else '<'}sl hist{'↑' if hist>hist_p else '↓'})")
             if not ha_bull:     b.append(f"ha=F({'+' if ha[-1]['c']>ha[-1]['o'] else '-'}{'+' if ha[-2]['c']>ha[-2]['o'] else '-'})")
-            if adx<=17:         b.append(f"adx={adx:.1f}<=17")
+            if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
             if not vol_ok:      b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bull} flow={f_bull})")
@@ -560,7 +560,7 @@ def analyze(sym, candles):
             b=[]
             if not macd_bear_r: b.append(f"macd_r=F(ml{'<' if ml<sl_v else '>'}sl hist{'↓' if hist<hist_p else '↑'})")
             if not ha_bear:     b.append(f"ha=F({'+' if ha[-1]['c']>ha[-1]['o'] else '-'}{'+' if ha[-2]['c']>ha[-2]['o'] else '-'})")
-            if adx<=17:         b.append(f"adx={adx:.1f}<=17")
+            if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
             if not vol_ok_s:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bear} flow={f_bear})")
