@@ -676,7 +676,7 @@ function triggerSignal(sym,type,price,atrVal,score,grade){
   al.className='sig-alert show '+(isL?'long':'short');
   $('saTitle').textContent=(isL?'🟢 SINAL LONG':'🔴 SINAL SHORT')+' — '+coin.short;
   $('saTitle').style.color=isL?'var(--green)':'var(--red)';
-  $('saCoin').textContent=coin.label+' · $'+fmtPrice(price,sym);
+  $('saCoin').textContent=coin.label+' · ⏱ '+currentTF+' · $'+fmtPrice(price,sym);
   $('saEntrada').textContent='$'+fmtPrice(price,sym);
   $('saStop').textContent='$'+stop.toFixed(stop<1?6:2);
   $('saTP1L').textContent=`TP1 (${r1}R)`;
