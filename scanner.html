@@ -289,7 +289,7 @@ const COINS=[
   {sym:'ICPUSDT', label:'ICP/USDT',    short:'ICP'},
   {sym:'XLMUSDT', label:'XLM/USDT',    short:'XLM'},
   {sym:'KASUSDT', label:'KAS/USDT',    short:'KAS'},
-  {sym:'FTMUSDT', label:'FTM/USDT',    short:'FTM'},
+  {sym:'EGLDUSDT',label:'EGLD/USDT',   short:'EGLD'},
   {sym:'FLOWUSDT',label:'FLOW/USDT',   short:'FLOW'},
   {sym:'CFXUSDT', label:'CFX/USDT',    short:'CFX'},
   // DeFi / infra
@@ -306,7 +306,7 @@ const COINS=[
   {sym:'LDOUSDT', label:'LDO/USDT',    short:'LDO'},
   {sym:'RUNEUSDT',label:'RUNE/USDT',   short:'RUNE'},
   {sym:'PENDLEUSDT',label:'PENDLE/USDT',short:'PENDLE'},
-  {sym:'MKRUSDT', label:'MKR/USDT',    short:'MKR'},
+  {sym:'CAKEUSDT',label:'CAKE/USDT',   short:'CAKE'},
   {sym:'CRVUSDT', label:'CRV/USDT',    short:'CRV'},
   {sym:'DYDXUSDT',label:'DYDX/USDT',   short:'DYDX'},
   {sym:'SNXUSDT', label:'SNX/USDT',    short:'SNX'},
@@ -350,7 +350,7 @@ const COINS=[
   {sym:'PYTHUSDT',label:'PYTH/USDT',   short:'PYTH'},
   {sym:'WUSDT',   label:'W/USDT',      short:'W'},
   {sym:'ZKUSDT',  label:'ZK/USDT',     short:'ZK'},
-  {sym:'ALTUSDT', label:'ALT/USDT',    short:'ALT'},
+  {sym:'MNTUSDT', label:'MNT/USDT',    short:'MNT'},
   {sym:'ZROUSDT', label:'ZRO/USDT',    short:'ZRO'},
   {sym:'SAGAUSDT',label:'SAGA/USDT',   short:'SAGA'},
   {sym:'BLURUSDT',label:'BLUR/USDT',   short:'BLUR'},
@@ -362,12 +362,12 @@ const COINS=[
   {sym:'GALAUSDT',label:'GALA/USDT',   short:'GALA'},
   {sym:'CHZUSDT', label:'CHZ/USDT',    short:'CHZ'},
   {sym:'APEUSDT', label:'APE/USDT',    short:'APE'},
-  {sym:'GMTUSDT', label:'GMT/USDT',    short:'GMT'},
+  {sym:'YGGUSDT', label:'YGG/USDT',    short:'YGG'},
   {sym:'MAGICUSDT',label:'MAGIC/USDT', short:'MAGIC'},
   // DePIN / outros
   {sym:'IOUSDT',  label:'IO/USDT',     short:'IO'},
   {sym:'ROSEUSDT',label:'ROSE/USDT',   short:'ROSE'},
-  {sym:'THETAUSDT',label:'THETA/USDT', short:'THETA'},
+  {sym:'IOTXUSDT',label:'IOTX/USDT',   short:'IOTX'},
   {sym:'CELOUSDT',label:'CELO/USDT',   short:'CELO'},
   {sym:'JASMYUSDT',label:'JASMY/USDT', short:'JASMY'},
   {sym:'LPTUSDT', label:'LPT/USDT',    short:'LPT'},
@@ -613,11 +613,8 @@ function analyzeH1(candles){
   return null;
 }
 
-// Session filter: 09h-21h BRT (UTC-3)
-function inSession(){
-  const h=(new Date().getUTCHours()+21)%24;
-  return(h>=9&&h<13)||(h>=14&&h<21);
-}
+// Crypto opera 24/7 — sem filtro de horário
+function inSession(){ return true; }
 
 function analyzeSymbol(sym){
   const s=state[sym];
@@ -690,8 +687,8 @@ function analyzeSymbol(sym){
   const now=Date.now(), cooldown=14400000; // 4h
   const lastT=lastSigTime[sym]||0;
   if(now-lastT>cooldown&&inSession()){
-    const flexLong=flexScore>40&&tBull&&(mBull||haBull)&&adxOk&&pdiBull&&vStrong&&notExtLong&&rsiBull;
-    const flexShort=flexScore<-40&&tBear&&(mBear||haBear)&&adxOk&&!pdiBull&&vStrong&&notExtShort&&rsiBear;
+    const flexLong=flexScore>40&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong&&rsiBull&&fBull;
+    const flexShort=flexScore<-40&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort&&rsiBear&&fBear;
     const finalSig=mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
     if(finalSig){
       const gradeL=finalSig==='LONG'?(gradeS_L?'S':gradeA_L?'A':null):null;
