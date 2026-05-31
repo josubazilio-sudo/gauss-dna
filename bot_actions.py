@@ -483,13 +483,13 @@ def analyze(sym, candles):
     not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 26
 
     long_flex = (flex_score > 40 and macd_bull_r and adx > 20 and adx_rising and
-                 not sideways and not_ext_long_tight and trendilo_long and
+                 not sideways and not_ext_long_tight and
                  safe_long and ha_bull and v_strong and (obv_bull or f_bull) and
-                 e200_rising and 38 < rsi < 68)
+                 38 < rsi < 68)
     short_flex = (flex_score < -40 and macd_bear_r and adx > 20 and adx_rising and
-                  not sideways and not_ext_short_tight and trendilo_short and
+                  not sideways and not_ext_short_tight and
                   safe_short and ha_bear and v_strong and (obv_bear or f_bear) and
-                  e200_falling and 32 < rsi < 62)
+                  32 < rsi < 62)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
