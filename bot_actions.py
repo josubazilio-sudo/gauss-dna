@@ -439,8 +439,8 @@ def analyze(sym, candles):
     # FLEX: score captura tendência (+35/-35), sem exigir alinhamento EMA extra
     flex_not_ext_long  = rsi < 75
     flex_not_ext_short = rsi > 25
-    long_flex =(flex_score>30 and macd_bull_r and adx>13 and flex_not_ext_long and trendilo_long)
-    short_flex=(flex_score<-30 and macd_bear_r and adx>13 and flex_not_ext_short and trendilo_short)
+    long_flex =(flex_score>45 and macd_bull_r and adx>20 and flex_not_ext_long and trendilo_long)
+    short_flex=(flex_score<-45 and macd_bear_r and adx>20 and flex_not_ext_short and trendilo_short)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -752,7 +752,7 @@ def quick_rank(candles):
     # ATR%
     atr=atr_series(candles,14)[-1]
     atr_pct=(atr/price)*100
-    if atr_pct<0.25 or atr_pct>6.0: return 0   # muito quieto ou muito louco
+    if atr_pct<0.25 or atr_pct>4.0: return 0   # muito quieto ou muito volátil para $180
     # ADX
     try: _,_,adx,_=dmi_adx(candles[-60:])
     except: return 0
@@ -795,19 +795,47 @@ async def scan_best_coins(session, tf="15m", top_n=20):
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 
+def in_trading_hours():
+    """Só opera 09h-13h e 14h-21h no horário de Brasília (BRT = UTC-3)."""
+    from datetime import timezone, timedelta
+    brt = timezone(timedelta(hours=-3))
+    h = datetime.now(brt).hour
+    return (9 <= h < 13) or (14 <= h < 21)
+
 async def run_cycle(session, last_sig, tf, coins):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     now=time.time(); sent=0
-    cooldown=tf_to_minutes(tf)*60
+    cooldown=max(tf_to_minutes(tf)*60, 14400)  # mínimo 4h entre sinais por moeda
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
+    MAX_SIGNALS_PER_CYCLE = 2  # máximo 2 sinais por ciclo — preservar capital $180
+
+    if not in_trading_hours():
+        log.info(f"[{tf}] Fora do horário de operação (09-13h e 14-21h BRT) — pulando ciclo")
+        return 0
+
     for sym,label,short in coins:
+        if sent >= MAX_SIGNALS_PER_CYCLE:
+            log.info(f"[{tf}] Limite de {MAX_SIGNALS_PER_CYCLE} sinais por ciclo atingido")
+            break
         candles=await fetch_candles(session,sym,tf)
         if not candles: await asyncio.sleep(0.4); continue
         result=analyze(sym,candles)
         if not result: await asyncio.sleep(0.4); continue
         grade=result.get("signal_grade","B")
+
+        # ATR% — excluir moedas muito voláteis para $180
+        atr_pct=(result["atr"]/result["price"])*100 if result["price"] else 0
+        if atr_pct > 4.0:
+            log.info(f"[{tf}] {short:7s} | ATR {atr_pct:.1f}% > 4% — muito volátil, ignorando")
+            await asyncio.sleep(0.2); continue
+
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
+            # Só Grade A e S — Grade B não tem R:R suficiente para $180
+            if grade == "B":
+                log.info(f"  ⚠️ {short} Grade B ignorado — aguardando setup A/S")
+                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
+                await asyncio.sleep(0.2); continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
                 last_sig[key]=now; sent+=1
@@ -845,6 +873,9 @@ async def run_cycle(session, last_sig, tf, coins):
 
 async def run_mtf_cycle(session, last_sig, coins):
     """Ciclo MTF: 1h confirma direção → 15m encontra entrada no pullback EMA21/50."""
+    if not in_trading_hours():
+        log.info("[MTF] Fora do horário de operação — pulando ciclo MTF")
+        return 0
     now = time.time()
     sent = 0
     cooldown_mtf = 3600  # 1h entre sinais MTF por moeda
