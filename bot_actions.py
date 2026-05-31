@@ -591,6 +591,15 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     # Mercado lateral: EMAs coladas + ADX fraco = sem direção
     sideways_mtf = abs(e21 - e50) / atr < 0.3 and adx < 22
 
+    # Trendilo: ALMA do % de variação vs bandas RMS — confirma momentum direcional
+    import math as _math
+    pch_m = [0.0] + [(closes[i]-closes[i-1])/closes[i]*100 for i in range(1, len(closes))]
+    avpch_m = alma_series(pch_m, 50, 0.85, 6)
+    rms_m = [_math.sqrt(sum(v*v for v in avpch_m[max(0,i-49):i+1])/min(i+1,50))
+             for i in range(len(avpch_m))]
+    trendilo_long_mtf  = not _math.isnan(avpch_m[-1]) and avpch_m[-1] >  rms_m[-1]
+    trendilo_short_mtf = not _math.isnan(avpch_m[-1]) and avpch_m[-1] < -rms_m[-1]
+
     # Zona de pullback: entrada só quando preço está próximo da EMA
     near_ema21_long  = abs(price - e21) < atr * 0.9 and price > e200
     near_ema50_long  = abs(price - e50) < atr * 1.2 and price > e200
@@ -621,12 +630,12 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
             adx > 22 and adx_rising_mtf and not sideways_mtf and
-            not_chasing_long and rsi_ok_long and
+            not_chasing_long and rsi_ok_long and trendilo_long_mtf and
             e200_rising_mtf and came_from_above and ema_aligned_long):
         sig = "LONG"
     elif (h1_bear and in_pullback_short and bounce_short and
               adx > 22 and adx_rising_mtf and not sideways_mtf and
-              not_chasing_short and rsi_ok_short and
+              not_chasing_short and rsi_ok_short and trendilo_short_mtf and
               e200_falling_mtf and came_from_below and ema_aligned_short):
         sig = "SHORT"
 
