@@ -73,13 +73,13 @@ COINS = [
     ("WIFUSDT","WIF/USDT","WIF"),("SHIBUSDT","SHIB/USDT","SHIB"),
     ("FLOKIUSDT","FLOKI/USDT","FLOKI"),("BONKUSDT","BONK/USDT","BONK"),
     ("NOTUSDT","NOT/USDT","NOT"),("POPCATUSDT","POPCAT/USDT","POPCAT"),
-    ("BRETTUSDT","BRETT/USDT","BRETT"),("TURBOUSDT","TURBO/USDT","TURBO"),
+    ("DOGSUSDT","DOGS/USDT","DOGS"),("TURBOUSDT","TURBO/USDT","TURBO"),
     ("MEWUSDT","MEW/USDT","MEW"),("BOMEUSDT","BOME/USDT","BOME"),
     # ── High beta estabelecidos ───────────────────────────────────────────
     ("DOTUSDT","DOT/USDT","DOT"),("ATOMUSDT","ATOM/USDT","ATOM"),
     ("LTCUSDT","LTC/USDT","LTC"),("FILUSDT","FIL/USDT","FIL"),
     ("ARUSDT","AR/USDT","AR"),("BCHUSDT","BCH/USDT","BCH"),
-    ("EOSUSDT","EOS/USDT","EOS"),("XTZUSDT","XTZ/USDT","XTZ"),
+    ("ETCUSDT","ETC/USDT","ETC"),("XTZUSDT","XTZ/USDT","XTZ"),
     ("QNTUSDT","QNT/USDT","QNT"),("BATUSDT","BAT/USDT","BAT"),
     # ── L2 / interop ─────────────────────────────────────────────────────
     ("STRKUSDT","STRK/USDT","STRK"),("ZETAUSDT","ZETA/USDT","ZETA"),
