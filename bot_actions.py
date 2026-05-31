@@ -477,16 +477,17 @@ def analyze(sym, candles):
     flex_score = score + flex_bonus_bull - flex_bonus_bear
 
     # ── FILTROS INSTITUCIONAIS ─────────────────────────────────────────────────
-    adx_rising = adx > adx_p
-    sideways = bb_squeeze and adx < 25
+    # sideways: só bloqueia se ADX < 18 (genuinamente sem direção) — evita falso-positivo
+    # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
+    sideways = bb_squeeze and adx < 18
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 74
     not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 26
 
-    long_flex = (flex_score > 40 and macd_bull_r and adx > 20 and adx_rising and
+    long_flex = (flex_score > 40 and macd_bull_r and adx > 20 and
                  not sideways and not_ext_long_tight and
                  safe_long and ha_bull and v_strong and (obv_bull or f_bull) and
                  38 < rsi < 68)
-    short_flex = (flex_score < -40 and macd_bear_r and adx > 20 and adx_rising and
+    short_flex = (flex_score < -40 and macd_bear_r and adx > 20 and
                   not sideways and not_ext_short_tight and
                   safe_short and ha_bear and v_strong and (obv_bear or f_bear) and
                   32 < rsi < 62)
@@ -538,22 +539,31 @@ def analyze(sym, candles):
     elif quality_score >= 6:  signal_grade = "B"   # setup básico
     else:                     signal_grade = "B"
 
-    # Log de diagnóstico detalhado
+    # Log de diagnóstico detalhado — mostra cada condição do long/short_flex
     if not sig:
-        if score < -25:
+        if score > 25:
             b=[]
-            if not tbear_r: b.append(f"tbear_r=F(p{'<' if price<e200 else '>'}e200,e10{'<' if e10<e21 else '>'}e21{'<' if e21<e50 else '>'}e50)")
-            if not (macd_bear_r or ha_bear): b.append(f"macd_r={macd_bear_r}/ha={ha_bear}")
-            if adx<=13: b.append(f"adx={adx:.1f}<=13")
-            if not (v_strong or vol_avg): b.append("vol=F")
-            log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} | {'; '.join(b) if b else 'ok?'}")
-        elif score > 25:
+            if not macd_bull_r: b.append(f"macd_r=F(ml{'>' if ml>sl_v else '<'}sl hist{'↑' if hist>hist_p else '↓'})")
+            if not ha_bull:     b.append(f"ha=F({'+' if ha[-1]['c']>ha[-1]['o'] else '-'}{'+' if ha[-2]['c']>ha[-2]['o'] else '-'})")
+            if adx<=20:         b.append(f"adx={adx:.1f}<=20")
+            if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
+            if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
+            if not v_strong:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x)")
+            if not (obv_bull or f_bull): b.append(f"obv={obv_bull}/flow={f_bull}")
+            if not (38<rsi<68): b.append(f"rsi={rsi:.1f} fora 38-68")
+            if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR rsi={rsi:.0f}")
+            log.info(f"  LONG-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
+        elif score < -25:
             b=[]
-            if not tbull_r: b.append("tbull_r=F")
-            if not (macd_bull_r or ha_bull): b.append(f"macd_r={macd_bull_r}/ha={ha_bull}")
-            if adx<=13: b.append(f"adx={adx:.1f}<=13")
-            if not (v_strong or vol_avg): b.append("vol=F")
-            log.info(f"  LONG-BLOCKED {sym}: score={score:+d} | {'; '.join(b) if b else 'ok?'}")
+            if not macd_bear_r: b.append(f"macd_r=F(ml{'<' if ml<sl_v else '>'}sl hist{'↓' if hist<hist_p else '↑'})")
+            if not ha_bear:     b.append(f"ha=F({'+' if ha[-1]['c']>ha[-1]['o'] else '-'}{'+' if ha[-2]['c']>ha[-2]['o'] else '-'})")
+            if adx<=20:         b.append(f"adx={adx:.1f}<=20")
+            if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
+            if not safe_short:  b.append(f"safe_short=F")
+            if not v_strong:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x)")
+            if not (obv_bear or f_bear): b.append(f"obv={obv_bear}/flow={f_bear}")
+            if not (32<rsi<62): b.append(f"rsi={rsi:.1f} fora 32-62")
+            log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
         else:
             log.info(f"  no-sig {sym}: score={score:+d} insuf")
 
