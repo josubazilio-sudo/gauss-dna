@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GAUSS+DNA · Scanner Top 50</title>
+<meta name="theme-color" content="#060810">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GAUSS Scanner">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060810;--s1:#0b0f1a;--s2:#101422;--border:#1a2035;--border2:#252d45;
+  --blue:#3b9eff;--cyan:#00d4c8;--green:#00e090;--orange:#ff8040;
+  --red:#ff3d5a;--yellow:#ffcc44;--purple:#b47fff;
+  --text:#ccd8ee;--muted:#3a4d6a;--muted2:#5a6d8a;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(59,158,255,.022) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(59,158,255,.022) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0}
+.wrap{max-width:980px;margin:0 auto;padding:1.4rem 1rem 5rem;position:relative;z-index:1}
+
+/* HEADER */
+.hdr{text-align:center;padding:1.1rem 0 1.4rem;border-bottom:1px solid var(--border);margin-bottom:1.2rem}
+.hdr-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);background:rgba(59,158,255,.07);border:1px solid rgba(59,158,255,.18);padding:.25rem .75rem;border-radius:2px;margin-bottom:.7rem}
+.dot{width:5px;height:5px;background:var(--blue);border-radius:50%}
+.dot.pulse{animation:blink 1.6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.hdr h1{font-family:'Unbounded',sans-serif;font-size:clamp(1.2rem,3vw,1.9rem);font-weight:900;letter-spacing:-.02em}
+.c1{color:var(--blue)}.c2{color:var(--cyan)}.c3{color:var(--green)}
+.hdr p{font-size:.63rem;color:var(--muted2);margin-top:.35rem}
+
+/* CONTROLS */
+.ctrl-bar{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap;margin-bottom:1.1rem}
+.sel{background:var(--s1);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'DM Mono',monospace;font-size:.72rem;padding:.42rem .7rem;outline:none;cursor:pointer}
+.sel:focus{border-color:var(--blue)}
+.btn{padding:.52rem .95rem;border-radius:7px;font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .18s;border:1px solid var(--border);background:var(--s1);color:var(--muted2)}
+.btn.go{background:rgba(0,224,144,.08);border-color:rgba(0,224,144,.3);color:var(--green)}
+.btn.go:not(:disabled):hover{background:rgba(0,224,144,.15);box-shadow:0 0 16px rgba(0,224,144,.18)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:not(.go):hover{border-color:var(--border2);color:var(--text)}
+
+.filters{display:flex;gap:.4rem}
+.ftab{padding:.42rem .9rem;border-radius:20px;font-family:'Unbounded',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .16s;border:1px solid var(--border);background:transparent;color:var(--muted)}
+.ftab.on{border-color:var(--blue);color:var(--blue);background:rgba(59,158,255,.07)}
+.ftab.fl.on{border-color:var(--green);color:var(--green);background:rgba(0,224,144,.07)}
+.ftab.fs.on{border-color:var(--red);color:var(--red);background:rgba(255,61,90,.07)}
+
+.live-dot{display:flex;align-items:center;gap:.35rem;font-size:.63rem;color:var(--muted2);margin-left:auto}
+.live-dot .d{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.live-dot.on .d{background:var(--green);animation:gpulse 1.4s infinite}
+@keyframes gpulse{0%,100%{box-shadow:0 0 0 0 rgba(0,224,144,.4)}70%{box-shadow:0 0 0 6px rgba(0,224,144,0)}}
+
+/* PROGRESS */
+#pbar-wrap{height:2px;background:var(--border);border-radius:1px;margin-bottom:1rem;overflow:hidden}
+#pbar{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));width:0%;transition:width .2s;border-radius:1px}
+#prog-lbl{font-size:.6rem;color:var(--muted2);text-align:center;margin-top:.3rem;margin-bottom:.7rem;min-height:.9rem}
+
+/* SUMMARY */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;margin-bottom:1.1rem}
+@media(max-width:560px){.summary{grid-template-columns:repeat(2,1fr)}}
+.sum-card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:.8rem;text-align:center}
+.sum-lbl{font-size:.57rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:.25rem}
+.sum-val{font-family:'Unbounded',sans-serif;font-size:1.05rem;font-weight:700;line-height:1.2}
+.sum-sub{font-size:.58rem;color:var(--muted2);margin-top:.1rem}
+
+/* COIN GRID */
+.coin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem}
+@media(max-width:680px){.coin-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:360px){.coin-grid{grid-template-columns:1fr}}
+
+.coin-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;position:relative;overflow:hidden;transition:border-color .25s,background .25s}
+.coin-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;border-radius:99px;background:var(--border);transition:background .3s}
+.coin-card.bull::before{background:var(--green)}
+.coin-card.bear::before{background:var(--red)}
+.coin-card.bull{border-color:rgba(0,224,144,.2);background:rgba(0,224,144,.025)}
+.coin-card.bear{border-color:rgba(255,61,90,.2);background:rgba(255,61,90,.025)}
+
+/* CARD TOP */
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem}
+.card-sym{font-family:'Unbounded',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2}
+.card-usdt{font-size:.57rem;font-weight:400;color:var(--muted2);font-family:'DM Mono',monospace}
+.card-price{font-size:.72rem;color:var(--text);text-align:right;line-height:1.3}
+.card-vol{font-size:.55rem;color:var(--muted);text-align:right}
+
+/* SIGNAL BADGE */
+.sig-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .65rem;border-radius:3px;font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.55rem}
+.sig-L{background:rgba(0,224,144,.1);border:1px solid rgba(0,224,144,.3);color:var(--green)}
+.sig-S{background:rgba(255,61,90,.1);border:1px solid rgba(255,61,90,.3);color:var(--red)}
+.sig-N{background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted2)}
+
+.grade-pill{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-family:'Unbounded',sans-serif;font-size:.58rem;font-weight:700;margin-left:.4rem}
+.gr-S{background:rgba(255,204,68,.1);border:1px solid rgba(255,204,68,.3);color:var(--yellow)}
+.gr-A{background:rgba(59,158,255,.1);border:1px solid rgba(59,158,255,.3);color:var(--blue)}
+.gr-B{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted2)}
+
+/* SCORE BAR */
+.score-row{display:flex;align-items:center;gap:.55rem;margin-bottom:.55rem}
+.bar-bg{flex:1;height:4px;background:var(--border2);border-radius:2px;position:relative;overflow:hidden}
+.bar-fill{position:absolute;top:0;height:100%;border-radius:2px;transition:width .4s}
+.score-num{font-size:.68rem;min-width:30px;text-align:right}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:.3rem .5rem}
+.stat-item{display:flex;justify-content:space-between;align-items:center}
+.stat-lbl{font-size:.57rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em}
+.stat-val{font-size:.67rem}
+
+/* LOADING CARD */
+.card-loading{display:flex;align-items:center;justify-content:center;min-height:130px}
+.spin{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card-sym-loading{font-family:'Unbounded',sans-serif;font-size:.75rem;color:var(--muted2);margin-left:.6rem}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-badge"><div class="dot pulse"></div> Scanner ao vivo</div>
+  <h1><span class="c1">GAUSS</span><span class="c2">+</span><span class="c3">DNA</span></h1>
+  <p>Top N por volume · Binance USDT · Estratégia FLEX</p>
+</div>
+
+<!-- CONTROLS -->
+<div class="ctrl-bar">
+  <select class="sel" id="tf">
+    <option value="15m">15 min</option>
+    <option value="1h">1 hora</option>
+    <option value="4h">4 horas</option>
+    <option value="1d">1 dia</option>
+  </select>
+  <select class="sel" id="topn">
+    <option value="30">Top 30</option>
+    <option value="50" selected>Top 50</option>
+    <option value="100">Top 100</option>
+  </select>
+  <button class="btn go" id="btn-scan" onclick="scanAll()">▶ Escanear</button>
+  <div class="filters">
+    <button class="ftab on"   data-f="ALL"   onclick="setF('ALL')">Todos</button>
+    <button class="ftab fl"   data-f="LONG"  onclick="setF('LONG')">Long</button>
+    <button class="ftab fs"   data-f="SHORT" onclick="setF('SHORT')">Short</button>
+  </div>
+  <div class="live-dot" id="live-dot"><div class="d"></div><span id="live-txt">Aguardando</span></div>
+</div>
+
+<!-- PROGRESS -->
+<div id="pbar-wrap"><div id="pbar"></div></div>
+<div id="prog-lbl"></div>
+
+<!-- SUMMARY -->
+<div class="summary">
+  <div class="sum-card">
+    <div class="sum-lbl">LONG</div>
+    <div class="sum-val" id="s-long" style="color:var(--green)">—</div>
+    <div class="sum-sub">sinais de compra</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-lbl">SHORT</div>
+    <div class="sum-val" id="s-short" style="color:var(--red)">—</div>
+    <div class="sum-sub">sinais de venda</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-lbl">Analisadas</div>
+    <div class="sum-val" id="s-total" style="color:var(--blue)">—</div>
+    <div class="sum-sub">moedas</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-lbl">Atualizado</div>
+    <div class="sum-val" id="s-time" style="font-size:.72rem;color:var(--muted2)">—</div>
+    <div class="sum-sub" id="s-tf">—</div>
+  </div>
+</div>
+
+<!-- GRID -->
+<div class="coin-grid" id="grid"></div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── EXCLUSIONS ─────────────────────────────────────────────────────────
+const STABLE=new Set(["USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH","EUR","GBP","BRL","UST","USDD","FRAX","USDT"]);
+const BAD=["UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S"];
+const API="https://api.binance.com/api/v3";
+
+// ── INDICATORS ─────────────────────────────────────────────────────────
+const ema=(a,n)=>{const k=2/(n+1),o=[a[0]];for(let i=1;i<a.length;i++)o.push(a[i]*k+o[i-1]*(1-k));return o};
+const rma=(a,n)=>{if(a.length<n)return a.map(_=>0);const o=[a.slice(0,n).reduce((s,v)=>s+v)/n];for(let i=n;i<a.length;i++)o.push((o[o.length-1]*(n-1)+a[i])/n);return o};
+function atrL(C,n=14){const tr=[C[0].h-C[0].l];for(let i=1;i<C.length;i++){const{h,l}=C[i],p=C[i-1].c;tr.push(Math.max(h-l,Math.abs(h-p),Math.abs(l-p)))}return rma(tr,n).pop()||1e-10}
+function rsiL(cl,n=14){if(cl.length<n+2)return 50;const g=[0],l=[0];for(let i=1;i<cl.length;i++){const d=cl[i]-cl[i-1];g.push(Math.max(d,0));l.push(Math.max(-d,0))}let ag=g.slice(1,n+1).reduce((a,b)=>a+b)/n,al=l.slice(1,n+1).reduce((a,b)=>a+b)/n;for(let i=n+1;i<cl.length;i++){ag=(ag*(n-1)+g[i])/n;al=(al*(n-1)+l[i])/n}return al===0?100:100-(100/(1+ag/al))}
+function macdC(cl){const ea=ema(cl,12),eb=ema(cl,26),ml=ea.map((v,i)=>v-eb[i]),sl=ema(ml,9),h=ml.map((v,i)=>v-sl[i]);return{ml:ml.at(-1),sl:sl.at(-1),h:h.at(-1),hp:h.at(-2)||0}}
+function dmiL(C,n=14,sm=14){const pdm=[],mdm=[],tr=[];for(let i=1;i<C.length;i++){const{h,l}=C[i],{h:ph,l:pl,c:pc}=C[i-1];const up=h-ph,dn=pl-l;pdm.push(up>dn&&up>0?up:0);mdm.push(dn>up&&dn>0?dn:0);tr.push(Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc)))}const rtr=rma(tr,n),rpdm=rma(pdm,n),rmdm=rma(mdm,n);const dx=rtr.map((t,i)=>{const p=(rpdm[i]/t||0)*100,m=(rmdm[i]/t||0)*100;return Math.abs(p-m)/((p+m)||1)*100});const adxA=rma(dx,sm);const idx=adxA.length-1,t=rtr[idx]||1e-10;return{pdi:(rpdm[idx]/t)*100,mdi:(rmdm[idx]/t)*100,adx:adxA[idx],adxp:adxA[idx-1]||0}}
+function kalman(a,len){const me=0.01*len;let est=a[0],ee=1;return a.map(v=>{const g=ee/(ee+me);est+=g*(v-est);ee=(1-g)*ee+0.1/len;return est})}
+function alma(a,len=50,off=0.85,sig=6){const m=Math.floor(off*(len-1)),sc=len/sig;const w=Array.from({length:len},(_,i)=>Math.exp(-((i-m)**2)/(2*sc*sc)));const ws=w.reduce((s,v)=>s+v);const out=new Array(len-1).fill(NaN);for(let i=len-1;i<a.length;i++){let v=0;for(let j=0;j<len;j++)v+=w[j]*a[i-len+1+j];out.push(v/ws)}return out}
+function haL(C){let ph=(C[0].o+C[0].c)/2,pc=(C[0].o+C[0].h+C[0].l+C[0].c)/4;for(let i=1;i<C.length;i++){const{o,h,l,c}=C[i],hc=(o+h+l+c)/4,ho=(ph+pc)/2;if(i===C.length-1)return{bull:hc>ho,bear:hc<ho};ph=ho;pc=hc}return{bull:false,bear:false}}
+function obvA(C){let v=0;const o=[0];for(let i=1;i<C.length;i++){v+=C[i].c>C[i-1].c?C[i].v:C[i].c<C[i-1].c?-C[i].v:0;o.push(v)}return o}
+
+// ── ANALYZE ────────────────────────────────────────────────────────────
+function analyze(sym,C){
+  const n=C.length;if(n<210)return null;
+  const cl=C.map(c=>c.c),vl=C.map(c=>c.v),price=cl[n-1];
+  const e10a=ema(cl,10),e21a=ema(cl,21),e50a=ema(cl,50),e200a=ema(cl,200);
+  const [e10,e21,e50,e200,e200p]=[e10a.at(-1),e21a.at(-1),e50a.at(-1),e200a.at(-1),e200a.at(-5)];
+  const kf=kalman(cl,50),ks=kalman(cl,150);
+  const ksp=kf.at(-1)-ks.at(-1),kspp=kf.at(-2)-ks.at(-2);
+  const kalUp=kf.at(-1)>ks.at(-1),kalDn=kf.at(-1)<ks.at(-1);
+  const kaUp=ksp>kspp&&ksp>0,kaDn=ksp<kspp&&ksp<0;
+  const pch=[0,...cl.slice(1).map((v,i)=>(v-cl[i])/v*100)];
+  const avpch=alma(pch,50,0.85,6);
+  const rmsV=avpch.map((_,i)=>{const sl=avpch.slice(Math.max(0,i-49),i+1).filter(v=>!isNaN(v));return sl.length?Math.sqrt(sl.reduce((a,v)=>a+v*v,0)/sl.length):0});
+  const trL=!isNaN(avpch.at(-1))&&avpch.at(-1)>rmsV.at(-1);
+  const trS=!isNaN(avpch.at(-1))&&avpch.at(-1)<-rmsV.at(-1);
+  const{ml,sl:slv,h:hist,hp:histP}=macdC(cl);
+  const mBull=ml>slv&&hist>histP&&hist>0,mBear=ml<slv&&hist<histP&&hist<0;
+  const mBullR=ml>slv,mBearR=ml<slv;
+  const ha=haL(C);
+  const{pdi,mdi,adx,adxp}=dmiL(C,14,14);
+  const rsiVal=rsiL(cl.slice(-53),14);
+  const rsiBull=rsiVal>50&&rsiVal<70,rsiBear=rsiVal>30&&rsiVal<50;
+  const volMA=vl.slice(-20).reduce((a,b)=>a+b)/20,vStr=vl.at(-1)>volMA*1.1;
+  const fRaw=C.map(c=>((c.c-c.o)/Math.max(c.h-c.l,1e-12))*c.v);
+  const fE=ema(fRaw,13),fSMA=fE.slice(-20).reduce((a,b)=>a+Math.abs(b),0)/20;
+  const fBull=fE.at(-1)>0,fBear=fE.at(-1)<0,fStr=Math.abs(fE.at(-1))>fSMA*1.2;
+  const ob=obvA(C),obE=ema(ob,20);
+  const oBull=ob.at(-1)>obE.at(-1)&&ob.at(-1)>ob.at(-6),oBear=ob.at(-1)<obE.at(-1)&&ob.at(-1)<ob.at(-6);
+  const vwSl=C.slice(-20),vwap=vwSl.reduce((a,c)=>a+(c.h+c.l+c.c)/3*c.v,0)/vwSl.reduce((a,c)=>a+c.v,0);
+  const abVwap=price>vwap,e200R=e200>e200p,e200F=e200<e200p;
+  const tBull=price>e200&&e10>e21&&e21>e50&&e50>e200,tBear=price<e200&&e10<e21&&e21<e50&&e50<e200;
+  const tbL=e10>e21&&e21>e50,tbS=e10<e21&&e21<e50;
+  let bc=0;for(let i=0;i<5;i++)if(cl[n-1-i]>e21a[n-1-i])bc++;
+  const tcB=bc>=4,tcS=bc<=1;
+  let sc=0;
+  sc+=tBull?35:tBear?-35:0;sc+=fBull?15:fBear?-15:0;sc+=fStr?10:0;
+  sc+=mBull?20:mBear?-20:0;sc+=adx>30?20:adx>22?10:0;sc+=vStr?10:-5;
+  sc+=rsiBull?10:rsiBear?-10:0;sc+=e200R?10:e200F?-10:0;
+  sc+=kalUp?10:kalDn?-10:0;sc+=oBull?15:oBear?-15:0;sc+=abVwap?5:-5;
+  sc+=ha.bull?10:ha.bear?-10:0;sc+=kaUp?5:kaDn?-5:0;sc+=tcB?5:tcS?-5:0;sc+=trL?10:trS?-10:0;
+  sc=Math.max(-145,Math.min(145,sc));
+  const fbB=tbL&&!tBull?30:0,fbS=tbS&&!tBear?30:0,flex=sc+fbB-fbS;
+  const longFlex=flex>30&&mBullR&&adx>13&&rsiVal<75&&trL;
+  const shortFlex=flex<-30&&mBearR&&adx>13&&rsiVal>25&&trS;
+  let sig=null;if(longFlex)sig='LONG';else if(shortFlex)sig='SHORT';
+  let qs=0;
+  if(sig==='LONG'){qs+=tBull?3:0;qs+=(price>e10&&price>e21&&price>e50)?2:0;qs+=mBull?2:1;qs+=ha.bull?2:0;qs+=(adx>22&&pdi>mdi&&adx>adxp)?2:adx>15?1:0;qs+=oBull?1:0;qs+=abVwap?1:0;qs+=kaUp?1:0;qs+=e200R?1:0;qs+=fStr?1:0;qs+=tcB?1:0}
+  else if(sig==='SHORT'){qs+=tBear?3:0;qs+=(price<e10&&price<e21&&price<e50)?2:0;qs+=mBear?2:1;qs+=ha.bear?2:0;qs+=(adx>22&&mdi>pdi&&adx>adxp)?2:adx>15?1:0;qs+=oBear?1:0;qs+=!abVwap?1:0;qs+=kaDn?1:0;qs+=e200F?1:0;qs+=fStr?1:0;qs+=tcS?1:0}
+  const grade=qs>=14?'S':qs>=10?'A':'B';
+  return{sym,price,score:flex,rsiVal,adx,sig,grade,trend:tBull?'BULL':tBear?'BEAR':'NEUTRO',kalUp};
+}
+
+// ── FETCH ──────────────────────────────────────────────────────────────
+async function getTop(n){
+  try{
+    const r=await fetch(`${API}/ticker/24hr`,{signal:AbortSignal.timeout(15000)});
+    const d=await r.json();
+    return d.filter(t=>{const s=t.symbol;if(!s.endsWith('USDT'))return false;const b=s.slice(0,-4);if(STABLE.has(b))return false;if(BAD.some(x=>b.includes(x)))return false;return+t.quoteVolume>2e6})
+      .sort((a,b)=>+b.quoteVolume-+a.quoteVolume).slice(0,n)
+      .map(t=>({sym:t.symbol,vol:+t.quoteVolume}));
+  }catch(e){return null}
+}
+async function fetchK(sym,tf){
+  try{
+    const r=await fetch(`${API}/klines?symbol=${sym}&interval=${tf}&limit=250`,{signal:AbortSignal.timeout(10000)});
+    if(!r.ok)return null;const d=await r.json();
+    if(!Array.isArray(d)||d.length<200)return null;
+    return d.map(k=>({o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+  }catch{return null}
+}
+
+function fmtP(p){if(p<0.000099)return p.toFixed(8);if(p<0.0099)return p.toFixed(6);if(p<0.099)return p.toFixed(5);if(p<0.99)return p.toFixed(4);if(p<99)return p.toFixed(3);return p.toLocaleString('en-US',{maximumFractionDigits:2})}
+function fmtV(v){if(v>=1e9)return(v/1e9).toFixed(1)+'B';if(v>=1e6)return(v/1e6).toFixed(0)+'M';return(v/1e3).toFixed(0)+'K'}
+
+// ── STATE ──────────────────────────────────────────────────────────────
+let rows=[], filt='ALL';
+
+// ── RENDER ────────────────────────────────────────────────────────────
+function render(){
+  const grid=document.getElementById('grid');
+  const vis=filt==='ALL'?rows:rows.filter(r=>r.loading||r.sig===filt);
+  grid.innerHTML='';
+
+  vis.forEach(r=>{
+    const el=document.createElement('div');
+    el.className='coin-card'+(r.sig==='LONG'?' bull':r.sig==='SHORT'?' bear':'');
+    if(r.loading){
+      el.innerHTML=`<div class="card-loading"><div class="spin"></div><span class="card-sym-loading">${r.sym.replace('USDT','')}</span></div>`;
+      grid.appendChild(el);return;
+    }
+    const base=r.sym.replace('USDT','');
+    const tv=`https://www.tradingview.com/chart/?symbol=BINANCE:${base}USDT`;
+    const sc=r.score||0;
+    const pct=Math.abs(sc)/145*50;
+    const bc=sc>0?'var(--green)':'var(--red)';
+    const barS=sc>=0?`left:50%;width:${pct}%;background:${bc}`:`left:${50-pct}%;width:${pct}%;background:${bc}`;
+    const scC=sc>60?'var(--green)':sc<-60?'var(--red)':sc>20?'#8bc34a':sc<-20?'#ff7043':'var(--muted2)';
+    const rsiC=r.rsiVal>70?'var(--red)':r.rsiVal<30?'var(--green)':'var(--text)';
+    const adxC=r.adx>30?'var(--green)':r.adx>20?'var(--yellow)':'var(--text)';
+    const trendC=r.trend==='BULL'?'var(--green)':r.trend==='BEAR'?'var(--red)':'var(--muted2)';
+    const sigHtml=r.sig?`<span class="sig-badge sig-${r.sig[0]}">${r.sig==='LONG'?'▲':'▼'} ${r.sig}</span><span class="grade-pill gr-${r.grade}">${r.grade}</span>`
+      :`<span class="sig-badge sig-N">Neutro</span>`;
+    el.innerHTML=`
+      <div class="card-top">
+        <div><div class="card-sym"><a href="${tv}" target="_blank" style="color:inherit;text-decoration:none">${base}</a><span class="card-usdt">/USDT</span></div></div>
+        <div><div class="card-price">$${fmtP(r.price)}</div>${r.vol?`<div class="card-vol">Vol $${fmtV(r.vol)}</div>`:''}</div>
+      </div>
+      <div>${sigHtml}</div>
+      <div class="score-row">
+        <div class="bar-bg"><div class="bar-fill" style="${barS}"></div></div>
+        <span class="score-num" style="color:${scC}">${sc>0?'+'+sc:sc}</span>
+      </div>
+      <div class="stats-row">
+        <div class="stat-item"><span class="stat-lbl">RSI</span><span class="stat-val" style="color:${rsiC}">${r.rsiVal.toFixed(1)}</span></div>
+        <div class="stat-item"><span class="stat-lbl">ADX</span><span class="stat-val" style="color:${adxC}">${r.adx.toFixed(1)}</span></div>
+        <div class="stat-item"><span class="stat-lbl">Trend</span><span class="stat-val" style="color:${trendC}">${r.trend}</span></div>
+        <div class="stat-item"><span class="stat-lbl">Kalman</span><span class="stat-val" style="color:${r.kalUp?'var(--green)':'var(--red)'}">${r.kalUp?'↑ UP':'↓ DN'}</span></div>
+      </div>`;
+    grid.appendChild(el);
+  });
+
+  const longs=rows.filter(r=>r.sig==='LONG').length;
+  const shorts=rows.filter(r=>r.sig==='SHORT').length;
+  const total=rows.filter(r=>!r.loading&&!r.error).length;
+  document.getElementById('s-long').textContent=longs||'—';
+  document.getElementById('s-short').textContent=shorts||'—';
+  document.getElementById('s-total').textContent=total||'—';
+}
+
+// ── SCAN ───────────────────────────────────────────────────────────────
+async function scanAll(){
+  const tf=document.getElementById('tf').value;
+  const topN=+document.getElementById('topn').value;
+  const btn=document.getElementById('btn-scan');
+  const live=document.getElementById('live-dot');
+  const liveTxt=document.getElementById('live-txt');
+  const pbar=document.getElementById('pbar');
+  const plbl=document.getElementById('prog-lbl');
+
+  btn.disabled=true;btn.textContent='Escaneando...';
+  live.classList.add('on');liveTxt.textContent='Buscando pares...';
+  pbar.style.width='0%';plbl.textContent=`Buscando top ${topN} por volume...`;
+
+  const pairs=await getTop(topN);
+  if(!pairs){
+    btn.disabled=false;btn.textContent='▶ Escanear';live.classList.remove('on');liveTxt.textContent='Erro';
+    plbl.textContent='Erro ao buscar pares — verifique a conexão';return;
+  }
+
+  rows=pairs.map(p=>({sym:p.sym,vol:p.vol,loading:true}));
+  plbl.textContent=`0 / ${pairs.length} analisadas`;
+  render();
+
+  let done=0;
+  const BATCH=8;
+  for(let i=0;i<pairs.length;i+=BATCH){
+    await Promise.all(pairs.slice(i,i+BATCH).map(async p=>{
+      const C=await fetchK(p.sym,tf);
+      const res=C?analyze(p.sym,C):null;
+      rows=rows.map(r=>r.sym===p.sym?(res?{...res,vol:p.vol}:{sym:p.sym,vol:p.vol,error:true}):r);
+      done++;
+      pbar.style.width=`${done/pairs.length*100}%`;
+      plbl.textContent=`${done} / ${pairs.length} analisadas`;
+      render();
+    }));
+  }
+
+  setTimeout(()=>pbar.style.width='0%',2000);
+  const now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('s-time').textContent=now;
+  document.getElementById('s-tf').textContent=`Timeframe: ${tf}`;
+  btn.disabled=false;btn.textContent='▶ Escanear';
+  live.classList.remove('on');liveTxt.textContent='Concluído';
+  plbl.textContent=`${pairs.length} moedas analisadas às ${now}`;
+}
+
+function setF(f){
+  filt=f;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
+  render();
+}
+
+scanAll();
+</script>
+</body>
+</html>

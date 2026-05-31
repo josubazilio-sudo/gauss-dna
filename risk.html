@@ -2,8 +2,17 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>GAUSS+DNA — Gestão de Risco $180</title>
+<meta name="description" content="Calculadora de risco e diário de operações GAUSS+DNA MTF Pullback">
+<meta name="theme-color" content="#3b9eff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GAUSS+DNA">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#060810;--s1:#0b0f1a;--s2:#101422;--border:#1a2035;--border2:#222840;--blue:#3b9eff;--cyan:#00d4c8;--green:#00e090;--orange:#ff8040;--red:#ff3d5a;--yellow:#ffcc44;--purple:#b47fff;--text:#ccd8ee;--muted:#3a4d6a;--muted2:#5a6d8a}
@@ -164,6 +173,26 @@ tr:hover td{background:rgba(255,255,255,.012)}
 .modal-btns .mbtn-del:hover{background:rgba(255,61,90,.15)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 .wrap>*{animation:fadeUp .35s ease both}
+
+/* INSTALL BANNER */
+#installBanner{display:none;position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);z-index:200;background:var(--s1);border:1px solid rgba(59,158,255,.35);border-radius:14px;padding:.85rem 1.1rem;box-shadow:0 8px 32px rgba(0,0,0,.55),0 0 0 1px rgba(59,158,255,.08);min-width:280px;max-width:360px;width:calc(100vw - 2rem);display:none;align-items:center;gap:.8rem;animation:fadeUp .3s ease both}
+#installBanner.show{display:flex}
+.ib-icon{width:42px;height:42px;border-radius:10px;flex-shrink:0}
+.ib-text{flex:1}
+.ib-text strong{display:block;font-family:'Unbounded',sans-serif;font-size:.68rem;font-weight:700;color:var(--text);margin-bottom:.18rem}
+.ib-text span{font-size:.62rem;color:var(--muted2)}
+.ib-btns{display:flex;gap:.45rem;flex-shrink:0}
+.ib-btn{padding:.5rem .85rem;border-radius:7px;font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:none;transition:all .18s}
+.ib-install{background:linear-gradient(135deg,#3b9eff,#00d4c8);color:#060810}
+.ib-install:hover{opacity:.88;transform:scale(1.03)}
+.ib-dismiss{background:rgba(255,255,255,.06);color:var(--muted2);border:1px solid var(--border)!important}
+.ib-dismiss:hover{color:var(--text)}
+
+/* iOS install hint */
+#iosHint{display:none;position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);z-index:200;background:var(--s1);border:1px solid rgba(59,158,255,.3);border-radius:12px;padding:1rem 1.2rem;max-width:320px;width:calc(100vw - 2rem);text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+#iosHint.show{display:block}
+#iosHint p{font-size:.7rem;color:var(--text);line-height:1.7;margin-bottom:.6rem}
+#iosHint button{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted2);padding:.45rem 1.2rem;border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer}
 </style>
 </head>
 <body>
@@ -211,9 +240,9 @@ tr:hover td{background:rgba(255,255,255,.012)}
   <!-- MÉTRICAS -->
   <div class="mets">
     <div class="met"><div class="met-l">Risco/Op.</div><div class="met-v cr" id="mR">$5.40</div><div class="met-s" id="mRs">3% · Stop swing</div></div>
-    <div class="met"><div class="met-l">TP1 (2R)</div><div class="met-v cb" id="mT1">$10.80</div><div class="met-s">fechar 50%</div></div>
-    <div class="met"><div class="met-l">TP2 (3.5R)</div><div class="met-v cc" id="mT2">$18.90</div><div class="met-s">fechar 30%</div></div>
-    <div class="met"><div class="met-l">Final (6R)</div><div class="met-v cv" id="mTF">$32.40</div><div class="met-s">últimos 20%</div></div>
+    <div class="met"><div class="met-l">TP1 (2R)</div><div class="met-v cb" id="mT1">$10.80</div><div class="met-s">fechar 40%</div></div>
+    <div class="met"><div class="met-l">TP2 (3.5R)</div><div class="met-v cc" id="mT2">$18.90</div><div class="met-s">fechar 35%</div></div>
+    <div class="met"><div class="met-l">Final (6R)</div><div class="met-v cv" id="mTF">$32.40</div><div class="met-s">últimos 25%</div></div>
   </div>
 
   <!-- TAB 1 — CALCULADORA -->
@@ -233,11 +262,11 @@ tr:hover td{background:rgba(255,255,255,.012)}
       <div class="panel">
         <div class="panel-ttl">Estrutura MTF Pullback</div>
         <div class="fixed-targets">
-          <div class="ft-row b1"><span>TP1 — fechar 50%</span><span class="cb">2.0 R</span></div>
-          <div class="ft-row b2"><span>TP2 — fechar 30%</span><span class="cc">3.5 R</span></div>
-          <div class="ft-row b3"><span>Final — últimos 20%</span><span class="cv">6.0 R</span></div>
+          <div class="ft-row b1"><span>TP1 — fechar 40%</span><span class="cb">2.0 R</span></div>
+          <div class="ft-row b2"><span>TP2 — fechar 35%</span><span class="cc">3.5 R</span></div>
+          <div class="ft-row b3"><span>Final — últimos 25%</span><span class="cv">6.0 R</span></div>
           <div class="ft-row b4"><span>Break Even após TP1</span><span class="cy">✓ Obrigatório</span></div>
-          <div class="ft-row b5"><span>Score mínimo entrada</span><span class="cp">&gt; 35 pts</span></div>
+          <div class="ft-row b5"><span>Score &gt; 45 · ADX &gt; 20 · Grade A+S</span><span class="cp">Institucional</span></div>
         </div>
       </div>
     </div>
@@ -305,6 +334,25 @@ tr:hover td{background:rgba(255,255,255,.012)}
 
 </div>
 
+<!-- INSTALL BANNER (Android/Desktop) -->
+<div id="installBanner">
+  <img class="ib-icon" src="icon-192.png" alt="icon">
+  <div class="ib-text">
+    <strong>Instalar GAUSS+DNA</strong>
+    <span>Adicionar à tela inicial</span>
+  </div>
+  <div class="ib-btns">
+    <button class="ib-btn ib-install" onclick="doInstall()">Instalar</button>
+    <button class="ib-btn ib-dismiss" onclick="dismissBanner()">✕</button>
+  </div>
+</div>
+
+<!-- IOS HINT -->
+<div id="iosHint">
+  <p>Para instalar no iPhone:<br>toque em <strong>Compartilhar</strong> (□↑) e depois em<br><strong>"Adicionar à Tela de Início"</strong></p>
+  <button onclick="document.getElementById('iosHint').classList.remove('show')">Entendi</button>
+</div>
+
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h4>Excluir operação?</h4>
@@ -362,15 +410,17 @@ function calcAll(){
   $('mT2').textContent=fmt(tp2);
   $('mTF').textContent=fmt(tfin);
 
-  const ganhoMed=(tp1*.5+tp2*.3+tfin*.2);
+  const ganhoMed=(tp1*.4+tp2*.35+tfin*.25);
   const stopD=(risco*2).toFixed(2);
   $('rulesEl').innerHTML=`
-    <div class="rule"><span>🔍</span><div><strong>Filtro de entrada: Score > 35 + ADX > 18</strong><span class="note">1h confirma tendência → 15m encontra pullback na EMA21/EMA50</span></div></div>
+    <div class="rule"><span>🔍</span><div><strong>Filtro: Score &gt; 45 · ADX &gt; 20 · ADX subindo</strong><span class="note">1h confirma tendência → 15m encontra pullback na EMA21/EMA50 · Grade A+S apenas</span></div></div>
+    <div class="rule"><span>⏰</span><div><strong>Horário: 09h–13h e 14h–21h BRT</strong><span class="note">Sem operar na abertura dos EUA (13–14h) nem fora do horário de liquidez</span></div></div>
+    <div class="rule"><span>🚫</span><div><strong>Evitar mercado lateral · Não comprar no topo · Não vender no fundo</strong><span class="note">BB squeeze + ADX &lt; 25 = sem sinal · Preço &gt; 2.5 ATR da EMA21 = extensão, aguardar</span></div></div>
     <div class="rule"><span>💰</span><div><strong>Risco fixo: ${(STATE.riscoPct*100).toFixed(1)}% por operação = ${fmt(risco)}</strong><span class="note">Stop no swing low/high da estrutura — nunca mova após entrar</span></div></div>
-    <div class="rule"><span>🎯</span><div><strong>TP1 em 2R → fechar 50% = ${fmt(tp1)} de ganho parcial</strong><span class="note">Após TP1 ative Break Even — trade vira risco zero</span></div></div>
-    <div class="rule"><span>✨</span><div><strong>TP2 em 3.5R → fechar 30% = ${fmt(tp2)}</strong><span class="note">Move stop para TP1 e deixa última parte correr</span></div></div>
-    <div class="rule"><span>🏆</span><div><strong>Final em 6R → últimos 20% = ${fmt(tfin)} · Ganho médio: ${fmt(ganhoMed)}</strong><span class="note">Em tendência forte (ADX>30) trailing stop sem limite</span></div></div>
-    <div class="rule"><span>🛑</span><div><strong>Stop diário: máx 2 losses = $${stopD} perdidos → encerre o dia</strong><span class="note">Apenas Grade A e S do bot · Nunca vá contra a tendência 1h</span></div></div>
+    <div class="rule"><span>🎯</span><div><strong>TP1 em 2R = ${fmt(tp1)} → fechar 40% da posição</strong><span class="note">Após TP1 ative Break Even — trade vira risco zero</span></div></div>
+    <div class="rule"><span>✨</span><div><strong>TP2 em 3.5R = ${fmt(tp2)} → fechar 35% da posição</strong><span class="note">Move stop para TP1 e deixa última parte correr</span></div></div>
+    <div class="rule"><span>🏆</span><div><strong>Final em 6R = ${fmt(tfin)} → últimos 25% · Ganho médio: ${fmt(ganhoMed)}</strong><span class="note">Em tendência forte (ADX &gt; 30) usar trailing stop sem limite</span></div></div>
+    <div class="rule"><span>🛑</span><div><strong>Stop diário: máx 2 losses = $${stopD} perdidos → encerre o dia</strong><span class="note">Grade A+S obrigatório · ADX subindo · Nunca contra tendência 1h</span></div></div>
     <div class="rule"><span>🔒</span><div><strong>Stop banca: 30% drawdown = ${fmt(stopBanca)} → pause e revise</strong><span class="note">Faltam ${fmt(META-b)} para a meta de $1.000</span></div></div>
   `;
   buildCVOptions();
@@ -381,7 +431,7 @@ function buildCVOptions(){
   const b=STATE.banca;
   const risco=b*STATE.riscoPct;
   const tp1=risco*2.0, tp2=risco*3.5, tfin=risco*6.0;
-  const ganhoMed=tp1*.5+tp2*.3+tfin*.2;
+  const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
   const t=STATE.selectedTipo;
   const opts=t==='win'
     ?[{lbl:'TP1 (2R)',v:tp1},{lbl:'TP2 (3.5R)',v:tp2},{lbl:'Final (6R)',v:tfin},{lbl:'Médio',v:ganhoMed}]
@@ -507,7 +557,7 @@ function simCalc(){
   const opsDay=parseFloat($('simOps').value)||2;
   const risco=banca*STATE.riscoPct;
   const tp1=risco*2.0, tp2=risco*3.5, tfin=risco*6.0;
-  const ganhoMed=tp1*.5+tp2*.3+tfin*.2;
+  const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
   const perdaMed=risco;
   const ev=wr*ganhoMed-(1-wr)*perdaMed;
   const evPct=ev/banca*100;
@@ -569,7 +619,67 @@ function showToast(msg){
 (()=>{
   sv('rr','rv','%');sv('lr','lv','x');
   loadState();buildCVOptions();calcAll();renderDiary();
+  initPWA();
 })();
+
+// ── PWA ──────────────────────────────────────────────
+let _deferredPrompt = null;
+
+function initPWA() {
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/gauss-dna/sw.js', { scope: '/gauss-dna/' })
+      .catch(() => {});
+  }
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInApp = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+
+  if (isInApp) return; // already installed
+
+  if (isIOS) {
+    // Show iOS hint after 3s if not dismissed
+    if (!localStorage.getItem('pwa_ios_dismissed')) {
+      setTimeout(() => {
+        document.getElementById('iosHint').classList.add('show');
+      }, 3000);
+    }
+    return;
+  }
+
+  // Android / Chrome: capture install prompt
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _deferredPrompt = e;
+    if (!localStorage.getItem('pwa_banner_dismissed')) {
+      setTimeout(() => {
+        document.getElementById('installBanner').classList.add('show');
+      }, 1500);
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('installBanner').classList.remove('show');
+    _deferredPrompt = null;
+    showToast('✅ App instalado na tela inicial!');
+  });
+}
+
+function doInstall() {
+  if (!_deferredPrompt) return;
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(r => {
+    if (r.outcome === 'accepted') showToast('✅ Instalando...');
+    _deferredPrompt = null;
+    document.getElementById('installBanner').classList.remove('show');
+  });
+}
+
+function dismissBanner() {
+  document.getElementById('installBanner').classList.remove('show');
+  localStorage.setItem('pwa_banner_dismissed', '1');
+}
 </script>
 </body>
 </html>

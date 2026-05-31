@@ -1,0 +1,315 @@
+//@version=6
+indicator("GAUSS+DNA FLEX $180", shorttitle="GAUSS FLEX", overlay=true,
+     max_labels_count=500, max_lines_count=500)
+
+//======================================
+// INPUTS
+//======================================
+grpTrend    = "TENDENCIA"
+grpKalman   = "KALMAN"
+grpTrendilo = "TRENDILO"
+grpFilters  = "FILTROS"
+
+ema10Len  = input.int(10,  "EMA10",  group=grpTrend)
+ema21Len  = input.int(21,  "EMA21",  group=grpTrend)
+ema50Len  = input.int(50,  "EMA50",  group=grpTrend)
+ema200Len = input.int(200, "EMA200", group=grpTrend)
+
+macdFastLen = input.int(12,    "MACD Fast",        group=grpFilters)
+macdSlowLen = input.int(26,    "MACD Slow",        group=grpFilters)
+macdSigLen  = input.int(9,     "MACD Signal",      group=grpFilters)
+adxLen      = input.int(14,    "ADX",              group=grpFilters)
+adxSmooth   = input.int(14,    "ADX Smooth",       group=grpFilters)
+rsiLen      = input.int(14,    "RSI",              group=grpFilters)
+volLen      = input.int(20,    "Volume MA",        group=grpFilters)
+flexThresh  = input.int(30,    "Flex Score min",   group=grpFilters)
+adxThresh   = input.float(13.0,"ADX min",          step=0.5, group=grpFilters)
+
+kalmanFastLen = input.int(50,  "Kalman Rapido", group=grpKalman)
+kalmanSlowLen = input.int(150, "Kalman Lento",  group=grpKalman)
+
+trLen       = input.int(50,    "Lookback",  group=grpTrendilo)
+trSmooth    = input.int(1,     "Smooth",    group=grpTrendilo)
+trOffset    = input.float(0.85,"Offset",    group=grpTrendilo)
+trSigma     = input.int(6,     "Sigma",     group=grpTrendilo)
+trBmult     = input.float(1.0, "Band Mult", group=grpTrendilo)
+useTrendilo = input.bool(true, "Trendilo como filtro", group=grpTrendilo)
+
+//======================================
+// EMAs
+//======================================
+ema10  = ta.ema(close, ema10Len)
+ema21  = ta.ema(close, ema21Len)
+ema50  = ta.ema(close, ema50Len)
+ema200 = ta.ema(close, ema200Len)
+
+plot(ema10,  "EMA10",  color=color.new(color.green,  20), linewidth=1)
+plot(ema21,  "EMA21",  color=color.new(color.red,    20), linewidth=1)
+plot(ema50,  "EMA50",  color=color.new(color.yellow,  0), linewidth=2)
+plot(ema200, "EMA200", color=color.new(color.white,   0), linewidth=3)
+
+//======================================
+// KALMAN
+//======================================
+kalman(src, length) =>
+    var float est  = na
+    var float eErr = 1.0
+    float mErr     = 0.01 * length
+    if na(est)
+        est := src
+    float gain = eErr / (eErr + mErr)
+    est       := est + gain * (src - est)
+    eErr      := (1 - gain) * eErr + 0.1 / length
+    est
+
+kFast = kalman(close, kalmanFastLen)
+kSlow = kalman(close, kalmanSlowLen)
+
+kSpread      = kFast - kSlow
+kSpreadPrev  = kFast[1] - kSlow[1]
+kalmanUp        = kFast > kSlow
+kalmanDown      = kFast < kSlow
+kalmanAccelUp   = kSpread > kSpreadPrev and kSpread > 0
+kalmanAccelDown = kSpread < kSpreadPrev and kSpread < 0
+
+plot(kFast, "Kalman Rapido", color=color.new(color.aqua,   55), linewidth=1)
+plot(kSlow, "Kalman Lento",  color=color.new(color.orange, 55), linewidth=1)
+
+//======================================
+// TRENDILO
+//======================================
+pch   = ta.change(close, trSmooth) / close * 100
+avpch = ta.alma(pch, trLen, trOffset, trSigma)
+rmsT  = trBmult * math.sqrt(math.sum(avpch * avpch, trLen) / trLen)
+cdir  = avpch > rmsT ? 1 : avpch < -rmsT ? -1 : 0
+trendiloLong  = cdir == 1
+trendiloShort = cdir == -1
+
+//======================================
+// MACD
+//======================================
+[macdLine, signalLine, histLine] = ta.macd(close, macdFastLen, macdSlowLen, macdSigLen)
+macdBull  = macdLine > signalLine and histLine > histLine[1] and histLine > 0
+macdBear  = macdLine < signalLine and histLine < histLine[1] and histLine < 0
+macdBullR = macdLine > signalLine
+macdBearR = macdLine < signalLine
+
+//======================================
+// HEIKIN ASHI
+//======================================
+haClose_p = (open + high + low + close) / 4
+var float haOpen_p = na
+haOpen_p := na(haOpen_p[1]) ? (open + close) / 2 : (haOpen_p[1] + haClose_p[1]) / 2
+haBull = haClose_p > haOpen_p and haClose_p[1] > haOpen_p[1]
+haBear = haClose_p < haOpen_p and haClose_p[1] < haOpen_p[1]
+
+//======================================
+// ADX / RSI / VOLUME
+//======================================
+[pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
+
+rsi           = ta.rsi(close, rsiLen)
+rsiBull        = rsi > 50 and rsi < 70
+rsiBear        = rsi > 30 and rsi < 50
+rsiNotExtLong  = rsi < 75
+rsiNotExtShort = rsi > 25
+
+volMA   = ta.sma(volume, volLen)
+vStrong = volume > volMA * 1.1
+
+//======================================
+// FLUXO / OBV / VWAP
+//======================================
+spread  = math.max(high - low, syminfo.mintick)
+flowRaw = ((close - open) / spread) * volume
+flow    = ta.ema(flowRaw, 13)
+flowSMA = ta.sma(math.abs(flow), 20)
+fBull   = flow > 0
+fBear   = flow < 0
+fStrong = math.abs(flow) > flowSMA * 1.2
+
+obv_    = ta.obv
+obvEMA  = ta.ema(obv_, 20)
+obvBull = obv_ > obvEMA and obv_ > obv_[5]
+obvBear = obv_ < obvEMA and obv_ < obv_[5]
+
+aboveVwap = close > ta.vwap
+belowVwap = close < ta.vwap
+
+//======================================
+// EMA200 DIRECAO / TENDENCIA
+//======================================
+e200Rising  = ema200 > ema200[4]
+e200Falling = ema200 < ema200[4]
+
+trendBull = close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
+trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema200
+tbullLoose = ema10 > ema21 and ema21 > ema50
+tbearLoose = ema10 < ema21 and ema21 < ema50
+
+bullsCount = (close > ema21 ? 1 : 0) + (close[1] > ema21[1] ? 1 : 0) + (close[2] > ema21[2] ? 1 : 0) + (close[3] > ema21[3] ? 1 : 0) + (close[4] > ema21[4] ? 1 : 0)
+trendConsistentBull = bullsCount >= 4
+trendConsistentBear = bullsCount <= 1
+
+//======================================
+// SCORE
+//======================================
+sTrend    = trendBull           ?  35 : trendBear           ? -35 : 0
+sFlow     = fBull               ?  15 : fBear               ? -15 : 0
+sFlowStr  = fStrong             ?  10 : 0
+sMacd     = macdBull            ?  20 : macdBear            ? -20 : 0
+sAdx      = adx > 30            ?  20 : adx > 22            ?  10 : 0
+sVol      = vStrong             ?  10 : -5
+sRsi      = rsiBull             ?  10 : rsiBear             ? -10 : 0
+sE200     = e200Rising          ?  10 : e200Falling         ? -10 : 0
+sKalman   = kalmanUp            ?  10 : kalmanDown          ? -10 : 0
+sObv      = obvBull             ?  15 : obvBear             ? -15 : 0
+sVwap     = aboveVwap           ?   5 : -5
+sHa       = haBull              ?  10 : haBear              ? -10 : 0
+sKaAccel  = kalmanAccelUp       ?   5 : kalmanAccelDown     ?  -5 : 0
+sTrCons   = trendConsistentBull ?   5 : trendConsistentBear ?  -5 : 0
+sTrendilo = trendiloLong        ?  10 : trendiloShort       ? -10 : 0
+
+baseScore = math.max(-145, math.min(145, sTrend + sFlow + sFlowStr + sMacd + sAdx + sVol + sRsi + sE200 + sKalman + sObv + sVwap + sHa + sKaAccel + sTrCons + sTrendilo))
+
+flexBonusBull = (tbullLoose and not trendBull) ? 30 : 0
+flexBonusBear = (tbearLoose and not trendBear) ? 30 : 0
+flexScore     = baseScore + flexBonusBull - flexBonusBear
+
+//======================================
+// SINAL FLEX
+//======================================
+trendiloOkL = not useTrendilo or trendiloLong
+trendiloOkS = not useTrendilo or trendiloShort
+
+longFlex  = flexScore > flexThresh  and macdBullR and adx > adxThresh and rsiNotExtLong  and trendiloOkL
+shortFlex = flexScore < -flexThresh and macdBearR and adx > adxThresh and rsiNotExtShort and trendiloOkS
+
+newLong  = longFlex  and not longFlex[1]  and barstate.isconfirmed
+newShort = shortFlex and not shortFlex[1] and barstate.isconfirmed
+
+//======================================
+// SINAIS VISUAIS
+//======================================
+plotshape(newLong,  "FLEX LONG",  style=shape.labelup,   location=location.belowbar, color=color.lime, text="L", textcolor=color.black, size=size.small)
+plotshape(newShort, "FLEX SHORT", style=shape.labeldown, location=location.abovebar, color=color.red,  text="S", textcolor=color.white, size=size.small)
+
+//======================================
+// FUNDO
+//======================================
+bgcolor(newLong                      ? color.new(color.lime,   75) : na)
+bgcolor(newShort                     ? color.new(color.red,    75) : na)
+bgcolor(longFlex  and not newLong    ? color.new(color.lime,   88) : na)
+bgcolor(shortFlex and not newShort   ? color.new(color.red,    88) : na)
+bgcolor(trendBull and not longFlex   ? color.new(color.lime,   96) : na)
+bgcolor(tbullLoose and not trendBull ? color.new(color.yellow, 96) : na)
+
+//======================================
+// PRE-CALCULO DAS CELULAS DO PAINEL
+// (tudo em linha unica para evitar erros de continuacao no Pine Script v6)
+//======================================
+G  = color.lime
+Y  = color.yellow
+R  = color.red
+W  = color.white
+Gr = color.gray
+
+c0t = str.tostring(flexScore) + " / " + str.tostring(flexThresh)
+c0c = flexScore > flexThresh ? G : flexScore > 0 ? Y : R
+c0b = flexScore > flexThresh ? color.new(color.lime, 80) : na
+
+c1t = str.tostring(baseScore)
+c1c = baseScore > 30 ? G : baseScore > 0 ? Y : R
+
+c2t = flexBonusBull > 0 ? "+" + str.tostring(flexBonusBull) : flexBonusBear > 0 ? "-" + str.tostring(flexBonusBear) : "-"
+c2c = flexBonusBull > 0 ? Y : flexBonusBear > 0 ? Y : Gr
+
+c3t = trendBull ? "BULL" : tbullLoose ? "LOOSE" : trendBear ? "BEAR" : "NEUTRO"
+c3c = trendBull ? G : tbullLoose ? Y : trendBear ? R : Gr
+
+c4t = macdBullR ? (macdBull ? "OK*" : "dir") : "X"
+c4c = macdBull ? G : macdBullR ? Y : R
+
+c5t = str.tostring(adx, "#.#")
+c5c = adx > 30 ? G : adx > 22 ? Y : adx > adxThresh ? Y : R
+
+c6t = str.tostring(rsi, "#.#")
+c6c = rsiBull ? G : rsiNotExtLong ? Y : R
+
+c7t = kalmanAccelUp ? "UP accel" : kalmanUp ? "UP" : kalmanAccelDown ? "DN accel" : "DN"
+c7c = kalmanAccelUp ? G : kalmanUp ? Y : R
+
+c8t = fBull ? (fStrong ? "OK*" : "OK") : fBear ? "X" : "-"
+c8c = fBull and fStrong ? G : fBull ? Y : fBear ? R : Gr
+
+c9t = haBull ? "OK" : haBear ? "X" : "-"
+c9c = haBull ? G : haBear ? R : Gr
+
+c10t = obvBull ? "OK" : obvBear ? "X" : "-"
+c10c = obvBull ? G : obvBear ? R : Gr
+
+c11t = aboveVwap ? "OK" : "X"
+c11c = aboveVwap ? G : R
+
+c12t = vStrong ? "OK" : "X"
+c12c = vStrong ? G : R
+
+c13t = e200Rising ? "subindo" : e200Falling ? "caindo" : "-"
+c13c = e200Rising ? G : e200Falling ? R : Gr
+
+c14t = trendiloLong ? "BULL +10" : trendiloShort ? "BEAR -10" : "NEUTRO 0"
+c14c = trendiloLong ? G : trendiloShort ? R : Gr
+
+c15t = newLong ? "COMPRAR" : newShort ? "VENDER" : longFlex ? "LONG ativo" : shortFlex ? "SHORT ativo" : "AGUARDAR"
+c15c = newLong ? G : newShort ? R : longFlex ? G : shortFlex ? R : Y
+c15b = longFlex or shortFlex ? color.new(c15c, 75) : na
+
+c16t = longFlex or shortFlex ? "-" : flexScore > flexThresh ? (not macdBullR ? "MACD X" : adx <= adxThresh ? "ADX X" : not rsiNotExtLong ? "RSI X" : not trendiloOkL ? "Trendilo X" : "-") : flexScore < -flexThresh ? (not macdBearR ? "MACD X" : adx <= adxThresh ? "ADX X" : not rsiNotExtShort ? "RSI X" : not trendiloOkS ? "Trendilo X" : "-") : "Score " + str.tostring(flexScore)
+c16c = c16t == "-" ? Gr : R
+
+//======================================
+// PAINEL 2x17
+//======================================
+var table painel = table.new(position.top_right, 2, 17, bgcolor=color.new(color.black, 72), border_width=1, border_color=color.new(color.gray, 60))
+
+if barstate.islast
+    table.cell(painel, 0, 0,  "FLEX SCORE", text_color=W,   text_size=size.small)
+    table.cell(painel, 1, 0,  c0t,  text_color=c0c,  bgcolor=c0b, text_size=size.small)
+    table.cell(painel, 0, 1,  "Base Score", text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 1,  c1t,  text_color=c1c,  text_size=size.small)
+    table.cell(painel, 0, 2,  "Bonus FLEX", text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 2,  c2t,  text_color=c2c,  text_size=size.small)
+    table.cell(painel, 0, 3,  "Tendencia",  text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 3,  c3t,  text_color=c3c,  text_size=size.small)
+    table.cell(painel, 0, 4,  "MACD",       text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 4,  c4t,  text_color=c4c,  text_size=size.small)
+    table.cell(painel, 0, 5,  "ADX",        text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 5,  c5t,  text_color=c5c,  text_size=size.small)
+    table.cell(painel, 0, 6,  "RSI",        text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 6,  c6t,  text_color=c6c,  text_size=size.small)
+    table.cell(painel, 0, 7,  "Kalman",     text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 7,  c7t,  text_color=c7c,  text_size=size.small)
+    table.cell(painel, 0, 8,  "Fluxo",      text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 8,  c8t,  text_color=c8c,  text_size=size.small)
+    table.cell(painel, 0, 9,  "Heikin Ashi",text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 9,  c9t,  text_color=c9c,  text_size=size.small)
+    table.cell(painel, 0, 10, "OBV",        text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 10, c10t, text_color=c10c, text_size=size.small)
+    table.cell(painel, 0, 11, "VWAP",       text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 11, c11t, text_color=c11c, text_size=size.small)
+    table.cell(painel, 0, 12, "Volume",     text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 12, c12t, text_color=c12c, text_size=size.small)
+    table.cell(painel, 0, 13, "EMA200",     text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 13, c13t, text_color=c13c, text_size=size.small)
+    table.cell(painel, 0, 14, "Trendilo",   text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 14, c14t, text_color=c14c, text_size=size.small)
+    table.cell(painel, 0, 15, "STATUS",     text_color=W,   text_size=size.small)
+    table.cell(painel, 1, 15, c15t, text_color=c15c, bgcolor=c15b, text_size=size.small)
+    table.cell(painel, 0, 16, "Bloqueio",   text_color=Gr,  text_size=size.small)
+    table.cell(painel, 1, 16, c16t, text_color=c16c, text_size=size.small)
+
+//======================================
+// ALERTAS
+//======================================
+alertcondition(newLong,  "FLEX LONG",  "LONG FLEX - GAUSS $180")
+alertcondition(newShort, "FLEX SHORT", "SHORT FLEX - GAUSS $180")

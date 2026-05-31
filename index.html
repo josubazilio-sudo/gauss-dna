@@ -161,6 +161,47 @@ tr:hover td{background:rgba(255,255,255,.01)}
 .bs{background:rgba(255,61,90,.1);color:var(--red)}
 .empty-h{padding:2rem;text-align:center;color:var(--muted2);font-size:.7rem;line-height:2}
 
+/* TOP 50 SCANNER */
+.t50-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1rem}
+.t50-head{padding:.8rem 1.1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.t50-title{font-family:'Unbounded',sans-serif;font-size:.7rem;font-weight:700;color:var(--blue)}
+.t50-sub{font-size:.6rem;color:var(--muted2);margin-top:.2rem;font-family:'DM Mono',monospace}
+.t50-ctrl{display:flex;align-items:center;gap:.6rem}
+#t50Btn{font-size:.58rem;font-family:'Unbounded',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.3rem .65rem;border-radius:5px;border:1px solid rgba(0,224,144,.4);background:rgba(0,224,144,.1);color:var(--green);cursor:pointer;transition:background .2s}
+#t50Btn:hover{background:rgba(0,224,144,.2)}
+#t50Btn:disabled{opacity:.5;cursor:not-allowed}
+.t50-dot{width:6px;height:6px;border-radius:50%;background:var(--muted2)}
+.t50-dot.on{background:var(--green);animation:blink 1.2s infinite}
+.t50-filters{display:flex;gap:.4rem;padding:.6rem 1.1rem;border-bottom:1px solid var(--border)}
+.t50-f{font-size:.58rem;font-family:'Unbounded',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.3rem .7rem;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;transition:all .18s}
+.t50-f.active{border-color:var(--blue);background:rgba(59,158,255,.1);color:var(--blue)}
+.t50-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.t50-stat{background:var(--s1);padding:.55rem;text-align:center}
+.t50-stat-lbl{font-size:.55rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em}
+.t50-stat-val{font-family:'Unbounded',sans-serif;font-size:.85rem;font-weight:700;margin-top:.15rem}
+.t50-grid{padding:.8rem;display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
+@media(max-width:400px){.t50-grid{grid-template-columns:1fr}}
+.t50-coin{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.65rem .75rem;position:relative;overflow:hidden;cursor:pointer;text-decoration:none;display:block;color:inherit;transition:border-color .15s}
+.t50-coin:hover{border-color:var(--border2)}
+.t50-coin.long{border-left:3px solid var(--green)}
+.t50-coin.short{border-left:3px solid var(--red)}
+.t50-coin-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
+.t50-name{font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700}
+.t50-badge{font-size:.5rem;font-family:'Unbounded',sans-serif;font-weight:700;padding:.15rem .45rem;border-radius:3px;text-transform:uppercase;letter-spacing:.05em}
+.t50-badge.long{background:rgba(0,224,144,.15);color:var(--green);border:1px solid rgba(0,224,144,.3)}
+.t50-badge.short{background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.3)}
+.t50-badge.neutro{background:rgba(255,255,255,.05);color:var(--muted2);border:1px solid var(--border2)}
+.t50-price{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted2)}
+.t50-bar-row{display:flex;align-items:center;gap:.4rem;margin:.35rem 0}
+.t50-bar-track{flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden}
+.t50-bar-fill{height:100%;border-radius:99px;transition:width .4s}
+.t50-score-lbl{font-size:.55rem;color:var(--muted2);min-width:2.8rem;text-align:right;font-family:'DM Mono',monospace}
+.t50-meta{display:grid;grid-template-columns:1fr 1fr;gap:.2rem .6rem;margin-top:.35rem}
+.t50-meta-item{font-size:.55rem;color:var(--muted2);font-family:'DM Mono',monospace}
+.t50-meta-item span{color:var(--text)}
+.t50-empty{padding:2rem;text-align:center;color:var(--muted2);font-size:.7rem;line-height:2;grid-column:1/-1}
+.t50-prog{padding:.8rem 1.1rem;font-size:.65rem;color:var(--muted2);font-family:'DM Mono',monospace}
+
 /* TOAST */
 #toast{position:fixed;bottom:1.5rem;right:1rem;background:var(--s2);border:1px solid var(--border2);border-radius:8px;padding:.65rem 1rem;font-size:.7rem;color:var(--text);z-index:999;display:none;animation:fadeUp .3s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -284,6 +325,33 @@ tr:hover td{background:rgba(255,255,255,.01)}
     <div class="scan-body" id="scanBody">
       <div class="scan-divider"></div>
       <div id="scanList"><div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">Pressione "Rastrear" para encontrar as melhores moedas agora.</div></div>
+    </div>
+  </div>
+
+  <!-- TOP 50 SCANNER -->
+  <div class="t50-card">
+    <div class="t50-head">
+      <div>
+        <div class="t50-title">🔥 Top 50 Binance — Sinais FLEX</div>
+        <div class="t50-sub" id="t50Sub">Pressione Varrer para analisar</div>
+      </div>
+      <div class="t50-ctrl">
+        <div class="t50-dot" id="t50Dot"></div>
+        <button id="t50Btn" onclick="startTop50()">▶ Varrer</button>
+      </div>
+    </div>
+    <div class="t50-filters">
+      <button class="t50-f active" id="f50all"   onclick="filterTop50('all')">Todos</button>
+      <button class="t50-f"        id="f50long"  onclick="filterTop50('long')">🟢 Long</button>
+      <button class="t50-f"        id="f50short" onclick="filterTop50('short')">🔴 Short</button>
+    </div>
+    <div class="t50-stats" id="t50Stats" style="display:none">
+      <div class="t50-stat"><div class="t50-stat-lbl">Long</div><div class="t50-stat-val" id="t50cL" style="color:var(--green)">0</div></div>
+      <div class="t50-stat"><div class="t50-stat-lbl">Short</div><div class="t50-stat-val" id="t50cS" style="color:var(--red)">0</div></div>
+      <div class="t50-stat"><div class="t50-stat-lbl">Total</div><div class="t50-stat-val" id="t50cT" style="color:var(--blue)">0</div></div>
+    </div>
+    <div class="t50-grid" id="t50Grid">
+      <div class="t50-empty">Pressione <strong>▶ Varrer</strong> para analisar as 50 maiores moedas por volume da Binance.</div>
     </div>
   </div>
 
@@ -1197,6 +1265,182 @@ function renderScanRows(rows){
     </a>`;
   }).join('');
 }
+</script>
+
+<!-- TOP 50 SCANNER SCRIPT -->
+<script>
+(function(){
+let t50Results=[];
+let t50Filter='all';
+let t50Running=false;
+
+function fmtP(p){return p<0.001?p.toFixed(6):p<1?p.toFixed(4):p<10?p.toFixed(3):p.toFixed(2);}
+
+function flexAnalyze50(candles){
+  if(candles.length<55) return null;
+  const closes=candles.map(c=>c.c);
+  const vols=candles.map(c=>c.v);
+  const n=closes.length;
+  const price=closes[n-1];
+
+  const e10=ema(closes,10),e21=ema(closes,21),e50=ema(closes,50),e200=ema(closes,200);
+  const tBull=price>e200&&e10>e21&&e21>e50;
+  const tBear=price<e200&&e10<e21&&e21<e50;
+
+  const {ml,sl,hist,histP}=macdCalc(closes);
+  const mBull=ml>sl&&hist>histP;
+  const mBear=ml<sl&&hist<histP;
+
+  const rsiV=rsiCalc(closes.slice(-30));
+  const rsiBull=rsiV>45&&rsiV<70, rsiBear=rsiV<55&&rsiV>30;
+  const notExtL=rsiV<76, notExtS=rsiV>24;
+
+  const avgVol=vols.slice(-20).reduce((a,v)=>a+v,0)/20;
+  const vStrong=vols[n-1]>avgVol;
+
+  const adxV=adxCalc(candles.slice(-20));
+  const adxOk=adxV>15;
+
+  const lastC=candles[n-1];
+  const sp=Math.max(lastC.h-lastC.l,0.0001);
+  const flow=((lastC.c-lastC.o)/sp)*lastC.v;
+  const fBull=flow>0, fBear=flow<0;
+
+  const e200p=ema(closes.slice(0,-5),200);
+  const e200s=e200>e200p?10:-10;
+  const pdiScore=adxOk?10:-10;
+
+  let score=(tBull?35:tBear?-35:0)+(mBull?20:mBear?-20:0)+(rsiBull?10:rsiBear?-10:0)+(vStrong?10:-10)+(adxOk?15:-15)+(fBull?20:fBear?-20:0)+e200s+pdiScore;
+  score=Math.max(-145,Math.min(145,score));
+
+  const atr=atrCalc(candles.slice(-20));
+  const trend=tBull?'BULL':tBear?'BEAR':'NEUTRO';
+
+  let sig='NEUTRO';
+  if(score>30&&mBull&&adxV>13&&notExtL&&tBull) sig='LONG';
+  else if(score<-30&&mBear&&adxV>13&&notExtS&&tBear) sig='SHORT';
+
+  let stop=0,tp1=0,tp2=0;
+  if(sig==='LONG'){stop=price-atr*1.5;tp1=price+atr*3;tp2=price+atr*5.25;}
+  else if(sig==='SHORT'){stop=price+atr*1.5;tp1=price-atr*3;tp2=price-atr*5.25;}
+
+  return{price,score,rsi:rsiV,adx:adxV,trend,sig,atr,stop,tp1,tp2};
+}
+
+function renderTop50(results){
+  const grid=document.getElementById('t50Grid');
+  const filtered=t50Filter==='all'?results:results.filter(r=>r.sig.toLowerCase()===t50Filter);
+  if(!filtered.length){
+    grid.innerHTML='<div class="t50-empty">Nenhum resultado para este filtro.</div>';
+    return;
+  }
+  grid.innerHTML=filtered.map(r=>{
+    const isL=r.sig==='LONG', isS=r.sig==='SHORT';
+    const cls=isL?'long':isS?'short':'';
+    const pct=Math.round((Math.abs(r.score)/145)*100);
+    const barColor=isL?'var(--green)':isS?'var(--red)':'var(--muted2)';
+    const badgeCls=isL?'long':isS?'short':'neutro';
+    const tvLink=`https://www.tradingview.com/chart/?symbol=BINANCE:${r.sym}`;
+    return `<a class="t50-coin ${cls}" href="${tvLink}" target="_blank">
+      <div class="t50-coin-top">
+        <span class="t50-name">${r.short}</span>
+        <span class="t50-badge ${badgeCls}">${r.sig}</span>
+      </div>
+      <div class="t50-price">$${fmtP(r.price)}</div>
+      <div class="t50-bar-row">
+        <div class="t50-bar-track"><div class="t50-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+        <span class="t50-score-lbl">${r.score>0?'+':''}${r.score}</span>
+      </div>
+      <div class="t50-meta">
+        <div class="t50-meta-item">RSI <span>${r.rsi.toFixed(0)}</span></div>
+        <div class="t50-meta-item">ADX <span>${r.adx.toFixed(0)}</span></div>
+        <div class="t50-meta-item">Tend <span>${r.trend}</span></div>
+        <div class="t50-meta-item">ATR <span>${((r.atr/r.price)*100).toFixed(1)}%</span></div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+function updateTop50Stats(results){
+  const longs=results.filter(r=>r.sig==='LONG').length;
+  const shorts=results.filter(r=>r.sig==='SHORT').length;
+  document.getElementById('t50cL').textContent=longs;
+  document.getElementById('t50cS').textContent=shorts;
+  document.getElementById('t50cT').textContent=results.length;
+  document.getElementById('t50Stats').style.display='grid';
+}
+
+window.filterTop50=function(f){
+  t50Filter=f;
+  ['all','long','short'].forEach(k=>{
+    const el=document.getElementById('f50'+k);
+    if(el) el.classList.toggle('active',k===f);
+  });
+  renderTop50(t50Results);
+};
+
+window.startTop50=async function(){
+  if(t50Running) return;
+  t50Running=true;
+  const btn=document.getElementById('t50Btn');
+  const sub=document.getElementById('t50Sub');
+  const dot=document.getElementById('t50Dot');
+  const grid=document.getElementById('t50Grid');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Varrendo...';}
+  if(dot) dot.className='t50-dot on';
+  t50Results=[];
+  grid.innerHTML='<div class="t50-prog" id="t50Prog">🔍 Buscando top 50 por volume...</div>';
+
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/ticker/24hr');
+    const data=await r.json();
+    const excl=new Set(['USDC','BUSD','TUSD','FDUSD','DAI','USDP','PAXG','WBTC','WETH','EUR','GBP','BRL','UST','USDD','FRAX']);
+    const excSub=['UP','DOWN','BULL','BEAR','3L','3S','2L','2S','5L','5S'];
+    const top=data
+      .filter(t=>{
+        if(!t.symbol.endsWith('USDT')) return false;
+        const b=t.symbol.slice(0,-4);
+        if(excl.has(b)) return false;
+        if(excSub.some(s=>b.includes(s))) return false;
+        return parseFloat(t.quoteVolume)>5e6;
+      })
+      .sort((a,b)=>parseFloat(b.quoteVolume)-parseFloat(a.quoteVolume))
+      .slice(0,50)
+      .map(t=>{const b=t.symbol.slice(0,-4);return{sym:t.symbol,short:b};});
+
+    const prog=document.getElementById('t50Prog');
+    const curTF=typeof currentTF!=='undefined'?currentTF:'15m';
+
+    const BATCH=6;
+    for(let i=0;i<top.length;i+=BATCH){
+      const batch=top.slice(i,i+BATCH);
+      await Promise.all(batch.map(async coin=>{
+        try{
+          const kr=await fetch(`https://api.binance.com/api/v3/klines?symbol=${coin.sym}&interval=${curTF}&limit=250`);
+          const kdata=await kr.json();
+          if(!Array.isArray(kdata)||kdata.length<55) return;
+          const candles=kdata.map(k=>({o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+          const res=flexAnalyze50(candles);
+          if(res) t50Results.push({...coin,...res});
+        }catch(e){}
+      }));
+      t50Results.sort((a,b)=>Math.abs(b.score)-Math.abs(a.score));
+      if(prog) prog.textContent=`⏳ ${Math.min(i+BATCH,top.length)}/${top.length} moedas analisadas...`;
+      updateTop50Stats(t50Results);
+      renderTop50(t50Results);
+    }
+
+    if(sub) sub.textContent=`✅ ${top.length} moedas • ${new Date().toLocaleTimeString('pt-BR')}`;
+  }catch(e){
+    if(sub) sub.textContent='❌ Erro na varredura';
+    grid.innerHTML='<div class="t50-empty">Erro ao buscar dados. Verifique a conexão.</div>';
+  }finally{
+    t50Running=false;
+    if(btn){btn.disabled=false;btn.textContent='🔄 Atualizar';}
+    if(dot) dot.className='t50-dot';
+  }
+};
+})();
 </script>
 
 <!-- PWA SERVICE WORKER + INSTALL BANNER -->

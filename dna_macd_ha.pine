@@ -1,0 +1,442 @@
+//@version=6
+strategy("SINAIS DE MOVIMENTO PRO - DNA INSTITUCIONAL MACD HA [BTC 1H]",
+     shorttitle="DNA MACD HA v4",
+     overlay=false,
+     max_bars_back=3000,
+     max_lines_count=500,
+     max_labels_count=500,
+     max_boxes_count=200,
+     initial_capital=500,
+     pyramiding=0,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=20,
+     commission_type=strategy.commission.percent,
+     commission_value=0.1,
+     slippage=3,
+     process_orders_on_close=true)
+
+//════════════════════════════════════════════════════════════
+// INPUTS
+//════════════════════════════════════════════════════════════
+groupTrend  = "TENDÊNCIA"
+groupMACD   = "MACD HA"
+groupFilter = "FILTROS"
+groupInst   = "FILTROS INSTITUCIONAIS"
+groupRisk   = "GESTÃO"
+groupVisual = "VISUAL"
+
+ema10Len  = input.int(8,   "EMA10",  group=groupTrend)
+ema21Len  = input.int(21,  "EMA21",  group=groupTrend)
+ema50Len  = input.int(50,  "EMA50",  group=groupTrend)
+ema200Len = input.int(200, "EMA200", group=groupTrend)
+
+macdFast   = input.int(8,  "MACD Fast",   group=groupMACD)
+macdSlow   = input.int(21, "MACD Slow",   group=groupMACD)
+macdSignal = input.int(5,  "MACD Signal", group=groupMACD)
+
+adxLen      = input.int(14,   "ADX",          group=groupFilter)
+adxSmooth   = input.int(14,   "ADX Smooth",   group=groupFilter)
+adxMin      = input.float(16, "ADX Min LONG", step=0.5, group=groupFilter)
+adxMinShort = input.float(18, "ADX Min SHORT",step=0.5, group=groupFilter)
+adxStrong   = input.float(28, "ADX Forte",    step=0.5, group=groupFilter)
+atrLen      = input.int(14,   "ATR",          group=groupFilter)
+volLen      = input.int(20,   "Média Volume", group=groupFilter)
+volMult     = input.float(0.9,"Volume Mult",  step=0.05, group=groupFilter)
+maxDistATR  = input.float(2.5,"Dist. EMA50 ATR", step=0.1, group=groupFilter)
+
+// Filtros institucionais (todos com toggle)
+useKalman   = input.bool(true,  "Kalman obrigatório",       group=groupInst)
+useTrendilo = input.bool(true,  "Trendilo obrigatório",     group=groupInst)
+useRsiZone  = input.bool(true,  "RSI zone 40-68 / 32-62",  group=groupInst)
+useSession  = input.bool(false, "Só horário BRT (09-13h / 14-21h)", group=groupInst)
+useHABody   = input.bool(true,  "HA body mínimo (sem doji)",group=groupInst)
+
+stopAtrMult = input.float(1.8, "STOP ATR",    step=0.1, group=groupRisk)
+tp1R        = input.float(1.2, "TP1 (R)",     step=0.1, group=groupRisk)
+tp2R        = input.float(2.2, "TP2 (R)",     step=0.1, group=groupRisk)
+tpFinalR    = input.float(3.5, "FINAL (R)",   step=0.1, group=groupRisk)
+tp1Qty      = input.float(40,  "TP1 % saída", step=5,   group=groupRisk)
+tp2Qty      = input.float(35,  "TP2 % saída", step=5,   group=groupRisk)
+useBreakEven = input.bool(true, "Break Even após TP1", group=groupRisk)
+useTrail     = input.bool(true, "Trailing em tendência forte", group=groupRisk)
+
+showPanel   = input.bool(true, "Painel de status", group=groupVisual)
+bullColor   = input.color(color.rgb(0, 204, 173), "Bull", group=groupVisual)
+bearColor   = input.color(color.rgb(255, 94, 116), "Bear", group=groupVisual)
+
+//════════════════════════════════════════════════════════════
+// MÉDIAS
+//════════════════════════════════════════════════════════════
+ema10  = ta.ema(close, ema10Len)
+ema21  = ta.ema(close, ema21Len)
+ema50  = ta.ema(close, ema50Len)
+ema200 = ta.ema(close, ema200Len)
+
+//════════════════════════════════════════════════════════════
+// KALMAN FILTER — suaviza preço, elimina ruído
+//════════════════════════════════════════════════════════════
+kalman(src, length) =>
+    var float est  = na
+    var float eErr = 1.0
+    float mErr     = 0.01 * length
+    if na(est)
+        est := src
+    float gain = eErr / (eErr + mErr)
+    est       := est + gain * (src - est)
+    eErr      := (1 - gain) * eErr + 0.1 / length
+    est
+
+kFast       = kalman(close, 50)
+kSlow       = kalman(close, 150)
+kSpread     = kFast - kSlow
+kalmanUp    = kFast > kSlow
+kalmanDown  = kFast < kSlow
+kalmanAccUp = kSpread > kSpread[1] and kSpread > 0
+kalmanAccDn = kSpread < kSpread[1] and kSpread < 0
+
+//════════════════════════════════════════════════════════════
+// TRENDILO — ALMA do momentum + bandas RMS
+//════════════════════════════════════════════════════════════
+pch          = ta.change(close, 1) / close * 100
+avpch        = ta.alma(pch, 50, 0.85, 6)
+rmsT         = math.sqrt(math.sum(avpch * avpch, 50) / 50)
+trendiloLong = avpch > rmsT
+trendiloShort = avpch < -rmsT
+
+//════════════════════════════════════════════════════════════
+// MACD
+//════════════════════════════════════════════════════════════
+[macdLine, signalLine, histLine] = ta.macd(close, macdFast, macdSlow, macdSignal)
+
+//════════════════════════════════════════════════════════════
+// HEIKIN ASHI SOBRE MACD
+//════════════════════════════════════════════════════════════
+haClose = (macdLine + signalLine + histLine + histLine) / 4
+
+var float haOpen = na
+haOpen := na(haOpen[1]) ? (macdLine + signalLine) / 2 : (haOpen[1] + haClose[1]) / 2
+
+haHigh = math.max(math.max(macdLine, signalLine), math.max(haOpen, haClose))
+haLow  = math.min(math.min(macdLine, signalLine), math.min(haOpen, haClose))
+
+haBody    = math.abs(haClose - haOpen)
+haRange   = math.max(haHigh - haLow, syminfo.mintick)
+haBodyPct = haBody / haRange  // corpo como % do range total
+
+haBull = haClose > haOpen and (not useHABody or haBodyPct > 0.25)
+haBear = haClose < haOpen and (not useHABody or haBodyPct > 0.25)
+
+macdBull = macdLine > signalLine and histLine > 0 and haBull
+macdBear = macdLine < signalLine and histLine < 0 and haBear
+
+// 3 barras consecutivas = momentum confirmado
+macdBull3 = macdBull and histLine > histLine[1] and histLine[1] > histLine[2]
+macdBear3 = macdBear and histLine < histLine[1] and histLine[1] < histLine[2]
+
+//════════════════════════════════════════════════════════════
+// ADX / ATR / VOLUME / FLOW
+//════════════════════════════════════════════════════════════
+[pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
+atr    = ta.atr(atrLen)
+volMa  = ta.sma(volume, volLen)
+volStrong = volume > volMa * volMult
+volWeak   = volume < volMa * 0.85
+
+spread  = math.max(high - low, syminfo.mintick)
+flowRaw = ((close - open) / spread) * volume
+flow    = ta.ema(flowRaw, 13)
+flowBull = flow > 0
+flowBear = flow < 0
+
+//════════════════════════════════════════════════════════════
+// RSI
+//════════════════════════════════════════════════════════════
+rsiVal = ta.rsi(close, 14)
+rsiOkL = not useRsiZone or (rsiVal > 40 and rsiVal < 68)
+rsiOkS = not useRsiZone or (rsiVal > 32 and rsiVal < 62)
+
+//════════════════════════════════════════════════════════════
+// SESSÃO BRT (UTC-3)
+//════════════════════════════════════════════════════════════
+hourBRT   = (hour + 21) % 24
+inSession = not useSession or ((hourBRT >= 9 and hourBRT < 13) or (hourBRT >= 14 and hourBRT < 21))
+
+//════════════════════════════════════════════════════════════
+// TENDÊNCIA
+//════════════════════════════════════════════════════════════
+trendBull = close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
+trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema200
+
+trendAlignmentBull = close > ema10 and close > ema21 and close > ema50
+trendAlignmentBear = close < ema10 and close < ema21 and close < ema50
+
+// Força da tendência: spread EMA21-EMA50 > 0.35 ATR
+trendStrong = math.abs(ema21 - ema50) / atr > 0.35
+
+//════════════════════════════════════════════════════════════
+// DISTÂNCIA
+//════════════════════════════════════════════════════════════
+distLong  = (close - ema50) / atr
+distShort = (ema50 - close) / atr
+
+notExtendedLong  = distLong  < maxDistATR
+notExtendedShort = distShort < maxDistATR
+
+//════════════════════════════════════════════════════════════
+// IMPULSO / SWEEP
+//════════════════════════════════════════════════════════════
+bullImpulse = close > high[1] and close > open and (close - open) > atr * 0.15
+bearImpulse = close < low[1]  and close < open and (open - close) > atr * 0.15
+
+liqSweepLong  = low  < low[1]  and close > low[1]  and close > open
+liqSweepShort = high > high[1] and close < high[1] and close < open
+
+//════════════════════════════════════════════════════════════
+// SCORE (filtro adicional, não sobrecarregado)
+//════════════════════════════════════════════════════════════
+scoreAdxRising = adx >= adx[1] ? 20 : -10
+scoreAdxStrong = adx > adxStrong ? 20 : 0
+scoreVolExtra  = volume > volMa * 1.5 ? 15 : 0
+scoreMomLong   = close > close[2] ? 10 : -5
+scoreMomShort  = close < close[2] ? 10 : -5
+scoreDILong    = pdi > mdi ? 15 : -10
+scoreDIShort   = mdi > pdi ? 15 : -10
+scoreKalmanL   = kalmanAccUp ? 15 : kalmanUp ? 8 : -10
+scoreKalmanS   = kalmanAccDn ? 15 : kalmanDown ? 8 : -10
+scoreTrL       = trendiloLong  ? 10 : -5
+scoreTrS       = trendiloShort ? 10 : -5
+
+longScore  = scoreAdxRising + scoreAdxStrong + scoreVolExtra + scoreDILong  + scoreMomLong  + scoreKalmanL + scoreTrL
+shortScore = scoreAdxRising + scoreAdxStrong + scoreVolExtra + scoreDIShort + scoreMomShort + scoreKalmanS + scoreTrS
+
+//════════════════════════════════════════════════════════════
+// COOLDOWN
+//════════════════════════════════════════════════════════════
+var int lastTradeBar = na
+cooldownBars  = adx > 35 ? 1 : adx > 25 ? 2 : 4
+tradeCooldown = na(lastTradeBar) or (bar_index - lastTradeBar > cooldownBars)
+
+//════════════════════════════════════════════════════════════
+// ENTRADAS
+//════════════════════════════════════════════════════════════
+kalmanOkL = not useKalman or kalmanUp
+kalmanOkS = not useKalman or kalmanDown
+trndOkL   = not useTrendilo or trendiloLong
+trndOkS   = not useTrendilo or trendiloShort
+
+longSignal =
+     barstate.isconfirmed and tradeCooldown and
+     trendBull and trendAlignmentBull and trendStrong and
+     macdBull and flowBull and
+     adx > adxMin and volStrong and
+     notExtendedLong and
+     (bullImpulse or liqSweepLong) and
+     kalmanOkL and trndOkL and rsiOkL and inSession and
+     longScore > 30
+
+shortSignal =
+     barstate.isconfirmed and tradeCooldown and
+     trendBear and trendAlignmentBear and trendStrong and
+     macdBear and flowBear and
+     adx > adxMinShort and volStrong and
+     notExtendedShort and
+     (bearImpulse or liqSweepShort) and
+     kalmanOkS and trndOkS and rsiOkS and inSession and
+     shortScore > 30
+
+newLong  = longSignal  and not longSignal[1]
+newShort = shortSignal and not shortSignal[1]
+
+//════════════════════════════════════════════════════════════
+// ATR CONGELADO NA ENTRADA
+//════════════════════════════════════════════════════════════
+var float longATR  = na
+var float shortATR = na
+if newLong
+    longATR  := atr
+if newShort
+    shortATR := atr
+
+//════════════════════════════════════════════════════════════
+// ENTRADAS
+//════════════════════════════════════════════════════════════
+if newLong
+    strategy.entry("LONG", strategy.long)
+if newShort
+    strategy.entry("SHORT", strategy.short)
+
+if strategy.opentrades > strategy.opentrades[1]
+    lastTradeBar := bar_index
+
+//════════════════════════════════════════════════════════════
+// RISCO — ALVOS EM 3 CAMADAS (40% / 35% / 25%)
+//════════════════════════════════════════════════════════════
+avgPrice  = strategy.position_avg_price
+
+longStop  = avgPrice - nz(longATR,  atr) * stopAtrMult
+shortStop = avgPrice + nz(shortATR, atr) * stopAtrMult
+
+longRisk  = avgPrice - longStop
+shortRisk = shortStop - avgPrice
+
+longTP1   = avgPrice + longRisk  * tp1R
+longTP2   = avgPrice + longRisk  * tp2R
+longFinal = avgPrice + longRisk  * tpFinalR
+
+shortTP1   = avgPrice - shortRisk * tp1R
+shortTP2   = avgPrice - shortRisk * tp2R
+shortFinal = avgPrice - shortRisk * tpFinalR
+
+//════════════════════════════════════════════════════════════
+// BREAK EVEN
+//════════════════════════════════════════════════════════════
+var bool beLong  = false
+var bool beShort = false
+
+if strategy.position_size == 0
+    beLong  := false
+    beShort := false
+
+if strategy.position_size > 0  and high >= longTP1
+    beLong  := true
+if strategy.position_size < 0  and low  <= shortTP1
+    beShort := true
+
+longStopFinal  = beLong  and useBreakEven ? avgPrice : longStop
+shortStopFinal = beShort and useBreakEven ? avgPrice : shortStop
+
+//════════════════════════════════════════════════════════════
+// TRAILING
+//════════════════════════════════════════════════════════════
+trendStrongLong  = strategy.position_size > 0 and ema10 > ema21 and close > ema21 and flowBull and kalmanUp
+trendStrongShort = strategy.position_size < 0 and ema10 < ema21 and close < ema21 and flowBear and kalmanDown
+
+trailOffsetL = math.round(nz(longATR,  atr) * stopAtrMult / syminfo.mintick)
+trailOffsetS = math.round(nz(shortATR, atr) * stopAtrMult / syminfo.mintick)
+
+//════════════════════════════════════════════════════════════
+// SAÍDAS — 3 CAMADAS INSTITUCIONAIS
+// TP1 40% → TP2 35% (= 58.3% do restante) → TP3 25% trailing/alvo
+//════════════════════════════════════════════════════════════
+tp2QtyAdj = tp2Qty / (1 - tp1Qty / 100)  // ajuste para posição remanescente
+
+strategy.exit("LONG TP1",   from_entry="LONG",  qty_percent=tp1Qty,    stop=longStopFinal,  limit=longTP1)
+strategy.exit("LONG TP2",   from_entry="LONG",  qty_percent=tp2QtyAdj, stop=longStopFinal,  limit=longTP2)
+strategy.exit("LONG FINAL", from_entry="LONG",  qty_percent=100,       stop=longStopFinal,
+     limit       = useTrail and trendStrongLong  ? na     : longFinal,
+     trail_price = useTrail and trendStrongLong  ? longTP1 : na,
+     trail_offset= useTrail and trendStrongLong  ? trailOffsetL : na)
+
+strategy.exit("SHORT TP1",   from_entry="SHORT", qty_percent=tp1Qty,    stop=shortStopFinal, limit=shortTP1)
+strategy.exit("SHORT TP2",   from_entry="SHORT", qty_percent=tp2QtyAdj, stop=shortStopFinal, limit=shortTP2)
+strategy.exit("SHORT FINAL", from_entry="SHORT", qty_percent=100,       stop=shortStopFinal,
+     limit       = useTrail and trendStrongShort ? na      : shortFinal,
+     trail_price = useTrail and trendStrongShort ? shortTP1 : na,
+     trail_offset= useTrail and trendStrongShort ? trailOffsetS : na)
+
+//════════════════════════════════════════════════════════════
+// SAÍDA ESTRUTURAL
+//════════════════════════════════════════════════════════════
+exitLong  = strategy.position_size > 0 and close < ema21 and ema10 < ema21 and volWeak and flowBear and close > longStopFinal
+exitShort = strategy.position_size < 0 and close > ema21 and ema10 > ema21 and volWeak and flowBull and close < shortStopFinal
+
+if exitLong
+    strategy.close("LONG",  comment="Exit↓")
+if exitShort
+    strategy.close("SHORT", comment="Exit↑")
+
+//════════════════════════════════════════════════════════════
+// VISUAL — MACD HA
+//════════════════════════════════════════════════════════════
+// Histograma colorido por força do momentum
+histCol = macdBull3 ? color.new(bullColor, 0)  :
+          macdBull  ? color.new(bullColor, 40) :
+          histLine > 0 ? color.new(bullColor, 72) :
+          macdBear3 ? color.new(bearColor, 0)  :
+          macdBear  ? color.new(bearColor, 40) :
+          color.new(bearColor, 72)
+
+plot(histLine, "Histograma", style=plot.style_columns, color=histCol, linewidth=4)
+plot(macdLine,   "MACD",   color=color.rgb(0,132,255), linewidth=2)
+plot(signalLine, "Signal", color=color.orange,          linewidth=2)
+
+plotcandle(haOpen, haHigh, haLow, haClose, "MACD HA",
+     color      =haBull ? color.lime : color.red,
+     wickcolor  =haBull ? color.lime : color.red,
+     bordercolor=haBull ? color.lime : color.red)
+
+hline(0, "ZERO", color=color.new(color.gray, 50))
+
+// Escala visual
+scaleFix = math.max(math.abs(histLine), math.abs(macdLine))
+plot( scaleFix * 1.8, display=display.none)
+plot(-scaleFix * 1.8, display=display.none)
+
+//════════════════════════════════════════════════════════════
+// EMAS (overlay no gráfico de preço)
+//════════════════════════════════════════════════════════════
+plot(ema10,  "EMA10",  color=color.green,  force_overlay=true)
+plot(ema21,  "EMA21",  color=color.red,    force_overlay=true)
+plot(ema50,  "EMA50",  color=color.yellow, linewidth=2, force_overlay=true)
+plot(ema200, "EMA200", color=color.white,  linewidth=2, force_overlay=true)
+
+//════════════════════════════════════════════════════════════
+// SINAIS
+//════════════════════════════════════════════════════════════
+plotshape(newLong,  "BUY",  style=shape.labelup,   location=location.bottom, color=bullColor, text="BUY",  textcolor=color.white)
+plotshape(newShort, "SELL", style=shape.labeldown,  location=location.top,   color=bearColor, text="SELL", textcolor=color.white)
+
+// Marcador de MACD bull3/bear3 confirmado
+plotshape(macdBull3 and not macdBull3[1], "BULL3", style=shape.circle, location=location.bottom, color=color.new(color.lime, 20), size=size.tiny)
+plotshape(macdBear3 and not macdBear3[1], "BEAR3", style=shape.circle, location=location.top,    color=color.new(color.red,  20), size=size.tiny)
+
+bgcolor(trendBull ? color.new(bullColor, 94) : trendBear ? color.new(bearColor, 94) : na)
+
+//════════════════════════════════════════════════════════════
+// PAINEL DE STATUS
+//════════════════════════════════════════════════════════════
+if showPanel and barstate.islast
+    var table p = table.new(position.top_right, 2, 11,
+         bgcolor=color.new(color.black, 70),
+         border_color=color.new(color.gray, 50), border_width=1)
+    c_ok  = color.lime
+    c_no  = color.red
+    c_neu = color.gray
+    c_lbl = color.new(color.gray, 20)
+
+    scoreDisp = strategy.position_size > 0 ? longScore : shortScore
+    scoreCol  = scoreDisp > 50 ? c_ok : scoreDisp > 30 ? color.yellow : c_no
+    gradeStr  = scoreDisp > 70 ? "S" : scoreDisp > 50 ? "A" : "B"
+    gradeCol  = gradeStr == "S" ? color.yellow : gradeStr == "A" ? color.aqua : c_neu
+
+    table.cell(p, 0, 0, "DNA MACD HA",   text_color=color.white,  text_size=size.small, bgcolor=color.new(color.navy,40))
+    table.cell(p, 1, 0, "v4 INST",       text_color=color.aqua,   text_size=size.small, bgcolor=color.new(color.navy,40))
+    table.cell(p, 0, 1, "Score",  text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 1, str.tostring(scoreDisp), text_color=scoreCol, text_size=size.small)
+    table.cell(p, 0, 2, "Grade",  text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 2, gradeStr, text_color=gradeCol, text_size=size.small)
+    table.cell(p, 0, 3, "ADX",    text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 3, str.tostring(math.round(adx,1)) + (adx >= adx[1] ? " ↑" : " →"), text_color=adx > adxMin ? c_ok : c_no, text_size=size.tiny)
+    table.cell(p, 0, 4, "RSI",    text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 4, str.tostring(math.round(rsiVal,1)), text_color=rsiVal > 70 ? c_no : rsiVal < 30 ? c_ok : color.white, text_size=size.tiny)
+    table.cell(p, 0, 5, "Kalman", text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 5, kalmanAccUp ? "↑↑ ACC" : kalmanUp ? "↑ BULL" : kalmanAccDn ? "↓↓ ACC" : "↓ BEAR", text_color=kalmanUp ? c_ok : c_no, text_size=size.tiny)
+    table.cell(p, 0, 6, "Trendilo",text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 6, trendiloLong ? "↑ LONG" : trendiloShort ? "↓ SHORT" : "→ NEU", text_color=trendiloLong ? c_ok : trendiloShort ? c_no : c_neu, text_size=size.tiny)
+    table.cell(p, 0, 7, "MACD HA",text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 7, macdBull3 ? "BULL ✦" : macdBull ? "BULL" : macdBear3 ? "BEAR ✦" : macdBear ? "BEAR" : "NEU", text_color=macdBull ? c_ok : macdBear ? c_no : c_neu, text_size=size.tiny)
+    table.cell(p, 0, 8, "Trend",  text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 8, trendBull ? "↑ BULL" : trendBear ? "↓ BEAR" : "→ NEU", text_color=trendBull ? c_ok : trendBear ? c_no : c_neu, text_size=size.tiny)
+    table.cell(p, 0, 9, "Força",  text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1, 9, trendStrong ? "✓ Forte" : "✗ Fraca", text_color=trendStrong ? c_ok : color.orange, text_size=size.tiny)
+    table.cell(p, 0,10, "Sessão", text_color=c_lbl, text_size=size.tiny)
+    table.cell(p, 1,10, inSession ? "✓ Ativa" : "✗ Fora", text_color=inSession ? c_ok : color.orange, text_size=size.tiny)
+
+//════════════════════════════════════════════════════════════
+// ALERTAS
+//════════════════════════════════════════════════════════════
+alertcondition(newLong,            "LONG",  "DNA MACD HA — COMPRA")
+alertcondition(newShort,           "SHORT", "DNA MACD HA — VENDA")
+alertcondition(exitLong or exitShort, "EXIT","DNA MACD HA — SAÍDA")
+alertcondition(macdBull3,          "BULL3", "DNA MACD HA — 3 barras BULL confirmadas")
+alertcondition(macdBear3,          "BEAR3", "DNA MACD HA — 3 barras BEAR confirmadas")

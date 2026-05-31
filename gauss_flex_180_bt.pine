@@ -1,0 +1,429 @@
+//@version=6
+strategy("GAUSS+DNA INSTITUCIONAL $180", shorttitle="GAUSS INST",
+     overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=10,
+     commission_type=strategy.commission.percent,
+     commission_value=0.1,
+     slippage=2,
+     max_bars_back=500,
+     process_orders_on_close=true)
+
+// ══════════════════════════════════════════════════
+// INPUTS
+// ══════════════════════════════════════════════════
+grpEntry    = "ENTRADA"
+grpRisk     = "RISCO / SAIDA"
+grpFilter   = "FILTROS INSTITUCIONAIS"
+grpKalman   = "KALMAN"
+grpTrendilo = "TRENDILO"
+grpVisual   = "VISUAL"
+
+// Filtros de qualidade
+scoreMin    = input.int(50,    "Score mínimo",                      group=grpFilter, minval=20, maxval=100)
+adxMin      = input.float(22,  "ADX mínimo",                        group=grpFilter, step=0.5)
+adxRisingOK = input.bool(true, "Exigir ADX subindo",                group=grpFilter)
+gradeFilter = input.string("A+S","Grade mínima", options=["A+S","S apenas","Todos"], group=grpFilter)
+sessionOnly = input.bool(true,  "Só horário principal (09-13h e 14-21h BRT)", group=grpFilter)
+use4H       = input.bool(true,  "Filtro 4H obrigatório",            group=grpFilter)
+useBTC      = input.bool(true,  "Filtro BTC (não contra BTC)",      group=grpFilter)
+useRsiZone  = input.bool(true,  "RSI zone 40-68 long / 32-62 short",group=grpFilter)
+useBBFilter = input.bool(true,  "Evitar extremos Bollinger",        group=grpFilter)
+
+// EMAs
+ema10Len  = input.int(10,  "EMA10",  group=grpEntry)
+ema21Len  = input.int(21,  "EMA21",  group=grpEntry)
+ema50Len  = input.int(50,  "EMA50",  group=grpEntry)
+ema200Len = input.int(200, "EMA200", group=grpEntry)
+
+// Gestão de risco
+stopMult  = input.float(1.5, "Stop ATR x (fallback)",   step=0.1, group=grpRisk)
+tp1R      = input.float(2.0, "TP1 (R)",                 step=0.1, group=grpRisk)
+tp2R      = input.float(3.5, "TP2 (R)",                 step=0.1, group=grpRisk)
+tp3R      = input.float(6.0, "TP3 Final (R)",           step=0.1, group=grpRisk)
+tp1Pct    = input.float(40,  "% saída no TP1",          step=5,   group=grpRisk)
+tp2Pct    = input.float(35,  "% saída no TP2",          step=5,   group=grpRisk)
+useShort  = input.bool(true, "Operar SHORT",                       group=grpRisk)
+useSwingStop = input.bool(true, "Stop estrutural (swing hi/lo)",   group=grpRisk)
+
+// Kalman
+kalmanFastLen = input.int(50,  "Kalman Rápido", group=grpKalman)
+kalmanSlowLen = input.int(150, "Kalman Lento",  group=grpKalman)
+
+// Trendilo
+trLen    = input.int(50,    "Lookback",  group=grpTrendilo)
+trOffset = input.float(0.85,"Offset",   group=grpTrendilo)
+trSigma  = input.int(6,     "Sigma",    group=grpTrendilo)
+trBmult  = input.float(1.0, "Band",     group=grpTrendilo)
+useTrendilo = input.bool(true, "Trendilo obrigatório", group=grpTrendilo)
+
+showPanel  = input.bool(true, "Painel de score", group=grpVisual)
+showLevels = input.bool(true, "Linhas TP/Stop",  group=grpVisual)
+
+// ══════════════════════════════════════════════════
+// INDICADORES
+// ══════════════════════════════════════════════════
+ema10  = ta.ema(close, ema10Len)
+ema21  = ta.ema(close, ema21Len)
+ema50  = ta.ema(close, ema50Len)
+ema200 = ta.ema(close, ema200Len)
+
+// Kalman
+kalman(src, length) =>
+    var float est  = na
+    var float eErr = 1.0
+    float mErr     = 0.01 * length
+    if na(est)
+        est := src
+    float gain = eErr / (eErr + mErr)
+    est       := est + gain * (src - est)
+    eErr      := (1 - gain) * eErr + 0.1 / length
+    est
+
+kFast       = kalman(close, kalmanFastLen)
+kSlow       = kalman(close, kalmanSlowLen)
+kSpread     = kFast - kSlow
+kalmanUp    = kFast > kSlow
+kalmanDown  = kFast < kSlow
+kalmanAccUp = kSpread > kSpread[1] and kSpread > 0
+kalmanAccDn = kSpread < kSpread[1] and kSpread < 0
+
+// Trendilo (ALMA + RMS)
+pch   = ta.change(close, 1) / close * 100
+avpch = ta.alma(pch, trLen, trOffset, trSigma)
+rmsT  = trBmult * math.sqrt(math.sum(avpch * avpch, trLen) / trLen)
+cdir  = avpch > rmsT ? 1 : avpch < -rmsT ? -1 : 0
+trendiloLong  = cdir == 1
+trendiloShort = cdir == -1
+
+// MACD
+[macdLine, sigLine, histLine] = ta.macd(close, 12, 26, 9)
+macdBull  = macdLine > sigLine and histLine > histLine[1]
+macdBear  = macdLine < sigLine and histLine < histLine[1]
+macdBullR = macdLine > sigLine
+macdBearR = macdLine < sigLine
+
+// Heikin-Ashi sintético
+haC = (open + high + low + close) / 4
+var float haO = na
+haO := na(haO[1]) ? (open + close) / 2 : (haO[1] + haC[1]) / 2
+haBull = haC > haO and haC[1] > haO[1]
+haBear = haC < haO and haC[1] < haO[1]
+
+// ADX/DMI
+[pdi, mdi, adxVal] = ta.dmi(14, 14)
+adxRising = adxVal > adxVal[2]
+adxLongOK  = adxVal > adxMin and pdi > mdi and adxVal > adxVal[1]
+adxShortOK = adxVal > adxMin and mdi > pdi and adxVal > adxVal[1]
+
+// RSI
+rsiVal        = ta.rsi(close, 14)
+rsiBull        = rsiVal > 48 and rsiVal < 70
+rsiBear        = rsiVal < 52 and rsiVal > 30
+rsiNotExtLong  = rsiVal < 74
+rsiNotExtShort = rsiVal > 26
+
+// Volume
+volMA    = ta.sma(volume, 20)
+vStrong  = volume > volMA * 1.1
+vStrong2 = volume > volMA * 1.5
+
+// Flow (força direcional da vela)
+spread  = math.max(high - low, syminfo.mintick)
+flowRaw = ((close - open) / spread) * volume
+flow    = ta.ema(flowRaw, 13)
+flowSMA = ta.sma(math.abs(flow), 20)
+fBull   = flow > 0
+fBear   = flow < 0
+fStrong = math.abs(flow) > flowSMA * 1.2
+
+// OBV
+obvLine = ta.obv
+obvEMA  = ta.ema(obvLine, 20)
+obvBull = obvLine > obvEMA and obvLine > obvLine[5]
+obvBear = obvLine < obvEMA and obvLine < obvLine[5]
+
+// VWAP
+aboveVwap = close > ta.vwap
+
+// EMA200 slope
+e200Rising  = ema200 > ema200[4]
+e200Falling = ema200 < ema200[4]
+
+// Trend alinhamento
+trendBull = close > ema200 and ema10 > ema21 and ema21 > ema50 and ema50 > ema200
+trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema200
+tbullLoose = ema10 > ema21 and ema21 > ema50
+tbearLoose = ema10 < ema21 and ema21 < ema50
+
+// ATR
+atr14 = ta.atr(14)
+
+// Força da tendência: spread EMA21-EMA50 significativo
+trendStrong = math.abs(ema21 - ema50) / atr14 > 0.35
+
+// Bollinger Bands — posição do preço na banda
+[bbUpper, bbBasis, bbLower] = ta.bb(close, 20, 2.0)
+bbRange  = math.max(bbUpper - bbLower, syminfo.mintick)
+bbPos    = (close - bbLower) / bbRange
+notBBTop = not useBBFilter or bbPos < 0.88
+notBBBot = not useBBFilter or bbPos > 0.12
+
+// Filtro 4H — tendência no timeframe superior
+ema21_4h    = request.security(syminfo.tickerid, "240", ta.ema(close, 21),  lookahead=barmerge.lookahead_off)
+ema50_4h    = request.security(syminfo.tickerid, "240", ta.ema(close, 50),  lookahead=barmerge.lookahead_off)
+ema200_4h   = request.security(syminfo.tickerid, "240", ta.ema(close, 200), lookahead=barmerge.lookahead_off)
+close_4h    = request.security(syminfo.tickerid, "240", close,              lookahead=barmerge.lookahead_off)
+trendBull4h = close_4h > ema21_4h and ema21_4h > ema50_4h
+trendBear4h = close_4h < ema21_4h and ema21_4h < ema50_4h
+
+// Filtro BTC — não operar altcoin contra BTC
+btcClose  = request.security("BINANCE:BTCUSDT", timeframe.period, close,          lookahead=barmerge.lookahead_off)
+btcEma21  = request.security("BINANCE:BTCUSDT", timeframe.period, ta.ema(close,21),lookahead=barmerge.lookahead_off)
+btcEma200 = request.security("BINANCE:BTCUSDT", timeframe.period, ta.ema(close,200),lookahead=barmerge.lookahead_off)
+btcBull   = btcClose > btcEma21 and btcClose > btcEma200 * 0.98
+btcBear   = btcClose < btcEma21 and btcClose < btcEma200 * 1.02
+isBTC     = syminfo.ticker == "BTCUSDT" or syminfo.ticker == "BTCBUSD"
+
+// RSI zone precisa
+rsiOkLong  = not useRsiZone or (rsiVal > 40 and rsiVal < 68)
+rsiOkShort = not useRsiZone or (rsiVal > 32 and rsiVal < 62)
+
+// Consistência de tendência (últimas 5 velas)
+bullsCount = (close>ema21?1:0)+(close[1]>ema21[1]?1:0)+(close[2]>ema21[2]?1:0)+(close[3]>ema21[3]?1:0)+(close[4]>ema21[4]?1:0)
+trendConsBull = bullsCount >= 4
+trendConsBear = bullsCount <= 1
+
+// ══════════════════════════════════════════════════
+// SCORE (−145 a +145)
+// ══════════════════════════════════════════════════
+sTrend   = trendBull  ?  35 : trendBear  ? -35 : 0
+sFlow    = fBull      ?  15 : fBear      ? -15 : 0
+sFlowStr = fStrong    ?  10 : 0
+sMacd    = macdBull   ?  20 : macdBear   ? -20 : 0
+sAdx     = adxVal>30  ?  20 : adxVal>22  ?  10 : 0
+sVol     = vStrong    ?  10 : -5
+sRsi     = rsiBull    ?  10 : rsiBear    ? -10 : 0
+sE200    = e200Rising ?  10 : e200Falling? -10 : 0
+sKalman  = kalmanUp   ?  10 : kalmanDown ? -10 : 0
+sObv     = obvBull    ?  15 : obvBear    ? -15 : 0
+sVwap    = aboveVwap  ?   5 : -5
+sHa      = haBull     ?  10 : haBear     ? -10 : 0
+sKaAcc   = kalmanAccUp?   5 : kalmanAccDn?  -5 : 0
+sTrCons  = trendConsBull ? 5 : trendConsBear ? -5 : 0
+sTrend2  = trendiloLong  ? 10 : trendiloShort ? -10 : 0
+
+baseScore = math.max(-145, math.min(145, sTrend+sFlow+sFlowStr+sMacd+sAdx+sVol+sRsi+sE200+sKalman+sObv+sVwap+sHa+sKaAcc+sTrCons+sTrend2))
+
+flexBonusBull = (tbullLoose and not trendBull) ? 30 : 0
+flexBonusBear = (tbearLoose and not trendBear) ? 30 : 0
+flexScore     = baseScore + flexBonusBull - flexBonusBear
+
+// ══════════════════════════════════════════════════
+// GRADE DO SINAL (S / A / B)
+// ══════════════════════════════════════════════════
+var int qualLong  = 0
+var int qualShort = 0
+qualLong  := (trendBull?3:0)+(adxLongOK?3:0)+(macdBull?2:0)+(haBull?2:0)+(obvBull?1:0)+(aboveVwap?1:0)+(vStrong2?2:vStrong?1:0)+(kalmanAccUp?1:0)+(e200Rising?1:0)+(fStrong?1:0)+(trendConsBull?1:0)
+qualShort := (trendBear?3:0)+(adxShortOK?3:0)+(macdBear?2:0)+(haBear?2:0)+(obvBear?1:0)+(aboveVwap?0:1)+(vStrong2?2:vStrong?1:0)+(kalmanAccDn?1:0)+(e200Falling?1:0)+(fStrong?1:0)+(trendConsBear?1:0)
+
+gradeS_L = qualLong  >= 12
+gradeA_L = qualLong  >= 8  and not gradeS_L
+gradeS_S = qualShort >= 12
+gradeA_S = qualShort >= 8  and not gradeS_S
+
+// Filtro de grade configurável
+gradeOkLong  = gradeFilter == "S apenas" ? gradeS_L :
+               gradeFilter == "A+S"      ? (gradeS_L or gradeA_L) : true
+gradeOkShort = gradeFilter == "S apenas" ? gradeS_S :
+               gradeFilter == "A+S"      ? (gradeS_S or gradeA_S) : true
+
+// ══════════════════════════════════════════════════
+// FILTRO DE SESSAO (09-13h e 14-21h BRT = UTC-3)
+// ══════════════════════════════════════════════════
+hourBRT = (hour + 21) % 24  // UTC → BRT (UTC-3)
+inSession = not sessionOnly or ((hourBRT >= 9 and hourBRT < 13) or (hourBRT >= 14 and hourBRT < 21))
+
+// ══════════════════════════════════════════════════
+// CONDICOES DE ENTRADA
+// ══════════════════════════════════════════════════
+trendiloOkL  = not useTrendilo or trendiloLong
+trendiloOkS  = not useTrendilo or trendiloShort
+adxRisingOkL = not adxRisingOK or adxRising
+adxRisingOkS = not adxRisingOK or adxRising
+t4hOkL       = not use4H or trendBull4h
+t4hOkS       = not use4H or trendBear4h
+btcOkL       = not useBTC or isBTC or btcBull
+btcOkS       = not useBTC or isBTC or btcBear
+
+longCond  = flexScore > scoreMin and macdBullR and adxVal > adxMin and rsiNotExtLong and rsiOkLong and trendiloOkL and gradeOkLong and adxRisingOkL and inSession and t4hOkL and btcOkL and notBBTop and trendStrong
+shortCond = flexScore < -scoreMin and macdBearR and adxVal > adxMin and rsiNotExtShort and rsiOkShort and trendiloOkS and gradeOkShort and adxRisingOkS and inSession and t4hOkS and btcOkS and notBBBot and trendStrong
+
+newLong  = longCond  and not longCond[1]  and barstate.isconfirmed
+newShort = shortCond and not shortCond[1] and barstate.isconfirmed and useShort
+
+// ══════════════════════════════════════════════════
+// NIVEIS INSTITUCIONAIS — STOP ESTRUTURAL + TP
+// ══════════════════════════════════════════════════
+// Stop: swing estrutural das últimas 8 velas + buffer ATR
+// Se swing estiver muito próximo, usa mínimo de ATR * stopMult
+
+swingLow8  = ta.lowest(low,  12)
+swingHigh8 = ta.highest(high, 12)
+
+var float entryPx  = na
+var float stopLv   = na
+var float tp1Lv    = na
+var float tp2Lv    = na
+var float tp3Lv    = na
+var float riskSize = na
+
+if newLong
+    entryPx  := close
+    float swStop = swingLow8 - atr14 * 0.5            // swing low com buffer 0.5 ATR
+    float atrStop = close - atr14 * stopMult          // fallback ATR
+    stopLv   := useSwingStop ? math.max(swStop, close - atr14 * 3.0) : atrStop
+    riskSize := math.max(close - stopLv, atr14 * 0.5) // risco mínimo = 0.5 ATR
+    tp1Lv    := close + riskSize * tp1R
+    tp2Lv    := close + riskSize * tp2R
+    tp3Lv    := close + riskSize * tp3R
+
+if newShort
+    entryPx  := close
+    float swStop = swingHigh8 + atr14 * 0.5            // swing high com buffer 0.5 ATR
+    float atrStop = close + atr14 * stopMult
+    stopLv   := useSwingStop ? math.min(swStop, close + atr14 * 3.0) : atrStop
+    riskSize := math.max(stopLv - close, atr14 * 0.5)
+    tp1Lv    := close - riskSize * tp1R
+    tp2Lv    := close - riskSize * tp2R
+    tp3Lv    := close - riskSize * tp3R
+
+// ══════════════════════════════════════════════════
+// ENTRADAS E SAIDAS INSTITUCIONAIS (3 camadas)
+// ══════════════════════════════════════════════════
+// Saída em 3 parcelas: TP1 (40%) → TP2 (35%) → TP3 (25%)
+// Stop protege o trade em todas as fases
+
+if newLong
+    strategy.entry("LONG", strategy.long, comment="▲ LONG")
+    strategy.exit("TP1-L",  "LONG", qty_percent=tp1Pct,              limit=tp1Lv, stop=stopLv, comment="TP1")
+    strategy.exit("TP2-L",  "LONG", qty_percent=tp2Pct / (1 - tp1Pct/100), limit=tp2Lv, stop=stopLv, comment="TP2")
+    strategy.exit("TP3-L",  "LONG",                                   limit=tp3Lv, stop=stopLv, comment="TP3")
+
+if newShort
+    strategy.entry("SHORT", strategy.short, comment="▼ SHORT")
+    strategy.exit("TP1-S",  "SHORT", qty_percent=tp1Pct,              limit=tp1Lv, stop=stopLv, comment="TP1")
+    strategy.exit("TP2-S",  "SHORT", qty_percent=tp2Pct / (1 - tp1Pct/100), limit=tp2Lv, stop=stopLv, comment="TP2")
+    strategy.exit("TP3-S",  "SHORT",                                   limit=tp3Lv, stop=stopLv, comment="TP3")
+
+// Reversão de posição
+if newShort and strategy.position_size > 0
+    strategy.close("LONG", comment="Reverse↓")
+if newLong  and strategy.position_size < 0
+    strategy.close("SHORT", comment="Reverse↑")
+
+// ══════════════════════════════════════════════════
+// VISUAL — EMAs
+// ══════════════════════════════════════════════════
+plot(ema10,  "EMA10",  color=color.new(color.green,  25), linewidth=1)
+plot(ema21,  "EMA21",  color=color.new(color.red,    25), linewidth=1)
+plot(ema50,  "EMA50",  color=color.new(color.yellow,  0), linewidth=2)
+plot(ema200, "EMA200", color=color.new(color.white,   0), linewidth=3)
+
+// Sinais de entrada
+plotshape(newLong,  "LONG",  style=shape.labelup,   location=location.belowbar,
+     color=color.lime, text="▲", textcolor=color.black, size=size.normal)
+plotshape(newShort, "SHORT", style=shape.labeldown, location=location.abovebar,
+     color=color.red,  text="▼", textcolor=color.white, size=size.normal)
+
+// Fundo suave durante sinal ativo
+bgcolor(longCond  and not newLong  ? color.new(color.lime, 94) : na)
+bgcolor(shortCond and not newShort ? color.new(color.red,  94) : na)
+
+// Linhas TP e Stop
+isLong  = strategy.position_size > 0
+isShort = strategy.position_size < 0
+plot(showLevels and (isLong or isShort) ? stopLv : na, "Stop",  color=color.new(color.red,    10), style=plot.style_linebr, linewidth=2)
+plot(showLevels and (isLong or isShort) ? tp1Lv  : na, "TP1",   color=color.new(color.yellow,  0), style=plot.style_linebr, linewidth=1)
+plot(showLevels and (isLong or isShort) ? tp2Lv  : na, "TP2",   color=color.new(color.aqua,    0), style=plot.style_linebr, linewidth=1)
+plot(showLevels and (isLong or isShort) ? tp3Lv  : na, "TP3",   color=color.new(color.lime,    0), style=plot.style_linebr, linewidth=2)
+
+// ══════════════════════════════════════════════════
+// PAINEL — Score e Grade
+// ══════════════════════════════════════════════════
+if showPanel and barstate.islastconfirmedhistory
+    var table panel = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 70), border_color=color.new(color.gray, 50), border_width=1)
+    gradeStr = isLong  ? (gradeS_L ? "S" : gradeA_L ? "A" : "B") :
+               isShort ? (gradeS_S ? "S" : gradeA_S ? "A" : "B") :
+               (gradeS_L or gradeS_S ? "S" : gradeA_L or gradeA_S ? "A" : "B")
+    gradeCol = gradeStr == "S" ? color.yellow : gradeStr == "A" ? color.aqua : color.gray
+    scoreCol = flexScore > 60 ? color.lime : flexScore > 30 ? color.green :
+               flexScore < -60 ? color.red  : flexScore < -30 ? color.orange : color.gray
+    table.cell(panel, 0, 0, "GAUSS+DNA", text_color=color.white, text_size=size.small, bgcolor=color.new(color.navy, 40))
+    table.cell(panel, 1, 0, "INSTITUCIONAL", text_color=color.aqua, text_size=size.small, bgcolor=color.new(color.navy, 40))
+    table.cell(panel, 0, 1, "Score", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 1, str.tostring(flexScore), text_color=scoreCol, text_size=size.small)
+    table.cell(panel, 0, 2, "Grade", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 2, gradeStr, text_color=gradeCol, text_size=size.small)
+    table.cell(panel, 0, 3, "ADX", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 3, str.tostring(math.round(adxVal, 1)) + (adxRising ? " ↑" : " →"), text_color=adxVal > adxMin ? color.lime : color.red, text_size=size.tiny)
+    table.cell(panel, 0, 4, "RSI", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 4, str.tostring(math.round(rsiVal, 1)), text_color=rsiVal > 70 ? color.red : rsiVal < 30 ? color.lime : color.white, text_size=size.tiny)
+    table.cell(panel, 0, 5, "Kalman", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 5, kalmanAccUp ? "↑↑ ACC" : kalmanUp ? "↑ BULL" : kalmanAccDn ? "↓↓ ACC" : "↓ BEAR", text_color=kalmanUp ? color.lime : color.red, text_size=size.tiny)
+    table.cell(panel, 0, 6, "Trendilo", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 6, trendiloLong ? "↑ LONG" : trendiloShort ? "↓ SHORT" : "→ NEU", text_color=trendiloLong ? color.lime : trendiloShort ? color.red : color.gray, text_size=size.tiny)
+    table.cell(panel, 0, 7, "4H", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 7, trendBull4h ? "↑ BULL" : trendBear4h ? "↓ BEAR" : "→ NEU", text_color=trendBull4h ? color.lime : trendBear4h ? color.red : color.gray, text_size=size.tiny)
+    table.cell(panel, 0, 8, "BTC", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 8, btcBull ? "↑ BULL" : btcBear ? "↓ BEAR" : "→ NEU", text_color=btcBull ? color.lime : btcBear ? color.red : color.gray, text_size=size.tiny)
+    table.cell(panel, 0, 9, "BB Pos", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 9, str.tostring(math.round(bbPos * 100)) + "%", text_color=bbPos > 0.88 ? color.red : bbPos < 0.12 ? color.lime : color.white, text_size=size.tiny)
+    table.cell(panel, 0, 10, "Trend Str", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 10, trendStrong ? "✓ Forte" : "✗ Fraca", text_color=trendStrong ? color.lime : color.orange, text_size=size.tiny)
+    table.cell(panel, 0, 11, "VWAP", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 11, aboveVwap ? "↑ Acima" : "↓ Abaixo", text_color=aboveVwap ? color.lime : color.red, text_size=size.tiny)
+    table.cell(panel, 0, 12, "Sessão", text_color=color.gray, text_size=size.tiny)
+    table.cell(panel, 1, 12, inSession ? "✓ Ativa" : "✗ Fora", text_color=inSession ? color.lime : color.orange, text_size=size.tiny)
+
+// ══════════════════════════════════════════════════
+// DNA MACD — Kalman Source (pane separado)
+// Usa preço suavizado pelo Kalman — elimina ruído e
+// produz cruzamentos mais limpos que o MACD padrão.
+// ══════════════════════════════════════════════════
+showDNAmacd = input.bool(true, "Mostrar DNA MACD", group=grpVisual)
+
+// MACD calculado sobre kFast (Kalman suavizado) em vez de close
+[dnaML, dnaSig, dnaHist] = ta.macd(kFast, 12, 26, 9)
+
+// Força do histograma: 3 barras consecutivas = momentum confirmado
+dnaBull3 = dnaHist > dnaHist[1] and dnaHist[1] > dnaHist[2] and dnaHist > 0
+dnaBear3 = dnaHist < dnaHist[1] and dnaHist[1] < dnaHist[2] and dnaHist < 0
+dnaBull1 = dnaHist > dnaHist[1] and dnaHist > 0
+dnaBear1 = dnaHist < dnaHist[1] and dnaHist < 0
+dnaBullW = dnaHist > 0 and not dnaBull1  // acima do zero mas fraquejando
+dnaBearW = dnaHist < 0 and not dnaBear1  // abaixo do zero mas recuperando
+
+// Cor do histograma: intensidade = confirmação do momentum
+dnaHistCol = dnaBull3 ? color.new(#00e090, 0)  :   // verde forte — 3 barras ↑
+             dnaBull1 ? color.new(#00e090, 45) :   // verde médio — crescendo
+             dnaBullW ? color.new(#00e090, 75) :   // verde fraco — perdendo força
+             dnaBear3 ? color.new(#ff3d5a, 0)  :   // vermelho forte — 3 barras ↓
+             dnaBear1 ? color.new(#ff3d5a, 45) :   // vermelho médio — caindo
+             dnaBearW ? color.new(#ff3d5a, 75) : color.new(color.gray, 60)
+
+// Linha MACD: azul quando bull, laranja quando bear
+dnaMLcol  = dnaML > dnaSig ? color.new(#3b9eff, 0) : color.new(#ff8040, 0)
+dnaSigCol = color.new(color.white, 40)
+
+plot(showDNAmacd ? dnaHist : na, "DNA Hist", color=dnaHistCol, style=plot.style_histogram, linewidth=3)
+plot(showDNAmacd ? dnaML   : na, "DNA MACD", color=dnaMLcol,   linewidth=2)
+plot(showDNAmacd ? dnaSig  : na, "DNA Sig",  color=dnaSigCol,  linewidth=1)
+hline(0, "Zero", color=color.new(color.gray, 55), linestyle=hline.style_dashed)
+
+// Sinais de cruzamento MACD no pane
+dnaCrossUp   = ta.crossover(dnaML,  dnaSig)
+dnaCrossDown = ta.crossunder(dnaML, dnaSig)
+
+plotshape(showDNAmacd and dnaCrossUp,   "MACD Cross↑", style=shape.triangleup,   location=location.bottom, color=color.lime, size=size.tiny)
+plotshape(showDNAmacd and dnaCrossDown, "MACD Cross↓", style=shape.triangledown, location=location.top,    color=color.red,  size=size.tiny)
