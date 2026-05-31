@@ -574,11 +574,12 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     # Mercado lateral no 15m: EMAs coladas (spread < 0.3 ATR) = sem direção
     sideways_mtf = abs(e21 - e50) / atr < 0.3 and adx < 22
 
-    # Zona de pullback: preço dentro de 1.5 ATR da EMA21 ou 2 ATR da EMA50
-    near_ema21_long  = abs(price - e21) < atr * 1.5 and price > e200
-    near_ema50_long  = abs(price - e50) < atr * 2.0 and price > e200
-    near_ema21_short = abs(price - e21) < atr * 1.5 and price < e200
-    near_ema50_short = abs(price - e50) < atr * 2.0 and price < e200
+    # Zona de pullback: entrada só quando preço está próximo da EMA
+    # Mais apertado = stop menor e R/R melhor
+    near_ema21_long  = abs(price - e21) < atr * 0.9 and price > e200
+    near_ema50_long  = abs(price - e50) < atr * 1.2 and price > e200
+    near_ema21_short = abs(price - e21) < atr * 0.9 and price < e200
+    near_ema50_short = abs(price - e50) < atr * 1.2 and price < e200
 
     in_pullback_long  = near_ema21_long  or near_ema50_long
     in_pullback_short = near_ema21_short or near_ema50_short
@@ -591,11 +592,11 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     not_chasing_long  = (price - e21) / atr < 2.0
     not_chasing_short = (e21 - price) / atr < 2.0
 
-    # Stop no swing da correção (últimas 8 velas + buffer ATR)
-    swing_low  = min(lows[-9:-1])
-    swing_high = max(highs[-9:-1])
-    stop_long  = swing_low  - atr * 0.3
-    stop_short = swing_high + atr * 0.3
+    # Stop no swing da correção (últimas 12 velas = estrutura mais real)
+    swing_low  = min(lows[-13:-1])
+    swing_high = max(highs[-13:-1])
+    stop_long  = swing_low  - atr * 0.5
+    stop_short = swing_high + atr * 0.5
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -630,12 +631,18 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
                         sig_source, tf, signal_grade):
     is_long=sig_type=="LONG"
 
-    # Stop baseado em swing high/low com floor de ATR
+    # Stop estrutural: abaixo do swing com buffer de 0.5 ATR
+    # Se swing estiver além de 3 ATR → setup ruim, não envia
     if is_long:
-        stop=max(swing_low-atr*0.1, price-atr*1.5)
+        stop = swing_low - atr * 0.5
+        if (price - stop) > atr * 3.0:
+            return   # risco/estrutura incompatível — skip
     else:
-        stop=min(swing_high+atr*0.1, price+atr*1.5)
+        stop = swing_high + atr * 0.5
+        if (stop - price) > atr * 3.0:
+            return
     risk=abs(price-stop)
+    if risk <= 0: return
 
     # TP dinâmico por grade — mínimo 2R no TP1 (protege capital)
     if signal_grade=="S":
