@@ -765,8 +765,10 @@ function triggerSignal(sym,type,price,atrVal,score,grade){
   $('waLink').href=`https://wa.me/?text=${msg}`;
   playAlert(isL);
   addHist(activeSignal);
-  const tok=$('tgToken').value.trim(),cid=$('tgChatId').value.trim();
+  const tok=($('tgToken').value.trim())||localStorage.getItem('tg_tok')||'';
+  const cid=($('tgChatId').value.trim())||localStorage.getItem('tg_cid')||'';
   if(tok&&cid) sendTGMsg(tok,cid,activeSignal);
+  else showToast('⚠️ Configure o Telegram para receber alertas');
 }
 
 function dismissSig(){$('sigAlert').classList.remove('show');activeSignal=null;}
@@ -918,7 +920,13 @@ function loadTGConfig(){
     const tok=localStorage.getItem('tg_tok'),cid=localStorage.getItem('tg_cid');
     if(tok)$('tgToken').value=tok;
     if(cid)$('tgChatId').value=cid;
-    if(tok||cid) showToast('✅ Config Telegram carregada');
+    if(tok&&cid) showToast('✅ Telegram configurado');
+    else{
+      // sem credenciais — abre o painel automaticamente
+      const b=$('tgBody'),t=$('tgToggle');
+      if(b){b.style.display='block';if(t)t.textContent='▲ fechar';}
+      showToast('⚙️ Configure o Telegram para receber alertas');
+    }
   }catch(e){}
 }
 
