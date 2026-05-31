@@ -68,6 +68,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .sa-levels{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.75rem}
 @media(max-width:400px){.sa-levels{grid-template-columns:1fr 1fr}}
 .sa-lv{border-radius:6px;padding:.5rem .65rem;text-align:center}
+.sa-lv.en{background:rgba(255,200,60,.07);border:1px solid rgba(255,200,60,.22)}
 .sa-lv.sl{background:rgba(255,61,90,.07);border:1px solid rgba(255,61,90,.18)}
 .sa-lv.t1{background:rgba(59,158,255,.07);border:1px solid rgba(59,158,255,.18)}
 .sa-lv.tf{background:rgba(0,224,144,.07);border:1px solid rgba(0,224,144,.18)}
@@ -211,10 +212,11 @@ tr:hover td{background:rgba(255,255,255,.01)}
       <span class="sa-coin" id="saCoin">BTC/USDT · $--</span>
     </div>
     <div class="sa-levels">
-      <div class="sa-lv sl"><div class="sa-lv-l">Stop Loss</div><div class="sa-lv-v" id="saStop" style="color:var(--red)">--</div></div>
-      <div class="sa-lv t1"><div class="sa-lv-l" id="saTP1L">TP1 (2R)</div><div class="sa-lv-v" id="saTP1" style="color:var(--blue)">--</div></div>
-      <div class="sa-lv t1"><div class="sa-lv-l" id="saTP2L">TP2 (3.5R)</div><div class="sa-lv-v" id="saTP2" style="color:var(--blue)">--</div></div>
-      <div class="sa-lv tf"><div class="sa-lv-l" id="saTPFL">Final (6R)</div><div class="sa-lv-v" id="saFinal" style="color:var(--green)">--</div></div>
+      <div class="sa-lv en" style="grid-column:span 3"><div class="sa-lv-l">💰 Entrada</div><div class="sa-lv-v" id="saEntrada" style="color:var(--yellow)">--</div></div>
+      <div class="sa-lv sl"><div class="sa-lv-l">🛑 Stop Loss</div><div class="sa-lv-v" id="saStop" style="color:var(--red)">--</div></div>
+      <div class="sa-lv t1"><div class="sa-lv-l" id="saTP1L">🎯 TP1 (2R)</div><div class="sa-lv-v" id="saTP1" style="color:var(--blue)">--</div></div>
+      <div class="sa-lv t1"><div class="sa-lv-l" id="saTP2L">✨ TP2 (3.5R)</div><div class="sa-lv-v" id="saTP2" style="color:var(--blue)">--</div></div>
+      <div class="sa-lv tf"><div class="sa-lv-l" id="saTPFL">🏆 Final (6R)</div><div class="sa-lv-v" id="saFinal" style="color:var(--green)">--</div></div>
       <div class="sa-lv" style="grid-column:span 2"><div class="sa-lv-l">Saídas: 40% · 35% · 25%</div><div class="sa-lv-v" id="saGrade" style="color:var(--yellow);font-size:.7rem">--</div></div>
     </div>
     <div style="font-size:.62rem;color:var(--muted2);margin-bottom:.6rem" id="saRisk">--</div>
@@ -674,7 +676,8 @@ function triggerSignal(sym,type,price,atrVal,score,grade){
   al.className='sig-alert show '+(isL?'long':'short');
   $('saTitle').textContent=(isL?'🟢 SINAL LONG':'🔴 SINAL SHORT')+' — '+coin.short;
   $('saTitle').style.color=isL?'var(--green)':'var(--red)';
-  $('saCoin').textContent=coin.label+' · $'+fmtPrice(price,sym);
+  $('saCoin').textContent=coin.label+' · ⏱ '+tf;
+  $('saEntrada').textContent='$'+fmtPrice(price,sym);
   $('saStop').textContent='$'+stop.toFixed(stop<1?6:2);
   $('saTP1L').textContent=`TP1 (${r1}R)`;
   $('saTP2L').textContent=`TP2 (${r2}R)`;

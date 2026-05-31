@@ -774,10 +774,14 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
 
     def d(v): return f"{v:.6f}" if v<0.01 else f"{v:.4f}" if v<1 else f"{v:.2f}"
     def esc(v):
+        # Escape para texto fora de backticks (MarkdownV2)
         s=str(v)
-        s=s.replace('\\','\\\\')  # backslash PRIMEIRO — evita double-escape
+        s=s.replace('\\','\\\\')
         for ch in r"_*[]()~`>#+=|{}.!-": s=s.replace(ch,f"\\{ch}")
         return s
+    def raw(v):
+        # Dentro de backticks só backslash precisa ser escapado
+        return str(v).replace('\\','\\\\')
 
     now=datetime.now().strftime("%H:%M — %d/%m/%Y")
     k_str="↑" if kalman_up else "↓"
@@ -788,15 +792,15 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| ⏱ {esc(tf)}\n"
         f"{cross_line}"
         f"{esc(grade_label)}\n\n"
-        f"💰 Entrada: `${esc(fmt_price(price))}`\n"
-        f"🛑 Stop: `${esc(d(stop))}`\n"
-        f"🎯 TP1 \\({esc(str(r1))}R\\): `${esc(d(tp1))}` → fechar 40%\n"
-        f"✨ TP2 \\({esc(str(r2))}R\\): `${esc(d(tp2))}` → fechar 35%\n"
-        f"🏆 Final \\({esc(str(r_final))}R\\): `${esc(d(final))}` → últimos 25%\n\n"
-        f"📐 *Gestão de risco \\(3% de ${esc(f'{CAPITAL:.0f}')}\\)*\n"
-        f"  Risco: `${esc(f'{risk_amount:.2f}')}`\n"
-        f"  Spot: `{esc(f'{contracts:.4f}')} {esc(short)}` \\(aprox `${esc(f'{pos_value:.2f}')} USDT`\\)\n"
-        f"  5x Lev: `${esc(f'{pos_5x:.2f}')} collateral`\n\n"
+        f"💰 Entrada: `${raw(fmt_price(price))}`\n"
+        f"🛑 Stop: `${raw(d(stop))}`\n"
+        f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 40%\n"
+        f"✨ TP2 \\({esc(str(r2))}R\\): `${raw(d(tp2))}` → fechar 35%\n"
+        f"🏆 Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → últimos 25%\n\n"
+        f"📐 *Gestão de risco \\(3% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
+        f"  Risco: `${raw(f'{risk_amount:.2f}')}`\n"
+        f"  Spot: `{raw(f'{contracts:.4f}')} {raw(short)}` \\(aprox `${raw(f'{pos_value:.2f}')} USDT`\\)\n"
+        f"  5x Lev: `${raw(f'{pos_5x:.2f}')} collateral`\n\n"
         f"📊 Score: *{esc(score)}/145* \\| RSI: {esc(f'{rsi:.0f}')} \\| ADX: {esc(f'{adx:.0f}')}\n"
         f"📈 Trend: {esc(trend)} \\| Kalman: {esc(k_str)}\n"
         f"⏰ {esc(now)}"
