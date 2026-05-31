@@ -1023,9 +1023,9 @@ async def run_cycle(session, last_sig, tf, coins):
         top3 = candidates[:3]
         best_adx = max((adx for _,_,_,_,adx,_ in top3), default=0)
         best_score = top3[0][0] if top3 else 0
-        motivo = ("📉 ADX baixo — mercado lateral" if best_adx < 22
+        motivo = ("📉 ADX baixo — mercado lateral" if best_adx < 17
                   else "📊 Score insuficiente" if best_score < 50
-                  else "⏳ Aguardando confirmação")
+                  else "⏳ MACD/HA pendente — aguardando entrada")
         lines = [f"  {sh}: score {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top3]
         txt = (f"🔍 [{tf}] Sem sinais no ciclo\n{motivo}\nTop candidatos:\n" + "\n".join(lines) +
                f"\n⏰ {datetime.now().strftime('%H:%M')}")
@@ -1134,6 +1134,22 @@ async def run_mtf_cycle(session, last_sig, coins):
             log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
 
         await asyncio.sleep(0.5)
+
+    # Informa no Telegram quando BTC está em queda bloqueando LONGs (máx 1x a cada 2h)
+    if sent == 0 and btc_bear_filter:
+        btc_bear_key = "_btc_bear_msg"
+        if now - last_sig.get(btc_bear_key, 0) >= 7200:
+            last_sig[btc_bear_key] = now
+            txt = (f"🐻 BTC em queda — LONGs bloqueados\n"
+                   f"💰 BTC ${btc_p:,.0f} | preço < EMA21 < EMA50\n"
+                   f"⏳ Aguardando BTC virar BULL para liberar sinais\n"
+                   f"⏰ {datetime.now().strftime('%H:%M')}")
+            url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+            try:
+                async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
+                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
+                    await r.json()
+            except: pass
 
     return sent
 
