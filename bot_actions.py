@@ -976,14 +976,20 @@ async def run_cycle(session, last_sig, tf, coins):
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"cooldown"))
         else:
-            candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
+            candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.4)
 
     if sent == 0 and candidates:
-        candidates.sort(reverse=True)
+        # Ordena por score desc → mostra os mais próximos de disparar sinal LONG
+        candidates.sort(key=lambda x: x[0], reverse=True)
         top3 = candidates[:3]
+        best_adx = max((adx for _,_,_,_,adx,_ in top3), default=0)
+        best_score = top3[0][0] if top3 else 0
+        motivo = ("📉 ADX baixo — mercado lateral" if best_adx < 22
+                  else "📊 Score insuficiente" if best_score < 50
+                  else "⏳ Aguardando confirmação")
         lines = [f"  {sh}: score {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top3]
-        txt = (f"🔍 [{tf}] Sem sinais no ciclo\nTop candidatos:\n" + "\n".join(lines) +
+        txt = (f"🔍 [{tf}] Sem sinais no ciclo\n{motivo}\nTop candidatos:\n" + "\n".join(lines) +
                f"\n⏰ {datetime.now().strftime('%H:%M')}")
         url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
         try:
