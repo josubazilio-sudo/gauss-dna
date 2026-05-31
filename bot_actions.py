@@ -348,8 +348,8 @@ def analyze(sym, candles):
     elif cross_10_21_bear: cross_label="EMA10 < EMA21"
     else: cross_label=""
 
-    # Swing levels para stop baseado em estrutura de mercado
-    swing_low=min(lows[-5:]); swing_high=max(highs[-5:])
+    # Swing levels para stop baseado em estrutura de mercado (8 velas = mais representativo)
+    swing_low=min(lows[-9:-1]); swing_high=max(highs[-9:-1])
 
     # ── TRENDILO (ALMA do % de variação + bandas RMS) ─────────────────────────
     pch = [0.0] + [(closes[i]-closes[i-1])/closes[i]*100 for i in range(1,n)]
@@ -420,10 +420,10 @@ def analyze(sym, candles):
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
-    macd_bull_r=ml>sl_v
-    macd_bear_r=ml<sl_v
-    # Volume: acima da média simples (sem multiplicador 1.1x)
-    vol_avg=vols[-1]>vol_ma
+    macd_bull_r=ml>sl_v and hist>hist_p   # direção + histograma crescendo
+    macd_bear_r=ml<sl_v and hist<hist_p
+    # Volume: 2 velas consecutivas com bom volume (mais sólido)
+    vol_avg=vols[-1]>vol_ma*1.1 and vols[-2]>vol_ma*0.9
     # Tendência relaxada: sem exigir e50>e200
     tbull_r=price>e200 and e10>e21 and e21>e50
     tbear_r=price<e200 and e10<e21 and e21<e50
@@ -451,12 +451,14 @@ def analyze(sym, candles):
     # FLEX com lógica institucional:
     # score + ADX subindo + sem lateral + extensão controlada +
     # Trendilo + safe_long/safe_short + HA confirmando + volume/OBV
-    long_flex = (flex_score > 45 and macd_bull_r and adx > 20 and adx_rising and
+    long_flex = (flex_score > 50 and macd_bull_r and adx > 22 and adx_rising and
                  not sideways and not_ext_long_tight and trendilo_long and
-                 safe_long and ha_bull and (obv_bull or f_bull))
-    short_flex = (flex_score < -45 and macd_bear_r and adx > 20 and adx_rising and
+                 safe_long and ha_bull and v_strong and (obv_bull or f_bull) and
+                 e200_rising and 38 < rsi < 68)
+    short_flex = (flex_score < -50 and macd_bear_r and adx > 22 and adx_rising and
                   not sideways and not_ext_short_tight and trendilo_short and
-                  safe_short and ha_bear and (obv_bear or f_bear))
+                  safe_short and ha_bear and v_strong and (obv_bear or f_bear) and
+                  e200_falling and 32 < rsi < 62)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -548,20 +550,23 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     e10_arr = ema_series(closes, 10); e10 = e10_arr[-1]
     e21_arr = ema_series(closes, 21); e21 = e21_arr[-1]
     e50_arr = ema_series(closes, 50); e50 = e50_arr[-1]
-    e200    = ema_series(closes, 200)[-1]
+    e200_arr = ema_series(closes, 200); e200 = e200_arr[-1]
     atr_arr = atr_series(candles_15m, 14); atr = max(atr_arr[-1], 1e-10)
 
     ml, sl_v, hist, hist_p, _ = macd_calc(closes)
-    macd_bull_r = ml > sl_v and hist > hist_p
+    macd_bull_r = ml > sl_v and hist > hist_p   # direção + histograma crescendo
     macd_bear_r = ml < sl_v and hist < hist_p
 
     ha = ha_series(candles_15m)
-    ha_bull = ha[-1]["c"] > ha[-1]["o"] and ha[-2]["c"] > ha[-2]["o"]
-    ha_bear = ha[-1]["c"] < ha[-1]["o"] and ha[-2]["c"] < ha[-2]["o"]
+    ha_body = abs(ha[-1]["c"] - ha[-1]["o"])
+    ha_body_ok = ha_body > atr * 0.2            # corpo HA mínimo = não é doji
+    ha_bull = ha[-1]["c"] > ha[-1]["o"] and ha[-2]["c"] > ha[-2]["o"] and ha_body_ok
+    ha_bear = ha[-1]["c"] < ha[-1]["o"] and ha[-2]["c"] < ha[-2]["o"] and ha_body_ok
 
     rsi = rsi_calc(closes[-50:])
     vol_ma = sum(vols[-20:]) / 20
-    vol_ok = vols[-1] > vol_ma
+    # Volume surge: spike claro no bounce (não só acima da média)
+    vol_surge = vols[-1] > vol_ma * 1.2 and vols[-1] >= vols[-2]
 
     obv = obv_calc(closes, vols)
     obv_ema = ema_series(obv, 20)
@@ -571,11 +576,22 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     _, _, adx, adx_p_mtf = dmi_adx(candles_15m[-60:])
     adx_rising_mtf = adx > adx_p_mtf
 
-    # Mercado lateral no 15m: EMAs coladas (spread < 0.3 ATR) = sem direção
+    # EMA200 direção: confirma tendência macro no 30m
+    e200_rising_mtf  = e200_arr[-1] > e200_arr[-6]
+    e200_falling_mtf = e200_arr[-1] < e200_arr[-6]
+
+    # Origem do pullback: preço veio de acima da EMA21 (pullback real, não breakdown)
+    came_from_above = any(closes[i] > e21_arr[i] for i in range(-8, -2))
+    came_from_below = any(closes[i] < e21_arr[i] for i in range(-8, -2))
+
+    # Alinhamento das EMAs: tendência estrutural confirmada
+    ema_aligned_long  = e10 > e21 > e50
+    ema_aligned_short = e10 < e21 < e50
+
+    # Mercado lateral: EMAs coladas + ADX fraco = sem direção
     sideways_mtf = abs(e21 - e50) / atr < 0.3 and adx < 22
 
     # Zona de pullback: entrada só quando preço está próximo da EMA
-    # Mais apertado = stop menor e R/R melhor
     near_ema21_long  = abs(price - e21) < atr * 0.9 and price > e200
     near_ema50_long  = abs(price - e50) < atr * 1.2 and price > e200
     near_ema21_short = abs(price - e21) < atr * 0.9 and price < e200
@@ -584,13 +600,13 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     in_pullback_long  = near_ema21_long  or near_ema50_long
     in_pullback_short = near_ema21_short or near_ema50_short
 
-    # Bounce: momentum virando + vela favorável + volume
-    bounce_long  = (macd_bull_r and ha_bull) and price > opens[-1] and (vol_ok or obv_bull)
-    bounce_short = (macd_bear_r and ha_bear) and price < opens[-1] and (vol_ok or obv_bear)
+    # Bounce: HA + MACD + volume spike (todos obrigatórios)
+    bounce_long  = macd_bull_r and ha_bull and price > opens[-1] and (vol_surge or obv_bull)
+    bounce_short = macd_bear_r and ha_bear and price < opens[-1] and (vol_surge or obv_bear)
 
-    # Não comprar topo no pullback (preço muito esticado da EMA21)
-    not_chasing_long  = (price - e21) / atr < 2.0
-    not_chasing_short = (e21 - price) / atr < 2.0
+    # Não perseguir: entrada só perto da EMA, não esticado
+    not_chasing_long  = (price - e21) / atr < 1.8
+    not_chasing_short = (e21 - price) / atr < 1.8
 
     # Stop no swing da correção (últimas 12 velas = estrutura mais real)
     swing_low  = min(lows[-13:-1])
@@ -598,14 +614,20 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_long  = swing_low  - atr * 0.5
     stop_short = swing_high + atr * 0.5
 
+    # RSI zone: evita entrar em extremos, mantém na zona saudável de pullback
+    rsi_ok_long  = 40 < rsi < 65
+    rsi_ok_short = 35 < rsi < 60
+
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
-            adx > 18 and adx_rising_mtf and not sideways_mtf and
-            not_chasing_long and 30 < rsi < 72):
+            adx > 22 and adx_rising_mtf and not sideways_mtf and
+            not_chasing_long and rsi_ok_long and
+            e200_rising_mtf and came_from_above and ema_aligned_long):
         sig = "LONG"
     elif (h1_bear and in_pullback_short and bounce_short and
-              adx > 18 and adx_rising_mtf and not sideways_mtf and
-              not_chasing_short and 28 < rsi < 70):
+              adx > 22 and adx_rising_mtf and not sideways_mtf and
+              not_chasing_short and rsi_ok_short and
+              e200_falling_mtf and came_from_below and ema_aligned_short):
         sig = "SHORT"
 
     if not sig:
