@@ -436,11 +436,27 @@ def analyze(sym, candles):
     flex_bonus_bear = 30 if (tbear_loose and not trend_bear) else 0
     flex_score = score + flex_bonus_bull - flex_bonus_bear
 
-    # FLEX: score captura tendência (+35/-35), sem exigir alinhamento EMA extra
-    flex_not_ext_long  = rsi < 75
-    flex_not_ext_short = rsi > 25
-    long_flex =(flex_score>45 and macd_bull_r and adx>20 and flex_not_ext_long and trendilo_long)
-    short_flex=(flex_score<-45 and macd_bear_r and adx>20 and flex_not_ext_short and trendilo_short)
+    # ── FILTROS INSTITUCIONAIS ─────────────────────────────────────────────────
+    # ADX subindo = tendência real, não lateral
+    adx_rising = adx > adx_p
+
+    # Mercado lateral: Bollinger contraindo + ADX fraco
+    sideways = bb_squeeze and adx < 25
+
+    # Extensão da EMA21 — não comprar topo nem vender fundo
+    # Preço > 2.5 ATR da EMA21 = movimento já foi feito, tarde demais
+    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 74
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 26
+
+    # FLEX com lógica institucional:
+    # score + ADX subindo + sem lateral + extensão controlada +
+    # Trendilo + safe_long/safe_short + HA confirmando + volume/OBV
+    long_flex = (flex_score > 45 and macd_bull_r and adx > 20 and adx_rising and
+                 not sideways and not_ext_long_tight and trendilo_long and
+                 safe_long and ha_bull and (obv_bull or f_bull))
+    short_flex = (flex_score < -45 and macd_bear_r and adx > 20 and adx_rising and
+                  not sideways and not_ext_short_tight and trendilo_short and
+                  safe_short and ha_bear and (obv_bear or f_bear))
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -552,7 +568,11 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     obv_bull = obv[-1] > obv_ema[-1] and obv[-1] > obv[-6]
     obv_bear = obv[-1] < obv_ema[-1] and obv[-1] < obv[-6]
 
-    _, _, adx, _ = dmi_adx(candles_15m[-60:])
+    _, _, adx, adx_p_mtf = dmi_adx(candles_15m[-60:])
+    adx_rising_mtf = adx > adx_p_mtf
+
+    # Mercado lateral no 15m: EMAs coladas (spread < 0.3 ATR) = sem direção
+    sideways_mtf = abs(e21 - e50) / atr < 0.3 and adx < 22
 
     # Zona de pullback: preço dentro de 1.5 ATR da EMA21 ou 2 ATR da EMA50
     near_ema21_long  = abs(price - e21) < atr * 1.5 and price > e200
@@ -563,20 +583,28 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     in_pullback_long  = near_ema21_long  or near_ema50_long
     in_pullback_short = near_ema21_short or near_ema50_short
 
-    # Bounce: momentum virando + vela favorável
-    bounce_long  = (macd_bull_r or ha_bull) and price > opens[-1] and (vol_ok or obv_bull)
-    bounce_short = (macd_bear_r or ha_bear) and price < opens[-1] and (vol_ok or obv_bear)
+    # Bounce: momentum virando + vela favorável + volume
+    bounce_long  = (macd_bull_r and ha_bull) and price > opens[-1] and (vol_ok or obv_bull)
+    bounce_short = (macd_bear_r and ha_bear) and price < opens[-1] and (vol_ok or obv_bear)
 
-    # Stop no swing da correção (últimas 5 velas anteriores + buffer ATR)
-    swing_low  = min(lows[-6:-1])
-    swing_high = max(highs[-6:-1])
+    # Não comprar topo no pullback (preço muito esticado da EMA21)
+    not_chasing_long  = (price - e21) / atr < 2.0
+    not_chasing_short = (e21 - price) / atr < 2.0
+
+    # Stop no swing da correção (últimas 8 velas + buffer ATR)
+    swing_low  = min(lows[-9:-1])
+    swing_high = max(highs[-9:-1])
     stop_long  = swing_low  - atr * 0.3
     stop_short = swing_high + atr * 0.3
 
     sig = None
-    if h1_bull and in_pullback_long  and bounce_long  and adx > 13 and 28 < rsi < 74:
+    if (h1_bull and in_pullback_long and bounce_long and
+            adx > 18 and adx_rising_mtf and not sideways_mtf and
+            not_chasing_long and 30 < rsi < 72):
         sig = "LONG"
-    elif h1_bear and in_pullback_short and bounce_short and adx > 13 and 26 < rsi < 72:
+    elif (h1_bear and in_pullback_short and bounce_short and
+              adx > 18 and adx_rising_mtf and not sideways_mtf and
+              not_chasing_short and 28 < rsi < 70):
         sig = "SHORT"
 
     if not sig:
