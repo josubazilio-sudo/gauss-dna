@@ -153,8 +153,7 @@ tbullLoose = ema10 > ema21 and ema21 > ema50
 tbearLoose = ema10 < ema21 and ema21 < ema50
 
 // Consistência de tendência (últimas 5 velas)
-bullsCount = (close > ema21 ? 1 : 0) + (close[1] > ema21[1] ? 1 : 0) +
-             (close[2] > ema21[2] ? 1 : 0) + (close[3] > ema21[3] ? 1 : 0) + (close[4] > ema21[4] ? 1 : 0)
+bullsCount = (close>ema21?1:0)+(close[1]>ema21[1]?1:0)+(close[2]>ema21[2]?1:0)+(close[3]>ema21[3]?1:0)+(close[4]>ema21[4]?1:0)
 trendConsBull = bullsCount >= 4
 trendConsBear = bullsCount <= 1
 
@@ -180,9 +179,7 @@ sKaAcc   = kalmanAccUp?   5 : kalmanAccDn?  -5 : 0
 sTrCons  = trendConsBull ? 5 : trendConsBear ? -5 : 0
 sTrend2  = trendiloLong  ? 10 : trendiloShort ? -10 : 0
 
-baseScore = math.max(-145, math.min(145,
-    sTrend + sFlow + sFlowStr + sMacd + sAdx + sVol + sRsi +
-    sE200 + sKalman + sObv + sVwap + sHa + sKaAcc + sTrCons + sTrend2))
+baseScore = math.max(-145, math.min(145, sTrend+sFlow+sFlowStr+sMacd+sAdx+sVol+sRsi+sE200+sKalman+sObv+sVwap+sHa+sKaAcc+sTrCons+sTrend2))
 
 flexBonusBull = (tbullLoose and not trendBull) ? 30 : 0
 flexBonusBear = (tbearLoose and not trendBear) ? 30 : 0
@@ -221,11 +218,8 @@ trendiloOkS = not useTrendilo or trendiloShort
 adxRisingOkL = not adxRisingOK or adxRising
 adxRisingOkS = not adxRisingOK or adxRising
 
-longCond  = flexScore  >  scoreMin and macdBullR and adxVal > adxMin and
-            rsiNotExtLong  and trendiloOkL and gradeOkLong  and adxRisingOkL and inSession
-
-shortCond = flexScore  < -scoreMin and macdBearR and adxVal > adxMin and
-            rsiNotExtShort and trendiloOkS and gradeOkShort and adxRisingOkS and inSession
+longCond  = flexScore > scoreMin and macdBullR and adxVal > adxMin and rsiNotExtLong and trendiloOkL and gradeOkLong and adxRisingOkL and inSession
+shortCond = flexScore < -scoreMin and macdBearR and adxVal > adxMin and rsiNotExtShort and trendiloOkS and gradeOkShort and adxRisingOkS and inSession
 
 newLong  = longCond  and not longCond[1]  and barstate.isconfirmed
 newShort = shortCond and not shortCond[1] and barstate.isconfirmed and useShort
