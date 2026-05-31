@@ -160,7 +160,22 @@ tr:hover td{background:rgba(255,255,255,.012)}
 .diary-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1rem}
 @media(max-width:560px){.diary-summary{grid-template-columns:repeat(2,1fr)}}
 
-/* MODAL */
+/* INSTALL BUTTON — sempre visível */
+#pwaInstallBtn{display:none;align-items:center;gap:.5rem;background:linear-gradient(135deg,rgba(59,158,255,.18),rgba(0,212,200,.1));border:1px solid rgba(59,158,255,.4);border-radius:10px;padding:.65rem 1.1rem;color:var(--blue);font-family:'DM Mono',monospace;font-size:.72rem;font-weight:500;cursor:pointer;width:100%;margin-bottom:1rem;transition:all .2s;letter-spacing:.03em}
+#pwaInstallBtn:hover{background:linear-gradient(135deg,rgba(59,158,255,.28),rgba(0,212,200,.18));border-color:var(--blue)}
+#pwaInstallBtn.visible{display:flex}
+#pwaInstallBtn .pwa-icon{font-size:1rem}
+#pwaInstallBtn .pwa-txt{flex:1;text-align:left}
+#pwaInstallBtn .pwa-arrow{opacity:.6}
+/* MODAL INSTALAR */
+#installModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center}
+#installModal.show{display:flex}
+.im-box{background:var(--s1);border:1px solid rgba(59,158,255,.3);border-radius:16px;padding:1.6rem 1.4rem;max-width:340px;width:90%;text-align:center}
+.im-box h3{font-family:'Unbounded',sans-serif;font-size:.85rem;font-weight:700;color:var(--blue);margin-bottom:.8rem}
+.im-step{background:var(--s2);border-radius:9px;padding:.8rem 1rem;margin:.5rem 0;font-size:.73rem;color:var(--text);line-height:1.6;text-align:left}
+.im-step strong{color:var(--cyan)}
+.im-close{margin-top:1rem;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted2);padding:.5rem 1.4rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.72rem;cursor:pointer}
+
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
 .modal-bg.show{display:flex}
 .modal{background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:1.5rem;max-width:340px;width:90%;text-align:center}
@@ -208,6 +223,31 @@ tr:hover td{background:rgba(255,255,255,.012)}
     <button class="tab-btn t1 active" onclick="showTab(1)">📐 Calculadora</button>
     <button class="tab-btn t2" onclick="showTab(2)">📒 Diário</button>
     <button class="tab-btn t3" onclick="showTab(3)">📊 Simulador</button>
+  </div>
+
+  <!-- BOTÃO INSTALAR APP -->
+  <button id="pwaInstallBtn" onclick="doInstall()">
+    <span class="pwa-icon">📲</span>
+    <span class="pwa-txt">Instalar app na tela inicial</span>
+    <span class="pwa-arrow">→</span>
+  </button>
+
+  <!-- MODAL INSTALAR (fallback manual) -->
+  <div id="installModal">
+    <div class="im-box">
+      <h3>📲 Instalar GAUSS+DNA</h3>
+      <div id="im-android" style="display:none">
+        <div class="im-step">1. Toque nos <strong>3 pontos ⋮</strong> no canto superior direito do Chrome</div>
+        <div class="im-step">2. Selecione <strong>"Adicionar à tela inicial"</strong></div>
+        <div class="im-step">3. Confirme tocando em <strong>"Adicionar"</strong></div>
+      </div>
+      <div id="im-ios" style="display:none">
+        <div class="im-step">1. Toque no ícone de <strong>Compartilhar</strong> (□↑) na barra inferior do Safari</div>
+        <div class="im-step">2. Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong></div>
+        <div class="im-step">3. Toque em <strong>"Adicionar"</strong> no canto superior direito</div>
+      </div>
+      <button class="im-close" onclick="document.getElementById('installModal').classList.remove('show')">Fechar</button>
+    </div>
   </div>
 
   <!-- PROGRESSO -->
@@ -343,7 +383,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
   </div>
   <div class="ib-btns">
     <button class="ib-btn ib-install" onclick="doInstall()">Instalar</button>
-    <button class="ib-btn ib-dismiss" onclick="dismissBanner()">✕</button>
+    <button class="ib-btn ib-dismiss" onclick="document.getElementById('installBanner').classList.remove('show')">✕</button>
   </div>
 </div>
 
@@ -624,61 +664,46 @@ function showToast(msg){
 
 // ── PWA ──────────────────────────────────────────────
 let _deferredPrompt = null;
+const _isIOS    = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const _isInApp  = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
 function initPWA() {
-  // Register service worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/gauss-dna/sw.js', { scope: '/gauss-dna/' })
-      .catch(() => {});
-  }
+  if ('serviceWorker' in navigator)
+    navigator.serviceWorker.register('/gauss-dna/sw.js', { scope: '/gauss-dna/' }).catch(() => {});
 
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isInApp = window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true;
+  if (_isInApp) return; // já instalado
 
-  if (isInApp) return; // already installed
+  // Mostra botão instalar sempre (exceto se já instalado)
+  document.getElementById('pwaInstallBtn').classList.add('visible');
 
-  if (isIOS) {
-    // Show iOS hint after 3s if not dismissed
-    if (!localStorage.getItem('pwa_ios_dismissed')) {
-      setTimeout(() => {
-        document.getElementById('iosHint').classList.add('show');
-      }, 3000);
-    }
-    return;
-  }
-
-  // Android / Chrome: capture install prompt
+  // Captura prompt nativo do Chrome/Android
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     _deferredPrompt = e;
-    if (!localStorage.getItem('pwa_banner_dismissed')) {
-      setTimeout(() => {
-        document.getElementById('installBanner').classList.add('show');
-      }, 1500);
-    }
   });
 
   window.addEventListener('appinstalled', () => {
-    document.getElementById('installBanner').classList.remove('show');
     _deferredPrompt = null;
+    document.getElementById('pwaInstallBtn').classList.remove('visible');
     showToast('✅ App instalado na tela inicial!');
   });
 }
 
 function doInstall() {
-  if (!_deferredPrompt) return;
-  _deferredPrompt.prompt();
-  _deferredPrompt.userChoice.then(r => {
-    if (r.outcome === 'accepted') showToast('✅ Instalando...');
-    _deferredPrompt = null;
-    document.getElementById('installBanner').classList.remove('show');
-  });
-}
-
-function dismissBanner() {
-  document.getElementById('installBanner').classList.remove('show');
-  localStorage.setItem('pwa_banner_dismissed', '1');
+  if (_deferredPrompt) {
+    // Chrome nativo: usa prompt automático
+    _deferredPrompt.prompt();
+    _deferredPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') showToast('✅ Instalando...');
+      _deferredPrompt = null;
+    });
+  } else {
+    // Fallback: mostra instruções manuais
+    const modal = document.getElementById('installModal');
+    document.getElementById('im-ios').style.display     = _isIOS ? 'block' : 'none';
+    document.getElementById('im-android').style.display = _isIOS ? 'none'  : 'block';
+    modal.classList.add('show');
+  }
 }
 </script>
 </body>
