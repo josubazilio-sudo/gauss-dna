@@ -964,9 +964,7 @@ async def run_cycle(session, last_sig, tf, coins):
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
     MAX_SIGNALS_PER_CYCLE = 2  # máximo 2 sinais por ciclo — preservar capital $180
 
-    if not in_trading_hours():
-        log.info(f"[{tf}] Fora do horário de operação (09-13h e 14-21h BRT) — pulando ciclo")
-        return 0
+    # Crypto opera 24/7 — sem filtro de horário
 
 
     for sym,label,short in coins:
@@ -1029,9 +1027,7 @@ async def run_cycle(session, last_sig, tf, coins):
 
 async def run_mtf_cycle(session, last_sig, coins):
     """Ciclo MTF: 1h confirma direção → 30m encontra entrada no pullback EMA21/50."""
-    if not in_trading_hours():
-        log.info("[MTF] Fora do horário de operação — pulando ciclo MTF")
-        return 0
+    # Crypto opera 24/7 — sem filtro de horário
     now = time.time()
     sent = 0
     cooldown_mtf = 3600  # 1h entre sinais MTF por moeda
