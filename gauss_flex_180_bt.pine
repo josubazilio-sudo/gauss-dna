@@ -422,5 +422,8 @@ plot(showDNAmacd ? dnaSig  : na, "DNA Sig",  color=dnaSigCol,  linewidth=1)
 hline(0, "Zero", color=color.new(color.gray, 55), linestyle=hline.style_dashed)
 
 // Sinais de cruzamento MACD no pane
-plotshape(showDNAmacd and ta.crossover(dnaML,  dnaSig), "MACD Cross↑", style=shape.triangleup,   location=location.bottom, color=color.lime, size=size.tiny)
-plotshape(showDNAmacd and ta.crossunder(dnaML, dnaSig), "MACD Cross↓", style=shape.triangledown, location=location.top,    color=color.red,  size=size.tiny)
+dnaCrossUp   = ta.crossover(dnaML,  dnaSig)
+dnaCrossDown = ta.crossunder(dnaML, dnaSig)
+
+plotshape(showDNAmacd and dnaCrossUp,   "MACD Cross↑", style=shape.triangleup,   location=location.bottom, color=color.lime, size=size.tiny)
+plotshape(showDNAmacd and dnaCrossDown, "MACD Cross↓", style=shape.triangledown, location=location.top,    color=color.red,  size=size.tiny)
