@@ -483,13 +483,17 @@ def analyze(sym, candles):
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 74
     not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 26
 
+    # volume OK: spike claro OU acumulação confirmada por OBV+fluxo
+    vol_ok = v_strong or (obv_bull and f_bull)
+    vol_ok_s = v_strong or (obv_bear and f_bear)
+
     long_flex = (flex_score > 40 and macd_bull_r and adx > 20 and
                  not sideways and not_ext_long_tight and
-                 safe_long and ha_bull and v_strong and (obv_bull or f_bull) and
+                 safe_long and ha_bull and vol_ok and
                  38 < rsi < 68)
     short_flex = (flex_score < -40 and macd_bear_r and adx > 20 and
                   not sideways and not_ext_short_tight and
-                  safe_short and ha_bear and v_strong and (obv_bear or f_bear) and
+                  safe_short and ha_bear and vol_ok_s and
                   32 < rsi < 62)
 
     sig=None; sig_source=""
@@ -548,8 +552,7 @@ def analyze(sym, candles):
             if adx<=20:         b.append(f"adx={adx:.1f}<=20")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
-            if not v_strong:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x)")
-            if not (obv_bull or f_bull): b.append(f"obv={obv_bull}/flow={f_bull}")
+            if not vol_ok:      b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bull} flow={f_bull})")
             if not (38<rsi<68): b.append(f"rsi={rsi:.1f} fora 38-68")
             if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR rsi={rsi:.0f}")
             log.info(f"  LONG-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
@@ -560,8 +563,7 @@ def analyze(sym, candles):
             if adx<=20:         b.append(f"adx={adx:.1f}<=20")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
-            if not v_strong:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x)")
-            if not (obv_bear or f_bear): b.append(f"obv={obv_bear}/flow={f_bear}")
+            if not vol_ok_s:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bear} flow={f_bear})")
             if not (32<rsi<62): b.append(f"rsi={rsi:.1f} fora 32-62")
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
         else:
