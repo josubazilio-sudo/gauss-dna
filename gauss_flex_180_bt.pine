@@ -156,6 +156,9 @@ trendBear = close < ema200 and ema10 < ema21 and ema21 < ema50 and ema50 < ema20
 tbullLoose = ema10 > ema21 and ema21 > ema50
 tbearLoose = ema10 < ema21 and ema21 < ema50
 
+// ATR
+atr14 = ta.atr(14)
+
 // Força da tendência: spread EMA21-EMA50 significativo
 trendStrong = math.abs(ema21 - ema50) / atr14 > 0.35
 
@@ -190,9 +193,6 @@ rsiOkShort = not useRsiZone or (rsiVal > 32 and rsiVal < 62)
 bullsCount = (close>ema21?1:0)+(close[1]>ema21[1]?1:0)+(close[2]>ema21[2]?1:0)+(close[3]>ema21[3]?1:0)+(close[4]>ema21[4]?1:0)
 trendConsBull = bullsCount >= 4
 trendConsBear = bullsCount <= 1
-
-// ATR
-atr14 = ta.atr(14)
 
 // ══════════════════════════════════════════════════
 // SCORE (−145 a +145)
@@ -351,7 +351,7 @@ plot(showLevels and (isLong or isShort) ? tp3Lv  : na, "TP3",   color=color.new(
 // ══════════════════════════════════════════════════
 // PAINEL — Score e Grade
 // ══════════════════════════════════════════════════
-if showPanel and barstate.islast
+if showPanel and barstate.islastconfirmedhistory
     var table panel = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 70), border_color=color.new(color.gray, 50), border_width=1)
     gradeStr = isLong  ? (gradeS_L ? "S" : gradeA_L ? "A" : "B") :
                isShort ? (gradeS_S ? "S" : gradeA_S ? "A" : "B") :
