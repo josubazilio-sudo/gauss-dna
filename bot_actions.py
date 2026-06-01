@@ -965,16 +965,10 @@ async def run_cycle(session, last_sig, tf, coins):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     now=time.time(); sent=0
     cooldown=max(tf_to_minutes(tf)*60, 28800)  # mínimo 8h — 1 sinal por moeda por rodada Actions
-    candidates=[]  # (abs_score, short, score, rsi, adx, reason)
-    MAX_SIGNALS_PER_CYCLE = 2  # máximo 2 sinais por ciclo — preservar capital $180
-
-    # Crypto opera 24/7 — sem filtro de horário
-
+    candidates=[]   # (abs_score, short, score, rsi, adx, reason)
+    pending=[]      # sinais prontos, ordenados por score antes de enviar
 
     for sym,label,short in coins:
-        if sent >= MAX_SIGNALS_PER_CYCLE:
-            log.info(f"[{tf}] Limite de {MAX_SIGNALS_PER_CYCLE} sinais por ciclo atingido")
-            break
         candles=await fetch_candles(session,sym,tf)
         if not candles: await asyncio.sleep(0.4); continue
         result=analyze(sym,candles)
@@ -989,12 +983,12 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # ELITE: só Grade A/S; FLEX: aceita Grade B (como na versão original)
+            # ELITE: só Grade A/S; FLEX: aceita Grade B
             if grade == "B" and SIGNAL_MODE == "ELITE":
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 await asyncio.sleep(0.2); continue
-            # Score mínimo por grade — evita sinal fraco passar pelo FLEX
+            # Score mínimo por grade
             abs_score = abs(result["score"])
             min_score = 80 if grade == "A" else 45 if grade == "B" else 0
             if abs_score < min_score:
@@ -1003,11 +997,8 @@ async def run_cycle(session, last_sig, tf, coins):
                 await asyncio.sleep(0.2); continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
-                last_sig[key]=now; sent+=1
-                await send_telegram(session,sym,label,short,result["sig"],result["price"],
-                                    result["atr"],result["score"],result["rsi"],result["adx"],
-                                    result["trend"],result["kalman_up"],
-                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+                pending.append((abs_score,sym,label,short,result,grade,key))
+                log.info(f"  ✅ {short} [{tf}] sinal válido score={result['score']:+d} — aguardando ranking")
             else:
                 mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
@@ -1015,6 +1006,20 @@ async def run_cycle(session, last_sig, tf, coins):
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.4)
+
+    # Envia os 2 sinais de maior score — preserva capital $180
+    pending.sort(key=lambda x: x[0], reverse=True)
+    for abs_score,sym,label,short,result,grade,key in pending[:2]:
+        last_sig[key]=now; sent+=1
+        log.info(f"  📤 Enviando #{sent}/2: {short} score={result['score']:+d} Grade:{grade}")
+        await send_telegram(session,sym,label,short,result["sig"],result["price"],
+                            result["atr"],result["score"],result["rsi"],result["adx"],
+                            result["trend"],result["kalman_up"],
+                            result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+    # sinais válidos que ficaram de fora por limite
+    for abs_score,sym,label,short,result,grade,key in pending[2:]:
+        log.info(f"  ⏭ {short} score={result['score']:+d} ignorado — limite 2 sinais/ciclo")
+        candidates.append((abs_score,short,result["score"],result["rsi"],result["adx"],"limite-ciclo"))
 
     if sent == 0 and candidates:
         # Top LONG: maior score positivo
