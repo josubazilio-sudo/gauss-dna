@@ -1,6 +1,6 @@
 {
-  "name": "GAUSS+DNA Scanner",
-  "short_name": "GAUSS Scanner",
+  "name": "Cripto",
+  "short_name": "Cripto",
   "description": "Monitor ao vivo de 100 criptomoedas com sinais GAUSS+DNA MTF Pullback",
   "start_url": "/gauss-dna/scanner.html",
   "scope": "/gauss-dna/",
