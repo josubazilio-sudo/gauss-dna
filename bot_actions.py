@@ -388,8 +388,8 @@ def analyze(sym, candles):
     elif cross_10_21_bear: cross_label="EMA10 < EMA21"
     else: cross_label=""
 
-    # Swing levels para stop baseado em estrutura de mercado (8 velas = mais representativo)
-    swing_low=min(lows[-9:-1]); swing_high=max(highs[-9:-1])
+    # Swing levels para stop — 16 velas (8h no 30m) = estrutura mais sólida
+    swing_low=min(lows[-17:-1]); swing_high=max(highs[-17:-1])
 
     # ── TRENDILO (ALMA do % de variação + bandas RMS) ─────────────────────────
     pch = [0.0] + [(closes[i]-closes[i-1])/closes[i]*100 for i in range(1,n)]
@@ -486,13 +486,16 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    long_flex = (flex_score > 40 and (macd_bull_r or ha_bull or trendilo_long) and adx >= 17 and
+    adx_rising = adx > adx_p   # ADX subindo = tendência ganhando força
+    long_flex = (flex_score > 40 and (macd_bull_r or ha_bull) and trendilo_long and
+                 adx >= 17 and adx_rising and
                  not sideways and not_ext_long_tight and
-                 safe_long and vol_ok and
+                 safe_long and vol_ok and f_bull and
                  38 < rsi < 68)
-    short_flex = (flex_score < -40 and (macd_bear_r or ha_bear or trendilo_short) and adx >= 17 and
+    short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and trendilo_short and
+                  adx >= 17 and adx_rising and
                   not sideways and not_ext_short_tight and
-                  safe_short and vol_ok_s and
+                  safe_short and vol_ok_s and f_bear and
                   32 < rsi < 62)
 
     sig=None; sig_source=""
@@ -548,20 +551,23 @@ def analyze(sym, candles):
     if not sig:
         if score > 25:
             b=[]
-            if not macd_bull_r: b.append(f"macd_r=F(ml{'>' if ml>sl_v else '<'}sl hist{'↑' if hist>hist_p else '↓'})")
-            if not ha_bull:     b.append(f"ha=F({'+' if ha[-1]['c']>ha[-1]['o'] else '-'}{'+' if ha[-2]['c']>ha[-2]['o'] else '-'})")
+            if not (macd_bull_r or ha_bull): b.append(f"macd/ha=F")
+            if not trendilo_long: b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
             if adx<17:          b.append(f"adx={adx:.1f}<17")
+            if not adx_rising:  b.append(f"adx caindo({adx:.1f}<{adx_p:.1f})")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
-            if not vol_ok:      b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bull} flow={f_bull})")
+            if not vol_ok:      b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bull})")
+            if not f_bull:      b.append(f"flow=F({flow:.0f})")
             if not (38<rsi<68): b.append(f"rsi={rsi:.1f} fora 38-68")
-            if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR rsi={rsi:.0f}")
+            if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR")
             log.info(f"  LONG-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
         elif score < -25:
             b=[]
-            if not macd_bear_r: b.append(f"macd_r=F(ml{'<' if ml<sl_v else '>'}sl hist{'↓' if hist<hist_p else '↑'})")
-            if not ha_bear:     b.append(f"ha=F({'+' if ha[-1]['c']>ha[-1]['o'] else '-'}{'+' if ha[-2]['c']>ha[-2]['o'] else '-'})")
+            if not (macd_bear_r or ha_bear): b.append(f"macd/ha=F")
+            if not trendilo_short: b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
             if adx<17:          b.append(f"adx={adx:.1f}<17")
+            if not adx_rising:  b.append(f"adx caindo({adx:.1f}<{adx_p:.1f})")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
             if not vol_ok_s:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bear} flow={f_bear})")
