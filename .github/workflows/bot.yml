@@ -35,6 +35,13 @@ jobs:
       - name: Instalar dependências
         run: pip install aiohttp
 
+      - name: Restaurar cooldown entre runs
+        uses: actions/cache@v4
+        with:
+          path: last_signals.json
+          key: last-signals-${{ github.run_id }}
+          restore-keys: last-signals-
+
       - name: Verificar credenciais
         env:
           TG_TOKEN_INPUT: ${{ github.event.inputs.tg_token }}
