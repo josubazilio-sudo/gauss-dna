@@ -670,10 +670,10 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     trend_strong_mtf = abs(e21 - e50) / atr > 0.35
 
     # Zona de pullback: entrada só quando preço está próximo da EMA
-    near_ema21_long  = abs(price - e21) < atr * 1.2 and price > e200   # era 0.9
-    near_ema50_long  = abs(price - e50) < atr * 1.2 and price > e200
-    near_ema21_short = abs(price - e21) < atr * 1.2 and price < e200   # era 0.9
-    near_ema50_short = abs(price - e50) < atr * 1.2 and price < e200
+    near_ema21_long  = abs(price - e21) < atr * 1.5 and price > e200
+    near_ema50_long  = abs(price - e50) < atr * 1.5 and price > e200
+    near_ema21_short = abs(price - e21) < atr * 1.5 and price < e200
+    near_ema50_short = abs(price - e50) < atr * 1.5 and price < e200
 
     in_pullback_long  = near_ema21_long  or near_ema50_long
     in_pullback_short = near_ema21_short or near_ema50_short
@@ -990,8 +990,8 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # ELITE: só Grade A/S; FLEX: aceita B se score mínimo atingido
-            if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 30):
+            # ELITE: só Grade A/S; FLEX: aceita Grade B (como na versão original)
+            if grade == "B" and SIGNAL_MODE == "ELITE":
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 await asyncio.sleep(0.2); continue
