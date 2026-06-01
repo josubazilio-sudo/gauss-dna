@@ -1105,13 +1105,17 @@ async def run_mtf_cycle(session, last_sig, coins):
             await asyncio.sleep(0.3); continue
 
         # BTC filter: não operar altcoin contra BTC (exceto BTC e USDT pairs de stablecoins)
-        if short not in ("BTC", "WBTC"):
+        # Exceção: Grade S (score ≥ 120) bypassa filtro BTC — setup excepcional independe de BTC
+        grade_s_exempt = abs(r1h["score"]) >= 120
+        if short not in ("BTC", "WBTC") and not grade_s_exempt:
             if h1_bull and btc_bear_filter:
                 log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC em queda")
                 await asyncio.sleep(0.2); continue
             if h1_bear and btc_bull_filter:
                 log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC em alta")
                 await asyncio.sleep(0.2); continue
+        elif grade_s_exempt and short not in ("BTC", "WBTC"):
+            log.info(f"[MTF] {short:7s} | Score {r1h['score']:+d} ≥ 120 — Grade S bypass filtro BTC")
 
         direction = "BULL" if h1_bull else "BEAR"
         log.info(f"[MTF] {short:7s} | 1h {direction} ✓4H ✓BTC | Score {r1h['score']:+d} → buscando entrada 30m...")
