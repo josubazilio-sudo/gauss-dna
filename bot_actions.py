@@ -992,6 +992,13 @@ async def run_cycle(session, last_sig, tf, coins):
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 await asyncio.sleep(0.2); continue
+            # Score mínimo por grade — evita sinal fraco passar pelo FLEX
+            abs_score = abs(result["score"])
+            min_score = 80 if grade == "A" else 45 if grade == "B" else 0
+            if abs_score < min_score:
+                log.info(f"  ⚠️ {short} Grade {grade} score {result['score']:+d} < {min_score} mínimo — ignorando")
+                candidates.append((abs_score,short,result["score"],result["rsi"],result["adx"],f"score<{min_score}"))
+                await asyncio.sleep(0.2); continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
                 last_sig[key]=now; sent+=1
