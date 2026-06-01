@@ -199,6 +199,7 @@ tr:hover td{background:rgba(255,255,255,.01)}
         <button class="tf-btn" id="tf4h" onclick="setTF('4h')">4h</button>
       </div>
     </div>
+    <span id="btcBadge" style="display:none;font-size:.6rem;font-weight:700;padding:.2rem .6rem;border-radius:10px"></span>
     <span class="last-upd" id="lastUpd">—</span>
   </div>
 
@@ -385,6 +386,7 @@ COINS.forEach(initCoinState);
 
 let monitoring=false, wsList=[], fetchTimers=[], signals=[], activeSignal=null, sigCount=0, audioCtx=null, currentTF='30m';
 let lastSigTime=(()=>{try{return JSON.parse(localStorage.getItem('lastSigTime')||'{}')}catch(e){return{}}})();
+let btcFilter={bear:false,bull:false};
 const TF_INTERVALS={'5m':10000,'15m':20000,'30m':30000,'1h':60000,'4h':120000};
 
 function setTF(tf){
@@ -644,7 +646,24 @@ function analyzeSymbol(sym){
   const vStrong=vols[n-1]>avgVol*1.1;
 
   const{adx:adxV,pdiBull}=adxFull(candles.slice(-60));
-  const adxOk=adxV>20;
+  const adxOk=adxV>=17;
+
+  // OBV
+  const obvSeries=[];let oRun=0;
+  for(let i=1;i<candles.length;i++){const d=candles[i].c-candles[i-1].c;oRun+=d>0?candles[i].v:d<0?-candles[i].v:0;obvSeries.push(oRun);}
+  const obvLast=obvSeries[obvSeries.length-1]||0;
+  const obvEmaV=ema(obvSeries,21);
+  const obvBull=obvLast>obvEmaV, obvBear=obvLast<obvEmaV;
+  const volOkLong=vStrong||obvBull;
+  const volOkShort=vStrong||obvBear;
+
+  // BTC status (computed from BTC candles)
+  if(sym==='BTCUSDT'){
+    const be21=ema(closes,21),be50=ema(closes,50),be200=ema(closes,200);
+    btcFilter.bear=price<be21&&be21<be50&&price<be200*1.02;
+    btcFilter.bull=price>be21&&be21>be50&&price>be200*0.98;
+    updateBtcBadge();
+  }
 
   const lastC=candles[n-1];
   const sp=Math.max(lastC.h-lastC.l,0.0001);
@@ -688,9 +707,17 @@ function analyzeSymbol(sym){
   const now=Date.now(), cooldown=14400000; // 4h
   const lastT=lastSigTime[sym]||0;
   if(now-lastT>cooldown&&inSession()){
-    const flexLong=flexScore>40&&(mBull||haBull)&&adxOk&&vStrong&&notExtLong&&rsiBull&&fBull;
-    const flexShort=flexScore<-40&&(mBear||haBear)&&adxOk&&vStrong&&notExtShort&&rsiBear&&fBear;
-    const finalSig=mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
+    const flexLong=flexScore>40&&(mBull||haBull)&&adxOk&&volOkLong&&notExtLong&&rsiBull&&fBull;
+    const flexShort=flexScore<-40&&(mBear||haBear)&&adxOk&&volOkShort&&notExtShort&&rsiBear&&fBear;
+    let finalSig=mtfSig||(flexLong?'LONG':flexShort?'SHORT':null);
+    // BTC filter — Grade S (|score|>=120) bypass
+    if(finalSig&&sym!=='BTCUSDT'){
+      const gradeSExempt=Math.abs(flexScore)>=120;
+      if(!gradeSExempt){
+        if(finalSig==='LONG'&&btcFilter.bear) finalSig=null;
+        if(finalSig==='SHORT'&&btcFilter.bull) finalSig=null;
+      }
+    }
     if(finalSig){
       const gradeL=finalSig==='LONG'?(gradeS_L?'S':gradeA_L?'A':null):null;
       const gradeS=finalSig==='SHORT'?(gradeS_S?'S':gradeA_S?'A':null):null;
@@ -902,6 +929,19 @@ async function startScan(){
     </a>`;
   }).join('');
   $('scanBtn').disabled=false; scanRunning=false;
+}
+
+function updateBtcBadge(){
+  const el=$('btcBadge'); if(!el) return;
+  if(btcFilter.bear){
+    el.textContent='🐻 BTC BEAR — LONGs bloqueados';
+    el.style.cssText='display:inline;font-size:.6rem;font-weight:700;padding:.2rem .6rem;border-radius:10px;background:rgba(255,61,90,.15);color:var(--red)';
+  } else if(btcFilter.bull){
+    el.textContent='🟢 BTC BULL';
+    el.style.cssText='display:inline;font-size:.6rem;font-weight:700;padding:.2rem .6rem;border-radius:10px;background:rgba(0,224,144,.15);color:var(--green)';
+  } else {
+    el.style.display='none';
+  }
 }
 
 function toggleTG(){
