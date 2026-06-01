@@ -487,13 +487,13 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    long_flex = (flex_score > 40 and macd_bull_r and adx >= 17 and
+    long_flex = (flex_score > 40 and (macd_bull_r or ha_bull) and adx >= 17 and
                  not sideways and not_ext_long_tight and
-                 safe_long and ha_bull and vol_ok and
+                 safe_long and vol_ok and
                  38 < rsi < 68)
-    short_flex = (flex_score < -40 and macd_bear_r and adx >= 17 and
+    short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and adx >= 17 and
                   not sideways and not_ext_short_tight and
-                  safe_short and ha_bear and vol_ok_s and
+                  safe_short and vol_ok_s and
                   32 < rsi < 62)
 
     sig=None; sig_source=""
@@ -679,9 +679,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     in_pullback_long  = near_ema21_long  or near_ema50_long
     in_pullback_short = near_ema21_short or near_ema50_short
 
-    # Bounce: HA + MACD + volume spike (todos obrigatórios)
-    bounce_long  = macd_bull_r and ha_bull and price > opens[-1] and (vol_surge or obv_bull)
-    bounce_short = macd_bear_r and ha_bear and price < opens[-1] and (vol_surge or obv_bear)
+    # Bounce: MACD OU HA (igual ao app HTML) + preço subindo + volume
+    bounce_long  = (macd_bull_r or ha_bull) and price > opens[-1] and (vol_surge or obv_bull)
+    bounce_short = (macd_bear_r or ha_bear) and price < opens[-1] and (vol_surge or obv_bear)
 
     # Não perseguir: entrada só perto da EMA, não esticado
     not_chasing_long  = (price - e21) / atr < 1.8
@@ -699,18 +699,12 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
-            adx > 22 and adx_rising_mtf and not sideways_mtf and
-            not_chasing_long and rsi_ok_long and trendilo_long_mtf and
-            e200_rising_mtf and came_from_above and ema_aligned_long and
-            kalman_up_mtf and above_vwap_mtf and f_bull_mtf and
-            not_bb_top and trend_strong_mtf):
+            adx >= 17 and not sideways_mtf and
+            not_chasing_long and rsi_ok_long and ema_aligned_long):
         sig = "LONG"
     elif (h1_bear and in_pullback_short and bounce_short and
-              adx > 22 and adx_rising_mtf and not sideways_mtf and
-              not_chasing_short and rsi_ok_short and trendilo_short_mtf and
-              e200_falling_mtf and came_from_below and ema_aligned_short and
-              kalman_down_mtf and below_vwap_mtf and f_bear_mtf and
-              not_bb_bot and trend_strong_mtf):
+              adx >= 17 and not sideways_mtf and
+              not_chasing_short and rsi_ok_short and ema_aligned_short):
         sig = "SHORT"
 
     if not sig:
@@ -740,7 +734,7 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
         quality_mtf += 1 if trendilo_short_mtf else 0
         quality_mtf += 1 if trend_strong_mtf else 0
         quality_mtf += 1 if kalman_accel_dn_mtf else 0
-    grade_mtf = "S" if quality_mtf >= 7 else "A" if quality_mtf >= 5 else "B"
+    grade_mtf = "S" if quality_mtf >= 5 else "A" if quality_mtf >= 3 else "B"
 
     return {
         "sig": sig, "sig_source": f"MTF_PULLBACK [1h→30m] EMA{'21' if near21 else '50'}",
@@ -997,9 +991,9 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # Só Grade A e S — Grade B não tem R:R suficiente para $180
-            if grade == "B":
-                log.info(f"  ⚠️ {short} Grade B ignorado — aguardando setup A/S")
+            # ELITE: só Grade A/S; FLEX: aceita B se score alto o suficiente
+            if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 50):
+                log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 await asyncio.sleep(0.2); continue
             key=f"{sym}_{tf}"
@@ -1080,8 +1074,8 @@ async def run_mtf_cycle(session, last_sig, coins):
         r1h = analyze(sym, candles_1h)
         if not r1h: await asyncio.sleep(0.5); continue
 
-        h1_bull = r1h["score"] > 20 and r1h.get("tbull_r", False) and r1h["adx"] > 18
-        h1_bear = r1h["score"] < -20 and r1h.get("tbear_r", False) and r1h["adx"] > 18
+        h1_bull = r1h["score"] > 20 and r1h.get("tbull_r", False) and r1h["adx"] >= 15
+        h1_bear = r1h["score"] < -20 and r1h.get("tbear_r", False) and r1h["adx"] >= 15
 
         if not (h1_bull or h1_bear):
             log.info(f"[MTF] {short:7s} | 1h sem setup | Score {r1h['score']:+d}")
@@ -1093,8 +1087,8 @@ async def run_mtf_cycle(session, last_sig, coins):
         if len(c1h_arr) >= 10:
             e21_1h_v = ema_series(c1h_arr, 21)
             e50_1h_v = ema_series(c1h_arr, 50)
-            h4_bull = c1h_arr[-1] > e21_1h_v[-1] > e50_1h_v[-1] and c1h_arr[-1] > c1h_arr[-5]
-            h4_bear = c1h_arr[-1] < e21_1h_v[-1] < e50_1h_v[-1] and c1h_arr[-1] < c1h_arr[-5]
+            h4_bull = c1h_arr[-1] > e21_1h_v[-1] > e50_1h_v[-1]
+            h4_bear = c1h_arr[-1] < e21_1h_v[-1] < e50_1h_v[-1]
         else:
             h4_bull = h4_bear = True
         if h1_bull and not h4_bull:
