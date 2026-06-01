@@ -1000,8 +1000,8 @@ keepAlive();
 let _deferredPrompt=null;
 const _ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
 const _standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-// Mostra botão para iOS (sem beforeinstallprompt) quando não instalado
-if(_ios&&!_standalone){const btn=$('installBtn');if(btn)btn.style.display='inline-block';}
+// Mostra botão sempre que não estiver rodando como app instalado
+if(!_standalone){const btn=$('installBtn');if(btn)btn.style.display='inline-block';}
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault(); _deferredPrompt=e;
   const btn=$('installBtn'); if(btn) btn.style.display='inline-block';
@@ -1017,7 +1017,7 @@ function installApp(){
   } else if(_ios){
     alert('iOS: toque em Compartilhar (⬆) → "Adicionar à Tela de Início"');
   } else {
-    alert('Android: toque no menu ⋮ → "Adicionar à tela inicial"\nOu aguarde o banner de instalação aparecer no Chrome.');
+    alert('Android Chrome:\n1. Toque no menu ⋮ (três pontos)\n2. "Adicionar à tela inicial"\n3. Confirme para instalar');
   }
 }
 
