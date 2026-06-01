@@ -1018,23 +1018,38 @@ async def run_cycle(session, last_sig, tf, coins):
         await asyncio.sleep(0.4)
 
     if sent == 0 and candidates:
-        # Ordena por score desc → mostra os mais próximos de disparar sinal LONG
-        candidates.sort(key=lambda x: x[0], reverse=True)
-        top3 = candidates[:3]
-        best_adx = max((adx for _,_,_,_,adx,_ in top3), default=0)
-        best_score = top3[0][0] if top3 else 0
-        motivo = ("📉 ADX baixo — mercado lateral" if best_adx < 17
-                  else "📊 Score insuficiente" if best_score < 50
-                  else "⏳ MACD/HA pendente — aguardando entrada")
-        lines = [f"  {sh}: score {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top3]
-        txt = (f"🔍 [{tf}] Sem sinais no ciclo\n{motivo}\nTop candidatos:\n" + "\n".join(lines) +
-               f"\n⏰ {datetime.now().strftime('%H:%M')}")
-        url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-        try:
-            async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
-                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
-                await r.json()
-        except: pass
+        # Top LONG: maior score positivo
+        top_long  = sorted([c for c in candidates if c[2]>0],  key=lambda x: x[2], reverse=True)[:3]
+        # Top SHORT: maior score negativo (mais bearish)
+        top_short = sorted([c for c in candidates if c[2]<0],  key=lambda x: x[2])[:3]
+
+        lines = []
+        if top_long:
+            best_adx_l = max(adx for _,_,_,_,adx,_ in top_long)
+            best_sc_l  = top_long[0][2]
+            motivo_l   = ("📉 ADX baixo" if best_adx_l < 17
+                          else "📊 Score baixo" if best_sc_l < 50
+                          else "⏳ MACD/HA pendente")
+            lines.append(f"📈 LONG — {motivo_l}")
+            lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_long]
+        if top_short:
+            best_adx_s = max(adx for _,_,_,_,adx,_ in top_short)
+            best_sc_s  = top_short[0][2]
+            motivo_s   = ("📉 ADX baixo" if best_adx_s < 17
+                          else "📊 Score baixo" if best_sc_s > -50
+                          else "⏳ MACD/HA pendente")
+            lines.append(f"📉 SHORT — {motivo_s}")
+            lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_short]
+
+        if lines:
+            txt = (f"🔍 [{tf}] Sem sinais no ciclo\nTop candidatos:\n" + "\n".join(lines) +
+                   f"\n⏰ {datetime.now().strftime('%H:%M')}")
+            url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+            try:
+                async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
+                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
+                    await r.json()
+            except: pass
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
