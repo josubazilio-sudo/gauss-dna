@@ -475,28 +475,15 @@ def analyze(sym, candles):
     flex_bonus_bear = 30 if (tbear_loose and not trend_bear) else 0
     flex_score = score + flex_bonus_bull - flex_bonus_bear
 
-    # ── FILTROS INSTITUCIONAIS ─────────────────────────────────────────────────
-    # sideways: squeeze+ADX<18 = sem direção confirmada; FLEX exige ADX>17 sem squeeze
-    # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
-    sideways = bb_squeeze and adx < 18
-    not_ext_long_tight  = (price - e21) / atr < 3.5 and rsi < 74   # era 2.5
-    not_ext_short_tight = (e21 - price) / atr < 3.5 and rsi > 26   # era 2.5
-
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    adx_rising = adx > adx_p * 0.95   # ADX subindo ou no máximo 5% abaixo do anterior
-    long_flex = (flex_score > 40 and (macd_bull_r or ha_bull) and trendilo_long and
-                 adx >= 17 and adx_rising and
-                 not sideways and not_ext_long_tight and
-                 safe_long and vol_ok and
-                 38 < rsi < 68)
-    short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and trendilo_short and
-                  adx >= 17 and adx_rising and
-                  not sideways and not_ext_short_tight and
-                  safe_short and vol_ok_s and
-                  32 < rsi < 62)
+    # FLEX: base sexta-feira + Trendilo obrigatório + ADX mínimo 15
+    long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and trendilo_long and
+                 adx >= 15 and rsi < 74)
+    short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and trendilo_short and
+                  adx >= 15 and rsi > 26)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -551,28 +538,20 @@ def analyze(sym, candles):
     if not sig:
         if score > 25:
             b=[]
+            if flex_score <= 30:             b.append(f"flex={flex_score:+d}<=30")
             if not (macd_bull_r or ha_bull): b.append(f"macd/ha=F")
-            if not trendilo_long: b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
-            if adx<17:          b.append(f"adx={adx:.1f}<17")
-            if not adx_rising:  b.append(f"adx caindo({adx:.1f}<{adx_p:.1f})")
-            if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
-            if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
-            if not vol_ok:      b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bull})")
-            if not f_bull:      b.append(f"flow=F({flow:.0f})")
-            if not (38<rsi<68): b.append(f"rsi={rsi:.1f} fora 38-68")
-            if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR")
-            log.info(f"  LONG-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
+            if not trendilo_long:            b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
+            if adx < 15:                     b.append(f"adx={adx:.1f}<15")
+            if rsi >= 74:                    b.append(f"rsi={rsi:.1f}>=74")
+            log.info(f"  LONG-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'OK'}")
         elif score < -25:
             b=[]
-            if not (macd_bear_r or ha_bear): b.append(f"macd/ha=F")
-            if not trendilo_short: b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
-            if adx<17:          b.append(f"adx={adx:.1f}<17")
-            if not adx_rising:  b.append(f"adx caindo({adx:.1f}<{adx_p:.1f})")
-            if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
-            if not safe_short:  b.append(f"safe_short=F")
-            if not vol_ok_s:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bear} flow={f_bear})")
-            if not (32<rsi<62): b.append(f"rsi={rsi:.1f} fora 32-62")
-            log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
+            if flex_score >= -30:             b.append(f"flex={flex_score:+d}>=-30")
+            if not (macd_bear_r or ha_bear):  b.append(f"macd/ha=F")
+            if not trendilo_short:            b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
+            if adx < 15:                      b.append(f"adx={adx:.1f}<15")
+            if rsi <= 26:                     b.append(f"rsi={rsi:.1f}<=26")
+            log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'OK'}")
         else:
             log.info(f"  no-sig {sym}: score={score:+d} insuf")
 
