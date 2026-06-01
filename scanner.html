@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>GAUSS+DNA · Scanner 100 Moedas</title>
-<meta name="description" content="Monitor ao vivo de 100 criptomoedas com sinais GAUSS+DNA">
+<title>GAUSS Scanner · Trendilo · 100 Moedas</title>
+<meta name="description" content="Scanner ao vivo: Trendilo, OBV, ADX — sinais LONG/SHORT em 100 criptomoedas">
 <meta name="theme-color" content="#060810">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GAUSS Scanner">
-<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="Scanner">
+<link rel="manifest" href="scanner-manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -165,7 +165,7 @@ tr:hover td{background:rgba(255,255,255,.01)}
     <h1><span class="c1">Scanner</span> <span class="c2">Ao Vivo</span> <span class="c3">⚡</span></h1>
     <p>BTC · ETH · SOL · XRP · BNB · ADA · AVAX · SUI · NEAR · TON · DOGE · PEPE · WIF · SHIB · LINK · INJ<br>
        TAO · FET · RENDER · ARB · OP · UNI · AAVE · LDO · RUNE · PENDLE · MKR · ORDI · ZK · EIGEN · +mais</p>
-    <button id="installBtn" style="display:none;margin-top:.8rem;padding:.5rem 1.4rem;background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.35);border-radius:20px;color:var(--blue);font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.08em;cursor:pointer;text-transform:uppercase" onclick="installApp()">⬇ Instalar App</button>
+    <button id="installBtn" style="display:none;margin-top:.9rem;padding:.6rem 1.8rem;background:linear-gradient(135deg,rgba(59,158,255,.18),rgba(0,212,200,.12));border:1px solid rgba(59,158,255,.5);border-radius:22px;color:var(--blue);font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.08em;cursor:pointer;text-transform:uppercase;box-shadow:0 0 16px rgba(59,158,255,.15)" onclick="installApp()">⬇ Instalar App</button>
   </div>
 
   <div class="tg-card">
@@ -1041,12 +1041,43 @@ window.addEventListener('appinstalled',()=>{
 function installApp(){
   if(_deferredPrompt){
     _deferredPrompt.prompt();
-    _deferredPrompt.userChoice.then(()=>{_deferredPrompt=null;$('installBtn').style.display='none';});
+    _deferredPrompt.userChoice.then(r=>{
+      _deferredPrompt=null;
+      if(r.outcome==='accepted') $('installBtn').style.display='none';
+    });
   } else if(_ios){
-    alert('iOS: toque em Compartilhar (⬆) → "Adicionar à Tela de Início"');
+    showInstallSheet(
+      '📱 Instalar no iPhone / iPad',
+      '1. Toque no ícone <strong>Compartilhar</strong> (⬆) na barra do Safari\n'+
+      '2. Role e toque em <strong>"Adicionar à Tela de Início"</strong>\n'+
+      '3. Confirme tocando em <strong>Adicionar</strong>'
+    );
   } else {
-    alert('Android Chrome:\n1. Toque no menu ⋮ (três pontos)\n2. "Adicionar à tela inicial"\n3. Confirme para instalar');
+    showInstallSheet(
+      '📱 Instalar no Android',
+      '1. Toque no menu <strong>⋮</strong> (três pontos) no Chrome\n'+
+      '2. Toque em <strong>"Adicionar à tela inicial"</strong>\n'+
+      '3. Toque em <strong>Adicionar</strong> para confirmar\n\n'+
+      '<em>O ícone "Scanner" aparecerá na tela inicial.</em>'
+    );
   }
+}
+function showInstallSheet(title,html){
+  let el=$('installSheet');
+  if(!el){
+    el=document.createElement('div');el.id='installSheet';
+    el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:1rem';
+    el.innerHTML=`<div style="background:#0f1525;border:1px solid #1e2d50;border-radius:16px;padding:1.4rem 1.6rem;max-width:420px;width:100%;font-family:DM Mono,monospace">
+      <div style="font-family:Unbounded,sans-serif;font-size:.8rem;font-weight:700;color:#3b9eff;margin-bottom:1rem" id="ishTitle"></div>
+      <div style="font-size:.72rem;color:#ccd8ee;line-height:1.9;white-space:pre-line" id="ishBody"></div>
+      <button onclick="document.getElementById('installSheet').remove()" style="margin-top:1.2rem;width:100%;padding:.62rem;background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.35);border-radius:8px;color:#3b9eff;font-family:Unbounded,sans-serif;font-size:.6rem;font-weight:700;cursor:pointer;letter-spacing:.06em">OK, ENTENDI</button>
+    </div>`;
+    document.body.appendChild(el);
+    el.addEventListener('click',e=>{if(e.target===el)el.remove();});
+  }
+  $('ishTitle').textContent=title;
+  $('ishBody').innerHTML=html;
+  el.style.display='flex';
 }
 
 // ── SERVICE WORKER ──
