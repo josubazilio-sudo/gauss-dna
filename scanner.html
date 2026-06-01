@@ -213,7 +213,7 @@ tr:hover td{background:rgba(255,255,255,.01)}
   <div class="sig-alert" id="sigAlert">
     <div class="sa-top">
       <span class="sa-title" id="saTitle">🟢 SINAL LONG</span>
-      <span class="sa-coin" id="saCoin">BTC/USDT · $--</span>
+      <a class="sa-coin" id="saCoin" href="#" target="_blank" rel="noopener" style="color:var(--muted2);text-decoration:none">BTC/USDT · $--</a>
     </div>
     <div class="sa-levels">
       <div class="sa-lv en" style="grid-column:span 3"><div class="sa-lv-l">💰 Entrada</div><div class="sa-lv-v" id="saEntrada" style="color:var(--yellow)">--</div></div>
@@ -226,6 +226,7 @@ tr:hover td{background:rgba(255,255,255,.01)}
     <div style="font-size:.62rem;color:var(--muted2);margin-bottom:.6rem" id="saRisk">--</div>
     <div class="sa-btns">
       <button class="sa-btn sa-tg" onclick="sendTG()">📲 Telegram</button>
+      <a class="sa-btn" id="tvLink" href="#" target="_blank" rel="noopener" style="background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.3);color:#4f88ff">📊 TradingView</a>
       <a class="sa-btn sa-wa" id="waLink" href="#" target="_blank">💬 WhatsApp</a>
       <button class="sa-btn sa-dis" onclick="dismissSig()">✕ Dispensar</button>
     </div>
@@ -764,7 +765,10 @@ function triggerSignal(sym,type,price,atrVal,score,grade){
   al.className='sig-alert show '+(isL?'long':'short');
   $('saTitle').textContent=(isL?'🟢 SINAL LONG':'🔴 SINAL SHORT')+' — '+coin.short;
   $('saTitle').style.color=isL?'var(--green)':'var(--red)';
-  $('saCoin').textContent=coin.label+' · ⏱ '+currentTF+' · $'+fmtPrice(price,sym);
+  const tvUrl='https://www.tradingview.com/chart/?symbol=BINANCE:'+sym;
+  $('saCoin').textContent=coin.label+' · ⏱ '+currentTF+' · $'+fmtPrice(price,sym)+' 📊';
+  $('saCoin').href=tvUrl;
+  $('tvLink').href=tvUrl;
   $('saEntrada').textContent='$'+fmtPrice(price,sym);
   $('saStop').textContent='$'+stop.toFixed(stop<1?6:2);
   $('saTP1L').textContent=`TP1 (${r1}R)`;
@@ -994,6 +998,10 @@ keepAlive();
 
 // ── PWA INSTALL ──
 let _deferredPrompt=null;
+const _ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const _standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+// Mostra botão para iOS (sem beforeinstallprompt) quando não instalado
+if(_ios&&!_standalone){const btn=$('installBtn');if(btn)btn.style.display='inline-block';}
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault(); _deferredPrompt=e;
   const btn=$('installBtn'); if(btn) btn.style.display='inline-block';
@@ -1006,12 +1014,10 @@ function installApp(){
   if(_deferredPrompt){
     _deferredPrompt.prompt();
     _deferredPrompt.userChoice.then(()=>{_deferredPrompt=null;$('installBtn').style.display='none';});
+  } else if(_ios){
+    alert('iOS: toque em Compartilhar (⬆) → "Adicionar à Tela de Início"');
   } else {
-    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
-    const msg=ios
-      ? 'iOS: toque em Compartilhar (⬆) → "Adicionar à Tela de Início"'
-      : 'Android: toque no menu ⋮ → "Adicionar à tela inicial"\n\nOu abra no Chrome e aguarde o banner de instalação aparecer.';
-    alert(msg);
+    alert('Android: toque no menu ⋮ → "Adicionar à tela inicial"\nOu aguarde o banner de instalação aparecer no Chrome.');
   }
 }
 
