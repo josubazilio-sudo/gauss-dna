@@ -274,10 +274,10 @@ def analyze(sym, candles):
     adx_long_ok=adx>22 and pdi>mdi and adx>adx_p
     adx_short_ok=adx>22 and mdi>pdi and adx>adx_p
 
-    # Volume (v_strong2: 2 velas consecutivas com bom volume = confirmação mais sólida)
+    # Volume (MEXC tem menos liquidez — threshold relativo à própria média)
     vol_ma=sum(vols[-20:])/20
-    v_strong=vols[-1]>vol_ma*1.1
-    v_strong2=v_strong and vols[-2]>vol_ma*0.9
+    v_strong=vols[-1]>vol_ma*1.0       # era 1.1; MEXC: basta igualar a média
+    v_strong2=v_strong and vols[-2]>vol_ma*0.85  # era 0.9
 
     # Flow
     flow_raw=[((c["c"]-c["o"])/max(c["h"]-c["l"],1e-10))*c["v"] for c in candles]
@@ -293,8 +293,8 @@ def analyze(sym, candles):
     # OBV — fluxo acumulado de volume
     obv=obv_calc(closes,vols)
     obv_ema=ema_series(obv,20)
-    obv_bull=obv[-1]>obv_ema[-1] and obv[-1]>obv[-6]
-    obv_bear=obv[-1]<obv_ema[-1] and obv[-1]<obv[-6]
+    obv_bull=obv[-1]>obv_ema[-1]   # MEXC: só compara com EMA (sem obv[-6])
+    obv_bear=obv[-1]<obv_ema[-1]
 
     # VWAP — suporte/resistência dinâmica por volume
     vwap=vwap_calc(candles)
@@ -442,20 +442,20 @@ def analyze(sym, candles):
     # Sinal de cruzamento (sem safe_long — não bloquear crossovers válidos)
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 (macd_bull or ha_bull) and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97)
+                (v_strong or obv_bull) and not_ext_long and price>e200*0.97)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  (macd_bear or ha_bear) and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03)
+                 (v_strong or obv_bear) and not_ext_short and price<e200*1.03)
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and (macd_bull or macd_recovering) and
-                   adx>18 and (f_bull or obv_bull) and v_strong and
+                   adx>18 and (f_bull or obv_bull) and (v_strong or obv_bull) and
                    above_vwap and score>15 and not any_cross_bull)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
-                    adx>18 and (f_bear or obv_bear) and v_strong and
+                    adx>18 and (f_bear or obv_bear) and (v_strong or obv_bear) and
                     below_vwap and score<-15 and not any_cross_bear)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
