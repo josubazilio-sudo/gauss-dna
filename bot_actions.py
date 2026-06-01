@@ -486,16 +486,16 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    adx_rising = adx > adx_p   # ADX subindo = tendência ganhando força
+    adx_rising = adx > adx_p * 0.95   # ADX subindo ou no máximo 5% abaixo do anterior
     long_flex = (flex_score > 40 and (macd_bull_r or ha_bull) and trendilo_long and
                  adx >= 17 and adx_rising and
                  not sideways and not_ext_long_tight and
-                 safe_long and vol_ok and f_bull and
+                 safe_long and vol_ok and
                  38 < rsi < 68)
     short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and trendilo_short and
                   adx >= 17 and adx_rising and
                   not sideways and not_ext_short_tight and
-                  safe_short and vol_ok_s and f_bear and
+                  safe_short and vol_ok_s and
                   32 < rsi < 62)
 
     sig=None; sig_source=""
