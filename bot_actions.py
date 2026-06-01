@@ -462,8 +462,7 @@ def analyze(sym, candles):
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
     macd_bull_r=ml>sl_v and hist>hist_p   # direção + histograma crescendo
     macd_bear_r=ml<sl_v and hist<hist_p
-    # Volume: 2 velas consecutivas com bom volume (mais sólido)
-    vol_avg=vols[-1]>vol_ma*1.1 and vols[-2]>vol_ma*0.9
+    # (vol_avg era variável morta — removida; FLEX usa vol_ok abaixo)
     # Tendência relaxada: sem exigir e50>e200
     tbull_r=price>e200 and e10>e21 and e21>e50
     tbear_r=price<e200 and e10<e21 and e21<e50
@@ -606,13 +605,13 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
 
     rsi = rsi_calc(closes[-50:])
     vol_ma = sum(vols[-20:]) / 20
-    # Volume surge: spike claro no bounce (não só acima da média)
-    vol_surge = vols[-1] > vol_ma * 1.2 and vols[-1] >= vols[-2]
+    # Volume surge: MEXC tem menos liquidez — basta igualar a média (era 1.2x)
+    vol_surge = vols[-1] > vol_ma * 1.0 and vols[-1] >= vols[-2]
 
     obv = obv_calc(closes, vols)
     obv_ema = ema_series(obv, 20)
-    obv_bull = obv[-1] > obv_ema[-1] and obv[-1] > obv[-6]
-    obv_bear = obv[-1] < obv_ema[-1] and obv[-1] < obv[-6]
+    obv_bull = obv[-1] > obv_ema[-1]   # relaxado: sem obv[-6] (igual ao analyze())
+    obv_bear = obv[-1] < obv_ema[-1]
 
     _, _, adx, adx_p_mtf = dmi_adx(candles_15m[-60:])
     adx_rising_mtf = adx > adx_p_mtf
@@ -629,8 +628,8 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     ema_aligned_long  = e10 > e21 > e50
     ema_aligned_short = e10 < e21 < e50
 
-    # Mercado lateral: EMAs coladas + ADX fraco = sem direção
-    sideways_mtf = abs(e21 - e50) / atr < 0.3 and adx < 22
+    # Mercado lateral: igual ao analyze() principal — adx<18 (era 22)
+    sideways_mtf = abs(e21 - e50) / atr < 0.3 and adx < 18
 
     # Trendilo: ALMA do % de variação vs bandas RMS — confirma momentum direcional
     import math as _math
@@ -664,16 +663,16 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     # Bollinger Bands — não entrar em extremo da banda
     bb_u_m, bb_l_m, _, _, _ = bb_calc(closes)
     bb_pos_m = (price - bb_l_m) / max(bb_u_m - bb_l_m, 1e-10)
-    not_bb_top = bb_pos_m < 0.88
-    not_bb_bot = bb_pos_m > 0.12
+    not_bb_top = bb_pos_m < 0.95   # era 0.88; alinhado com analyze() que usa 97%
+    not_bb_bot = bb_pos_m > 0.05
 
     # Força da tendência: EMA21 suficientemente afastada da EMA50
     trend_strong_mtf = abs(e21 - e50) / atr > 0.35
 
     # Zona de pullback: entrada só quando preço está próximo da EMA
-    near_ema21_long  = abs(price - e21) < atr * 0.9 and price > e200
+    near_ema21_long  = abs(price - e21) < atr * 1.2 and price > e200   # era 0.9
     near_ema50_long  = abs(price - e50) < atr * 1.2 and price > e200
-    near_ema21_short = abs(price - e21) < atr * 0.9 and price < e200
+    near_ema21_short = abs(price - e21) < atr * 1.2 and price < e200   # era 0.9
     near_ema50_short = abs(price - e50) < atr * 1.2 and price < e200
 
     in_pullback_long  = near_ema21_long  or near_ema50_long
@@ -694,8 +693,8 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_short = swing_high + atr * 0.5
 
     # RSI zone: evita entrar em extremos, mantém na zona saudável de pullback
-    rsi_ok_long  = 40 < rsi < 65
-    rsi_ok_short = 35 < rsi < 60
+    rsi_ok_long  = 38 < rsi < 68   # alinhado com FLEX (era 40-65)
+    rsi_ok_short = 32 < rsi < 62   # alinhado com FLEX (era 35-60)
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
