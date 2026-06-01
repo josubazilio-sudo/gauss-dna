@@ -479,8 +479,8 @@ def analyze(sym, candles):
     # sideways: squeeze+ADX<18 = sem direção confirmada; FLEX exige ADX>17 sem squeeze
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
-    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 74
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 26
+    not_ext_long_tight  = (price - e21) / atr < 3.5 and rsi < 74   # era 2.5
+    not_ext_short_tight = (e21 - price) / atr < 3.5 and rsi > 26   # era 2.5
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
@@ -990,8 +990,8 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # ELITE: só Grade A/S; FLEX: aceita B se score alto o suficiente
-            if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 50):
+            # ELITE: só Grade A/S; FLEX: aceita B se score mínimo atingido
+            if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 30):
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 await asyncio.sleep(0.2); continue
