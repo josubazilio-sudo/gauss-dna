@@ -480,10 +480,13 @@ def analyze(sym, candles):
     vol_ok_s = v_strong or obv_bear
 
     # FLEX: base sexta-feira + Trendilo obrigatório + ADX mínimo 15
+    # not near_bb_top/bot + not ext_ema21: evita comprar no topo e vender no fundo
     long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and trendilo_long and
-                 adx >= 15 and rsi < 74)
+                 adx >= 15 and rsi < 74 and
+                 not near_bb_top and not ext_above_ema21)
     short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and trendilo_short and
-                  adx >= 15 and rsi > 26)
+                  adx >= 15 and rsi > 26 and
+                  not near_bb_bot and not ext_below_ema21)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -543,6 +546,8 @@ def analyze(sym, candles):
             if not trendilo_long:            b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
             if adx < 15:                     b.append(f"adx={adx:.1f}<15")
             if rsi >= 74:                    b.append(f"rsi={rsi:.1f}>=74")
+            if near_bb_top:                  b.append(f"bb_top({price_bb_pos:.2f})")
+            if ext_above_ema21:              b.append(f"ext_ema21={(price-e21)/atr:.1f}ATR")
             log.info(f"  LONG-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'OK'}")
         elif score < -25:
             b=[]
@@ -551,6 +556,8 @@ def analyze(sym, candles):
             if not trendilo_short:            b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
             if adx < 15:                      b.append(f"adx={adx:.1f}<15")
             if rsi <= 26:                     b.append(f"rsi={rsi:.1f}<=26")
+            if near_bb_bot:                   b.append(f"bb_bot({price_bb_pos:.2f})")
+            if ext_below_ema21:               b.append(f"ext_ema21={(e21-price)/atr:.1f}ATR")
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'OK'}")
         else:
             log.info(f"  no-sig {sym}: score={score:+d} insuf")
