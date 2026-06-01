@@ -381,7 +381,7 @@ const COINS=[
 
 const state={};
 function initCoinState(c){
-  state[c.sym]={price:0,change:0,prevPrice:0,score:0,trend:'—',macd:'—',rsi:0,vol:'—',adx:0,candles:[],atr:0,sig:null,loading:true,h1Setup:null,h1Candles:[]};
+  state[c.sym]={price:0,change:0,prevPrice:0,score:0,trend:'—',macd:'—',rsi:0,vol:'—',adx:0,candles:[],atr:0,sig:null,loading:true,h1Setup:null,h1Candles:[],trendilo:'—',obv:'—'};
 }
 COINS.forEach(initCoinState);
 
@@ -413,6 +413,8 @@ function buildCards(){
         <div class="cc-bar-row"><span class="cc-bar-lbl">MACD</span><div class="cc-bar-track"><div class="cc-bar-fill" id="bMACD_${c.sym}" style="width:0%"></div></div><span class="cc-bar-val" id="vMACD_${c.sym}">—</span></div>
         <div class="cc-bar-row"><span class="cc-bar-lbl">RSI</span><div class="cc-bar-track"><div class="cc-bar-fill" id="bRSI_${c.sym}" style="width:0%"></div></div><span class="cc-bar-val" id="vRSI_${c.sym}">—</span></div>
         <div class="cc-bar-row"><span class="cc-bar-lbl">ADX</span><div class="cc-bar-track"><div class="cc-bar-fill" id="bADX_${c.sym}" style="width:0%"></div></div><span class="cc-bar-val" id="vADX_${c.sym}">—</span></div>
+        <div class="cc-bar-row"><span class="cc-bar-lbl">Trendilo</span><div class="cc-bar-track"><div class="cc-bar-fill" id="bTrl_${c.sym}" style="width:0%"></div></div><span class="cc-bar-val" id="vTrl_${c.sym}">—</span></div>
+        <div class="cc-bar-row"><span class="cc-bar-lbl">OBV</span><div class="cc-bar-track"><div class="cc-bar-fill" id="bOBV_${c.sym}" style="width:0%"></div></div><span class="cc-bar-val" id="vOBV_${c.sym}">—</span></div>
       </div>
       <div class="cc-score"><span class="cc-score-lbl">Score GAUSS</span><span class="cc-score-val" id="scr_${c.sym}" style="color:var(--muted2)">—</span></div>
       <div class="cc-status loading" id="sta_${c.sym}">carregando...</div>
@@ -438,6 +440,10 @@ function updateCard(sym){
   const adxPct=Math.min(100,s.adx*2);
   const adxCol=s.adx>20?'var(--orange)':'var(--muted)';
   setBar('bADX_'+sym,'vADX_'+sym,adxPct,adxCol,s.adx.toFixed(0),adxCol);
+  const trL=s.trendilo==='LONG',trS=s.trendilo==='SHORT';
+  setBar('bTrl_'+sym,'vTrl_'+sym,trL?78:trS?78:30,trL?'var(--cyan)':trS?'var(--orange)':'var(--muted)',s.trendilo||'—',trL?'var(--cyan)':trS?'var(--orange)':'var(--muted2)');
+  const oB=s.obv==='BULL',oBr=s.obv==='BEAR';
+  setBar('bOBV_'+sym,'vOBV_'+sym,oB?70:oBr?70:35,oB?'var(--blue)':oBr?'var(--red)':'var(--muted)',s.obv||'—',oB?'var(--blue)':oBr?'var(--red)':'var(--muted2)');
   const sc=s.score;
   const scEl=$('scr_'+sym); scEl.textContent=sc; scEl.style.color=sc>50?'var(--green)':sc<-50?'var(--red)':'var(--yellow)';
   card.className='coin-card'+(sc>30?' bull':sc<-30?' bear':'');
@@ -535,6 +541,14 @@ async function fetchCandles(sym){
 
 // ── ANALYSIS ──
 function emaArr(arr,p){const k=2/(p+1);const out=[arr[0]];for(let i=1;i<arr.length;i++)out.push(arr[i]*k+out[i-1]*(1-k));return out;}
+function almaArr(src,length=50,offset=0.85,sigma=6){
+  const m=Math.floor(offset*(length-1)),s=length/sigma;
+  const w=Array.from({length:length},(_,i)=>Math.exp(-Math.pow(i-m,2)/(2*s*s)));
+  const wSum=w.reduce((a,b)=>a+b,0);
+  const out=new Array(length-1).fill(NaN);
+  for(let i=length-1;i<src.length;i++){let val=0;for(let j=0;j<length;j++)val+=w[j]*src[i-length+1+j];out.push(val/wSum);}
+  return out;
+}
 function ema(arr,p){return emaArr(arr,p).slice(-1)[0];}
 function rsiCalc(closes,p=14){
   let g=0,l=0;
@@ -658,6 +672,18 @@ function analyzeSymbol(sym){
   const volOkLong=vStrong||obvBull;
   const volOkShort=vStrong||obvBear;
 
+  // Trendilo — ALMA(50) of % price change vs RMS bands
+  const pch=[0];
+  for(let i=1;i<closes.length;i++) pch.push((closes[i]-closes[i-1])/closes[i]*100);
+  const avpch=almaArr(pch,50,0.85,6);
+  const rmsArr=avpch.map((_,i)=>{
+    const sl=avpch.slice(Math.max(0,i-49),i+1).filter(v=>!isNaN(v));
+    return sl.length?Math.sqrt(sl.reduce((a,v)=>a+v*v,0)/sl.length):0;
+  });
+  const tLast=avpch[avpch.length-1], rLast=rmsArr[rmsArr.length-1];
+  const trendiloLong=!isNaN(tLast)&&tLast>rLast;
+  const trendiloShort=!isNaN(tLast)&&tLast<-rLast;
+
   // BTC status (computed from BTC candles)
   if(sym==='BTCUSDT'){
     const be21=ema(closes,21),be50=ema(closes,50),be200=ema(closes,200);
@@ -681,6 +707,8 @@ function analyzeSymbol(sym){
   s.trend=tBull?'BULL':tBear?'BEAR':'NEUTRO';
   s.macd=mBull?'BULL':mBear?'BEAR':'NEUTRO';
   s.rsi=rsiV; s.vol=vStrong?'FORTE':'FRACO'; s.adx=adxV;
+  s.trendilo=trendiloLong?'LONG':trendiloShort?'SHORT':'NEUTRO';
+  s.obv=obvBull?'BULL':obvBear?'BEAR':'NEUTRO';
   s.score=flexScore; s.atr=atrCalc(candles.slice(-20)); s.loading=false;
 
   // Grade A/S
