@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GAUSS Sinais</title>
+<link rel="manifest" href="gauss-manifest.json">
+<meta name="theme-color" content="#060810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GAUSS Sinais">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{--bg:#060810;--s1:#0d1117;--s2:#111827;--green:#00e676;--red:#ff5252;--yellow:#ffd740;--blue:#4fc3f7;--orange:#ff9800;--purple:#ce93d8;--text:#e8eaf6;--text2:#6c757d;--border:rgba(255,255,255,0.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding:.8rem;min-height:100vh}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
+.hdr-title{font-size:.9rem;font-weight:700;color:var(--blue)}
+.hdr-right{display:flex;gap:.4rem;align-items:center}
+.btc-badge{font-size:.6rem;font-weight:700;padding:.2rem .5rem;border-radius:10px}
+.btc-bull{background:rgba(0,230,118,.15);color:var(--green)}
+.btc-bear{background:rgba(255,82,82,.15);color:var(--red)}
+.btc-neu{background:rgba(108,117,125,.15);color:var(--text2)}
+#installBtn{display:none;padding:.25rem .7rem;background:rgba(79,195,247,.1);border:1px solid rgba(79,195,247,.35);border-radius:12px;color:var(--blue);font-size:.58rem;font-weight:700;cursor:pointer}
+
+/* Controls */
+.ctrl{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.7rem;align-items:center}
+.tf{padding:.25rem .6rem;border-radius:14px;border:1px solid var(--border);background:var(--s2);color:var(--text2);font-size:.62rem;cursor:pointer;font-weight:600}
+.tf.on{border-color:var(--blue);color:var(--blue);background:rgba(79,195,247,.08)}
+.scan-btn{padding:.25rem .7rem;border-radius:14px;border:1px solid var(--green);background:rgba(0,230,118,.08);color:var(--green);font-size:.62rem;font-weight:700;cursor:pointer;margin-left:auto}
+
+/* Progress */
+.prog{height:2px;background:var(--s2);border-radius:1px;margin-bottom:.5rem;overflow:hidden}
+.prog-f{height:100%;background:var(--blue);width:0;transition:width .2s}
+.status{font-size:.6rem;color:var(--text2);text-align:center;margin-bottom:.6rem}
+
+/* BTC info bar */
+.btc-bar{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:.5rem .8rem;display:flex;gap:1rem;align-items:center;margin-bottom:.8rem;flex-wrap:wrap}
+.btc-info{font-size:.65rem;color:var(--text2)}
+.btc-info span{font-weight:700;color:var(--text)}
+
+/* Section headers */
+.sec{font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:.8rem 0 .4rem;display:flex;align-items:center;gap:.4rem}
+.sec-long{color:var(--green)}.sec-short{color:var(--red)}
+.sec-count{font-size:.55rem;background:var(--s2);padding:.1rem .35rem;border-radius:8px;color:var(--text2);font-weight:400}
+
+/* Signal card */
+.sig-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:.75rem;margin-bottom:.5rem;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.sig-card.long{border-color:rgba(0,230,118,.5)}
+.sig-card.short{border-color:rgba(255,82,82,.5)}
+.sig-card.grade-s{box-shadow:0 0 12px rgba(0,230,118,.15)}
+.sig-card.grade-s.short{box-shadow:0 0 12px rgba(255,82,82,.15)}
+.sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem}
+.sc-name{font-size:.95rem;font-weight:700}
+.sc-name.long{color:var(--green)}.sc-name.short{color:var(--red)}
+.sc-badges{display:flex;gap:.3rem;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-size:.52rem;font-weight:700;padding:.1rem .35rem;border-radius:4px}
+.b-grade-s{background:rgba(0,230,118,.2);color:var(--green)}
+.b-grade-a{background:rgba(255,215,64,.2);color:var(--yellow)}
+.b-grS-btc{background:rgba(206,147,216,.2);color:var(--purple)}
+.b-tf{background:rgba(79,195,247,.12);color:var(--blue)}
+.sc-price{font-size:.75rem;color:var(--text2);margin-bottom:.4rem}
+.sc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem;margin-bottom:.4rem}
+.sc-box{background:var(--s2);border-radius:6px;padding:.35rem;text-align:center}
+.sc-box-lbl{font-size:.5rem;color:var(--text2);text-transform:uppercase;margin-bottom:.1rem}
+.sc-box-val{font-size:.72rem;font-weight:700}
+.sc-box-sl .sc-box-val{color:var(--red)}
+.sc-box-tp1 .sc-box-val{color:var(--blue)}
+.sc-box-fin .sc-box-val{color:var(--green)}
+.sc-entry{background:rgba(255,215,64,.06);border:1px solid rgba(255,215,64,.2);border-radius:6px;padding:.35rem;text-align:center;margin-bottom:.4rem}
+.sc-entry-lbl{font-size:.5rem;color:var(--yellow);text-transform:uppercase}
+.sc-entry-val{font-size:.85rem;font-weight:700;color:var(--yellow)}
+.sc-stats{display:flex;gap:.3rem;font-size:.55rem;color:var(--text2);flex-wrap:wrap}
+.sc-stat{background:var(--s2);padding:.1rem .3rem;border-radius:4px}
+.sc-tg{width:100%;margin-top:.5rem;padding:.35rem;background:rgba(79,195,247,.08);border:1px solid rgba(79,195,247,.2);border-radius:6px;color:var(--blue);font-size:.62rem;font-weight:700;cursor:pointer;letter-spacing:.04em}
+
+/* Candidate grid */
+.cand-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
+@media(min-width:560px){.cand-grid{grid-template-columns:repeat(3,1fr)}}
+.cand-card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:.55rem;cursor:pointer}
+.cand-card:hover{border-color:rgba(79,195,247,.3)}
+.cand-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem}
+.cand-name{font-size:.8rem;font-weight:700;text-decoration:none;color:var(--text)}
+.cand-name:hover{color:var(--blue)}
+.cand-dir{font-size:.52rem;font-weight:700;padding:.08rem .3rem;border-radius:3px}
+.cand-dir.long{background:rgba(0,230,118,.1);color:var(--green)}
+.cand-dir.short{background:rgba(255,82,82,.1);color:var(--red)}
+.cand-score{font-size:.85rem;font-weight:700;margin-bottom:.2rem}
+.cand-score.pos{color:var(--green)}.cand-score.neg{color:var(--red)}
+.cbar{height:3px;background:var(--s2);border-radius:2px;overflow:hidden;margin-bottom:.15rem}
+.cbar-f{height:100%;border-radius:2px}
+.cbar-lbl{display:flex;justify-content:space-between;font-size:.52rem;color:var(--text2)}
+.cand-dots{display:flex;flex-wrap:wrap;gap:.15rem;margin-top:.2rem}
+.dot{font-size:.48rem;padding:.08rem .22rem;border-radius:2px}
+.dot.ok{background:rgba(0,230,118,.1);color:var(--green)}
+.dot.fail{background:rgba(255,255,255,.03);color:var(--text2)}
+
+/* Timer */
+.timer{font-size:.58rem;color:var(--text2);text-align:center;margin-top:.6rem;padding:.3rem;background:var(--s1);border-radius:6px}
+
+/* Empty state */
+.empty{text-align:center;padding:1.5rem;color:var(--text2);font-size:.7rem}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-title">⚡ GAUSS Sinais</div>
+  <div class="hdr-right">
+    <div class="btc-badge btc-neu" id="btcBadge">BTC ...</div>
+    <button id="installBtn" onclick="installApp()">📲 Instalar</button>
+  </div>
+</div>
+
+<div class="ctrl">
+  <button class="tf" onclick="setTF(this,'5m')">5m</button>
+  <button class="tf" onclick="setTF(this,'15m')">15m</button>
+  <button class="tf on" onclick="setTF(this,'30m')">30m</button>
+  <button class="tf" onclick="setTF(this,'1h')">1h</button>
+  <button class="tf" onclick="setTF(this,'4h')">4h</button>
+  <button class="scan-btn" onclick="startScan()">🔄 Varrer</button>
+</div>
+
+<div class="prog"><div class="prog-f" id="prog"></div></div>
+<div class="status" id="status">Iniciando...</div>
+
+<div id="btcBar" class="btc-bar" style="display:none">
+  <div class="btc-info">BTC <span id="btcPrice">—</span></div>
+  <div class="btc-info">EMA21 <span id="btcE21">—</span></div>
+  <div class="btc-info">EMA50 <span id="btcE50">—</span></div>
+  <div class="btc-info" id="btcStatus">—</div>
+</div>
+
+<div id="signals"></div>
+<div id="candidates"></div>
+<div class="timer" id="timer"></div>
+
+<script>
+const COINS=[
+  {sym:'BTCUSDT',s:'BTC'},{sym:'ETHUSDT',s:'ETH'},{sym:'BNBUSDT',s:'BNB'},
+  {sym:'XRPUSDT',s:'XRP'},{sym:'TRXUSDT',s:'TRX'},{sym:'ADAUSDT',s:'ADA'},
+  {sym:'SOLUSDT',s:'SOL'},{sym:'AVAXUSDT',s:'AVAX'},{sym:'SUIUSDT',s:'SUI'},
+  {sym:'APTUSDT',s:'APT'},{sym:'NEARUSDT',s:'NEAR'},{sym:'TONUSDT',s:'TON'},
+  {sym:'SEIUSDT',s:'SEI'},{sym:'TIAUSDT',s:'TIA'},{sym:'ALGOUSDT',s:'ALGO'},
+  {sym:'VETUSDT',s:'VET'},{sym:'HBARUSDT',s:'HBAR'},{sym:'STXUSDT',s:'STX'},
+  {sym:'ICPUSDT',s:'ICP'},{sym:'XLMUSDT',s:'XLM'},{sym:'KASUSDT',s:'KAS'},
+  {sym:'EGLDUSDT',s:'EGLD'},{sym:'FLOWUSDT',s:'FLOW'},{sym:'CFXUSDT',s:'CFX'},
+  {sym:'LINKUSDT',s:'LINK'},{sym:'INJUSDT',s:'INJ'},{sym:'JUPUSDT',s:'JUP'},
+  {sym:'ARBUSDT',s:'ARB'},{sym:'OPUSDT',s:'OP'},{sym:'UNIUSDT',s:'UNI'},
+  {sym:'AAVEUSDT',s:'AAVE'},{sym:'ENAUSDT',s:'ENA'},{sym:'ONDOUSDT',s:'ONDO'},
+  {sym:'GRTUSDT',s:'GRT'},{sym:'LDOUSDT',s:'LDO'},{sym:'RUNEUSDT',s:'RUNE'},
+  {sym:'PENDLEUSDT',s:'PENDLE'},{sym:'CAKEUSDT',s:'CAKE'},{sym:'CRVUSDT',s:'CRV'},
+  {sym:'DYDXUSDT',s:'DYDX'},{sym:'SNXUSDT',s:'SNX'},{sym:'GMXUSDT',s:'GMX'},
+  {sym:'COMPUSDT',s:'COMP'},{sym:'STGUSDT',s:'STG'},{sym:'FETUSDT',s:'FET'},
+  {sym:'TAOUSDT',s:'TAO'},{sym:'RENDERUSDT',s:'RENDER'},{sym:'WLDUSDT',s:'WLD'},
+  {sym:'IMXUSDT',s:'IMX'},{sym:'EIGENUSDT',s:'EIGEN'},{sym:'DOGEUSDT',s:'DOGE'},
+  {sym:'PEPEUSDT',s:'PEPE'},{sym:'WIFUSDT',s:'WIF'},{sym:'SHIBUSDT',s:'SHIB'},
+  {sym:'FLOKIUSDT',s:'FLOKI'},{sym:'BONKUSDT',s:'BONK'},{sym:'NOTUSDT',s:'NOT'},
+  {sym:'POPCATUSDT',s:'POPCAT'},{sym:'DOGSUSDT',s:'DOGS'},{sym:'TURBOUSDT',s:'TURBO'},
+  {sym:'MEWUSDT',s:'MEW'},{sym:'BOMEUSDT',s:'BOME'},{sym:'DOTUSDT',s:'DOT'},
+  {sym:'ATOMUSDT',s:'ATOM'},{sym:'LTCUSDT',s:'LTC'},{sym:'FILUSDT',s:'FIL'},
+  {sym:'ARUSDT',s:'AR'},{sym:'BCHUSDT',s:'BCH'},{sym:'ETCUSDT',s:'ETC'},
+  {sym:'XTZUSDT',s:'XTZ'},{sym:'QNTUSDT',s:'QNT'},{sym:'BATUSDT',s:'BAT'},
+  {sym:'STRKUSDT',s:'STRK'},{sym:'ZETAUSDT',s:'ZETA'},{sym:'PYTHUSDT',s:'PYTH'},
+  {sym:'WUSDT',s:'W'},{sym:'ZKUSDT',s:'ZK'},{sym:'MNTUSDT',s:'MNT'},
+  {sym:'ZROUSDT',s:'ZRO'},{sym:'SAGAUSDT',s:'SAGA'},{sym:'BLURUSDT',s:'BLUR'},
+  {sym:'ORDIUSDT',s:'ORDI'},{sym:'AXSUSDT',s:'AXS'},{sym:'SANDUSDT',s:'SAND'},
+  {sym:'MANAUSDT',s:'MANA'},{sym:'GALAUSDT',s:'GALA'},{sym:'CHZUSDT',s:'CHZ'},
+  {sym:'APEUSDT',s:'APE'},{sym:'YGGUSDT',s:'YGG'},{sym:'MAGICUSDT',s:'MAGIC'},
+  {sym:'IOUSDT',s:'IO'},{sym:'ROSEUSDT',s:'ROSE'},{sym:'IOTXUSDT',s:'IOTX'},
+  {sym:'CELOUSDT',s:'CELO'},{sym:'JASMYUSDT',s:'JASMY'},{sym:'LPTUSDT',s:'LPT'},
+  {sym:'AEVOUSDT',s:'AEVO'},{sym:'BERAUSDT',s:'BERA'},{sym:'LISTAUSDT',s:'LISTA'},
+  {sym:'REZUSDT',s:'REZ'},
+];
+
+let tf='30m', scanTimer=null, cdTimer=null, nextRef=0;
+let btcBull=false, btcBear=false, btcPrice=0, btcE21=0, btcE50=0;
+let lastSig={};
+
+// ── Math ─────────────────────────────────────────────────────────
+const ema=(a,p)=>{const k=2/(p+1);let o=[a[0]];for(let i=1;i<a.length;i++)o.push(a[i]*k+o[i-1]*(1-k));return o;}
+function rsi(c,p=14){let g=0,l=0;for(let i=1;i<=p;i++){const d=c[i]-c[i-1];d>0?g+=d:l-=d;}let ag=g/p,al=l/p;for(let i=p+1;i<c.length;i++){const d=c[i]-c[i-1];ag=(ag*(p-1)+(d>0?d:0))/p;al=(al*(p-1)+(d<0?-d:0))/p;}return al===0?100:100-(100/(1+ag/al));}
+function adx(h,l,c,p=14){const tr=[],pm=[],nm=[];for(let i=1;i<c.length;i++){tr.push(Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));const u=h[i]-h[i-1],d=l[i-1]-l[i];pm.push(u>d&&u>0?u:0);nm.push(d>u&&d>0?d:0);}const n=tr.length,st=ema(tr,p),sp=ema(pm,p),sn=ema(nm,p),pdi=sp[n-1]/st[n-1]*100,ndi=sn[n-1]/st[n-1]*100;return{v:Math.abs(pdi-ndi)/(pdi+ndi||1)*100,pdi,ndi};}
+function macd(c){const m=ema(c,12).map((v,i)=>v-ema(c,26)[i]),s=ema(m,9);return{m,s,h:m.map((v,i)=>v-s[i])};}
+function ha(kk){const r=[];for(let i=0;i<kk.length;i++){const c=kk[i],hc=(c.o+c.h+c.l+c.c)/4,ho=i===0?(c.o+c.c)/2:(r[i-1].o+r[i-1].c)/2;r.push({o:ho,c:hc,bull:hc>ho});}return r;}
+function obv(c,v){let o=0,r=[0];for(let i=1;i<c.length;i++){o+=c[i]>c[i-1]?v[i]:c[i]<c[i-1]?-v[i]:0;r.push(o);}return r;}
+function bb(c,p=20,m=2){const n=c.length,e=ema(c,p)[n-1],sl=c.slice(n-p),mn=sl.reduce((a,b)=>a+b,0)/p,sd=Math.sqrt(sl.reduce((a,b)=>a+(b-mn)**2,0)/p);return{u:e+m*sd,l:e-m*sd,b:e,w:2*m*sd/(e||1)};}
+
+// ── Analyse ───────────────────────────────────────────────────────
+function analyse(sym,kk){
+  if(!kk||kk.length<60)return null;
+  const c=kk.map(k=>k.c),h=kk.map(k=>k.h),l=kk.map(k=>k.l),v=kk.map(k=>k.v),n=c.length,p=c[n-1];
+  const e21=ema(c,21),e50=ema(c,50),e200=ema(c,200),e10=ema(c,10);
+  const {m:ml,s:sl,h:ht}=macd(c);
+  const haK=ha(kk);
+  const {v:adxV,pdi,ndi}=adx(h,l,c);
+  const {u:bbU,l:bbL,b:bbB,w:bbW}=bb(c);
+  const obvA=obv(c,v);
+  const rsiV=rsi(c);
+  const atr=h.slice(-14).reduce((a,hi,i)=>a+hi-l.slice(-14)[i],0)/14;
+  const volMA=v.slice(-20).reduce((a,b)=>a+b,0)/20;
+  const vL=v[n-1];
+  const e21v=e21[n-1],e50v=e50[n-1],e200v=e200[n-1],e10v=e10[n-1];
+  const mlV=ml[n-1],slV=sl[n-1],htV=ht[n-1],htP=ht[n-2];
+
+  // Score
+  let sc=0;
+  if(p>e21v)sc+=20;else sc-=20;
+  if(p>e50v)sc+=15;else sc-=15;
+  if(p>e200v)sc+=15;else sc-=15;
+  if(mlV>slV)sc+=20;else sc-=20;
+  if(htV>0)sc+=10;else sc-=10;
+  if(htV>htP)sc+=10;else sc-=10;
+  if(rsiV>50)sc+=10;else sc-=10;
+  if(pdi>ndi)sc+=15;else sc-=15;
+  const obvBull=obvA[n-1]>obvA[n-5],obvBear=obvA[n-1]<obvA[n-5];
+  if(obvBull)sc+=10;else sc-=10;
+  const vStr=vL>volMA*1.1;
+  if(vStr)sc+=10;else sc-=10;
+
+  // Conditions (same as bot)
+  const macdBull=mlV>slV&&htV>htP,macdBear=mlV<slV&&htV<htP;
+  const adxOk=adxV>=17;
+  const haBull=haK[n-1].bull&&haK[n-2].bull,haBear=!haK[n-1].bull&&!haK[n-2].bull;
+  const volOkL=vStr||obvBull,volOkS=vStr||obvBear;
+  const rsiOkL=rsiV>=38&&rsiV<=68,rsiOkS=rsiV>=32&&rsiV<=62;
+  const squeeze=bbW<0.04,notSide=!(squeeze&&adxV<18);
+  const nearTop=(p-bbB)/(bbU-bbB||1)>0.8,nearBot=(bbB-p)/(bbB-bbL||1)>0.8;
+  const extUp=(p-e21v)/(atr||1)>2.5,extDn=(e21v-p)/(atr||1)>2.5;
+  const volDry=vL<volMA*0.5;
+  const safeLong=!nearTop&&!extUp&&!volDry&&rsiV<80;
+  const safeShort=!nearBot&&!extDn&&!volDry&&rsiV>20;
+  const scOkL=sc>40,scOkS=sc<-40;
+  const gradeS=Math.abs(sc)>=120;
+  const gradeA=Math.abs(sc)>=80;
+  const grade=gradeS?'S':gradeA?'A':null;
+
+  // BTC filter (with Grade S bypass)
+  const btcBlock=sym!=='BTCUSDT';
+  const longBtcOk=!btcBlock||(btcBull||(!btcBear)||gradeS);
+  const shortBtcOk=!btcBlock||(btcBear||(!btcBull)||gradeS);
+
+  const NAMES=['Score','MACD','ADX','HA','Vol','RSI','Seguro','Tendência'];
+  const LC=[scOkL,macdBull,adxOk,haBull,volOkL,rsiOkL,safeLong,notSide];
+  const SC=[scOkS,macdBear,adxOk,haBear,volOkS,rsiOkS,safeShort,notSide];
+  const longFlex=LC.every(Boolean)&&longBtcOk;
+  const shortFlex=SC.every(Boolean)&&shortBtcOk;
+
+  const sig=longFlex?'LONG':shortFlex?'SHORT':null;
+  const lMet=LC.filter(Boolean).length,sMet=SC.filter(Boolean).length;
+
+  // Targets
+  const risk=(p-p*(1-atr/p*1.5));
+  const sl_l=p-atr*1.5,tp1_l=p+atr*2.5,tp2_l=p+atr*4.5,fin_l=p+atr*8;
+  const sl_s=p+atr*1.5,tp1_s=p-atr*2.5,tp2_s=p-atr*4.5,fin_s=p-atr*8;
+
+  return{sym,s:sym.replace('USDT',''),price:p,sc,adxV,rsiV,sig,grade,gradeS,
+    lMet,sMet,NAMES,LC,SC,longBtcBlocked:btcBear&&!gradeS&&btcBlock,
+    sl:sig==='LONG'?sl_l:sl_s, tp1:sig==='LONG'?tp1_l:tp1_s,
+    tp2:sig==='LONG'?tp2_l:tp2_s, fin:sig==='LONG'?fin_l:fin_s};
+}
+
+// ── Fetch ─────────────────────────────────────────────────────────
+async function fc(sym){
+  try{const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${tf}&limit=250`);if(!r.ok)return null;const d=await r.json();return d.map(k=>({o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));}catch{return null;}
+}
+
+async function fetchBTC(){
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=250');
+    if(!r.ok)return;
+    const d=await r.json(),kk=d.map(k=>({c:+k[4]})),c=kk.map(k=>k.c),n=c.length;
+    const e21v=ema(c,21)[n-1],e50v=ema(c,50)[n-1],e200v=ema(c,200)[n-1],pv=c[n-1];
+    btcPrice=pv;btcE21=e21v;btcE50=e50v;
+    btcBull=pv>e21v&&e21v>e50v&&pv>e200v*0.98;
+    btcBear=pv<e21v&&e21v<e50v&&pv<e200v*1.02;
+    const badge=document.getElementById('btcBadge');
+    const bar=document.getElementById('btcBar');
+    badge.className='btc-badge '+(btcBull?'btc-bull':btcBear?'btc-bear':'btc-neu');
+    badge.textContent='BTC '+(btcBull?'BULL ↑':btcBear?'BEAR ↓':'NEUTRO');
+    document.getElementById('btcPrice').textContent='$'+pv.toLocaleString('pt-BR',{maximumFractionDigits:0});
+    document.getElementById('btcE21').textContent='$'+e21v.toFixed(0);
+    document.getElementById('btcE50').textContent='$'+e50v.toFixed(0);
+    document.getElementById('btcStatus').textContent=btcBear?'🐻 LONGs bloqueados (Grade S livre)':btcBull?'🟢 LONGs liberados':'⚪ Neutro';
+    bar.style.display='flex';
+  }catch{}
+}
+
+// ── Format ────────────────────────────────────────────────────────
+const fp=p=>p>=1000?p.toFixed(0):p>=1?p.toFixed(2):p>=0.001?p.toFixed(4):p.toFixed(6);
+
+// ── Scan ──────────────────────────────────────────────────────────
+async function startScan(){
+  clearTimeout(scanTimer);clearInterval(cdTimer);
+  document.getElementById('signals').innerHTML='';
+  document.getElementById('candidates').innerHTML='';
+  document.getElementById('timer').textContent='';
+  const fired=[],cands=[];
+  await fetchBTC();
+  for(let i=0;i<COINS.length;i++){
+    const coin=COINS[i];
+    document.getElementById('prog').style.width=Math.round((i+1)/COINS.length*100)+'%';
+    document.getElementById('status').textContent=`${i+1}/100 — ${coin.s} (${tf})`;
+    const kk=await fc(coin.sym);
+    if(kk){const r=analyse(coin.sym,kk);if(r){r.grade?fired.push(r):cands.push(r);}}
+    await new Promise(res=>setTimeout(res,70));
+  }
+  document.getElementById('prog').style.width='0';
+  const now=new Date();
+  document.getElementById('status').textContent=`✅ ${now.toLocaleTimeString('pt-BR')} — ${fired.length} sinal(is) encontrado(s)`;
+  renderSignals(fired);
+  renderCandidates(cands);
+  nextRef=Date.now()+3600000;
+  cdTimer=setInterval(()=>{
+    const l=Math.max(0,nextRef-Date.now());
+    const m=String(Math.floor(l/60000)).padStart(2,'0'),s=String(Math.floor((l%60000)/1000)).padStart(2,'0');
+    document.getElementById('timer').textContent=`⏱ Próxima varredura em ${m}:${s}`;
+    if(l===0){clearInterval(cdTimer);startScan();}
+  },1000);
+}
+
+// ── TG config ─────────────────────────────────────────────────────
+const getTok=()=>localStorage.getItem('tg_tok')||'';
+const getCid=()=>localStorage.getItem('tg_cid')||'';
+
+async function sendTG(r){
+  const tok=getTok(),cid=getCid();
+  if(!tok||!cid){alert('Configure o Telegram nas configurações do Scanner Cripto');return;}
+  const esc=v=>String(v).replace(/[_*[\]()~`>#+=|{}.!\\-]/g,'\\$&');
+  const d=n=>n.toFixed(n<1?6:2);
+  const text=`🚨 *GAUSS\\+DNA — ${r.sig}*\n\n🎯 *${esc(r.s)}*${r.gradeS?' 🏆 GRADE S':' ⭐ GRADE A'}\n\n💰 Entrada: \`$${esc(fp(r.price))}\`\n🛑 Stop: \`$${esc(d(r.sl))}\`\n🎯 TP1: \`$${esc(d(r.tp1))}\`\n✨ TP2: \`$${esc(d(r.tp2))}\`\n🏆 Final: \`$${esc(d(r.fin))}\`\n\n📊 Score: *${esc(r.sc)}* \\| RSI ${esc(r.rsiV.toFixed(0))} \\| ADX ${esc(r.adxV.toFixed(0))}\n⏰ ${esc(new Date().toLocaleTimeString('pt-BR'))}`;
+  try{
+    const res=await fetch(`https://api.telegram.org/bot${tok}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:cid,text,parse_mode:'MarkdownV2'})});
+    const dd=await res.json();
+    alert(dd.ok?'✅ Enviado!':'❌ '+dd.description);
+  }catch{alert('❌ Erro ao enviar');}
+}
+
+// ── Render Signals ────────────────────────────────────────────────
+function renderSignals(list){
+  const el=document.getElementById('signals');
+  const longs=list.filter(r=>r.sig==='LONG').sort((a,b)=>b.sc-a.sc);
+  const shorts=list.filter(r=>r.sig==='SHORT').sort((a,b)=>a.sc-b.sc);
+  let html='';
+  if(longs.length){
+    html+=`<div class="sec sec-long">🟢 SINAIS LONG <span class="sec-count">${longs.length}</span></div>`;
+    longs.forEach(r=>html+=sigCard(r));
+  }
+  if(shorts.length){
+    html+=`<div class="sec sec-short">🔴 SINAIS SHORT <span class="sec-count">${shorts.length}</span></div>`;
+    shorts.forEach(r=>html+=sigCard(r));
+  }
+  if(!list.length) html=`<div class="empty">Nenhum sinal ativo no momento<br><small>Aguardando confirmação MACD + HA</small></div>`;
+  el.innerHTML=html;
+}
+
+function sigCard(r){
+  const isL=r.sig==='LONG';
+  const btcTag=r.gradeS&&(btcBear&&isL||btcBull&&!isL)?`<span class="badge b-grS-btc">S bypass BTC</span>`:'';
+  return`<div class="sig-card ${isL?'long':'short'} ${r.gradeS?'grade-s':''}">
+  <div class="sc-top">
+    <div class="sc-name ${isL?'long':'short'}">${isL?'▲':'▼'} ${r.s} ${isL?'LONG':'SHORT'}</div>
+    <div class="sc-badges">
+      ${r.gradeS?'<span class="badge b-grade-s">🏆 S</span>':'<span class="badge b-grade-a">⭐ A</span>'}
+      ${btcTag}
+      <span class="badge b-tf">${tf}</span>
+    </div>
+  </div>
+  <div class="sc-price">$${fp(r.price)} · Score ${r.sc>0?'+':''}${r.sc} · RSI ${r.rsiV.toFixed(0)}</div>
+  <div class="sc-entry"><div class="sc-entry-lbl">💰 ENTRADA</div><div class="sc-entry-val">$${fp(r.price)}</div></div>
+  <div class="sc-grid">
+    <div class="sc-box sc-box-sl"><div class="sc-box-lbl">Stop Loss</div><div class="sc-box-val">$${fp(r.sl)}</div></div>
+    <div class="sc-box sc-box-tp1"><div class="sc-box-lbl">TP1 (2.5R)</div><div class="sc-box-val">$${fp(r.tp1)}</div></div>
+    <div class="sc-box sc-box-fin"><div class="sc-box-lbl">Final (8R)</div><div class="sc-box-val">$${fp(r.fin)}</div></div>
+  </div>
+  <div class="sc-stats">
+    <span class="sc-stat">ADX ${r.adxV.toFixed(0)}</span>
+    <span class="sc-stat">RSI ${r.rsiV.toFixed(0)}</span>
+    <span class="sc-stat">Score ${r.sc>0?'+':''}${r.sc}</span>
+    ${r.gradeS?'<span class="sc-stat" style="color:var(--purple)">Grade S</span>':'<span class="sc-stat" style="color:var(--yellow)">Grade A</span>'}
+  </div>
+  <button class="sc-tg" onclick='sendTG(${JSON.stringify({sym:r.sym,s:r.s,sig:r.sig,price:r.price,sl:r.sl,tp1:r.tp1,tp2:r.tp2,fin:r.fin,sc:r.sc,rsiV:r.rsiV,adxV:r.adxV,gradeS:r.gradeS})})'>📲 Enviar Telegram</button>
+</div>`;
+}
+
+// ── Render Candidates ─────────────────────────────────────────────
+function renderCandidates(list){
+  const el=document.getElementById('candidates');
+  const longs=list.filter(r=>r.lMet>r.sMet&&r.sc>0).sort((a,b)=>(b.lMet-a.lMet)||b.sc-a.sc).slice(0,10);
+  const shorts=list.filter(r=>r.sMet>=r.lMet&&r.sc<0).sort((a,b)=>(b.sMet-a.sMet)||a.sc-b.sc).slice(0,10);
+  let html='';
+  if(longs.length){
+    html+=`<div class="sec sec-long">📈 CANDIDATOS LONG <span class="sec-count">${longs.length}</span></div><div class="cand-grid">`;
+    longs.forEach(r=>html+=candCard(r,'LONG'));
+    html+='</div>';
+  }
+  if(shorts.length){
+    html+=`<div class="sec sec-short">📉 CANDIDATOS SHORT <span class="sec-count">${shorts.length}</span></div><div class="cand-grid">`;
+    shorts.forEach(r=>html+=candCard(r,'SHORT'));
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+
+function candCard(r,dir){
+  const isL=dir==='LONG';
+  const met=isL?r.lMet:r.sMet,tot=r.NAMES.length,pct=met/tot*100;
+  const conds=isL?r.LC:r.SC;
+  const bc=met===tot?'var(--green)':met>=tot-1?'var(--orange)':met>=tot-2?'var(--yellow)':'var(--text2)';
+  const tv=`https://www.tradingview.com/chart/?symbol=BINANCE:${r.sym}`;
+  const dots=r.NAMES.map((n,i)=>`<span class="dot ${conds[i]?'ok':'fail'}">${n}</span>`).join('');
+  return`<div class="cand-card">
+  <div class="cand-top">
+    <a class="cand-name" href="${tv}" target="_blank">${r.s}</a>
+    <span class="cand-dir ${isL?'long':'short'}">${dir}</span>
+  </div>
+  <div class="cand-score ${isL?'pos':'neg'}">${r.sc>0?'+':''}${r.sc}</div>
+  <div class="cbar"><div class="cbar-f" style="width:${pct}%;background:${bc}"></div></div>
+  <div class="cbar-lbl"><span>${met}/${tot}</span><span>ADX ${r.adxV.toFixed(0)} RSI ${r.rsiV.toFixed(0)}</span></div>
+  <div class="cand-dots">${dots}</div>
+</div>`;
+}
+
+// ── PWA ───────────────────────────────────────────────────────────
+let _ie=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_ie=e;document.getElementById('installBtn').style.display='inline-block';});
+function installApp(){if(!_ie)return;_ie.prompt();_ie.userChoice.then(()=>{_ie=null;document.getElementById('installBtn').style.display='none';});}
+window.addEventListener('appinstalled',()=>{document.getElementById('installBtn').style.display='none';});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+startScan();
+</script>
+</body>
+</html>
