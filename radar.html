@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GAUSS+DNA — Radar</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#060810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GAUSS Radar">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 :root{--bg:#060810;--s1:#0d1117;--s2:#111827;--green:#00e676;--red:#ff5252;--yellow:#ffd740;--blue:#4fc3f7;--orange:#ff9800;--text:#e8eaf6;--text2:#6c757d;--border:rgba(255,255,255,0.06)}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -45,6 +51,7 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;pad
 .stats{display:flex;gap:.3rem;font-size:.55rem;color:var(--text2);flex-wrap:wrap}
 .stat{background:var(--s2);padding:.1rem .28rem;border-radius:3px}
 .timer{font-size:.6rem;color:var(--text2);text-align:center;margin-top:.5rem}
+#installBtn{display:none;margin:.5rem auto 0;padding:.35rem 1.1rem;background:rgba(79,195,247,.1);border:1px solid rgba(79,195,247,.35);border-radius:20px;color:var(--blue);font-size:.62rem;font-weight:700;letter-spacing:.06em;cursor:pointer;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -52,6 +59,7 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;pad
 <div class="header">
   <div class="title">📡 GAUSS+DNA — Radar de Sinais</div>
   <div class="subtitle" id="subTitle">Top 20 moedas mais próximas de sinal</div>
+  <button id="installBtn" onclick="installApp()">📲 Instalar App</button>
 </div>
 
 <div class="controls">
@@ -326,6 +334,22 @@ function renderGrid(coins){
 }
 
 startScan();
+
+// ── PWA Install ──────────────────────────────────────────────────
+let _installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();_installEvt=e;
+  document.getElementById('installBtn').style.display='inline-block';
+});
+function installApp(){
+  if(!_installEvt)return;
+  _installEvt.prompt();
+  _installEvt.userChoice.then(()=>{_installEvt=null;document.getElementById('installBtn').style.display='none';});
+}
+window.addEventListener('appinstalled',()=>{document.getElementById('installBtn').style.display='none';});
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 </script>
 </body>
 </html>

@@ -25,6 +25,12 @@
       "description": "Monitor 100 moedas ao vivo"
     },
     {
+      "name": "Radar",
+      "short_name": "Radar",
+      "url": "/gauss-dna/radar.html",
+      "description": "Top 20 moedas próximas de sinal"
+    },
+    {
       "name": "Calculadora",
       "short_name": "Calc",
       "url": "/gauss-dna/risk.html",
