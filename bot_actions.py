@@ -452,11 +452,11 @@ def analyze(sym, candles):
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and (macd_bull or macd_recovering) and
                    adx>18 and (f_bull or obv_bull) and (v_strong or obv_bull) and
-                   above_vwap and score>15 and not any_cross_bull)
+                   above_vwap and score>15 and rsi < 68 and not any_cross_bull)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and (v_strong or obv_bear) and
-                    below_vwap and score<-15 and not any_cross_bear)
+                    below_vwap and score<-15 and rsi > 32 and not any_cross_bear)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -486,7 +486,7 @@ def analyze(sym, candles):
                  adx >= 15 and rsi < 74 and
                  not near_bb_top and not ext_above_ema21 and not exhaustion_top)
     short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and trendilo_short and
-                  adx >= 15 and rsi > 26 and
+                  adx >= 15 and rsi > 32 and
                   not near_bb_bot and not ext_below_ema21 and not exhaustion_bot)
 
     sig=None; sig_source=""
