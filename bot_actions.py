@@ -486,11 +486,11 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    long_flex = (flex_score > 40 and (macd_bull_r or ha_bull) and adx >= 17 and
+    long_flex = (flex_score > 40 and (macd_bull_r or ha_bull or trendilo_long) and adx >= 17 and
                  not sideways and not_ext_long_tight and
                  safe_long and vol_ok and
                  38 < rsi < 68)
-    short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and adx >= 17 and
+    short_flex = (flex_score < -40 and (macd_bear_r or ha_bear or trendilo_short) and adx >= 17 and
                   not sideways and not_ext_short_tight and
                   safe_short and vol_ok_s and
                   32 < rsi < 62)
@@ -523,6 +523,7 @@ def analyze(sym, candles):
         quality_score += 1 if e200_rising else 0
         quality_score += 1 if f_strong else 0
         quality_score += 1 if trend_consistent_bull else 0
+        quality_score += 1 if trendilo_long else 0
     elif sig == "SHORT":
         quality_score += 3 if trend_bear else 0
         quality_score += 2 if align_bear else 0
@@ -536,6 +537,7 @@ def analyze(sym, candles):
         quality_score += 1 if e200_falling else 0
         quality_score += 1 if f_strong else 0
         quality_score += 1 if trend_consistent_bear else 0
+        quality_score += 1 if trendilo_short else 0
 
     if quality_score >= 14:   signal_grade = "S"   # setup perfeito
     elif quality_score >= 10: signal_grade = "A"   # setup sólido
@@ -678,9 +680,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     in_pullback_long  = near_ema21_long  or near_ema50_long
     in_pullback_short = near_ema21_short or near_ema50_short
 
-    # Bounce: MACD OU HA (igual ao app HTML) + preço subindo + volume
-    bounce_long  = (macd_bull_r or ha_bull) and price > opens[-1] and (vol_surge or obv_bull)
-    bounce_short = (macd_bear_r or ha_bear) and price < opens[-1] and (vol_surge or obv_bear)
+    # Bounce: MACD OU HA OU Trendilo + preço subindo + volume
+    bounce_long  = (macd_bull_r or ha_bull or trendilo_long_mtf) and price > opens[-1] and (vol_surge or obv_bull)
+    bounce_short = (macd_bear_r or ha_bear or trendilo_short_mtf) and price < opens[-1] and (vol_surge or obv_bear)
 
     # Não perseguir: entrada só perto da EMA, não esticado
     not_chasing_long  = (price - e21) / atr < 1.8
