@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GAUSS+DNA — Radar</title>
+<style>
+:root{--bg:#060810;--s1:#0d1117;--s2:#111827;--green:#00e676;--red:#ff5252;--yellow:#ffd740;--blue:#4fc3f7;--orange:#ff9800;--text:#e8eaf6;--text2:#6c757d;--border:rgba(255,255,255,0.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding:.8rem;min-height:100vh}
+.header{text-align:center;margin-bottom:.8rem}
+.title{font-size:1rem;font-weight:700;color:var(--blue);letter-spacing:.05em}
+.subtitle{font-size:.65rem;color:var(--text2);margin-top:.2rem}
+.controls{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin-bottom:.7rem}
+.tf-btn{padding:.3rem .7rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--text2);font-size:.65rem;cursor:pointer;font-weight:600}
+.tf-btn.active{border-color:var(--blue);color:var(--blue);background:rgba(79,195,247,.1)}
+.refresh-btn{padding:.3rem .8rem;border-radius:20px;border:1px solid var(--green);background:rgba(0,230,118,.08);color:var(--green);font-size:.65rem;cursor:pointer;font-weight:600}
+.prog-bar{height:3px;background:var(--s2);border-radius:2px;margin-bottom:.5rem;overflow:hidden}
+.prog-fill{height:100%;background:var(--blue);width:0%;transition:width .2s}
+.status{text-align:center;font-size:.62rem;color:var(--text2);margin-bottom:.8rem}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
+@media(min-width:560px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:800px){.grid{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:1100px){.grid{grid-template-columns:repeat(5,1fr)}}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:.7rem;transition:border-color .2s}
+.card.pronto{border-color:rgba(0,230,118,.5)}
+.card.quase{border-color:rgba(255,152,0,.4)}
+.card.perto{border-color:rgba(255,215,64,.25)}
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem}
+.coin-link{font-size:.85rem;font-weight:700;color:var(--text);text-decoration:none}
+.coin-link:hover{color:var(--blue)}
+.badge{font-size:.55rem;font-weight:700;padding:.1rem .35rem;border-radius:4px}
+.badge.long{background:rgba(0,230,118,.12);color:var(--green)}
+.badge.short{background:rgba(255,82,82,.12);color:var(--red)}
+.score{font-size:.95rem;font-weight:700;margin-bottom:.3rem}
+.score.pos{color:var(--green)}.score.neg{color:var(--red)}.score.neu{color:var(--text2)}
+.prox-wrap{margin-bottom:.35rem}
+.prox-bar{height:4px;background:var(--s2);border-radius:2px;overflow:hidden}
+.prox-fill{height:100%;border-radius:2px;transition:width .5s}
+.prox-lbl{display:flex;justify-content:space-between;font-size:.58rem;color:var(--text2);margin-top:.15rem}
+.conds{display:flex;flex-wrap:wrap;gap:.2rem;margin-bottom:.3rem}
+.cond{font-size:.5rem;padding:.1rem .28rem;border-radius:3px}
+.cond.ok{background:rgba(0,230,118,.1);color:var(--green)}
+.cond.fail{background:rgba(255,255,255,.04);color:var(--text2)}
+.stats{display:flex;gap:.3rem;font-size:.55rem;color:var(--text2);flex-wrap:wrap}
+.stat{background:var(--s2);padding:.1rem .28rem;border-radius:3px}
+.timer{font-size:.6rem;color:var(--text2);text-align:center;margin-top:.5rem}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">📡 GAUSS+DNA — Radar de Sinais</div>
+  <div class="subtitle" id="subTitle">Top 20 moedas mais próximas de sinal</div>
+</div>
+
+<div class="controls">
+  <button class="tf-btn" onclick="setTF(this,'5m')">5m</button>
+  <button class="tf-btn" onclick="setTF(this,'15m')">15m</button>
+  <button class="tf-btn active" onclick="setTF(this,'30m')">30m</button>
+  <button class="tf-btn" onclick="setTF(this,'1h')">1h</button>
+  <button class="tf-btn" onclick="setTF(this,'4h')">4h</button>
+  <button class="refresh-btn" onclick="startScan()">🔄 Atualizar</button>
+</div>
+
+<div class="prog-bar"><div class="prog-fill" id="prog"></div></div>
+<div class="status" id="status">Iniciando varredura...</div>
+<div class="grid" id="grid"></div>
+<div class="timer" id="timer"></div>
+
+<script>
+const COINS=[
+  {sym:'BTCUSDT',short:'BTC'},{sym:'ETHUSDT',short:'ETH'},{sym:'BNBUSDT',short:'BNB'},
+  {sym:'XRPUSDT',short:'XRP'},{sym:'TRXUSDT',short:'TRX'},{sym:'ADAUSDT',short:'ADA'},
+  {sym:'SOLUSDT',short:'SOL'},{sym:'AVAXUSDT',short:'AVAX'},{sym:'SUIUSDT',short:'SUI'},
+  {sym:'APTUSDT',short:'APT'},{sym:'NEARUSDT',short:'NEAR'},{sym:'TONUSDT',short:'TON'},
+  {sym:'SEIUSDT',short:'SEI'},{sym:'TIAUSDT',short:'TIA'},{sym:'ALGOUSDT',short:'ALGO'},
+  {sym:'VETUSDT',short:'VET'},{sym:'HBARUSDT',short:'HBAR'},{sym:'STXUSDT',short:'STX'},
+  {sym:'ICPUSDT',short:'ICP'},{sym:'XLMUSDT',short:'XLM'},{sym:'KASUSDT',short:'KAS'},
+  {sym:'EGLDUSDT',short:'EGLD'},{sym:'FLOWUSDT',short:'FLOW'},{sym:'CFXUSDT',short:'CFX'},
+  {sym:'LINKUSDT',short:'LINK'},{sym:'INJUSDT',short:'INJ'},{sym:'JUPUSDT',short:'JUP'},
+  {sym:'ARBUSDT',short:'ARB'},{sym:'OPUSDT',short:'OP'},{sym:'UNIUSDT',short:'UNI'},
+  {sym:'AAVEUSDT',short:'AAVE'},{sym:'ENAUSDT',short:'ENA'},{sym:'ONDOUSDT',short:'ONDO'},
+  {sym:'GRTUSDT',short:'GRT'},{sym:'LDOUSDT',short:'LDO'},{sym:'RUNEUSDT',short:'RUNE'},
+  {sym:'PENDLEUSDT',short:'PENDLE'},{sym:'CAKEUSDT',short:'CAKE'},{sym:'CRVUSDT',short:'CRV'},
+  {sym:'DYDXUSDT',short:'DYDX'},{sym:'SNXUSDT',short:'SNX'},{sym:'GMXUSDT',short:'GMX'},
+  {sym:'COMPUSDT',short:'COMP'},{sym:'STGUSDT',short:'STG'},{sym:'FETUSDT',short:'FET'},
+  {sym:'TAOUSDT',short:'TAO'},{sym:'RENDERUSDT',short:'RENDER'},{sym:'WLDUSDT',short:'WLD'},
+  {sym:'IMXUSDT',short:'IMX'},{sym:'EIGENUSDT',short:'EIGEN'},{sym:'DOGEUSDT',short:'DOGE'},
+  {sym:'PEPEUSDT',short:'PEPE'},{sym:'WIFUSDT',short:'WIF'},{sym:'SHIBUSDT',short:'SHIB'},
+  {sym:'FLOKIUSDT',short:'FLOKI'},{sym:'BONKUSDT',short:'BONK'},{sym:'NOTUSDT',short:'NOT'},
+  {sym:'POPCATUSDT',short:'POPCAT'},{sym:'DOGSUSDT',short:'DOGS'},{sym:'TURBOUSDT',short:'TURBO'},
+  {sym:'MEWUSDT',short:'MEW'},{sym:'BOMEUSDT',short:'BOME'},{sym:'DOTUSDT',short:'DOT'},
+  {sym:'ATOMUSDT',short:'ATOM'},{sym:'LTCUSDT',short:'LTC'},{sym:'FILUSDT',short:'FIL'},
+  {sym:'ARUSDT',short:'AR'},{sym:'BCHUSDT',short:'BCH'},{sym:'ETCUSDT',short:'ETC'},
+  {sym:'XTZUSDT',short:'XTZ'},{sym:'QNTUSDT',short:'QNT'},{sym:'BATUSDT',short:'BAT'},
+  {sym:'STRKUSDT',short:'STRK'},{sym:'ZETAUSDT',short:'ZETA'},{sym:'PYTHUSDT',short:'PYTH'},
+  {sym:'WUSDT',short:'W'},{sym:'ZKUSDT',short:'ZK'},{sym:'MNTUSDT',short:'MNT'},
+  {sym:'ZROUSDT',short:'ZRO'},{sym:'SAGAUSDT',short:'SAGA'},{sym:'BLURUSDT',short:'BLUR'},
+  {sym:'ORDIUSDT',short:'ORDI'},{sym:'AXSUSDT',short:'AXS'},{sym:'SANDUSDT',short:'SAND'},
+  {sym:'MANAUSDT',short:'MANA'},{sym:'GALAUSDT',short:'GALA'},{sym:'CHZUSDT',short:'CHZ'},
+  {sym:'APEUSDT',short:'APE'},{sym:'YGGUSDT',short:'YGG'},{sym:'MAGICUSDT',short:'MAGIC'},
+  {sym:'IOUSDT',short:'IO'},{sym:'ROSEUSDT',short:'ROSE'},{sym:'IOTXUSDT',short:'IOTX'},
+  {sym:'CELOUSDT',short:'CELO'},{sym:'JASMYUSDT',short:'JASMY'},{sym:'LPTUSDT',short:'LPT'},
+  {sym:'AEVOUSDT',short:'AEVO'},{sym:'BERAUSDT',short:'BERA'},{sym:'LISTAUSDT',short:'LISTA'},
+  {sym:'REZUSDT',short:'REZ'},
+];
+
+let tf='30m', scanTimer=null, countdownTimer=null, nextRefresh=0;
+
+function setTF(btn,newTF){
+  tf=newTF;
+  document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  startScan();
+}
+
+// ── Indicators ──────────────────────────────────────────────────
+function ema(arr,p){
+  const k=2/(p+1);let o=[arr[0]];
+  for(let i=1;i<arr.length;i++)o.push(arr[i]*k+o[i-1]*(1-k));
+  return o;
+}
+function calcRSI(c,p=14){
+  let g=0,l=0;
+  for(let i=1;i<=p;i++){const d=c[i]-c[i-1];if(d>0)g+=d;else l-=d;}
+  let ag=g/p,al=l/p;
+  for(let i=p+1;i<c.length;i++){const d=c[i]-c[i-1];ag=(ag*(p-1)+(d>0?d:0))/p;al=(al*(p-1)+(d<0?-d:0))/p;}
+  return al===0?100:100-(100/(1+ag/al));
+}
+function calcADX(h,l,c,p=14){
+  const tr=[],pm=[],nm=[];
+  for(let i=1;i<c.length;i++){
+    tr.push(Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));
+    const u=h[i]-h[i-1],d=l[i-1]-l[i];
+    pm.push(u>d&&u>0?u:0);nm.push(d>u&&d>0?d:0);
+  }
+  const n=tr.length;
+  const str=ema(tr,p),spm=ema(pm,p),snm=ema(nm,p);
+  const pdi=spm[n-1]/str[n-1]*100,ndi=snm[n-1]/str[n-1]*100;
+  return{val:Math.abs(pdi-ndi)/(pdi+ndi||1)*100,pdi,ndi};
+}
+function calcMACD(c){
+  const m=ema(c,12).map((v,i)=>v-ema(c,26)[i]);
+  const s=ema(m,9),h=m.map((v,i)=>v-s[i]);
+  return{m,s,h};
+}
+function calcHA(candles){
+  const ha=[];
+  for(let i=0;i<candles.length;i++){
+    const c=candles[i],haC=(c.o+c.h+c.l+c.c)/4;
+    const haO=i===0?(c.o+c.c)/2:(ha[i-1].o+ha[i-1].c)/2;
+    ha.push({o:haO,c:haC,bull:haC>haO});
+  }
+  return ha;
+}
+function calcOBV(c,v){
+  let obv=0,arr=[0];
+  for(let i=1;i<c.length;i++){obv+=c[i]>c[i-1]?v[i]:c[i]<c[i-1]?-v[i]:0;arr.push(obv);}
+  return arr;
+}
+function calcBB(c,p=20,m=2){
+  const n=c.length,e=ema(c,p)[n-1];
+  const sl=c.slice(n-p),mn=sl.reduce((a,b)=>a+b,0)/p;
+  const sd=Math.sqrt(sl.reduce((a,b)=>a+(b-mn)**2,0)/p);
+  return{upper:e+m*sd,lower:e-m*sd,basis:e,w:(2*m*sd)/(e||1)};
+}
+
+// ── Analyse one coin ─────────────────────────────────────────────
+function analyse(candles){
+  if(!candles||candles.length<60)return null;
+  const c=candles.map(k=>k.c),h=candles.map(k=>k.h),l=candles.map(k=>k.l),v=candles.map(k=>k.v);
+  const n=c.length,price=c[n-1];
+
+  const e21=ema(c,21),e50=ema(c,50),e200=ema(c,200);
+  const {m:ml,s:sl,h:ht}=calcMACD(c);
+  const ha=calcHA(candles);
+  const {val:adxV,pdi,ndi}=calcADX(h,l,c);
+  const {upper,lower,basis,w:bbW}=calcBB(c);
+  const obv=calcOBV(c,v);
+  const rsiV=calcRSI(c);
+  const atr=h.slice(-14).reduce((a,hi,i)=>a+hi-l.slice(-14)[i],0)/14;
+  const volMA=v.slice(-20).reduce((a,b)=>a+b,0)/20;
+  const vLast=v[n-1];
+
+  const e21v=e21[n-1],e50v=e50[n-1],e200v=e200[n-1];
+  const mlV=ml[n-1],slV=sl[n-1],htV=ht[n-1],htP=ht[n-2];
+
+  // GAUSS score
+  let sc=0;
+  if(price>e21v)sc+=20;else sc-=20;
+  if(price>e50v)sc+=15;else sc-=15;
+  if(price>e200v)sc+=15;else sc-=15;
+  if(mlV>slV)sc+=20;else sc-=20;
+  if(htV>0)sc+=10;else sc-=10;
+  if(htV>htP)sc+=10;else sc-=10;
+  if(rsiV>50)sc+=10;else sc-=10;
+  if(pdi>ndi)sc+=15;else sc-=15;
+  const obvBull=obv[n-1]>obv[n-5],obvBear=obv[n-1]<obv[n-5];
+  if(obvBull)sc+=10;else sc-=10;
+  const vStr=vLast>volMA*1.1;
+  if(vStr)sc+=10;else sc-=10;
+
+  // Individual conditions
+  const macdBull=mlV>slV&&htV>htP;
+  const macdBear=mlV<slV&&htV<htP;
+  const adxOk=adxV>=17;
+  const haBull=ha[n-1].bull&&ha[n-2].bull;
+  const haBear=!ha[n-1].bull&&!ha[n-2].bull;
+  const volOkL=vStr||obvBull;
+  const volOkS=vStr||obvBear;
+  const rsiOkL=rsiV>=38&&rsiV<=68;
+  const rsiOkS=rsiV>=32&&rsiV<=62;
+  const notSide=!(bbW<0.04&&adxV<18);
+  const nearTop=(price-basis)/(upper-basis||1)>0.8;
+  const nearBot=(basis-price)/(basis-lower||1)>0.8;
+  const extUp=(price-e21v)/(atr||1)>2.5;
+  const extDn=(e21v-price)/(atr||1)>2.5;
+  const volDry=vLast<volMA*0.5;
+  const safeLong=!nearTop&&!extUp&&!volDry&&rsiV<80;
+  const safeShort=!nearBot&&!extDn&&!volDry&&rsiV>20;
+  const scOkL=sc>40,scOkS=sc<-40;
+
+  const NAMES=['Score','MACD','ADX','HA','Volume','RSI','Seguro','Tendência'];
+  const lc=[scOkL,macdBull,adxOk,haBull,volOkL,rsiOkL,safeLong,notSide];
+  const sc2=[scOkS,macdBear,adxOk,haBear,volOkS,rsiOkS,safeShort,notSide];
+  const lMet=lc.filter(Boolean).length,sMet=sc2.filter(Boolean).length;
+
+  return{price,sc,adxV,rsiV,lMet,sMet,
+    dir:lMet>=sMet?'LONG':'SHORT',
+    met:Math.max(lMet,sMet),
+    total:NAMES.length,
+    names:NAMES,
+    conds:lMet>=sMet?lc:sc2};
+}
+
+// ── Fetch ────────────────────────────────────────────────────────
+async function fetchCandles(sym){
+  try{
+    const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${tf}&limit=250`);
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.map(k=>({o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+  }catch{return null;}
+}
+
+// ── Scan ────────────────────────────────────────────────────────
+async function startScan(){
+  clearTimeout(scanTimer);clearInterval(countdownTimer);
+  document.getElementById('grid').innerHTML='';
+  document.getElementById('timer').textContent='';
+  const results=[];
+
+  for(let i=0;i<COINS.length;i++){
+    const coin=COINS[i];
+    const pct=Math.round((i+1)/COINS.length*100);
+    document.getElementById('prog').style.width=pct+'%';
+    document.getElementById('status').textContent=`Varrendo ${i+1}/100 — ${coin.short} (${tf})`;
+    const candles=await fetchCandles(coin.sym);
+    if(candles){
+      const r=analyse(candles);
+      if(r)results.push({...r,sym:coin.sym,short:coin.short});
+    }
+    await new Promise(res=>setTimeout(res,70));
+  }
+
+  // Sort: conditions met DESC → abs score DESC
+  results.sort((a,b)=>(b.met-a.met)||Math.abs(b.sc)-Math.abs(a.sc));
+  renderGrid(results.slice(0,20));
+
+  const now=new Date();
+  document.getElementById('prog').style.width='0%';
+  document.getElementById('subTitle').textContent=`Top 20 · ${tf} · ${now.toLocaleTimeString('pt-BR')}`;
+  document.getElementById('status').textContent=`✅ Varredura concluída — ${now.toLocaleTimeString('pt-BR')}`;
+
+  // Countdown para próxima varredura (1h)
+  nextRefresh=Date.now()+3600000;
+  countdownTimer=setInterval(()=>{
+    const left=Math.max(0,nextRefresh-Date.now());
+    const m=String(Math.floor(left/60000)).padStart(2,'0');
+    const s=String(Math.floor((left%60000)/1000)).padStart(2,'0');
+    document.getElementById('timer').textContent=`⏱ Próxima varredura em ${m}:${s}`;
+    if(left===0){clearInterval(countdownTimer);startScan();}
+  },1000);
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function fmtP(p){return p>=1000?p.toFixed(0):p>=1?p.toFixed(2):p>=0.001?p.toFixed(4):p.toFixed(6);}
+
+function renderGrid(coins){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  coins.forEach(r=>{
+    const pct=r.met/r.total*100;
+    let cls='card',lbl='';
+    if(r.met===r.total){cls+=' pronto';lbl='🔥 PRONTO';}
+    else if(r.met>=r.total-1){cls+=' quase';lbl='⚡ QUASE';}
+    else if(r.met>=r.total-2){cls+=' perto';lbl='📈 PERTO';}
+    else{lbl='⏳ AGUARDANDO';}
+
+    const barC=r.met===r.total?'var(--green)':r.met>=r.total-1?'var(--orange)':r.met>=r.total-2?'var(--yellow)':'var(--text2)';
+    const scC=r.sc>40?'pos':r.sc<-40?'neg':'neu';
+    const tvUrl=`https://www.tradingview.com/chart/?symbol=BINANCE:${r.sym}`;
+
+    const dots=r.names.map((nm,i)=>`<span class="cond ${r.conds[i]?'ok':'fail'}">${nm}</span>`).join('');
+
+    grid.innerHTML+=`
+<div class="${cls}">
+  <div class="card-top">
+    <a class="coin-link" href="${tvUrl}" target="_blank">${r.short}</a>
+    <span class="badge ${r.dir.toLowerCase()}">${r.dir}</span>
+  </div>
+  <div class="score ${scC}">${r.sc>0?'+':''}${r.sc}</div>
+  <div class="prox-wrap">
+    <div class="prox-bar"><div class="prox-fill" style="width:${pct}%;background:${barC}"></div></div>
+    <div class="prox-lbl"><span>${lbl}</span><span>${r.met}/${r.total}</span></div>
+  </div>
+  <div class="conds">${dots}</div>
+  <div class="stats">
+    <span class="stat">ADX ${r.adxV.toFixed(0)}</span>
+    <span class="stat">RSI ${r.rsiV.toFixed(0)}</span>
+    <span class="stat">$${fmtP(r.price)}</span>
+  </div>
+</div>`;
+  });
+}
+
+startScan();
+</script>
+</body>
+</html>
