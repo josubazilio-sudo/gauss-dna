@@ -695,11 +695,11 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
-            adx >= 17 and not sideways_mtf and
+            adx >= 17 and not sideways_mtf and not_bb_top and
             not_chasing_long and rsi_ok_long and ema_aligned_long):
         sig = "LONG"
     elif (h1_bear and in_pullback_short and bounce_short and
-              adx >= 17 and not sideways_mtf and
+              adx >= 17 and not sideways_mtf and not_bb_bot and
               not_chasing_short and rsi_ok_short and ema_aligned_short):
         sig = "SHORT"
 
