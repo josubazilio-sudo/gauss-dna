@@ -777,6 +777,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     risk_amount = CAPITAL * RISK_PCT          # ex: $5.40
     contracts   = risk_amount / risk if risk > 0 else 0  # unidades da moeda
     pos_value   = contracts * price           # valor em USD (spot)
+    pos_3x      = pos_value / 3               # collateral com 3x alavancagem
     pos_5x      = pos_value / 5               # collateral com 5x alavancagem
 
     grade_info={
@@ -826,7 +827,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"📐 *Gestão de risco \\(3% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${raw(f'{risk_amount:.2f}')}`\n"
         f"  Spot: `{raw(f'{contracts:.4f}')} {raw(short)}` \\(aprox `${raw(f'{pos_value:.2f}')} USDT`\\)\n"
-        f"  5x Lev: `${raw(f'{pos_5x:.2f}')} collateral`\n\n"
+        f"  3x Lev: `${raw(f'{pos_3x:.2f}')} collateral` ✅ seguro\n"
+        f"  5x Lev: `${raw(f'{pos_5x:.2f}')} collateral` ⚡ recomendado\n\n"
         f"📊 Score: *{esc(score)}/145* \\| RSI: {esc(f'{rsi:.0f}')} \\| ADX: {esc(f'{adx:.0f}')}\n"
         f"📈 Trend: {esc(trend)} \\| Kalman: {esc(k_str)}\n"
         f"⏰ {esc(now)}"
