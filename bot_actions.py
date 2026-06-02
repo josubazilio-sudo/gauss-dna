@@ -225,10 +225,14 @@ def fmt_price(price):
 def analyze(sym, candles):
     n=len(candles)
     if n<60: return None
-    closes=[c["c"] for c in candles]
-    highs=[c["h"] for c in candles]; lows=[c["l"] for c in candles]
-    opens=[c["o"] for c in candles]; vols=[c["v"] for c in candles]
-    price=closes[-1]
+    # Heikin Ashi como base — suaviza indicadores e reduz ruído falso
+    ha_raw=ha_series(candles)
+    closes=[c["c"] for c in ha_raw]   # HA close (EMAs, RSI, MACD, Kalman, BB)
+    highs =[c["h"] for c in ha_raw]   # HA high
+    lows  =[c["l"] for c in ha_raw]   # HA low
+    opens =[c["o"] for c in ha_raw]   # HA open
+    vols  =[c["v"] for c in candles]  # volume real
+    price =candles[-1]["c"]           # preço real (entrada / stop / TP)
 
     # EMAs (com valores anteriores para detecção de cruzamento)
     e10_arr=ema_series(closes,10); e10=e10_arr[-1]; e10_p=e10_arr[-2]
@@ -258,10 +262,9 @@ def analyze(sym, candles):
     macd_recovering=hist>hist_p                    # histograma subindo (para early long)
     macd_exhausting=hist<hist_p                    # histograma caindo (para early short)
 
-    # Heikin-Ashi (série correta — open baseado no HA anterior)
-    ha=ha_series(candles)
-    ha_bull=ha[-1]["c"]>ha[-1]["o"] and ha[-2]["c"]>ha[-2]["o"]
-    ha_bear=ha[-1]["c"]<ha[-1]["o"] and ha[-2]["c"]<ha[-2]["o"]
+    # Heikin-Ashi bull/bear — closes e opens já são HA (calculados no topo)
+    ha_bull=closes[-1]>opens[-1] and closes[-2]>opens[-2]
+    ha_bear=closes[-1]<opens[-1] and closes[-2]<opens[-2]
 
     # RSI (elite usa zona mais estreita + momentum direcional)
     rsi=rsi_calc(closes[-50:])
@@ -564,7 +567,7 @@ def analyze(sym, candles):
         if score > 25:
             b=[]
             if not macd_bull_r: b.append(f"macd_r=F(ml{'>' if ml>sl_v else '<'}sl hist{'↑' if hist>hist_p else '↓'})")
-            if not ha_bull:     b.append(f"ha=F({'+' if ha[-1]['c']>ha[-1]['o'] else '-'}{'+' if ha[-2]['c']>ha[-2]['o'] else '-'})")
+            if not ha_bull:     b.append(f"ha=F({'+' if closes[-1]>opens[-1] else '-'}{'+' if closes[-2]>opens[-2] else '-'})")
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
@@ -576,7 +579,7 @@ def analyze(sym, candles):
         elif score < -25:
             b=[]
             if not macd_bear_r: b.append(f"macd_r=F(ml{'<' if ml<sl_v else '>'}sl hist{'↓' if hist<hist_p else '↑'})")
-            if not ha_bear:     b.append(f"ha=F({'+' if ha[-1]['c']>ha[-1]['o'] else '-'}{'+' if ha[-2]['c']>ha[-2]['o'] else '-'})")
+            if not ha_bear:     b.append(f"ha=F({'+' if closes[-1]>opens[-1] else '-'}{'+' if closes[-2]>opens[-2] else '-'})")
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
@@ -600,12 +603,14 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     Procura pullback até EMA21/EMA50 com bounce — stop no swing da correção."""
     n = len(candles_15m)
     if n < 50: return None
-    closes = [c["c"] for c in candles_15m]
-    highs  = [c["h"] for c in candles_15m]
-    lows   = [c["l"] for c in candles_15m]
-    opens  = [c["o"] for c in candles_15m]
-    vols   = [c["v"] for c in candles_15m]
-    price  = closes[-1]
+    # Heikin Ashi como base — mesma abordagem do analyze()
+    ha_raw = ha_series(candles_15m)
+    closes = [c["c"] for c in ha_raw]   # HA close
+    highs  = [c["h"] for c in ha_raw]   # HA high
+    lows   = [c["l"] for c in ha_raw]   # HA low
+    opens  = [c["o"] for c in ha_raw]   # HA open
+    vols   = [c["v"] for c in candles_15m]  # volume real
+    price  = candles_15m[-1]["c"]           # preço real
 
     e10_arr = ema_series(closes, 10); e10 = e10_arr[-1]
     e21_arr = ema_series(closes, 21); e21 = e21_arr[-1]
@@ -614,14 +619,14 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     atr_arr = atr_series(candles_15m, 14); atr = max(atr_arr[-1], 1e-10)
 
     ml, sl_v, hist, hist_p, _ = macd_calc(closes)
-    macd_bull_r = ml > sl_v and hist > hist_p   # direção + histograma crescendo
+    macd_bull_r = ml > sl_v and hist > hist_p
     macd_bear_r = ml < sl_v and hist < hist_p
 
-    ha = ha_series(candles_15m)
-    ha_body = abs(ha[-1]["c"] - ha[-1]["o"])
-    ha_body_ok = ha_body > atr * 0.2            # corpo HA mínimo = não é doji
-    ha_bull = ha[-1]["c"] > ha[-1]["o"] and ha[-2]["c"] > ha[-2]["o"] and ha_body_ok
-    ha_bear = ha[-1]["c"] < ha[-1]["o"] and ha[-2]["c"] < ha[-2]["o"] and ha_body_ok
+    # HA bull/bear — closes e opens já são HA
+    ha_body    = abs(closes[-1] - opens[-1])
+    ha_body_ok = ha_body > atr * 0.2
+    ha_bull = closes[-1] > opens[-1] and closes[-2] > opens[-2] and ha_body_ok
+    ha_bear = closes[-1] < opens[-1] and closes[-2] < opens[-2] and ha_body_ok
 
     rsi = rsi_calc(closes[-50:])
     vol_ma = sum(vols[-20:]) / 20
