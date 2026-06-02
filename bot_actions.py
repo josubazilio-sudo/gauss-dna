@@ -1299,6 +1299,7 @@ async def main():
                 if "1h" in TIMEFRAMES and ("30m" in TIMEFRAMES or "15m" in TIMEFRAMES):
                     sent_mtf = await run_mtf_cycle(session, last_sig, active_coins)
                     total += sent_mtf
+                    save_state(last_sig)  # persiste cooldown BTC BEAR imediatamente
             except Exception as e:
                 log.error(f"❌ MTF erro ciclo #{cycle}: {e}")
             try:
@@ -1306,10 +1307,11 @@ async def main():
                 base_tf = next((t for t in TIMEFRAMES if t != "1h"), TIMEFRAMES[0])
                 sent=await run_cycle(session, last_sig, base_tf, active_coins)
                 total+=sent
-                save_state(last_sig)
                 log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total}")
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{cycle}: {e}")
+            finally:
+                save_state(last_sig)  # garante que estado é salvo mesmo com exceção
 
             if not LOOP_MODE:
                 break
