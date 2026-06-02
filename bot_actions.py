@@ -489,12 +489,12 @@ def analyze(sym, candles):
 
     long_flex = (flex_score > 40 and (macd_bull_r or ha_bull) and adx >= 17 and
                  not sideways and not_ext_long_tight and
-                 safe_long and vol_ok and
-                 38 < rsi < 68)
+                 safe_long and
+                 35 < rsi < 72)
     short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and adx >= 17 and
                   not sideways and not_ext_short_tight and
-                  safe_short and vol_ok_s and
-                  32 < rsi < 62)
+                  safe_short and
+                  28 < rsi < 65)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -552,8 +552,7 @@ def analyze(sym, candles):
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
-            if not vol_ok:      b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bull} flow={f_bull})")
-            if not (38<rsi<68): b.append(f"rsi={rsi:.1f} fora 38-68")
+            if not (35<rsi<72): b.append(f"rsi={rsi:.1f} fora 35-72")
             if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR rsi={rsi:.0f}")
             log.info(f"  LONG-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
         elif score < -25:
@@ -563,8 +562,7 @@ def analyze(sym, candles):
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
-            if not vol_ok_s:    b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bear} flow={f_bear})")
-            if not (32<rsi<62): b.append(f"rsi={rsi:.1f} fora 32-62")
+            if not (28<rsi<65): b.append(f"rsi={rsi:.1f} fora 28-65")
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
         else:
             log.info(f"  no-sig {sym}: score={score:+d} insuf")
