@@ -1,6 +1,6 @@
 """
-GAUSS+DNA — Scanner de Backtest v2
-Melhorias: paginação 6m, pontuação adaptativa, filtro volatilidade, exits ATR+breakeven
+GAUSS+DNA — Scanner de Backtest v3
+Melhorias: confirmação HTF, ADX regime + rising, TPs adaptativos por volatilidade, cooldown dinâmico
 """
 import requests, math, time, json, os
 from datetime import datetime
@@ -10,10 +10,10 @@ BASE        = "https://api.mexc.com/api/v3"
 INTERVAL    = os.environ.get("INTERVAL", "30m")
 TOP_N       = int(os.environ.get("TOP_N", "100"))
 API_KEY     = os.environ.get("MEXC_API_KEY", "")
-CANDLES     = int(os.environ.get("CANDLES", "8640"))   # 6m@30m=8640
+CANDLES     = int(os.environ.get("CANDLES", "8640"))
 WARMUP      = 100
 MIN_TRADES  = 3
-ATR_PCT_MIN = 0.30   # % mínimo de ATR médio para filtrar ativos estáveis
+ATR_PCT_MIN = 0.30
 
 INTERVAL_MS = {
     "1m":60_000,"3m":180_000,"5m":300_000,"15m":900_000,
@@ -135,6 +135,17 @@ def calc_volma_arr(candles, p=20):
     for i in range(p-1, n): res[i]=sum(vols[i-p+1:i+1])/p
     return res
 
+def calc_avg_atr_pct_arr(atr_a, closes, win=20):
+    """ATR% médio em janela deslizante — decide regime de volatilidade da moeda."""
+    n=len(atr_a); res=[1.0]*n
+    buf=deque(); s=0.0
+    for i in range(n):
+        v=atr_a[i]/closes[i]*100 if closes[i]>0 else 0
+        buf.append(v); s+=v
+        if len(buf)>win: s-=buf.popleft()
+        res[i]=s/len(buf)
+    return res
+
 # ── Pré-filtro de volatilidade ────────────────────────────────────────────────
 
 def is_volatile_enough(candles):
@@ -142,10 +153,9 @@ def is_volatile_enough(candles):
     atrs = calc_atr_arr(recent)
     valid = [(atrs[i], recent[i][4]) for i in range(len(recent)) if recent[i][4] > 0]
     if not valid: return False
-    avg_pct = sum(a/p*100 for a,p in valid) / len(valid)
-    return avg_pct >= ATR_PCT_MIN
+    return sum(a/p*100 for a,p in valid)/len(valid) >= ATR_PCT_MIN
 
-# ── Simulação vetorizada — scoring adaptativo + exits ATR + breakeven ─────────
+# ── Simulação vetorizada v3 ───────────────────────────────────────────────────
 
 def run_backtest(candles):
     n=len(candles)
@@ -156,8 +166,7 @@ def run_backtest(candles):
     e50=ema_arr(closes,50); e200=ema_arr(closes,200)
     atr_a=calc_atr_arr(candles)
     e12=ema_arr(closes,12); e26=ema_arr(closes,26)
-    ml=[e12[i]-e26[i] for i in range(n)]
-    sl=ema_arr(ml,9)
+    ml=[e12[i]-e26[i] for i in range(n)]; sl=ema_arr(ml,9)
     hist=[ml[i]-sl[i] for i in range(n)]
     rsi_a=calc_rsi_arr(closes)
     pdi_a,mdi_a,adx_a=calc_adx_arr(candles)
@@ -167,6 +176,7 @@ def run_backtest(candles):
     vwap_a=calc_vwap_arr(candles)
     ha_bull_a=calc_ha_bull_arr(candles)
     volma_a=calc_volma_arr(candles)
+    avg_atr_pct_a=calc_avg_atr_pct_arr(atr_a, closes)
 
     trades=[]; in_trade=None; cooldown=0
 
@@ -196,7 +206,13 @@ def run_backtest(candles):
         exh_top=(highs[i]-max(opens[i],closes[i]))/cr>0.4
         exh_bot=(min(opens[i],closes[i])-lows[i])/cr>0.4
 
-        # near_liq e vol_ok agora contribuem ao score (não mais hard gates)
+        # ADX deve estar subindo (tendência se fortalecendo)
+        adx_rising = adx > adx_a[max(0,i-3)]
+
+        # Confirmação HTF via EMA50: acima/abaixo de EMA200 E em movimento
+        htf_bull = e50v > e200v and e50[i] > e50[max(0,i-5)]
+        htf_bear = e50v < e200v and e50[i] < e50[max(0,i-5)]
+
         sc=(
             (15 if e21v>e50v>e200v else 0)+(10 if e10v>e21v else 0)+
             (10 if macd_bull else -10 if macd_bear else 0)+
@@ -212,45 +228,54 @@ def run_backtest(candles):
         fbb=30 if (tbear and not (e21v<e50v<e200v)) else 0
         flex_sc=sc+fb-fbb
 
-        # Threshold 15 (era 30); near_liq e vol_ok removidos como hard gates
+        # ADX mínimo 20 (era 15) + rising + confirmação HTF
         long_flex=(flex_sc>15 and (macd_bull or ha_bull) and trl_long and
-                   tbull and above_vwap and adx>=15 and
+                   tbull and htf_bull and above_vwap and
+                   adx>=20 and adx_rising and
                    rsi<74 and not near_bb_top and not ext_above and not exh_top)
         short_flex=(flex_sc<-15 and (macd_bear or ha_bear) and trl_short and
-                    tbear and below_vwap and adx>=15 and
+                    tbear and htf_bear and below_vwap and
+                    adx>=20 and adx_rising and
                     rsi>32 and not near_bb_bot and not ext_below and not exh_bot)
 
         if in_trade:
             t=in_trade; h=highs[i]; l=lows[i]
             is_long=t["sig"]=="LONG"; closed=False
+            tp1_m=t.get("tp1_m",2.5); tp2_m=t.get("tp2_m",4.5); tp3_m=t.get("tp3_m",8.0)
             if is_long:
                 if l<=t["stop"]:
-                    # stop_r: R ganho/perdido no stop atual (-1=inicial, 0=BE, 2.5=trail TP1)
                     t["pnl"]+=t.get("stop_r",-1.0)*t["rem"]; t["result"]="STOP"; closed=True
                 elif not t.get("tp1_hit") and h>=t["tp1"]:
-                    t["pnl"]+=2.5*0.40; t["rem"]-=0.40; t["tp1_hit"]=True
-                    t["stop"]=t["entry"]; t["stop_r"]=0.0  # breakeven
+                    t["pnl"]+=tp1_m*0.40; t["rem"]-=0.40; t["tp1_hit"]=True
+                    t["stop"]=t["entry"]; t["stop_r"]=0.0
                 elif t.get("tp1_hit") and not t.get("tp2_hit") and h>=t["tp2"]:
-                    t["pnl"]+=4.5*0.35; t["rem"]-=0.35; t["tp2_hit"]=True
-                    t["stop"]=t["tp1"]; t["stop_r"]=2.5  # trail p/ TP1
+                    t["pnl"]+=tp2_m*0.35; t["rem"]-=0.35; t["tp2_hit"]=True
+                    t["stop"]=t["tp1"]; t["stop_r"]=tp1_m
                 elif t.get("tp2_hit") and h>=t["tp3"]:
-                    t["pnl"]+=8.0*t["rem"]; t["rem"]=0; t["result"]="FULL TP"; closed=True
+                    t["pnl"]+=tp3_m*t["rem"]; t["rem"]=0; t["result"]="FULL TP"; closed=True
             else:
                 if h>=t["stop"]:
                     t["pnl"]+=t.get("stop_r",-1.0)*t["rem"]; t["result"]="STOP"; closed=True
                 elif not t.get("tp1_hit") and l<=t["tp1"]:
-                    t["pnl"]+=2.5*0.40; t["rem"]-=0.40; t["tp1_hit"]=True
-                    t["stop"]=t["entry"]; t["stop_r"]=0.0  # breakeven
+                    t["pnl"]+=tp1_m*0.40; t["rem"]-=0.40; t["tp1_hit"]=True
+                    t["stop"]=t["entry"]; t["stop_r"]=0.0
                 elif t.get("tp1_hit") and not t.get("tp2_hit") and l<=t["tp2"]:
-                    t["pnl"]+=4.5*0.35; t["rem"]-=0.35; t["tp2_hit"]=True
-                    t["stop"]=t["tp1"]; t["stop_r"]=2.5  # trail p/ TP1
+                    t["pnl"]+=tp2_m*0.35; t["rem"]-=0.35; t["tp2_hit"]=True
+                    t["stop"]=t["tp1"]; t["stop_r"]=tp1_m
                 elif t.get("tp2_hit") and l<=t["tp3"]:
-                    t["pnl"]+=8.0*t["rem"]; t["rem"]=0; t["result"]="FULL TP"; closed=True
+                    t["pnl"]+=tp3_m*t["rem"]; t["rem"]=0; t["result"]="FULL TP"; closed=True
             if closed:
                 if not t.get("result"):
                     q=t.get("tp2_hit",False); p2=t.get("tp1_hit",False)
                     t["result"]="TP2" if q else "TP1" if p2 else "STOP"
-                t["exit_idx"]=i; trades.append(t); in_trade=None; cooldown=6
+                t["exit_idx"]=i; trades.append(t); in_trade=None
+                # Cooldown dinâmico: stop total=12, win forte=3, parcial=6
+                if t["result"]=="STOP" and not t.get("tp1_hit"):
+                    cooldown=12
+                elif t.get("tp2_hit") or t["result"]=="FULL TP":
+                    cooldown=3
+                else:
+                    cooldown=6
             continue
 
         if cooldown>0: cooldown-=1; continue
@@ -261,16 +286,23 @@ def run_backtest(candles):
         if not sig: continue
 
         is_long=sig=="LONG"
-        # Stop baseado em ATR (1.5×): mais consistente entre coins
         stop=(price - 1.5*atr if is_long else price + 1.5*atr)
         risk=abs(price-stop)
         if risk<=0 or risk/price>0.08: continue
-        tp1=price+(risk*2.5 if is_long else -risk*2.5)
-        tp2=price+(risk*4.5 if is_long else -risk*4.5)
-        tp3=price+(risk*8.0 if is_long else -risk*8.0)
+
+        # TPs adaptativos: conservador para coins lentos, agressivo para voláteis
+        ap=avg_atr_pct_a[i]
+        if ap < 0.5:    tp1_m,tp2_m,tp3_m = 1.5, 3.0, 5.0   # baixa volatilidade
+        elif ap > 1.5:  tp1_m,tp2_m,tp3_m = 2.5, 4.5, 8.0   # alta volatilidade
+        else:           tp1_m,tp2_m,tp3_m = 2.0, 3.5, 6.0   # média volatilidade
+
+        tp1=price+(risk*tp1_m if is_long else -risk*tp1_m)
+        tp2=price+(risk*tp2_m if is_long else -risk*tp2_m)
+        tp3=price+(risk*tp3_m if is_long else -risk*tp3_m)
 
         in_trade={"sig":sig,"entry":price,"stop":stop,"tp1":tp1,"tp2":tp2,"tp3":tp3,
                   "risk":risk,"pnl":0,"rem":1.0,"entry_idx":i,"result":None,
+                  "tp1_m":tp1_m,"tp2_m":tp2_m,"tp3_m":tp3_m,
                   "date":datetime.utcfromtimestamp(candles[i][0]/1000).strftime("%d/%m")}
 
     if in_trade:
@@ -309,36 +341,28 @@ def calc_stats(trades):
             "profit_factor":pf,"max_dd":max_dd,
             "grade":performance_grade(wr,pf,total_r)}
 
-# ── Fetch com paginação startTime (até 6 meses) ───────────────────────────────
+# ── Fetch com paginação startTime ─────────────────────────────────────────────
 
 def fetch_klines(symbol, interval=INTERVAL, total=CANDLES):
-    step = INTERVAL_MS.get(interval, 1_800_000)
-    start = int(time.time() * 1000) - total * step
-    all_c = []
-    headers = {"X-MEXC-APIKEY": API_KEY} if API_KEY else {}
-
-    for _ in range(20):  # máx 20 batches = 20.000 candles
+    step=INTERVAL_MS.get(interval,1_800_000)
+    start=int(time.time()*1000)-total*step
+    all_c=[]; headers={"X-MEXC-APIKEY":API_KEY} if API_KEY else {}
+    for _ in range(20):
         try:
-            r = requests.get(
-                f"{BASE}/klines",
-                params={"symbol":symbol,"interval":interval,
-                        "startTime":start,"limit":1000},
-                headers=headers, timeout=15)
-            data = r.json()
-            if not isinstance(data, list) or not data:
-                break
-            batch = [[int(c[0]),float(c[1]),float(c[2]),
-                      float(c[3]),float(c[4]),float(c[5])] for c in data]
+            r=requests.get(f"{BASE}/klines",
+                           params={"symbol":symbol,"interval":interval,
+                                   "startTime":start,"limit":1000},
+                           headers=headers,timeout=15)
+            data=r.json()
+            if not isinstance(data,list) or not data: break
+            batch=[[int(c[0]),float(c[1]),float(c[2]),
+                    float(c[3]),float(c[4]),float(c[5])] for c in data]
             all_c.extend(batch)
-            if len(data) < 1000:
-                break  # último batch, sem mais dados
-            start = batch[-1][0] + step
+            if len(data)<1000: break
+            start=batch[-1][0]+step
             time.sleep(0.2)
-        except:
-            break
-
-    if len(all_c) < WARMUP + 10:
-        return None
+        except: break
+    if len(all_c)<WARMUP+10: return None
     return all_c
 
 def fetch_top_symbols(n=100):
@@ -357,10 +381,10 @@ def fetch_top_symbols(n=100):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    step_ms = INTERVAL_MS.get(INTERVAL, 1_800_000)
-    dias_alvo = CANDLES * step_ms // 86_400_000
-    api_str = "autenticado" if API_KEY else "público"
-    print("🔍 GAUSS+DNA Backtest Scanner v2")
+    step_ms=INTERVAL_MS.get(INTERVAL,1_800_000)
+    dias_alvo=CANDLES*step_ms//86_400_000
+    api_str="autenticado" if API_KEY else "público"
+    print("🔍 GAUSS+DNA Backtest Scanner v3")
     print(f"   Timeframe: {INTERVAL} | Alvo: {CANDLES} candles (~{dias_alvo}d) | API: {api_str}")
     print(f"   Buscando top {TOP_N} moedas do MEXC...\n")
 
@@ -371,13 +395,13 @@ def main():
     results=[]; no_data=0; few_trades=0; low_vol=0
     total=len(symbols)
     for idx,sym in enumerate(symbols):
-        print(f"  [{idx+1:3d}/{total}] {sym:15s}", end="", flush=True)
+        print(f"  [{idx+1:3d}/{total}] {sym:15s}",end="",flush=True)
         candles=fetch_klines(sym)
         if not candles:
             print("sem dados"); no_data+=1; time.sleep(0.3); continue
         if not is_volatile_enough(candles):
             print("baixa volatilidade"); low_vol+=1; time.sleep(0.2); continue
-        dias_real = len(candles) * step_ms // 86_400_000
+        dias_real=len(candles)*step_ms//86_400_000
         trades=run_backtest(candles)
         stats=calc_stats(trades)
         closed_ct=len([t for t in trades if t["result"]!="OPEN"])
@@ -394,15 +418,14 @@ def main():
         s=r["stats"]
         return s["profit_factor"]*s["win_rate"]*math.sqrt(s["trades"])/(s["max_dd"]+1)
 
-    results.sort(key=rank_score, reverse=True)
+    results.sort(key=rank_score,reverse=True)
 
     print(f"\n{'='*82}")
-    print(f"📊 RANKING — GAUSS+DNA FLEX v2 | {INTERVAL} | top {TOP_N}")
+    print(f"📊 RANKING — GAUSS+DNA FLEX v3 | {INTERVAL} | top {TOP_N}")
     print(f"{'='*82}")
     print(f"{'#':4} {'Moeda':14} {'Grade':15} {'WR%':6} {'TotalR':8} {'PF':6} {'Trades':7} {'AvgR':6} {'DD':5} {'Dias':5}")
     print(f"{'-'*82}")
-
-    for i,r in enumerate(results, 1):
+    for i,r in enumerate(results,1):
         s=r["stats"]
         print(f"{i:3}. {r['symbol']:14} {s['grade']:15} "
               f"{s['win_rate']:5.1f}% {s['total_r']:+7.1f}R "
