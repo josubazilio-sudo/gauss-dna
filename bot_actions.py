@@ -750,17 +750,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
                         sig_source, tf, signal_grade):
     is_long=sig_type=="LONG"
 
-    # Stop estrutural: abaixo do swing com buffer de 0.5 ATR
-    # Se swing estiver além de 3 ATR → setup ruim, não envia
-    if is_long:
-        stop = swing_low - atr * 0.5
-        if (price - stop) > atr * 3.0:
-            return   # risco/estrutura incompatível — skip
-    else:
-        stop = swing_high + atr * 0.5
-        if (stop - price) > atr * 3.0:
-            return
-    risk=abs(price-stop)
+    # Stop fixo em 1.2 ATR — previsível, nunca bloqueia sinais válidos
+    stop = price - 1.2 * atr if is_long else price + 1.2 * atr
+    risk = 1.2 * atr
     if risk <= 0: return
 
     # TP dinâmico por grade — mínimo 2R no TP1 (protege capital)
