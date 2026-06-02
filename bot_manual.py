@@ -176,12 +176,10 @@ def analyze(candles):
         elif score < -15 and adx > 14: near = "SHORT"
 
     atr_pct = (atr/price)*100 if price else 1.0
-    if   atr_pct < 0.5:  tp1_m, tp2_m, tp3_m = 1.5, 3.0, 5.0
-    elif atr_pct > 1.5:  tp1_m, tp2_m, tp3_m = 2.5, 4.5, 8.0
-    else:                tp1_m, tp2_m, tp3_m = 2.0, 3.5, 6.0
+    tp1_m, tp2_m, tp3_m = 1.5, 3.0, 5.0
 
     risk_usd  = CAPITAL * RISK_PCT
-    stop_dist = 1.5 * atr
+    stop_dist = 1.2 * atr
     pos_size  = risk_usd / stop_dist if stop_dist else 0
     pos_usd   = pos_size * price
 

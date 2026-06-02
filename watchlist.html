@@ -354,11 +354,9 @@ function analyze(candles){
   }
 
   const atrPct=(atr/price)*100;
-  let tp1m=2,tp2m=3.5,tp3m=6;
-  if(atrPct<0.5){tp1m=1.5;tp2m=3;tp3m=5;}
-  else if(atrPct>1.5){tp1m=2.5;tp2m=4.5;tp3m=8;}
+  const tp1m=1.5,tp2m=3,tp3m=5;
 
-  const riskUsd=CAPITAL*RISK_PCT, stopDist=1.5*atr;
+  const riskUsd=CAPITAL*RISK_PCT, stopDist=1.2*atr;
   const posUsd=riskUsd/stopDist*price;
   let stopP=0,tp1P=0,tp2P=0,tp3P=0;
   if(sig==='LONG'){stopP=price-stopDist;tp1P=price+tp1m*stopDist;tp2P=price+tp2m*stopDist;tp3P=price+tp3m*stopDist;}
