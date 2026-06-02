@@ -482,13 +482,13 @@ def analyze(sym, candles):
     # Área de liquidez: perto da EMA21 ou EMA50 — onde stops e liquidez se acumulam
     near_liq = abs(price - e21) / atr < 2.5 or abs(price - e50) / atr < 2.5
 
-    # FLEX: Trendilo + EMAs alinhadas + volume + área de liquidez + proteções
+    # FLEX: Trendilo + EMAs alinhadas + VWAP + volume + área de liquidez + proteções
     long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and trendilo_long and
-                 tbull_loose and vol_ok and near_liq and
+                 tbull_loose and above_vwap and vol_ok and near_liq and
                  adx >= 15 and rsi < 74 and
                  not near_bb_top and not ext_above_ema21 and not exhaustion_top)
     short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and trendilo_short and
-                  tbear_loose and vol_ok_s and near_liq and
+                  tbear_loose and below_vwap and vol_ok_s and near_liq and
                   adx >= 15 and rsi > 32 and
                   not near_bb_bot and not ext_below_ema21 and not exhaustion_bot)
 
@@ -579,7 +579,8 @@ def analyze(sym, candles):
             "sig":sig,"sig_source":sig_source,"swing_low":swing_low,"swing_high":swing_high,
             "ha_bull":ha_bull,"obv_bull":obv_bull,"above_vwap":above_vwap,
             "signal_grade":signal_grade,"quality_score":quality_score,
-            "tbull_r":tbull_r,"tbear_r":tbear_r}
+            "tbull_r":tbull_r,"tbear_r":tbear_r,
+            "trendilo_long":trendilo_long,"trendilo_short":trendilo_short}
 
 def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     """Entrada na 15m dado setup confirmado na 1h.
@@ -992,17 +993,16 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # ELITE: só Grade A/S; FLEX: aceita Grade B
-            if grade == "B" and SIGNAL_MODE == "ELITE":
-                log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
+            # Só Grade A/S — Grade B ignorado em todos os modos
+            if grade == "B":
+                log.info(f"  ⚠️ {short} Grade B ignorado — mínimo Grade A")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 await asyncio.sleep(0.2); continue
-            # Score mínimo por grade
+            # Score mínimo: Grade A ≥ 80, Grade S sem mínimo
             abs_score = abs(result["score"])
-            min_score = 80 if grade == "A" else 45 if grade == "B" else 0
-            if abs_score < min_score:
-                log.info(f"  ⚠️ {short} Grade {grade} score {result['score']:+d} < {min_score} mínimo — ignorando")
-                candidates.append((abs_score,short,result["score"],result["rsi"],result["adx"],f"score<{min_score}"))
+            if grade == "A" and abs_score < 80:
+                log.info(f"  ⚠️ {short} Grade A score {result['score']:+d} < 80 — ignorando")
+                candidates.append((abs_score,short,result["score"],result["rsi"],result["adx"],"score<80"))
                 await asyncio.sleep(0.2); continue
             key=f"{sym}"
             if now-last_sig.get(key,0)>=cooldown:
@@ -1015,6 +1015,25 @@ async def run_cycle(session, last_sig, tf, coins):
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.4)
+
+    # Trendilo 1h: confirma direção no timeframe superior antes de enviar
+    confirmed = []
+    for item in pending:
+        abs_score,sym,label,short,result,grade,key = item
+        c1h = await fetch_candles(session, sym, "1h")
+        if c1h:
+            r1h = analyze(sym, c1h)
+            if r1h:
+                is_long = result["sig"] == "LONG"
+                trl_ok = r1h.get("trendilo_long") if is_long else r1h.get("trendilo_short")
+                if trl_ok:
+                    confirmed.append(item)
+                else:
+                    log.info(f"  ❌ {short} Trendilo 1h não confirma {result['sig']} — bloqueado")
+                    candidates.append((abs_score,short,result["score"],result["rsi"],result["adx"],"trendilo-1h"))
+                continue
+        confirmed.append(item)  # API falhou: deixa passar
+    pending = confirmed
 
     # Envia os 2 sinais de maior score — preserva capital $180
     pending.sort(key=lambda x: x[0], reverse=True)
