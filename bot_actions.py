@@ -479,15 +479,17 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    # FLEX: base sexta-feira + Trendilo obrigatório + ADX mínimo 15
-    # tbull/bear_loose: EMAs alinhadas na direção do sinal — evita operar contra tendência
-    # not near_bb_top/bot + not ext_ema21: evita comprar no topo e vender no fundo
-    # not exhaustion_top/bot: bloqueia candle de rejeição (pavio longo = força contrária)
+    # Área de liquidez: perto da EMA21 ou EMA50 — onde stops e liquidez se acumulam
+    near_liq = abs(price - e21) / atr < 2.5 or abs(price - e50) / atr < 2.5
+
+    # FLEX: Trendilo + EMAs alinhadas + volume + área de liquidez + proteções
     long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and trendilo_long and
-                 tbull_loose and adx >= 15 and rsi < 74 and
+                 tbull_loose and vol_ok and near_liq and
+                 adx >= 15 and rsi < 74 and
                  not near_bb_top and not ext_above_ema21 and not exhaustion_top)
     short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and trendilo_short and
-                  tbear_loose and obv_bear and adx >= 15 and rsi > 32 and
+                  tbear_loose and vol_ok_s and near_liq and
+                  adx >= 15 and rsi > 32 and
                   not near_bb_bot and not ext_below_ema21 and not exhaustion_bot)
 
     sig=None; sig_source=""
@@ -547,6 +549,8 @@ def analyze(sym, candles):
             if not (macd_bull_r or ha_bull): b.append(f"macd/ha=F")
             if not trendilo_long:            b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
             if not tbull_loose:              b.append(f"ema_desalin(e10<e21 ou e21<e50)")
+            if not vol_ok:                   b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bull})")
+            if not near_liq:                 b.append(f"fora_liq(e21={abs(price-e21)/atr:.1f}ATR e50={abs(price-e50)/atr:.1f}ATR)")
             if adx < 15:                     b.append(f"adx={adx:.1f}<15")
             if rsi >= 74:                    b.append(f"rsi={rsi:.1f}>=74")
             if near_bb_top:                  b.append(f"bb_top({price_bb_pos:.2f})")
@@ -559,7 +563,8 @@ def analyze(sym, candles):
             if not (macd_bear_r or ha_bear):  b.append(f"macd/ha=F")
             if not trendilo_short:            b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
             if not tbear_loose:               b.append(f"ema_desalin(e10>e21 ou e21>e50)")
-            if not obv_bear:                  b.append(f"obv_bear=F")
+            if not vol_ok_s:                  b.append(f"vol=F({vols[-1]/vol_ma:.2f}x obv={obv_bear})")
+            if not near_liq:                  b.append(f"fora_liq(e21={abs(price-e21)/atr:.1f}ATR e50={abs(price-e50)/atr:.1f}ATR)")
             if adx < 15:                      b.append(f"adx={adx:.1f}<15")
             if rsi <= 26:                     b.append(f"rsi={rsi:.1f}<=26")
             if near_bb_bot:                   b.append(f"bb_bot({price_bb_pos:.2f})")
