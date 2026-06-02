@@ -1067,12 +1067,12 @@ async def run_mtf_cycle(session, last_sig, coins):
     # Crypto opera 24/7 — sem filtro de horário
     now = time.time()
     sent = 0
-    cooldown_mtf = 3600  # 1h entre sinais MTF por moeda
+    cooldown_mtf = 14400  # 4h entre sinais MTF por moeda (ciclo 4H)
     setup_coins = []  # (short, direction, score, rsi, motivo_bloqueio)
 
-    # BTC trend — não operar altcoins contra tendência do BTC
+    # BTC trend — filtro em 4H para coerência com o timeframe de setup
     btc_bull_filter = btc_bear_filter = False
-    btc_candles = await fetch_candles(session, "BTCUSDT", "1h")
+    btc_candles = await fetch_candles(session, "BTCUSDT", "4h")
     if btc_candles and len(btc_candles) >= 50:
         btc_c = [c["c"] for c in btc_candles]
         btc_e21  = ema_series(btc_c, 21)[-1]
@@ -1081,78 +1081,59 @@ async def run_mtf_cycle(session, last_sig, coins):
         btc_p    = btc_c[-1]
         btc_bull_filter = btc_p > btc_e21 > btc_e50 and btc_p > btc_e200 * 0.98
         btc_bear_filter = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02
-        log.info(f"[MTF] BTC: {'BULL ↑' if btc_bull_filter else 'BEAR ↓' if btc_bear_filter else 'NEUTRO'} | ${btc_p:.0f}")
+        log.info(f"[MTF] BTC 4H: {'BULL ↑' if btc_bull_filter else 'BEAR ↓' if btc_bear_filter else 'NEUTRO'} | ${btc_p:.0f}")
 
     for sym, label, short in coins:
-        # 1h — direção e setup
-        candles_1h = await fetch_candles(session, sym, "1h")
-        if not candles_1h: await asyncio.sleep(0.5); continue
+        # 4H — direção e setup (confirma tendência maior)
+        candles_4h = await fetch_candles(session, sym, "4h")
+        if not candles_4h: await asyncio.sleep(0.5); continue
 
-        r1h = analyze(sym, candles_1h)
-        if not r1h: await asyncio.sleep(0.5); continue
+        r4h = analyze(sym, candles_4h)
+        if not r4h: await asyncio.sleep(0.5); continue
 
-        h1_rsi = r1h["rsi"]
-        h1_bull = r1h["score"] > 20 and r1h.get("tbull_r", False) and r1h["adx"] >= 15 and h1_rsi < 40
-        h1_bear = r1h["score"] < -20 and r1h.get("tbear_r", False) and r1h["adx"] >= 15 and h1_rsi > 60
-        direction = "BULL" if h1_bull else "BEAR"
+        h4_rsi = r4h["rsi"]
+        h4_bull = r4h["score"] > 20 and r4h.get("tbull_r", False) and r4h["adx"] >= 15 and h4_rsi < 45
+        h4_bear = r4h["score"] < -20 and r4h.get("tbear_r", False) and r4h["adx"] >= 15 and h4_rsi > 55
+        direction = "BULL" if h4_bull else "BEAR"
 
-        if not (h1_bull or h1_bear):
-            log.info(f"[MTF] {short:7s} | 1h sem setup | Score {r1h['score']:+d} RSI1H {h1_rsi:.0f}")
+        if not (h4_bull or h4_bear):
+            log.info(f"[MTF] {short:7s} | 4H sem setup | Score {r4h['score']:+d} RSI4H {h4_rsi:.0f}")
             await asyncio.sleep(0.5)
             continue
 
-        # Pseudo-4H: usa últimas 4 velas de 1h para confirmar tendência de 4h
-        c1h_arr = [c["c"] for c in candles_1h]
-        if len(c1h_arr) >= 10:
-            e21_1h_v = ema_series(c1h_arr, 21)
-            e50_1h_v = ema_series(c1h_arr, 50)
-            h4_bull = c1h_arr[-1] > e21_1h_v[-1] > e50_1h_v[-1]
-            h4_bear = c1h_arr[-1] < e21_1h_v[-1] < e50_1h_v[-1]
-        else:
-            h4_bull = h4_bear = True
-        if h1_bull and not h4_bull:
-            setup_coins.append((short, direction, r1h["score"], h1_rsi, "4H↑ pendente"))
-            log.info(f"[MTF] {short:7s} | LONG bloqueado — 4H não confirma")
-            await asyncio.sleep(0.3); continue
-        if h1_bear and not h4_bear:
-            setup_coins.append((short, direction, r1h["score"], h1_rsi, "4H↓ pendente"))
-            log.info(f"[MTF] {short:7s} | SHORT bloqueado — 4H não confirma")
-            await asyncio.sleep(0.3); continue
-
-        # BTC filter: não operar altcoin contra BTC (exceto BTC e USDT pairs de stablecoins)
-        # Exceção: Grade S (score ≥ 120) bypassa filtro BTC — setup excepcional independe de BTC
-        grade_s_exempt = abs(r1h["score"]) >= 120
+        # BTC filter: não operar altcoin contra BTC
+        grade_s_exempt = abs(r4h["score"]) >= 120
         if short not in ("BTC", "WBTC") and not grade_s_exempt:
-            if h1_bull and btc_bear_filter:
-                setup_coins.append((short, direction, r1h["score"], h1_rsi, "BTC em queda"))
-                log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC em queda")
+            if h4_bull and btc_bear_filter:
+                setup_coins.append((short, direction, r4h["score"], h4_rsi, "BTC em queda"))
+                log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC 4H em queda")
                 await asyncio.sleep(0.2); continue
-            if h1_bear and btc_bull_filter:
-                setup_coins.append((short, direction, r1h["score"], h1_rsi, "BTC em alta"))
-                log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC em alta")
+            if h4_bear and btc_bull_filter:
+                setup_coins.append((short, direction, r4h["score"], h4_rsi, "BTC em alta"))
+                log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC 4H em alta")
                 await asyncio.sleep(0.2); continue
         elif grade_s_exempt and short not in ("BTC", "WBTC"):
-            log.info(f"[MTF] {short:7s} | Score {r1h['score']:+d} ≥ 120 — Grade S bypass filtro BTC")
+            log.info(f"[MTF] {short:7s} | Score {r4h['score']:+d} ≥ 120 — Grade S bypass BTC")
 
-        log.info(f"[MTF] {short:7s} | 1h {direction} ✓4H ✓BTC | Score {r1h['score']:+d} → buscando entrada 30m...")
+        log.info(f"[MTF] {short:7s} | 4H {direction} ✓BTC | Score {r4h['score']:+d} → buscando entrada 1H...")
 
-        # 30m — entrada no pullback
-        candles_15m = await fetch_candles(session, sym, "30m")
-        if not candles_15m: await asyncio.sleep(0.5); continue
+        # 1H — entrada no pullback EMA21/50
+        candles_1h = await fetch_candles(session, sym, "1h")
+        if not candles_1h: await asyncio.sleep(0.5); continue
 
-        result = analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear)
+        result = analyze_mtf_entry(sym, candles_1h, h4_bull, h4_bear)
         if not result:
-            setup_coins.append((short, direction, r1h["score"], h1_rsi, "pullback 30m pendente"))
-            log.info(f"[MTF] {short:7s} | 30m sem entrada (não está no pullback)")
+            setup_coins.append((short, direction, r4h["score"], h4_rsi, "pullback 1H pendente"))
+            log.info(f"[MTF] {short:7s} | 1H sem entrada (não está no pullback)")
             await asyncio.sleep(0.5)
             continue
 
         mtf_grade = result.get("signal_grade", "A")
         mtf_quality = result.get("quality_score", 0)
-        log.info(f"[MTF] {short:7s} | ✅ 30m {result['sig']} Grade:{mtf_grade} Q:{mtf_quality}/10 | {result['sig_source']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
+        log.info(f"[MTF] {short:7s} | ✅ 1H {result['sig']} Grade:{mtf_grade} Q:{mtf_quality}/10 | {result['sig_source']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
 
         if mtf_grade == "B":
-            setup_coins.append((short, direction, r1h["score"], h1_rsi, "Grade B"))
+            setup_coins.append((short, direction, r4h["score"], h4_rsi, "Grade B"))
             log.info(f"[MTF] {short:7s} | Grade B ignorado — setup insuficiente")
             await asyncio.sleep(0.3); continue
 
@@ -1161,14 +1142,14 @@ async def run_mtf_cycle(session, last_sig, coins):
             last_sig[key] = now
             sent += 1
             await send_telegram(session, sym, label, short, result["sig"],
-                                result["price"], result["atr"], r1h["score"],
+                                result["price"], result["atr"], r4h["score"],
                                 result["rsi"], result["adx"], result["trend"],
                                 result["kalman_up"],
                                 result["swing_low"], result["swing_high"],
-                                result["sig_source"], "30m", mtf_grade)
+                                result["sig_source"], "1h", mtf_grade)
         else:
             mins = int((cooldown_mtf - (now - last_sig.get(key, 0))) / 60)
-            setup_coins.append((short, direction, r1h["score"], h1_rsi, f"cooldown {mins}min"))
+            setup_coins.append((short, direction, r4h["score"], h4_rsi, f"cooldown {mins}min"))
             log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
 
         await asyncio.sleep(0.5)
@@ -1191,7 +1172,7 @@ async def run_mtf_cycle(session, last_sig, coins):
 
     # Diagnóstico MTF: mostra setups 1H em análise quando não há sinal
     if sent == 0 and setup_coins:
-        lines = [f"🔍 [MTF 1H→30m] Sem sinal — {len(setup_coins)} setup(s) 1H ativos"]
+        lines = [f"🔍 [MTF 4H→1H] Sem sinal — {len(setup_coins)} setup(s) 4H ativos"]
         for sh, d, sc, rsi, motivo in setup_coins[:4]:
             arrow = "📈" if d == "BULL" else "📉"
             lines.append(f"  {arrow} {sh}: {sc:+d} RSI {rsi:.0f} → {motivo}")
@@ -1324,17 +1305,22 @@ async def main():
                 last_scan_cycle=cycle
 
             log.info(f"── Ciclo #{cycle} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(active_coins)} moedas ──")
-            # MTF (1h→15m) + FLEX 15m — o 1h standalone é redundante e causa rate limit
+            # MTF (4H→1H ou 1H→30m) + FLEX no timeframe de entrada
             total=0
             try:
-                if "1h" in TIMEFRAMES and ("30m" in TIMEFRAMES or "15m" in TIMEFRAMES):
+                has_mtf = (("4h" in TIMEFRAMES and "1h" in TIMEFRAMES) or
+                           ("1h" in TIMEFRAMES and ("30m" in TIMEFRAMES or "15m" in TIMEFRAMES)))
+                if has_mtf:
                     sent_mtf = await run_mtf_cycle(session, last_sig, active_coins)
                     total += sent_mtf
             except Exception as e:
                 log.error(f"❌ MTF erro ciclo #{cycle}: {e}")
             try:
-                # FLEX standalone no timeframe base (30m) — 1h coberto pelo MTF
-                base_tf = next((t for t in TIMEFRAMES if t != "1h"), TIMEFRAMES[0])
+                # FLEX no timeframe menor (entrada) — HTF coberto pelo MTF
+                if "4h" in TIMEFRAMES:
+                    base_tf = next((t for t in TIMEFRAMES if t != "4h"), "1h")
+                else:
+                    base_tf = next((t for t in TIMEFRAMES if t != "1h"), TIMEFRAMES[0])
                 sent=await run_cycle(session, last_sig, base_tf, active_coins)
                 total+=sent
                 save_state(last_sig)
