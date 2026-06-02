@@ -1,0 +1,43 @@
+name: GAUSS+DNA Backtest Scanner
+
+on:
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: 'Quantas moedas escanear (padrão: 100)'
+        required: false
+        default: '100'
+      timeframe:
+        description: 'Timeframe (30m ou 1h)'
+        required: false
+        default: '30m'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install requests
+
+      - name: Rodar scanner
+        env:
+          TOP_N: ${{ github.event.inputs.top_n || '100' }}
+          INTERVAL: ${{ github.event.inputs.timeframe || '30m' }}
+        run: python scan_backtest.py
+
+      - name: Upload resultados
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-results
+          path: backtest_results.json
+          retention-days: 30
