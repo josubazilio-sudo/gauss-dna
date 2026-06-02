@@ -1042,6 +1042,7 @@ async def run_mtf_cycle(session, last_sig, coins):
     now = time.time()
     sent = 0
     cooldown_mtf = 3600  # 1h entre sinais MTF por moeda
+    setup_coins = []  # (short, direction, score, rsi, motivo_bloqueio)
 
     # BTC trend — não operar altcoins contra tendência do BTC
     btc_bull_filter = btc_bear_filter = False
@@ -1067,6 +1068,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         h1_rsi = r1h["rsi"]
         h1_bull = r1h["score"] > 20 and r1h.get("tbull_r", False) and r1h["adx"] >= 15 and h1_rsi < 40
         h1_bear = r1h["score"] < -20 and r1h.get("tbear_r", False) and r1h["adx"] >= 15 and h1_rsi > 60
+        direction = "BULL" if h1_bull else "BEAR"
 
         if not (h1_bull or h1_bear):
             log.info(f"[MTF] {short:7s} | 1h sem setup | Score {r1h['score']:+d} RSI1H {h1_rsi:.0f}")
@@ -1083,9 +1085,11 @@ async def run_mtf_cycle(session, last_sig, coins):
         else:
             h4_bull = h4_bear = True
         if h1_bull and not h4_bull:
+            setup_coins.append((short, direction, r1h["score"], h1_rsi, "4H↑ pendente"))
             log.info(f"[MTF] {short:7s} | LONG bloqueado — 4H não confirma")
             await asyncio.sleep(0.3); continue
         if h1_bear and not h4_bear:
+            setup_coins.append((short, direction, r1h["score"], h1_rsi, "4H↓ pendente"))
             log.info(f"[MTF] {short:7s} | SHORT bloqueado — 4H não confirma")
             await asyncio.sleep(0.3); continue
 
@@ -1094,15 +1098,16 @@ async def run_mtf_cycle(session, last_sig, coins):
         grade_s_exempt = abs(r1h["score"]) >= 120
         if short not in ("BTC", "WBTC") and not grade_s_exempt:
             if h1_bull and btc_bear_filter:
+                setup_coins.append((short, direction, r1h["score"], h1_rsi, "BTC em queda"))
                 log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC em queda")
                 await asyncio.sleep(0.2); continue
             if h1_bear and btc_bull_filter:
+                setup_coins.append((short, direction, r1h["score"], h1_rsi, "BTC em alta"))
                 log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC em alta")
                 await asyncio.sleep(0.2); continue
         elif grade_s_exempt and short not in ("BTC", "WBTC"):
             log.info(f"[MTF] {short:7s} | Score {r1h['score']:+d} ≥ 120 — Grade S bypass filtro BTC")
 
-        direction = "BULL" if h1_bull else "BEAR"
         log.info(f"[MTF] {short:7s} | 1h {direction} ✓4H ✓BTC | Score {r1h['score']:+d} → buscando entrada 30m...")
 
         # 30m — entrada no pullback
@@ -1111,6 +1116,7 @@ async def run_mtf_cycle(session, last_sig, coins):
 
         result = analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear)
         if not result:
+            setup_coins.append((short, direction, r1h["score"], h1_rsi, "pullback 30m pendente"))
             log.info(f"[MTF] {short:7s} | 30m sem entrada (não está no pullback)")
             await asyncio.sleep(0.5)
             continue
@@ -1120,6 +1126,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         log.info(f"[MTF] {short:7s} | ✅ 30m {result['sig']} Grade:{mtf_grade} Q:{mtf_quality}/10 | {result['sig_source']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
 
         if mtf_grade == "B":
+            setup_coins.append((short, direction, r1h["score"], h1_rsi, "Grade B"))
             log.info(f"[MTF] {short:7s} | Grade B ignorado — setup insuficiente")
             await asyncio.sleep(0.3); continue
 
@@ -1135,6 +1142,7 @@ async def run_mtf_cycle(session, last_sig, coins):
                                 result["sig_source"], "30m", mtf_grade)
         else:
             mins = int((cooldown_mtf - (now - last_sig.get(key, 0))) / 60)
+            setup_coins.append((short, direction, r1h["score"], h1_rsi, f"cooldown {mins}min"))
             log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
 
         await asyncio.sleep(0.5)
@@ -1154,6 +1162,22 @@ async def run_mtf_cycle(session, last_sig, coins):
                                         timeout=aiohttp.ClientTimeout(total=10)) as r:
                     await r.json()
             except: pass
+
+    # Diagnóstico MTF: mostra setups 1H em análise quando não há sinal
+    if sent == 0 and setup_coins:
+        lines = [f"🔍 [MTF 1H→30m] Sem sinal — {len(setup_coins)} setup(s) 1H ativos"]
+        for sh, d, sc, rsi, motivo in setup_coins[:4]:
+            arrow = "📈" if d == "BULL" else "📉"
+            lines.append(f"  {arrow} {sh}: {sc:+d} RSI {rsi:.0f} → {motivo}")
+        if len(setup_coins) > 4:
+            lines.append(f"  ... +{len(setup_coins)-4} outros")
+        lines.append(f"⏰ {datetime.now().strftime('%H:%M')}")
+        url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+        try:
+            async with session.post(url, json={"chat_id":TG_CHATID,"text":"\n".join(lines)},
+                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
+                await r.json()
+        except: pass
 
     return sent
 
