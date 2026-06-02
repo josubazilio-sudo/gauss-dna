@@ -480,13 +480,14 @@ def analyze(sym, candles):
     vol_ok_s = v_strong or obv_bear
 
     # FLEX: base sexta-feira + Trendilo obrigatório + ADX mínimo 15
+    # tbull/bear_loose: EMAs alinhadas na direção do sinal — evita operar contra tendência
     # not near_bb_top/bot + not ext_ema21: evita comprar no topo e vender no fundo
     # not exhaustion_top/bot: bloqueia candle de rejeição (pavio longo = força contrária)
     long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and trendilo_long and
-                 adx >= 15 and rsi < 74 and
+                 tbull_loose and adx >= 15 and rsi < 74 and
                  not near_bb_top and not ext_above_ema21 and not exhaustion_top)
     short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and trendilo_short and
-                  adx >= 15 and rsi > 32 and
+                  tbear_loose and obv_bear and adx >= 15 and rsi > 32 and
                   not near_bb_bot and not ext_below_ema21 and not exhaustion_bot)
 
     sig=None; sig_source=""
@@ -545,6 +546,7 @@ def analyze(sym, candles):
             if flex_score <= 30:             b.append(f"flex={flex_score:+d}<=30")
             if not (macd_bull_r or ha_bull): b.append(f"macd/ha=F")
             if not trendilo_long:            b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
+            if not tbull_loose:              b.append(f"ema_desalin(e10<e21 ou e21<e50)")
             if adx < 15:                     b.append(f"adx={adx:.1f}<15")
             if rsi >= 74:                    b.append(f"rsi={rsi:.1f}>=74")
             if near_bb_top:                  b.append(f"bb_top({price_bb_pos:.2f})")
@@ -556,6 +558,8 @@ def analyze(sym, candles):
             if flex_score >= -30:             b.append(f"flex={flex_score:+d}>=-30")
             if not (macd_bear_r or ha_bear):  b.append(f"macd/ha=F")
             if not trendilo_short:            b.append(f"trendilo=F({avpch[-1]:.3f} rms={rms_vals[-1]:.3f})")
+            if not tbear_loose:               b.append(f"ema_desalin(e10>e21 ou e21>e50)")
+            if not obv_bear:                  b.append(f"obv_bear=F")
             if adx < 15:                      b.append(f"adx={adx:.1f}<15")
             if rsi <= 26:                     b.append(f"rsi={rsi:.1f}<=26")
             if near_bb_bot:                   b.append(f"bb_bot({price_bb_pos:.2f})")
