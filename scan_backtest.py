@@ -10,9 +10,9 @@ from collections import deque
 BASE       = "https://api.mexc.com/api/v3"
 INTERVAL   = os.environ.get("INTERVAL", "30m")
 TOP_N      = int(os.environ.get("TOP_N", "100"))
-CANDLES    = 8640   # 6 meses em 30m (180 dias × 48 candles/dia)
-WARMUP     = 300    # candles descartados para aquecimento dos indicadores
-MIN_TRADES = 5      # mínimo de trades fechados para resultado válido
+CANDLES    = 1000   # máximo suportado pela API pública do MEXC (~20 dias em 30m)
+WARMUP     = 100    # candles descartados para aquecimento (EMA200 precisa de 200, mas usamos 100 mínimo)
+MIN_TRADES = 2      # mínimo de trades fechados para resultado válido
 
 # ── Indicadores — retornam arrays completos (O(n), não O(n²)) ────────────────
 
@@ -279,23 +279,14 @@ def calc_stats(trades):
 # ── Fetch com paginação (até 6 meses) ────────────────────────────────────────
 
 def fetch_klines(symbol, interval=INTERVAL, total=CANDLES):
-    all_raw=[]; end_time=None
-    batches=math.ceil(total/1000)+1
-    for _ in range(batches):
-        params={"symbol":symbol,"interval":interval,"limit":1000}
-        if end_time: params["endTime"]=end_time
-        try:
-            r=requests.get(f"{BASE}/klines",params=params,timeout=15)
-            data=r.json()
-        except: break
-        if not isinstance(data,list) or not data: break
-        all_raw=data+all_raw  # prepend — dados mais antigos primeiro
-        if len(data)<1000: break  # chegou ao início dos dados disponíveis
-        end_time=int(data[0][0])-1
-        time.sleep(0.08)
-    if len(all_raw)<WARMUP+10: return None
-    raw=all_raw[-total:]
-    return [[int(c[0]),float(c[1]),float(c[2]),float(c[3]),float(c[4]),float(c[5])] for c in raw]
+    try:
+        r=requests.get(f"{BASE}/klines",
+                       params={"symbol":symbol,"interval":interval,"limit":min(total,1000)},
+                       timeout=15)
+        data=r.json()
+        if not isinstance(data,list) or len(data)<WARMUP+10: return None
+        return [[int(c[0]),float(c[1]),float(c[2]),float(c[3]),float(c[4]),float(c[5])] for c in data]
+    except: return None
 
 def fetch_top_symbols(n=100):
     try:
@@ -314,8 +305,8 @@ def fetch_top_symbols(n=100):
 
 def main():
     dias=CANDLES*30//60//24
-    print("🔍 GAUSS+DNA Backtest Scanner — 6 meses")
-    print(f"   Timeframe: {INTERVAL} | Candles: {CANDLES} (~{dias} dias)")
+    print("🔍 GAUSS+DNA Backtest Scanner")
+    print(f"   Timeframe: {INTERVAL} | Candles: {CANDLES} (~{dias} dias | últimos dados disponíveis)")
     print(f"   Buscando top {TOP_N} moedas do MEXC...\n")
 
     symbols=fetch_top_symbols(TOP_N)
