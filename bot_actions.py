@@ -1064,11 +1064,12 @@ async def run_mtf_cycle(session, last_sig, coins):
         r1h = analyze(sym, candles_1h)
         if not r1h: await asyncio.sleep(0.5); continue
 
-        h1_bull = r1h["score"] > 20 and r1h.get("tbull_r", False) and r1h["adx"] >= 15
-        h1_bear = r1h["score"] < -20 and r1h.get("tbear_r", False) and r1h["adx"] >= 15
+        h1_rsi = r1h["rsi"]
+        h1_bull = r1h["score"] > 20 and r1h.get("tbull_r", False) and r1h["adx"] >= 15 and h1_rsi < 40
+        h1_bear = r1h["score"] < -20 and r1h.get("tbear_r", False) and r1h["adx"] >= 15 and h1_rsi > 60
 
         if not (h1_bull or h1_bear):
-            log.info(f"[MTF] {short:7s} | 1h sem setup | Score {r1h['score']:+d}")
+            log.info(f"[MTF] {short:7s} | 1h sem setup | Score {r1h['score']:+d} RSI1H {h1_rsi:.0f}")
             await asyncio.sleep(0.5)
             continue
 
