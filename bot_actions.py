@@ -246,6 +246,8 @@ def analyze(sym, candles):
     kalman_spread=ks[-1]-kl[-1]; kalman_spread_p=ks[-2]-kl[-2]
     kalman_accel_up=kalman_spread>kalman_spread_p>0
     kalman_accel_down=kalman_spread<kalman_spread_p<0
+    k_short_rising  = ks[-1] > ks[-2]   # Kalman curto subindo (Pine: short_rising)
+    k_short_falling = ks[-1] < ks[-2]   # Kalman curto caindo  (Pine: short_falling)
 
     # MACD (bull3/bear3 = 3 barras consecutivas para ELITE; recovering para early)
     ml,sl_v,hist,hist_p,hist_pp=macd_calc(closes)
@@ -289,6 +291,8 @@ def analyze(sym, candles):
     bb_upper,bb_lower,bb_basis,bb_bw,bb_bw_prev=bb_calc(closes)
     bb_squeeze=bb_bw<bb_bw_prev*0.95   # banda contraindo
     bb_expand=bb_bw>bb_bw_prev*1.02    # banda expandindo (breakout)
+    bb_break_long  = price > bb_upper  # quebra acima da banda (Pine Script)
+    bb_break_short = price < bb_lower  # quebra abaixo da banda (Pine Script)
 
     # OBV — fluxo acumulado de volume
     obv=obv_calc(closes,vols)
@@ -496,15 +500,27 @@ def analyze(sym, candles):
                   safe_short and
                   28 < rsi < 65)
 
+    # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
+    # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
+    # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
+    long_bb_break  = (bb_break_long  and kalman_up   and k_short_rising  and
+                      flex_score > 30 and adx >= 17  and not sideways    and
+                      not ext_above_ema21 and not vol_drying and rsi < 80)
+    short_bb_break = (bb_break_short and kalman_down and k_short_falling  and
+                      flex_score < -30 and adx >= 17 and not sideways    and
+                      not ext_below_ema21 and not vol_drying and rsi > 20)
+
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
         if long_elite or early_long: sig="LONG"; sig_source="ELITE"
         elif short_elite or early_short: sig="SHORT"; sig_source="ELITE"
-    else:  # FLEX — pullback > cross > flex (prioridade melhor preço)
+    else:  # FLEX — pullback > cross > bb_break > flex (prioridade melhor preço)
         if long_pullback: sig="LONG"; sig_source="PULLBACK"
         elif short_pullback: sig="SHORT"; sig_source="PULLBACK"
         elif long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
         elif short_cross: sig="SHORT"; sig_source=f"CROSS:{cross_label}"
+        elif long_bb_break: sig="LONG"; sig_source="BB_BREAK"
+        elif short_bb_break: sig="SHORT"; sig_source="BB_BREAK"
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
 
@@ -554,6 +570,8 @@ def analyze(sym, candles):
             if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
             if not (35<rsi<72): b.append(f"rsi={rsi:.1f} fora 35-72")
             if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR rsi={rsi:.0f}")
+            bb_info = f"bb_break={'✓' if bb_break_long else f'F(p<={bb_upper:.4f})'} k={'↑' if kalman_up else '↓'} ks={'↑' if k_short_rising else '↓'}"
+            b.append(bb_info)
             log.info(f"  LONG-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
         elif score < -25:
             b=[]
@@ -563,6 +581,8 @@ def analyze(sym, candles):
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
             if not (28<rsi<65): b.append(f"rsi={rsi:.1f} fora 28-65")
+            bb_info = f"bb_break={'✓' if bb_break_short else f'F(p>={bb_lower:.4f})'} k={'↓' if kalman_down else '↑'} ks={'↓' if k_short_falling else '↑'}"
+            b.append(bb_info)
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
         else:
             log.info(f"  no-sig {sym}: score={score:+d} insuf")
@@ -572,7 +592,8 @@ def analyze(sym, candles):
             "sig":sig,"sig_source":sig_source,"swing_low":swing_low,"swing_high":swing_high,
             "ha_bull":ha_bull,"obv_bull":obv_bull,"above_vwap":above_vwap,
             "signal_grade":signal_grade,"quality_score":quality_score,
-            "tbull_r":tbull_r,"tbear_r":tbear_r}
+            "tbull_r":tbull_r,"tbear_r":tbear_r,
+            "bb_break_long":bb_break_long,"bb_break_short":bb_break_short}
 
 def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     """Entrada na 15m dado setup confirmado na 1h.
