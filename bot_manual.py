@@ -102,7 +102,30 @@ def calc_vwap(h, l, c, v):
         vwap.append(cum_tv/cum_v if cum_v else t)
     return vwap[-1]
 
-def analyze(candles):
+def htf_conditions(candles_1h):
+    """Retorna (htf_bull, htf_bear) baseado em Trendilo + RSI + volume do 1H."""
+    if not candles_1h or len(candles_1h) < 30:
+        return False, False
+    c1 = [float(x[4]) for x in candles_1h]
+    v1 = [float(x[5]) for x in candles_1h]
+    trl1  = ema(ema(c1, 14), 14)
+    rsi1  = calc_rsi(c1)
+    j     = len(c1) - 1
+    # Trendilo direction on 1H
+    tl1   = trl1[j] > trl1[max(0, j-2)]
+    ts1   = trl1[j] < trl1[max(0, j-2)]
+    rsi1v = rsi1[j] if rsi1[j] else 50.0
+    # Volume: compare last bar vs avg of previous 5
+    vol_avg = sum(v1[max(0,j-5):j]) / max(1, min(5, j))
+    vol_up  = v1[j] >= vol_avg * 0.85
+    vol_dn  = v1[j] <= vol_avg * 1.15
+    # LONG: 1H Trendilo rising + RSI not overbought + volume supportive
+    htf_bull = tl1 and rsi1v < 68 and vol_up
+    # SHORT: 1H Trendilo falling + RSI not oversold + volume declining
+    htf_bear = ts1 and rsi1v > 32 and vol_dn
+    return htf_bull, htf_bear
+
+def analyze(candles, candles_1h=None):
     if len(candles) < 60: return None
     o = [float(c[1]) for c in candles]
     h = [float(c[2]) for c in candles]
@@ -143,8 +166,8 @@ def analyze(candles):
     av  = price > vwap
     bv  = price < vwap
 
-    htf_bull = e50v > e200v and e50[i] > e50[max(0,i-5)]
-    htf_bear = e50v < e200v and e50[i] < e50[max(0,i-5)]
+    # Real 1H HTF: Trendilo direction + RSI + volume on 1H candles
+    htf_bull, htf_bear = htf_conditions(candles_1h)
 
     score = 0
     if ab:  score += 20
@@ -334,11 +357,15 @@ async def main():
     results = []
 
     async with aiohttp.ClientSession() as session:
-        tasks = [fetch(session, sym) for sym, _, _ in WATCHLIST]
-        candles_list = await asyncio.gather(*tasks)
+        tasks_30m = [fetch(session, sym, INTERVAL) for sym, _, _ in WATCHLIST]
+        tasks_1h  = [fetch(session, sym, '1h', limit=100) for sym, _, _ in WATCHLIST]
+        all_30m, all_1h = await asyncio.gather(
+            asyncio.gather(*tasks_30m),
+            asyncio.gather(*tasks_1h),
+        )
 
-        for (sym, label, grade), candles in zip(WATCHLIST, candles_list):
-            r = analyze(candles) if candles else None
+        for (sym, label, grade), candles, c1h in zip(WATCHLIST, all_30m, all_1h):
+            r = analyze(candles, c1h) if candles else None
             results.append(((sym, label, grade), r))
             sig_str = r["sig"] or r["near"] or "sem sinal" if r else "ERRO"
             score_str = f"score={r['score']:+d}" if r else ""

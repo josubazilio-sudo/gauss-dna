@@ -303,7 +303,25 @@ function calcVWAP(h,l,c,v){
   return vol?tv/vol:c[c.length-1];
 }
 
-function analyze(candles){
+function htfConditions(c1h){
+  if(!c1h||c1h.length<30)return{bull:false,bear:false};
+  const c1=c1h.map(x=>+x[4]),v1=c1h.map(x=>+x[5]);
+  const trl1=ema(ema(c1,14),14);
+  const rsi1=calcRSI(c1);
+  const j=c1.length-1;
+  const tl1=trl1[j]>trl1[Math.max(0,j-2)];
+  const ts1=trl1[j]<trl1[Math.max(0,j-2)];
+  const rsi1v=rsi1[j]||50;
+  const volAvg=v1.slice(Math.max(0,j-5),j).reduce((a,b)=>a+b,0)/Math.min(5,j)||1;
+  const volUp=v1[j]>=volAvg*0.85;
+  const volDn=v1[j]<=volAvg*1.15;
+  return{
+    bull: tl1&&rsi1v<68&&volUp,
+    bear: ts1&&rsi1v>32&&volDn,
+  };
+}
+
+function analyze(candles,candles1h){
   if(candles.length<60)return null;
   const o=candles.map(x=>+x[1]),h=candles.map(x=>+x[2]),
         l=candles.map(x=>+x[3]),c=candles.map(x=>+x[4]),
@@ -329,8 +347,8 @@ function analyze(candles){
   const mb=mh[i]>0&&mh[i]>mh[i-1], mr=mh[i]<0&&mh[i]<mh[i-1];
   const hb=haC[i]>haO[i]&&haC[i]>haC[i-1], hr=haC[i]<haO[i]&&haC[i]<haC[i-1];
   const av=price>vwap, bv=price<vwap;
-  const htfBull=e50v>e200v&&e50[i]>e50[Math.max(0,i-5)];
-  const htfBear=e50v<e200v&&e50[i]<e50[Math.max(0,i-5)];
+  // Real 1H HTF: Trendilo + RSI + volume do 1H
+  const{bull:htfBull,bear:htfBear}=htfConditions(candles1h);
 
   let score=0;
   if(ab)score+=20;else if(e9v>e21v)score+=10;
@@ -369,9 +387,9 @@ function analyze(candles){
 }
 
 // ── Fetch ──
-async function fetchCandles(sym,limit=220){
+async function fetchCandles(sym,interval='30m',limit=220){
   try{
-    const r=await fetch(`${MEXC}/klines?symbol=${sym}&interval=30m&limit=${limit}`);
+    const r=await fetch(`${MEXC}/klines?symbol=${sym}&interval=${interval}&limit=${limit}`);
     if(!r.ok)return null;
     return await r.json();
   }catch{return null;}
@@ -487,8 +505,11 @@ function renderGrids(){
 
 // ── Load one coin ──
 async function loadCoin(coin){
-  const candles=await fetchCandles(coin.sym);
-  const result=candles?analyze(candles):null;
+  const[candles,candles1h]=await Promise.all([
+    fetchCandles(coin.sym,'30m',220),
+    fetchCandles(coin.sym,'1h',100),
+  ]);
+  const result=candles?analyze(candles,candles1h):null;
   if(result&&prevPrices[coin.sym]===undefined)prevPrices[coin.sym]=result.price;
   else if(result&&state[coin.sym])prevPrices[coin.sym]=(state[coin.sym]||{}).price||result.price;
   state[coin.sym]=result;
