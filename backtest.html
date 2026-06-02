@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<!--
+  GAUSS+DNA Backtester — opens via HTTP server or GitHub Pages.
+  Cannot run from file:// directly (MEXC API blocks CORS on file protocol).
+  Serve locally: python3 -m http.server 8080, then open http://localhost:8080/backtest.html
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAUSS+DNA · Backtester</title>
+<meta name="theme-color" content="#060810">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+:root{
+  --bg:#060810;--s1:#0b0f1a;--s2:#101422;--s3:#131828;
+  --border:#1a2035;--border2:#222840;
+  --blue:#3b9eff;--cyan:#00d4ff;--green:#00e090;
+  --orange:#ff8040;--red:#ff3d5a;--yellow:#ffcc44;--purple:#b47fff;
+  --text:#ccd8ee;--muted:#3a4d6a;--muted2:#5a6d8a
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(59,158,255,.02) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(59,158,255,.02) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0}
+
+/* ── LAYOUT ── */
+.wrap{max-width:1400px;margin:0 auto;padding:1rem 1rem 4rem;position:relative;z-index:1}
+
+/* ── HEADER ── */
+.hdr{text-align:center;margin-bottom:1.2rem;padding:.8rem 0}
+.hdr-badge{display:inline-flex;align-items:center;gap:.4rem;
+  background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);
+  border-radius:20px;padding:.28rem .9rem;font-size:.6rem;color:var(--cyan);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem}
+.hdr h1{font-family:'Unbounded',sans-serif;font-size:1.5rem;font-weight:900;margin-bottom:.25rem}
+.hdr h1 .c1{color:var(--cyan)}.hdr h1 .c2{color:var(--yellow)}
+.hdr p{font-size:.62rem;color:var(--muted2);letter-spacing:.04em}
+
+/* ── CONTROL BAR ── */
+.ctrl{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;
+  background:var(--s1);border:1px solid var(--border);border-radius:12px;
+  padding:.85rem 1rem;margin-bottom:.85rem}
+.ctrl-group{display:flex;flex-direction:column;gap:.25rem}
+.ctrl-group label{font-size:.56rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em}
+.ctrl-group input,.ctrl-group select{
+  background:var(--s2);border:1px solid var(--border2);border-radius:7px;
+  color:var(--text);font-family:'DM Mono',monospace;font-size:.75rem;
+  padding:.42rem .7rem;outline:none;min-width:110px}
+.ctrl-group input:focus,.ctrl-group select:focus{border-color:var(--cyan)}
+.ctrl-group select option{background:var(--s2)}
+.btn-run{padding:.55rem 1.4rem;border-radius:8px;font-family:'Unbounded',sans-serif;
+  font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  cursor:pointer;border:none;transition:all .2s;
+  background:linear-gradient(135deg,rgba(0,212,255,.18),rgba(0,212,255,.08));
+  border:1px solid rgba(0,212,255,.35);color:var(--cyan);align-self:flex-end}
+.btn-run:hover{background:linear-gradient(135deg,rgba(0,212,255,.3),rgba(0,212,255,.15));
+  box-shadow:0 0 18px rgba(0,212,255,.2)}
+.btn-run:disabled{opacity:.4;cursor:not-allowed}
+.status-txt{font-size:.62rem;color:var(--muted2);align-self:flex-end;margin-left:auto}
+
+/* ── CHART ── */
+.chart-wrap{background:var(--s1);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;margin-bottom:.85rem;position:relative}
+#chart{height:480px;width:100%}
+.chart-legend{position:absolute;top:10px;left:14px;z-index:10;
+  display:flex;flex-wrap:wrap;gap:.5rem;pointer-events:none}
+.leg-item{font-size:.6rem;padding:.2rem .5rem;border-radius:4px;
+  background:rgba(6,8,16,.7);border:1px solid var(--border2)}
+
+/* ── LOADING SPINNER ── */
+.spinner-wrap{position:absolute;inset:0;display:none;align-items:center;
+  justify-content:center;background:rgba(6,8,16,.7);z-index:20;border-radius:12px}
+.spinner-wrap.show{display:flex}
+.spinner{width:38px;height:38px;border:3px solid var(--border2);
+  border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+.spinner-txt{margin-top:.6rem;font-size:.62rem;color:var(--muted2)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner-block{display:flex;flex-direction:column;align-items:center;gap:.4rem}
+
+/* ── STATS BAR ── */
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:.85rem}
+@media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;
+  padding:.75rem .9rem;text-align:center}
+.stat-lbl{font-size:.55rem;color:var(--muted2);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:.3rem}
+.stat-val{font-family:'Unbounded',sans-serif;font-size:1.1rem;font-weight:700}
+.stat-val.pos{color:var(--green)}.stat-val.neg{color:var(--red)}
+.stat-val.neu{color:var(--cyan)}
+
+/* ── TRADES TABLE ── */
+.tbl-wrap{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.tbl-hdr{padding:.75rem 1rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem}
+.tbl-title{font-size:.65rem;color:var(--cyan);letter-spacing:.06em;text-transform:uppercase}
+.tbl-sub{font-size:.58rem;color:var(--muted2)}
+.tbl-scroll{max-height:360px;overflow-y:auto}
+.tbl-scroll::-webkit-scrollbar{width:5px}
+.tbl-scroll::-webkit-scrollbar-track{background:transparent}
+.tbl-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+table{width:100%;border-collapse:collapse;font-size:.65rem}
+thead th{padding:.55rem .75rem;text-align:left;font-size:.55rem;
+  color:var(--muted2);text-transform:uppercase;letter-spacing:.07em;
+  border-bottom:1px solid var(--border);position:sticky;top:0;
+  background:var(--s1);z-index:5}
+tbody tr{border-bottom:1px solid rgba(26,32,53,.5);transition:background .15s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody td{padding:.5rem .75rem;color:var(--text)}
+.sig-long{color:var(--green);font-weight:500}
+.sig-short{color:var(--red);font-weight:500}
+.r-pos{color:var(--green)}.r-neg{color:var(--red)}.r-neu{color:var(--muted2)}
+.result-win{color:var(--green)}.result-loss{color:var(--red)}
+.result-part{color:var(--yellow)}.result-open{color:var(--muted2)}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--muted2);font-size:.65rem}
+
+/* ── EQUITY CURVE ── */
+.equity-wrap{background:var(--s1);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;margin-bottom:.85rem}
+.equity-hdr{padding:.75rem 1rem;border-bottom:1px solid var(--border);
+  font-size:.65rem;color:var(--cyan);letter-spacing:.06em;text-transform:uppercase}
+#equity-chart{height:160px;width:100%}
+
+/* ── NOTICE ── */
+.notice{background:rgba(255,200,60,.05);border:1px solid rgba(255,200,60,.18);
+  border-radius:8px;padding:.65rem 1rem;margin-bottom:.85rem;
+  font-size:.6rem;color:var(--yellow);line-height:1.7}
+
+/* ── RESPONSIVE ── */
+@media(max-width:700px){
+  .hdr h1{font-size:1.1rem}
+  #chart{height:320px}
+  #equity-chart{height:120px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-badge">⚡ GAUSS+DNA · Backtester</div>
+    <h1><span class="c1">GAUSS</span><span class="c2">+DNA</span> · FLEX Backtester</h1>
+    <p>Estratégia FLEX LONG/SHORT · MEXC API · Dados reais · Sem build step</p>
+  </div>
+
+  <!-- NOTICE -->
+  <div class="notice">
+    ⚠ Requer servidor HTTP: abra via <code>python3 -m http.server 8080</code> ou GitHub Pages
+    — file:// bloqueia CORS da API MEXC. Capital base: 1000 USDT · Risco por trade: 2% (20 USDT = 1R).
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="ctrl">
+    <div class="ctrl-group">
+      <label>Par</label>
+      <input id="inp-symbol" value="BTCUSDT" style="width:130px" placeholder="BTCUSDT">
+    </div>
+    <div class="ctrl-group">
+      <label>Timeframe</label>
+      <select id="inp-tf">
+        <option value="15m">15m</option>
+        <option value="30m" selected>30m</option>
+        <option value="1h">1h</option>
+        <option value="4h">4h</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Período</label>
+      <select id="inp-days">
+        <option value="30">Últimos 30 dias</option>
+        <option value="60" selected>Últimos 60 dias</option>
+        <option value="90">Últimos 90 dias</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Risco / Trade</label>
+      <select id="inp-risk">
+        <option value="1">1% (10 USDT)</option>
+        <option value="2" selected>2% (20 USDT)</option>
+        <option value="3">3% (30 USDT)</option>
+      </select>
+    </div>
+    <button class="btn-run" id="btn-run" onclick="runBacktest()">▶ Executar Backtest</button>
+    <span class="status-txt" id="status-txt">Aguardando...</span>
+  </div>
+
+  <!-- CHART AREA -->
+  <div class="chart-wrap">
+    <div class="spinner-wrap" id="spinner">
+      <div class="spinner-block">
+        <div class="spinner"></div>
+        <div class="spinner-txt" id="spinner-txt">Baixando dados...</div>
+      </div>
+    </div>
+    <div id="chart"></div>
+  </div>
+
+  <!-- EQUITY CURVE -->
+  <div class="equity-wrap">
+    <div class="equity-hdr">Curva de Equity (R acumulado)</div>
+    <div id="equity-chart"></div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats">
+    <div class="stat-card"><div class="stat-lbl">Win Rate</div><div class="stat-val neu" id="s-wr">—</div></div>
+    <div class="stat-card"><div class="stat-lbl">Total Trades</div><div class="stat-val neu" id="s-tt">—</div></div>
+    <div class="stat-card"><div class="stat-lbl">Total R</div><div class="stat-val neu" id="s-tr">—</div></div>
+    <div class="stat-card"><div class="stat-lbl">Avg R/Trade</div><div class="stat-val neu" id="s-ar">—</div></div>
+    <div class="stat-card"><div class="stat-lbl">Profit Factor</div><div class="stat-val neu" id="s-pf">—</div></div>
+    <div class="stat-card"><div class="stat-lbl">Max Drawdown</div><div class="stat-val neu" id="s-dd">—</div></div>
+  </div>
+
+  <!-- TRADES TABLE -->
+  <div class="tbl-wrap">
+    <div class="tbl-hdr">
+      <span class="tbl-title">Operações</span>
+      <span class="tbl-sub" id="tbl-sub">—</span>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Data</th>
+            <th>Par</th>
+            <th>Sinal</th>
+            <th>Entrada</th>
+            <th>Stop</th>
+            <th>TP1</th>
+            <th>TP2</th>
+            <th>Final TP</th>
+            <th>Resultado</th>
+            <th>R</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody id="trade-tbody">
+          <tr><td colspan="12" class="empty-state">Execute o backtest para ver as operações.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+//  GLOBAL STATE
+// ═══════════════════════════════════════════════════════════
+let mainChart = null;
+let candleSeries = null;
+let equityChart = null;
+let equitySeries = null;
+let markerSeries = [];   // line series for TP/SL levels
+
+// ═══════════════════════════════════════════════════════════
+//  UTILITY
+// ═══════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'}) +
+         ' ' + d.toTimeString().slice(0,5);
+}
+
+function fmtPrice(p) {
+  if (p === null || p === undefined || isNaN(p)) return '—';
+  if (p < 0.0001) return p.toFixed(7);
+  if (p < 0.01)   return p.toFixed(5);
+  if (p < 1)      return p.toFixed(4);
+  if (p < 100)    return p.toFixed(3);
+  return p.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function fmtR(r) {
+  if (r === null || isNaN(r)) return '—';
+  return (r >= 0 ? '+' : '') + r.toFixed(2) + 'R';
+}
+
+function setStatus(txt) { $('status-txt').textContent = txt; }
+function setSpinner(show, txt='') {
+  $('spinner').classList.toggle('show', show);
+  if (txt) $('spinner-txt').textContent = txt;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DATA FETCH — MEXC public klines
+// ═══════════════════════════════════════════════════════════
+async function fetchKlines(symbol, interval, days) {
+  const limit = 1000;
+  const now = Date.now();
+  const msPerCandle = tfToMs(interval);
+  const totalCandles = Math.ceil((days * 86400000) / msPerCandle) + 200; // +warmup
+
+  let allCandles = [];
+  let endTime = now;
+
+  while (allCandles.length < totalCandles) {
+    const url = `https://api.mexc.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}&endTime=${endTime}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`MEXC API ${resp.status}: ${await resp.text()}`);
+    const raw = await resp.json();
+    if (!raw.length) break;
+
+    // MEXC returns ascending order; prepend to allCandles
+    const batch = raw.map(r => ({
+      t: +r[0],   // openTime ms
+      o: +r[1], h: +r[2], l: +r[3], c: +r[4],
+      v: +r[5],
+      ct: +r[6]   // closeTime ms
+    }));
+
+    allCandles = [...batch, ...allCandles];
+    endTime = batch[0].t - 1; // go further back
+
+    setSpinner(true, `Baixando dados... ${allCandles.length} velas`);
+    if (allCandles.length >= totalCandles) break;
+    if (raw.length < limit) break; // no more data
+  }
+
+  // Sort ascending, deduplicate
+  allCandles.sort((a,b) => a.t - b.t);
+  const seen = new Set();
+  allCandles = allCandles.filter(c => { if (seen.has(c.t)) return false; seen.add(c.t); return true; });
+
+  // Filter to requested range + warmup
+  const cutoff = now - (days * 86400000) - 200 * msPerCandle;
+  allCandles = allCandles.filter(c => c.t >= cutoff && c.ct <= now);
+
+  return allCandles;
+}
+
+function tfToMs(tf) {
+  const map = {'1m':60000,'3m':180000,'5m':300000,'15m':900000,
+               '30m':1800000,'1h':3600000,'2h':7200000,'4h':14400000,
+               '6h':21600000,'8h':28800000,'12h':43200000,'1d':86400000};
+  return map[tf] || 1800000;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INDICATOR MATH
+// ═══════════════════════════════════════════════════════════
+function emaSeries(arr, p) {
+  const k = 2.0 / (p + 1);
+  const out = [arr[0]];
+  for (let i = 1; i < arr.length; i++) out.push(arr[i] * k + out[i-1] * (1 - k));
+  return out;
+}
+
+function rmaSeries(arr, p) {
+  let seed = 0;
+  for (let i = 0; i < p; i++) seed += arr[i];
+  const out = [seed / p];
+  for (let i = p; i < arr.length; i++) out.push((out[out.length-1] * (p-1) + arr[i]) / p);
+  // pad front with NaN
+  const padded = new Array(p - 1).fill(NaN);
+  return [...padded, ...out];
+}
+
+function almaSeries(src, length=50, offset=0.85, sigma=6) {
+  const n = src.length;
+  const m = Math.floor(offset * (length - 1));
+  const s = length / sigma;
+  const w = [];
+  for (let i = 0; i < length; i++) w.push(Math.exp(-((i - m) ** 2) / (2 * s * s)));
+  const wSum = w.reduce((a,b) => a+b, 0);
+  const out = new Array(length - 1).fill(NaN);
+  for (let i = length - 1; i < n; i++) {
+    let val = 0;
+    for (let j = 0; j < length; j++) val += w[j] * src[i - length + 1 + j];
+    out.push(val / wSum);
+  }
+  return out;
+}
+
+function atrSeries(candles, p=14) {
+  const trs = [candles[0].h - candles[0].l];
+  for (let i = 1; i < candles.length; i++) {
+    const {h,l} = candles[i]; const pc = candles[i-1].c;
+    trs.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+  }
+  const rma = rmaSeries(trs, p);
+  // fill front with tr values for warmup
+  return rma.map((v,i) => isNaN(v) ? trs[i] : v);
+}
+
+function rsiCalc(closes, p=14) {
+  const gains = [0], losses = [0];
+  for (let i = 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i-1];
+    gains.push(Math.max(d, 0)); losses.push(Math.max(-d, 0));
+  }
+  let ag = 0, al = 0;
+  for (let i = 1; i <= p; i++) { ag += gains[i]; al += losses[i]; }
+  ag /= p; al /= p;
+  for (let i = p + 1; i < closes.length; i++) {
+    ag = (ag * (p-1) + gains[i]) / p;
+    al = (al * (p-1) + losses[i]) / p;
+  }
+  return al === 0 ? 100 : 100 - (100 / (1 + ag / al));
+}
+
+function macdCalc(closes, f=12, s=26, sig=9) {
+  const ea = emaSeries(closes, f);
+  const eb = emaSeries(closes, s);
+  const ml = ea.map((v,i) => v - eb[i]);
+  const sl = emaSeries(ml, sig);
+  const hist = ml.map((v,i) => v - sl[i]);
+  const n = hist.length;
+  return {
+    ml: ml[n-1], sl: sl[n-1],
+    hist: hist[n-1],
+    hist_p: n > 1 ? hist[n-2] : hist[n-1],
+    hist_pp: n > 2 ? hist[n-3] : hist[n-1]
+  };
+}
+
+function dmiAdx(candles, p=14, smooth=14) {
+  const pdm=[], mdm=[], tr=[];
+  for (let i = 1; i < candles.length; i++) {
+    const {h,l} = candles[i]; const {h:ph, l:pl, c:pc} = candles[i-1];
+    const up = h - ph, dn = pl - l;
+    pdm.push(up > dn && up > 0 ? up : 0);
+    mdm.push(dn > up && dn > 0 ? dn : 0);
+    tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+  }
+  const rtr  = rmaSeries(tr, p).map((v,i) => isNaN(v) ? tr[i]||1e-10 : v);
+  const rpdm = rmaSeries(pdm, p).map((v,i) => isNaN(v) ? pdm[i]||0 : v);
+  const rmdm = rmaSeries(mdm, p).map((v,i) => isNaN(v) ? mdm[i]||0 : v);
+  const dx = rtr.map((t,i) => {
+    const pdi = (rpdm[i]/t)*100, mdi = (rmdm[i]/t)*100;
+    return Math.abs(pdi - mdi) / ((pdi + mdi) || 1) * 100;
+  });
+  const adxArr = rmaSeries(dx, smooth).map((v,i) => isNaN(v) ? dx[i]||0 : v);
+  const n = adxArr.length;
+  const t = rtr[n-1] || 1e-10;
+  return {
+    pdi: (rpdm[n-1]/t)*100,
+    mdi: (rmdm[n-1]/t)*100,
+    adx: adxArr[n-1],
+    adx_p: n > 1 ? adxArr[n-2] : adxArr[n-1]
+  };
+}
+
+function haSeries(candles) {
+  const ha = [];
+  for (let i = 0; i < candles.length; i++) {
+    const c = candles[i];
+    const hc = (c.o + c.h + c.l + c.c) / 4;
+    const ho = i === 0 ? (c.o + c.c) / 2 : (ha[i-1].o + ha[i-1].c) / 2;
+    ha.push({ o:ho, h:Math.max(c.h,ho,hc), l:Math.min(c.l,ho,hc), c:hc });
+  }
+  return ha;
+}
+
+function bbCalc(closes, p=20, mult=2.0) {
+  const slice = closes.slice(-p);
+  const basis = slice.reduce((a,b)=>a+b,0) / p;
+  const variance = slice.reduce((a,b) => a + (b-basis)**2, 0) / p;
+  const stdDev = Math.sqrt(variance);
+  const upper = basis + mult * stdDev;
+  const lower = basis - mult * stdDev;
+  return {upper, lower, basis, range: Math.max(upper - lower, 1e-10)};
+}
+
+function obvCalc(closes, vols) {
+  const obv = [0];
+  for (let i = 1; i < closes.length; i++) {
+    if (closes[i] > closes[i-1])      obv.push(obv[i-1] + vols[i]);
+    else if (closes[i] < closes[i-1]) obv.push(obv[i-1] - vols[i]);
+    else                               obv.push(obv[i-1]);
+  }
+  return obv;
+}
+
+function vwapCalc(candles, period=20) {
+  const sl = candles.slice(-period);
+  const vp = sl.reduce((a,c) => a + (c.h+c.l+c.c)/3 * c.v, 0);
+  const tv = sl.reduce((a,c) => a + c.v, 0);
+  return tv > 0 ? vp / tv : sl[sl.length-1].c;
+}
+
+// Rolling RMS of last N values
+function rollingRMS(arr, n=50) {
+  return arr.map((_, i) => {
+    const slice = arr.slice(Math.max(0, i-n+1), i+1).filter(v => !isNaN(v));
+    if (!slice.length) return 0;
+    return Math.sqrt(slice.reduce((a,v) => a + v*v, 0) / slice.length);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SIGNAL ANALYSIS at candle index i (using candles[0..i])
+// ═══════════════════════════════════════════════════════════
+function analyze(candles, idx, almaPch, rmsVals) {
+  if (idx < 60) return null;
+
+  const window = candles.slice(0, idx + 1);
+  const n = window.length;
+  const closes = window.map(c => c.c);
+  const highs  = window.map(c => c.h);
+  const lows   = window.map(c => c.l);
+  const opens  = window.map(c => c.o);
+  const vols   = window.map(c => c.v);
+  const price  = closes[n-1];
+
+  // EMAs
+  const e10a = emaSeries(closes, 10);  const e10 = e10a[n-1];
+  const e21a = emaSeries(closes, 21);  const e21 = e21a[n-1];
+  const e50a = emaSeries(closes, 50);  const e50 = e50a[n-1];
+  const e200a= emaSeries(closes,200);  const e200= e200a[n-1]; const e200p=n>4?e200a[n-4]:e200;
+
+  // ATR
+  const atrArr = atrSeries(window, 14);
+  const atr = Math.max(atrArr[n-1], 1e-10);
+
+  // MACD
+  const {ml, sl: sl_v, hist, hist_p, hist_pp} = macdCalc(closes);
+  const macd_bull_r = ml > sl_v && hist > hist_p;
+  const macd_bear_r = ml < sl_v && hist < hist_p;
+
+  // Heikin-Ashi
+  const ha = haSeries(window);
+  const ha_bull = ha[n-1].c > ha[n-1].o && (n < 2 || ha[n-2].c > ha[n-2].o);
+  const ha_bear = ha[n-1].c < ha[n-1].o && (n < 2 || ha[n-2].c < ha[n-2].o);
+
+  // RSI
+  const rsi = rsiCalc(closes.slice(-50));
+
+  // DMI/ADX
+  const {pdi, mdi, adx} = dmiAdx(window.slice(-60));
+
+  // Volume
+  const vol_ma = vols.slice(-20).reduce((a,b)=>a+b,0) / 20;
+  const v_strong = vols[n-1] > vol_ma * 1.0;
+
+  // Bollinger Bands
+  const {upper: bb_upper, lower: bb_lower, range: bb_range} = bbCalc(closes);
+  const bb_pos = (price - bb_lower) / bb_range;
+  const near_bb_top = bb_pos > 0.97;
+  const near_bb_bot = bb_pos < 0.03;
+
+  // OBV
+  const obv = obvCalc(closes, vols);
+  const obv_ema = emaSeries(obv, 21);
+  const obv_bull = obv[n-1] > obv_ema[n-1];
+  const obv_bear = obv[n-1] < obv_ema[n-1];
+
+  // VWAP
+  const vwap = vwapCalc(window);
+  const above_vwap = price > vwap;
+  const below_vwap = price < vwap;
+
+  // EMA alignment
+  const tbull_loose = e10 > e21 && e21 > e50;
+  const tbear_loose = e10 < e21 && e21 < e50;
+  const trend_bull  = price > e200 && e10 > e21 && e21 > e50 && e50 > e200;
+  const trend_bear  = price < e200 && e10 < e21 && e21 < e50 && e50 < e200;
+  const e200_rising = e200 > e200p;
+  const e200_falling= e200 < e200p;
+
+  // Trendilo — use pre-computed arrays up to idx
+  const avpch_val = almaPch[idx];
+  const rms_val   = rmsVals[idx];
+  const trendilo_long  = !isNaN(avpch_val) && avpch_val > rms_val;
+  const trendilo_short = !isNaN(avpch_val) && avpch_val < -rms_val;
+
+  // Safety filters
+  const ext_above_ema21 = (price - e21) / atr > 3.0;
+  const ext_below_ema21 = (e21 - price) / atr > 3.0;
+  const uwick_ratio = (highs[n-1] - Math.max(opens[n-1], price)) /
+                      Math.max(highs[n-1] - lows[n-1], 1e-10);
+  const lwick_ratio = (Math.min(opens[n-1], price) - lows[n-1]) /
+                      Math.max(highs[n-1] - lows[n-1], 1e-10);
+  const exhaustion_top = uwick_ratio > 0.40;
+  const exhaustion_bot = lwick_ratio > 0.40;
+
+  // Volume & liquidity
+  const vol_ok   = v_strong || obv_bull;
+  const vol_ok_s = v_strong || obv_bear;
+  const near_liq = Math.abs(price - e21) / atr < 2.5 || Math.abs(price - e50) / atr < 2.5;
+
+  // Flex score
+  const rsi_bull = 50 < rsi && rsi < 70;
+  const rsi_bear = 30 < rsi && rsi < 50;
+  const score = Math.max(-145, Math.min(145,
+    (trend_bull ? 35 : trend_bear ? -35 : 0) +
+    (macd_bull_r ? 20 : macd_bear_r ? -20 : 0) +
+    (adx > 30 ? 20 : adx > 22 ? 10 : 0) +
+    (v_strong ? 10 : -5) +
+    (rsi_bull ? 10 : rsi_bear ? -10 : 0) +
+    (e200_rising ? 10 : e200_falling ? -10 : 0) +
+    (obv_bull ? 15 : obv_bear ? -15 : 0) +
+    (above_vwap ? 5 : -5) +
+    (ha_bull ? 10 : ha_bear ? -10 : 0) +
+    (trendilo_long ? 10 : trendilo_short ? -10 : 0)
+  ));
+
+  const flex_bonus_bull = (tbull_loose && !trend_bull) ? 30 : 0;
+  const flex_bonus_bear = (tbear_loose && !trend_bear) ? 30 : 0;
+  const flex_score = score + flex_bonus_bull - flex_bonus_bear;
+
+  // FLEX signals
+  const long_flex = (
+    flex_score > 30 &&
+    (macd_bull_r || ha_bull) &&
+    trendilo_long &&
+    tbull_loose &&
+    above_vwap &&
+    vol_ok &&
+    near_liq &&
+    adx >= 15 &&
+    rsi < 74 &&
+    !near_bb_top &&
+    !ext_above_ema21 &&
+    !exhaustion_top
+  );
+
+  const short_flex = (
+    flex_score < -30 &&
+    (macd_bear_r || ha_bear) &&
+    trendilo_short &&
+    tbear_loose &&
+    below_vwap &&
+    vol_ok_s &&
+    near_liq &&
+    adx >= 15 &&
+    rsi > 32 &&
+    !near_bb_bot &&
+    !ext_below_ema21 &&
+    !exhaustion_bot
+  );
+
+  // Swing levels for stop
+  const lookback = window.slice(-17, -1);
+  const swing_low  = Math.min(...lookback.map(c => c.l));
+  const swing_high = Math.max(...lookback.map(c => c.h));
+
+  return {
+    price, atr, rsi, adx, flex_score,
+    long_flex, short_flex,
+    swing_low, swing_high,
+    above_vwap, obv_bull,
+    trendilo_long, trendilo_short
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BACKTEST ENGINE
+// ═══════════════════════════════════════════════════════════
+function runBacktestEngine(candles, symbol) {
+  const WARMUP = 200;
+  const COOLDOWN = 8;
+
+  // Pre-compute Trendilo arrays over all candles
+  const allCloses = candles.map(c => c.c);
+  const pch = [0, ...allCloses.slice(1).map((c,i) => (c - allCloses[i]) / allCloses[i] * 100)];
+  const almaPch = almaSeries(pch, 50, 0.85, 6);
+  const rmsVals = rollingRMS(almaPch, 50);
+
+  const trades = [];
+  let openTrade = null;
+  let cooldownLeft = 0;
+
+  // Trade resolution state (partial fills)
+  function newTrade(dir, entryIdx, entry, stop, candle) {
+    const risk = Math.abs(entry - stop);
+    if (risk < 1e-10) return null;
+    const mult = dir === 'LONG' ? 1 : -1;
+    return {
+      id: trades.length + 1,
+      dir,
+      symbol,
+      entryIdx,
+      entryTime: candle.t,
+      entry,
+      stop,
+      risk,
+      tp1: entry + mult * risk * 2.5,
+      tp2: entry + mult * risk * 4.5,
+      tp3: entry + mult * risk * 8.0,
+      // remaining portions
+      rem1: 0.40,  // 40% exits at TP1
+      rem2: 0.35,  // 35% exits at TP2
+      rem3: 0.25,  // 25% exits at final
+      tp1_hit: false, tp2_hit: false, tp3_hit: false,
+      stopped: false, closed: false,
+      totalR: 0,
+      exitTime: null, exitNote: ''
+    };
+  }
+
+  function applyCandle(trade, candle) {
+    const {h, l} = candle;
+    const dir = trade.dir;
+    let changed = false;
+
+    // Check stop first (worst case for the candle)
+    const stopHit = dir === 'LONG' ? l <= trade.stop : h >= trade.stop;
+    if (stopHit && !trade.closed) {
+      // Calculate R for remaining portions
+      const remaining = trade.rem1 + trade.rem2 + trade.rem3;
+      trade.totalR -= remaining; // -1R per remaining unit
+      trade.stopped = true;
+      trade.closed = true;
+      trade.exitTime = candle.t;
+      trade.exitNote = 'STOP';
+      return;
+    }
+
+    // TP1
+    if (!trade.tp1_hit && trade.rem1 > 0) {
+      const tp1Hit = dir === 'LONG' ? h >= trade.tp1 : l <= trade.tp1;
+      if (tp1Hit) {
+        trade.totalR += trade.rem1 * 2.5;
+        trade.rem1 = 0;
+        trade.tp1_hit = true;
+        changed = true;
+      }
+    }
+
+    // TP2
+    if (trade.tp1_hit && !trade.tp2_hit && trade.rem2 > 0) {
+      const tp2Hit = dir === 'LONG' ? h >= trade.tp2 : l <= trade.tp2;
+      if (tp2Hit) {
+        trade.totalR += trade.rem2 * 4.5;
+        trade.rem2 = 0;
+        trade.tp2_hit = true;
+        changed = true;
+      }
+    }
+
+    // Final TP
+    if (trade.tp2_hit && !trade.tp3_hit && trade.rem3 > 0) {
+      const tp3Hit = dir === 'LONG' ? h >= trade.tp3 : l <= trade.tp3;
+      if (tp3Hit) {
+        trade.totalR += trade.rem3 * 8.0;
+        trade.rem3 = 0;
+        trade.tp3_hit = true;
+        trade.closed = true;
+        trade.exitTime = candle.t;
+        trade.exitNote = 'TP3';
+        changed = true;
+      }
+    }
+  }
+
+  // Main loop
+  for (let i = WARMUP; i < candles.length; i++) {
+    const candle = candles[i];
+
+    // Manage open trade
+    if (openTrade && !openTrade.closed) {
+      applyCandle(openTrade, candle);
+      if (openTrade.closed) {
+        trades.push({...openTrade});
+        cooldownLeft = COOLDOWN;
+        openTrade = null;
+      }
+      continue; // only one trade at a time; skip signal check while in trade
+    }
+
+    if (cooldownLeft > 0) { cooldownLeft--; continue; }
+
+    // Analyze for signal
+    const res = analyze(candles, i, almaPch, rmsVals);
+    if (!res) continue;
+
+    let dir = null;
+    if (res.long_flex)  dir = 'LONG';
+    else if (res.short_flex) dir = 'SHORT';
+    if (!dir) continue;
+
+    // Compute stop
+    const entry = candle.c;
+    let stop;
+    if (dir === 'LONG')  stop = res.swing_low  - 0.5 * res.atr;
+    else                 stop = res.swing_high + 0.5 * res.atr;
+
+    const t = newTrade(dir, i, entry, stop, candle);
+    if (!t) continue;
+
+    // Check next candle starts the trade (enter at close of signal candle)
+    openTrade = t;
+  }
+
+  // Close any open trade at last price
+  if (openTrade && !openTrade.closed) {
+    const last = candles[candles.length - 1];
+    const remaining = openTrade.rem1 + openTrade.rem2 + openTrade.rem3;
+    // Mark as open / partial
+    openTrade.exitTime = last.t;
+    openTrade.exitNote = 'OPEN';
+    // R for open trade: mark to market vs entry
+    const dir = openTrade.dir;
+    const mtm = (last.c - openTrade.entry) * (dir === 'LONG' ? 1 : -1) / openTrade.risk;
+    openTrade.totalR += remaining * mtm;
+    openTrade.closed = true;
+    trades.push({...openTrade});
+  }
+
+  return trades;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STATISTICS
+// ═══════════════════════════════════════════════════════════
+function calcStats(trades) {
+  const closed = trades.filter(t => t.exitNote !== 'OPEN');
+  const wins = closed.filter(t => t.totalR > 0);
+  const losses = closed.filter(t => t.totalR <= 0);
+
+  const totalR = trades.reduce((a,t) => a + t.totalR, 0);
+  const avgR = closed.length ? totalR / closed.length : 0;
+  const winRate = closed.length ? wins.length / closed.length * 100 : 0;
+
+  const grossWin  = wins.reduce((a,t)=>a+t.totalR,0);
+  const grossLoss = Math.abs(losses.reduce((a,t)=>a+t.totalR,0));
+  const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? Infinity : 0;
+
+  // Equity curve & max drawdown
+  let equity = 0, peak = 0, maxDD = 0;
+  const curve = [{time:0, value:0}];
+  trades.forEach(t => {
+    equity += t.totalR;
+    if (equity > peak) peak = equity;
+    const dd = peak - equity;
+    if (dd > maxDD) maxDD = dd;
+    curve.push({time: t.exitTime ? Math.floor(t.exitTime/1000) : 0, value: parseFloat(equity.toFixed(3))});
+  });
+
+  return {winRate, totalTrades:trades.length, totalR, avgR, profitFactor, maxDD, curve};
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CHART SETUP
+// ═══════════════════════════════════════════════════════════
+function initCharts() {
+  // Main chart
+  if (mainChart) { mainChart.remove(); mainChart = null; }
+  const chartEl = $('chart');
+  mainChart = LightweightCharts.createChart(chartEl, {
+    layout: { background:{color:'#060810'}, textColor:'#5a6d8a' },
+    grid: { vertLines:{color:'#1a2035'}, horzLines:{color:'#1a2035'} },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor:'#1a2035', textColor:'#5a6d8a' },
+    timeScale: { borderColor:'#1a2035', timeVisible:true, secondsVisible:false },
+    width: chartEl.offsetWidth,
+    height: chartEl.offsetHeight
+  });
+
+  candleSeries = mainChart.addCandlestickSeries({
+    upColor:'#00e090', downColor:'#ff3d5a',
+    borderUpColor:'#00e090', borderDownColor:'#ff3d5a',
+    wickUpColor:'#00e090', wickDownColor:'#ff3d5a'
+  });
+
+  // Equity chart
+  if (equityChart) { equityChart.remove(); equityChart = null; }
+  const eqEl = $('equity-chart');
+  equityChart = LightweightCharts.createChart(eqEl, {
+    layout: { background:{color:'#0b0f1a'}, textColor:'#5a6d8a' },
+    grid: { vertLines:{color:'#1a2035'}, horzLines:{color:'#1a2035'} },
+    rightPriceScale: { borderColor:'#1a2035' },
+    timeScale: { borderColor:'#1a2035', timeVisible:true, secondsVisible:false },
+    width: eqEl.offsetWidth,
+    height: eqEl.offsetHeight
+  });
+  equitySeries = equityChart.addAreaSeries({
+    lineColor:'#00d4ff', topColor:'rgba(0,212,255,0.25)',
+    bottomColor:'rgba(0,212,255,0.0)', lineWidth:2
+  });
+
+  // Resize handler
+  const resizeObserver = new ResizeObserver(() => {
+    if (mainChart)   mainChart.resize(chartEl.offsetWidth, chartEl.offsetHeight);
+    if (equityChart) equityChart.resize(eqEl.offsetWidth, eqEl.offsetHeight);
+  });
+  resizeObserver.observe(chartEl);
+  resizeObserver.observe(eqEl);
+}
+
+function plotCandles(candles) {
+  const data = candles.map(c => ({
+    time: Math.floor(c.t / 1000),
+    open: c.o, high: c.h, low: c.l, close: c.c
+  }));
+  candleSeries.setData(data);
+}
+
+function plotMarkers(trades, candles) {
+  const markers = [];
+  trades.forEach(t => {
+    const tsec = Math.floor(candles[t.entryIdx].t / 1000);
+    markers.push({
+      time: tsec,
+      position: t.dir === 'LONG' ? 'belowBar' : 'aboveBar',
+      color: t.dir === 'LONG' ? '#00e090' : '#ff3d5a',
+      shape: t.dir === 'LONG' ? 'arrowUp' : 'arrowDown',
+      text: t.dir === 'LONG' ? `L#${t.id}` : `S#${t.id}`
+    });
+  });
+  candleSeries.setMarkers(markers);
+}
+
+function plotEquityCurve(curve) {
+  // Filter valid timestamps
+  const valid = curve.filter(p => p.time > 0);
+  if (valid.length > 1) {
+    equitySeries.setData(valid);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UI UPDATE
+// ═══════════════════════════════════════════════════════════
+function updateStats(stats) {
+  const wr  = $('s-wr');
+  const tr  = $('s-tr');
+  const ar  = $('s-ar');
+  const pf  = $('s-pf');
+  const dd  = $('s-dd');
+  const tt  = $('s-tt');
+
+  const wrv = stats.winRate.toFixed(1) + '%';
+  wr.textContent = wrv;
+  wr.className = 'stat-val ' + (stats.winRate >= 50 ? 'pos' : 'neg');
+
+  const trv = (stats.totalR >= 0 ? '+' : '') + stats.totalR.toFixed(2) + 'R';
+  tr.textContent = trv;
+  tr.className = 'stat-val ' + (stats.totalR >= 0 ? 'pos' : 'neg');
+
+  const arv = (stats.avgR >= 0 ? '+' : '') + stats.avgR.toFixed(2) + 'R';
+  ar.textContent = arv;
+  ar.className = 'stat-val ' + (stats.avgR >= 0 ? 'pos' : 'neg');
+
+  const pfv = isFinite(stats.profitFactor) ? stats.profitFactor.toFixed(2) : '∞';
+  pf.textContent = pfv;
+  pf.className = 'stat-val ' + (stats.profitFactor >= 1 ? 'pos' : 'neg');
+
+  dd.textContent = '-' + stats.maxDD.toFixed(2) + 'R';
+  dd.className = 'stat-val neg';
+
+  tt.textContent = stats.totalTrades;
+  tt.className = 'stat-val neu';
+}
+
+function updateTable(trades, symbol) {
+  const tbody = $('trade-tbody');
+  $('tbl-sub').textContent = `${trades.length} operações · ${symbol}`;
+
+  if (!trades.length) {
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Nenhuma operação encontrada no período.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = trades.map(t => {
+    const sigCls = t.dir === 'LONG' ? 'sig-long' : 'sig-short';
+    const sigTxt = t.dir === 'LONG' ? '▲ LONG' : '▼ SHORT';
+    const totalR = t.totalR;
+    const rCls = totalR > 0 ? 'r-pos' : totalR < 0 ? 'r-neg' : 'r-neu';
+    let resCls = 'result-open', resTxt = 'Aberto';
+    if (t.exitNote === 'STOP') { resCls='result-loss'; resTxt='Stop'; }
+    else if (t.exitNote === 'TP3') { resCls='result-win'; resTxt='TP Final'; }
+    else if (t.tp2_hit) { resCls='result-part'; resTxt='Parcial TP2'; }
+    else if (t.tp1_hit) { resCls='result-part'; resTxt='Parcial TP1'; }
+    else if (t.exitNote === 'OPEN') { resCls='result-open'; resTxt='Aberto'; }
+
+    return `<tr>
+      <td>${t.id}</td>
+      <td>${fmtDate(t.entryTime)}</td>
+      <td>${t.symbol}</td>
+      <td class="${sigCls}">${sigTxt}</td>
+      <td>${fmtPrice(t.entry)}</td>
+      <td>${fmtPrice(t.stop)}</td>
+      <td>${fmtPrice(t.tp1)}</td>
+      <td>${fmtPrice(t.tp2)}</td>
+      <td>${fmtPrice(t.tp3)}</td>
+      <td class="${resCls}">${resTxt}</td>
+      <td class="${rCls}">${fmtR(totalR)}</td>
+      <td>${t.exitNote||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MAIN ENTRY POINT
+// ═══════════════════════════════════════════════════════════
+async function runBacktest() {
+  const symbol = ($('inp-symbol').value || 'BTCUSDT').trim().toUpperCase();
+  const tf     = $('inp-tf').value;
+  const days   = parseInt($('inp-days').value);
+  const btn    = $('btn-run');
+
+  btn.disabled = true;
+  setSpinner(true, 'Conectando à API MEXC...');
+  setStatus('Baixando dados...');
+
+  try {
+    // Init charts first
+    initCharts();
+
+    // Fetch data
+    setSpinner(true, `Baixando ${symbol} ${tf}...`);
+    const candles = await fetchKlines(symbol, tf, days);
+    if (candles.length < 250) throw new Error('Dados insuficientes. Tente um par mais líquido ou período maior.');
+
+    setStatus(`${candles.length} velas carregadas · Executando backtest...`);
+    setSpinner(true, 'Calculando indicadores...');
+
+    // Run backtest (small delay for UI repaint)
+    await new Promise(r => setTimeout(r, 30));
+    const trades = runBacktestEngine(candles, symbol);
+    const stats  = calcStats(trades);
+
+    // Plot
+    plotCandles(candles);
+    plotMarkers(trades, candles);
+    plotEquityCurve(stats.curve);
+
+    // UI
+    updateStats(stats);
+    updateTable(trades, symbol);
+
+    const winPct = stats.winRate.toFixed(1);
+    setStatus(`✓ ${candles.length} velas · ${trades.length} trades · Win ${winPct}% · ${stats.totalR.toFixed(2)}R`);
+  } catch (err) {
+    console.error(err);
+    setStatus(`Erro: ${err.message}`);
+    $('trade-tbody').innerHTML = `<tr><td colspan="12" class="empty-state" style="color:#ff3d5a">${err.message}</td></tr>`;
+  } finally {
+    setSpinner(false);
+    btn.disabled = false;
+  }
+}
+
+// Auto-run on load with defaults
+window.addEventListener('load', () => {
+  // Small delay to let fonts load
+  setTimeout(() => {
+    initCharts();
+  }, 200);
+});
+
+// Handle Enter key on symbol input
+$('inp-symbol').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runBacktest();
+});
+</script>
+</body>
+</html>
