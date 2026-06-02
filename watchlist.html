@@ -316,8 +316,8 @@ function htfConditions(c1h){
   const volUp=v1[j]>=volAvg*0.85;
   const volDn=v1[j]<=volAvg*1.15;
   return{
-    bull: tl1&&rsi1v<68&&volUp,
-    bear: ts1&&rsi1v>32&&volDn,
+    bull: tl1&&rsi1v<40&&volUp,   // 1H sobrevendido
+    bear: ts1&&rsi1v>60&&volDn,   // 1H sobrecomprado
   };
 }
 

@@ -119,10 +119,10 @@ def htf_conditions(candles_1h):
     vol_avg = sum(v1[max(0,j-5):j]) / max(1, min(5, j))
     vol_up  = v1[j] >= vol_avg * 0.85
     vol_dn  = v1[j] <= vol_avg * 1.15
-    # LONG: 1H Trendilo rising + RSI not overbought + volume supportive
-    htf_bull = tl1 and rsi1v < 68 and vol_up
-    # SHORT: 1H Trendilo falling + RSI not oversold + volume declining
-    htf_bear = ts1 and rsi1v > 32 and vol_dn
+    # LONG: 1H Trendilo rising + RSI oversold on 1H + volume supportive
+    htf_bull = tl1 and rsi1v < 40 and vol_up
+    # SHORT: 1H Trendilo falling + RSI overbought on 1H + volume declining
+    htf_bear = ts1 and rsi1v > 60 and vol_dn
     return htf_bull, htf_bear
 
 def analyze(candles, candles_1h=None):
