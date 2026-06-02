@@ -1010,23 +1010,24 @@ async def run_cycle(session, last_sig, tf, coins):
     # Envia os 2 sinais de maior score — preserva capital $180
     pending.sort(key=lambda x: x[0], reverse=True)
     for abs_score,sym,label,short,result,grade,key in pending[:2]:
-        last_sig[key]=now; sent+=1
+        sent+=1
         log.info(f"  📤 Enviando #{sent}/2: {short} score={result['score']:+d} Grade:{grade}")
         await send_telegram(session,sym,label,short,result["sig"],result["price"],
                             result["atr"],result["score"],result["rsi"],result["adx"],
                             result["trend"],result["kalman_up"],
                             result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+        last_sig[key]=now  # marca cooldown só após envio
     # sinais válidos que ficaram de fora por limite
     for abs_score,sym,label,short,result,grade,key in pending[2:]:
         log.info(f"  ⏭ {short} score={result['score']:+d} ignorado — limite 2 sinais/ciclo")
         candidates.append((abs_score,short,result["score"],result["rsi"],result["adx"],"limite-ciclo"))
 
-    if sent == 0 and candidates:
-        # Top LONG: maior score positivo
+    # "Sem sinais" — máx 1x a cada 2h para não spammar
+    no_sig_key = "_no_sig_msg"
+    if sent == 0 and candidates and now - last_sig.get(no_sig_key, 0) >= 7200:
+        last_sig[no_sig_key] = now
         top_long  = sorted([c for c in candidates if c[2]>0],  key=lambda x: x[2], reverse=True)[:3]
-        # Top SHORT: maior score negativo (mais bearish)
         top_short = sorted([c for c in candidates if c[2]<0],  key=lambda x: x[2])[:3]
-
         lines = []
         if top_long:
             best_adx_l = max(adx for _,_,_,_,adx,_ in top_long)
@@ -1044,9 +1045,8 @@ async def run_cycle(session, last_sig, tf, coins):
                           else "⏳ MACD/HA pendente")
             lines.append(f"📉 SHORT — {motivo_s}")
             lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_short]
-
         if lines:
-            txt = (f"🔍 [{tf}] Sem sinais no ciclo\nTop candidatos:\n" + "\n".join(lines) +
+            txt = (f"🔍 Sem sinais\nTop candidatos:\n" + "\n".join(lines) +
                    f"\n⏰ {datetime.now().strftime('%H:%M')}")
             url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
             try:
@@ -1058,10 +1058,10 @@ async def run_cycle(session, last_sig, tf, coins):
 
 async def run_mtf_cycle(session, last_sig, coins):
     """Ciclo MTF: 1h confirma direção → 30m encontra entrada no pullback EMA21/50."""
-    # Crypto opera 24/7 — sem filtro de horário
     now = time.time()
     sent = 0
     cooldown_mtf = 28800  # 8h — mesma janela do FLEX, evita repetição MTF
+    pending_mtf = []      # coleta todos, envia só os 2 melhores por quality
 
     # BTC trend — não operar altcoins contra tendência do BTC
     btc_bull_filter = btc_bear_filter = False
@@ -1108,8 +1108,7 @@ async def run_mtf_cycle(session, last_sig, coins):
             log.info(f"[MTF] {short:7s} | SHORT bloqueado — 4H não confirma")
             await asyncio.sleep(0.3); continue
 
-        # BTC filter: não operar altcoin contra BTC (exceto BTC e USDT pairs de stablecoins)
-        # Exceção: Grade S (score ≥ 120) bypassa filtro BTC — setup excepcional independe de BTC
+        # BTC filter: não operar altcoin contra BTC
         grade_s_exempt = abs(r1h["score"]) >= 120
         if short not in ("BTC", "WBTC") and not grade_s_exempt:
             if h1_bull and btc_bear_filter:
@@ -1144,17 +1143,26 @@ async def run_mtf_cycle(session, last_sig, coins):
 
         key = f"{sym}"
         if now - last_sig.get(key, 0) >= cooldown_mtf:
-            last_sig[key] = now
-            sent += 1
-            await send_telegram(session, sym, label, short, result["sig"],
-                                result["price"], result["atr"], r1h["score"],
-                                result["rsi"], result["adx"], result["trend"],
-                                result["kalman_up"],
-                                result["swing_low"], result["swing_high"],
-                                result["sig_source"], "30m", mtf_grade)
+            pending_mtf.append((mtf_quality, sym, label, short, result, r1h, mtf_grade, key))
+            log.info(f"  ✅ {short} [MTF] válido Q={mtf_quality} — aguardando ranking")
         else:
             mins = int((cooldown_mtf - (now - last_sig.get(key, 0))) / 60)
             log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
+
+    # Envia os 2 melhores por quality score — só DEPOIS de analisar tudo
+    pending_mtf.sort(key=lambda x: x[0], reverse=True)
+    for quality, sym, label, short, result, r1h, mtf_grade, key in pending_mtf[:2]:
+        sent += 1
+        log.info(f"  📤 MTF #{sent}/2: {short} Q={quality} Grade:{mtf_grade}")
+        await send_telegram(session, sym, label, short, result["sig"],
+                            result["price"], result["atr"], r1h["score"],
+                            result["rsi"], result["adx"], result["trend"],
+                            result["kalman_up"],
+                            result["swing_low"], result["swing_high"],
+                            result["sig_source"], "30m", mtf_grade)
+        last_sig[key] = now  # marca cooldown só após envio bem-sucedido
+    for quality, sym, label, short, result, r1h, mtf_grade, key in pending_mtf[2:]:
+        log.info(f"  ⏭ {short} [MTF] ignorado — limite 2 sinais/ciclo")
 
         await asyncio.sleep(0.5)
 
@@ -1282,9 +1290,9 @@ async def main():
 
             if LOOP_MODE and cycle>1:   # ciclo 1 roda imediatamente
                 wait=seconds_to_candle_close(tf_min_base)
-                if wait>3:
-                    log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
-                    await asyncio.sleep(wait+2)
+                wait=max(wait, 60)  # mínimo 60s — nunca processa a mesma vela duas vezes
+                log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
+                await asyncio.sleep(wait+2)
 
             # Rescan periódico (a cada SCAN_EVERY ciclos)
             if DYNAMIC_SCAN and cycle>1 and (cycle-last_scan_cycle)>=SCAN_EVERY:
