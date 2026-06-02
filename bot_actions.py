@@ -995,7 +995,7 @@ async def run_cycle(session, last_sig, tf, coins):
                 log.info(f"  ⚠️ {short} Grade {grade} score {result['score']:+d} < {min_score} mínimo — ignorando")
                 candidates.append((abs_score,short,result["score"],result["rsi"],result["adx"],f"score<{min_score}"))
                 await asyncio.sleep(0.2); continue
-            key=f"{sym}_{tf}"
+            key=f"{sym}"
             if now-last_sig.get(key,0)>=cooldown:
                 pending.append((abs_score,sym,label,short,result,grade,key))
                 log.info(f"  ✅ {short} [{tf}] sinal válido score={result['score']:+d} — aguardando ranking")
@@ -1142,7 +1142,7 @@ async def run_mtf_cycle(session, last_sig, coins):
             log.info(f"[MTF] {short:7s} | Grade B ignorado — setup insuficiente")
             await asyncio.sleep(0.3); continue
 
-        key = f"{sym}_MTF"
+        key = f"{sym}"
         if now - last_sig.get(key, 0) >= cooldown_mtf:
             last_sig[key] = now
             sent += 1
