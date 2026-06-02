@@ -11,6 +11,10 @@ on:
         description: 'Timeframe (30m ou 1h)'
         required: false
         default: '30m'
+      candles:
+        description: 'Candles a buscar (8640=6m@30m, 1000=20d@30m)'
+        required: false
+        default: '8640'
 
 permissions:
   contents: write
@@ -18,7 +22,7 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -36,6 +40,8 @@ jobs:
         env:
           TOP_N: ${{ github.event.inputs.top_n || '100' }}
           INTERVAL: ${{ github.event.inputs.timeframe || '30m' }}
+          CANDLES: ${{ github.event.inputs.candles || '8640' }}
+          MEXC_API_KEY: ${{ secrets.MEXC_API_KEY }}
         run: python scan_backtest.py
 
       - name: Salvar resultados no repositório

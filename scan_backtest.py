@@ -1,20 +1,26 @@
 """
-GAUSS+DNA — Scanner de Backtest (6 meses)
-Varre as top N moedas do MEXC, simula a estratégia FLEX em 6 meses de dados
-históricos e ranqueia por performance — do aceitável ao melhor.
+GAUSS+DNA — Scanner de Backtest v2
+Melhorias: paginação 6m, pontuação adaptativa, filtro volatilidade, exits ATR+breakeven
 """
 import requests, math, time, json, os
 from datetime import datetime
 from collections import deque
 
-BASE       = "https://api.mexc.com/api/v3"
-INTERVAL   = os.environ.get("INTERVAL", "30m")
-TOP_N      = int(os.environ.get("TOP_N", "100"))
-CANDLES    = 1000   # máximo suportado pela API pública do MEXC (~20 dias em 30m)
-WARMUP     = 100    # candles descartados para aquecimento (EMA200 precisa de 200, mas usamos 100 mínimo)
-MIN_TRADES = 2      # mínimo de trades fechados para resultado válido
+BASE        = "https://api.mexc.com/api/v3"
+INTERVAL    = os.environ.get("INTERVAL", "30m")
+TOP_N       = int(os.environ.get("TOP_N", "100"))
+API_KEY     = os.environ.get("MEXC_API_KEY", "")
+CANDLES     = int(os.environ.get("CANDLES", "8640"))   # 6m@30m=8640
+WARMUP      = 100
+MIN_TRADES  = 3
+ATR_PCT_MIN = 0.30   # % mínimo de ATR médio para filtrar ativos estáveis
 
-# ── Indicadores — retornam arrays completos (O(n), não O(n²)) ────────────────
+INTERVAL_MS = {
+    "1m":60_000,"3m":180_000,"5m":300_000,"15m":900_000,
+    "30m":1_800_000,"1h":3_600_000,"4h":14_400_000,"1d":86_400_000
+}
+
+# ── Indicadores — arrays O(n) ─────────────────────────────────────────────────
 
 def ema_arr(src, p):
     k = 2/(p+1); v = src[0]; out = [v]
@@ -129,14 +135,23 @@ def calc_volma_arr(candles, p=20):
     for i in range(p-1, n): res[i]=sum(vols[i-p+1:i+1])/p
     return res
 
-# ── Simulação vetorizada (O(n)) ───────────────────────────────────────────────
+# ── Pré-filtro de volatilidade ────────────────────────────────────────────────
+
+def is_volatile_enough(candles):
+    recent = candles[-30:]
+    atrs = calc_atr_arr(recent)
+    valid = [(atrs[i], recent[i][4]) for i in range(len(recent)) if recent[i][4] > 0]
+    if not valid: return False
+    avg_pct = sum(a/p*100 for a,p in valid) / len(valid)
+    return avg_pct >= ATR_PCT_MIN
+
+# ── Simulação vetorizada — scoring adaptativo + exits ATR + breakeven ─────────
 
 def run_backtest(candles):
     n=len(candles)
     closes=[c[4] for c in candles]; highs=[c[2] for c in candles]
     lows=[c[3] for c in candles]; opens=[c[1] for c in candles]
 
-    # Pré-computar todos os indicadores uma única vez
     e10=ema_arr(closes,10); e21=ema_arr(closes,21)
     e50=ema_arr(closes,50); e200=ema_arr(closes,200)
     atr_a=calc_atr_arr(candles)
@@ -181,6 +196,7 @@ def run_backtest(candles):
         exh_top=(highs[i]-max(opens[i],closes[i]))/cr>0.4
         exh_bot=(min(opens[i],closes[i])-lows[i])/cr>0.4
 
+        # near_liq e vol_ok agora contribuem ao score (não mais hard gates)
         sc=(
             (15 if e21v>e50v>e200v else 0)+(10 if e10v>e21v else 0)+
             (10 if macd_bull else -10 if macd_bear else 0)+
@@ -188,37 +204,53 @@ def run_backtest(candles):
             (10 if adx>22 and pdi>mdi else -10 if adx>22 and mdi>pdi else 0)+
             (10 if trl_long else -10 if trl_short else 0)+
             (5 if obv_bull else -5 if obv_bear else 0)+
-            (5 if above_vwap else -5)
+            (5 if above_vwap else -5)+
+            (5 if near_liq else -3)+
+            (3 if vol_ok else -2)
         )
         fb=30 if (tbull and not (e21v>e50v>e200v)) else 0
         fbb=30 if (tbear and not (e21v<e50v<e200v)) else 0
         flex_sc=sc+fb-fbb
 
-        long_flex=(flex_sc>30 and (macd_bull or ha_bull) and trl_long and
-                   tbull and above_vwap and vol_ok and near_liq and
-                   adx>=15 and rsi<74 and not near_bb_top and not ext_above and not exh_top)
-        short_flex=(flex_sc<-30 and (macd_bear or ha_bear) and trl_short and
-                    tbear and below_vwap and vol_ok_s and near_liq and
-                    adx>=15 and rsi>32 and not near_bb_bot and not ext_below and not exh_bot)
+        # Threshold 15 (era 30); near_liq e vol_ok removidos como hard gates
+        long_flex=(flex_sc>15 and (macd_bull or ha_bull) and trl_long and
+                   tbull and above_vwap and adx>=15 and
+                   rsi<74 and not near_bb_top and not ext_above and not exh_top)
+        short_flex=(flex_sc<-15 and (macd_bear or ha_bear) and trl_short and
+                    tbear and below_vwap and adx>=15 and
+                    rsi>32 and not near_bb_bot and not ext_below and not exh_bot)
 
         if in_trade:
             t=in_trade; h=highs[i]; l=lows[i]
             is_long=t["sig"]=="LONG"; closed=False
             if is_long:
-                if l<=t["stop"]: t["pnl"]+=-t["rem"]; t["result"]="STOP"; closed=True
-                elif not t.get("tp1_hit") and h>=t["tp1"]: t["pnl"]+=2.5*0.40; t["rem"]-=0.40; t["tp1_hit"]=True
-                elif not t.get("tp2_hit") and t.get("tp1_hit") and h>=t["tp2"]: t["pnl"]+=4.5*0.35; t["rem"]-=0.35; t["tp2_hit"]=True
-                elif t.get("tp2_hit") and h>=t["tp3"]: t["pnl"]+=8.0*t["rem"]; t["rem"]=0; t["result"]="FULL TP"; closed=True
+                if l<=t["stop"]:
+                    # stop_r: R ganho/perdido no stop atual (-1=inicial, 0=BE, 2.5=trail TP1)
+                    t["pnl"]+=t.get("stop_r",-1.0)*t["rem"]; t["result"]="STOP"; closed=True
+                elif not t.get("tp1_hit") and h>=t["tp1"]:
+                    t["pnl"]+=2.5*0.40; t["rem"]-=0.40; t["tp1_hit"]=True
+                    t["stop"]=t["entry"]; t["stop_r"]=0.0  # breakeven
+                elif t.get("tp1_hit") and not t.get("tp2_hit") and h>=t["tp2"]:
+                    t["pnl"]+=4.5*0.35; t["rem"]-=0.35; t["tp2_hit"]=True
+                    t["stop"]=t["tp1"]; t["stop_r"]=2.5  # trail p/ TP1
+                elif t.get("tp2_hit") and h>=t["tp3"]:
+                    t["pnl"]+=8.0*t["rem"]; t["rem"]=0; t["result"]="FULL TP"; closed=True
             else:
-                if h>=t["stop"]: t["pnl"]+=-t["rem"]; t["result"]="STOP"; closed=True
-                elif not t.get("tp1_hit") and l<=t["tp1"]: t["pnl"]+=2.5*0.40; t["rem"]-=0.40; t["tp1_hit"]=True
-                elif not t.get("tp2_hit") and t.get("tp1_hit") and l<=t["tp2"]: t["pnl"]+=4.5*0.35; t["rem"]-=0.35; t["tp2_hit"]=True
-                elif t.get("tp2_hit") and l<=t["tp3"]: t["pnl"]+=8.0*t["rem"]; t["rem"]=0; t["result"]="FULL TP"; closed=True
+                if h>=t["stop"]:
+                    t["pnl"]+=t.get("stop_r",-1.0)*t["rem"]; t["result"]="STOP"; closed=True
+                elif not t.get("tp1_hit") and l<=t["tp1"]:
+                    t["pnl"]+=2.5*0.40; t["rem"]-=0.40; t["tp1_hit"]=True
+                    t["stop"]=t["entry"]; t["stop_r"]=0.0  # breakeven
+                elif t.get("tp1_hit") and not t.get("tp2_hit") and l<=t["tp2"]:
+                    t["pnl"]+=4.5*0.35; t["rem"]-=0.35; t["tp2_hit"]=True
+                    t["stop"]=t["tp1"]; t["stop_r"]=2.5  # trail p/ TP1
+                elif t.get("tp2_hit") and l<=t["tp3"]:
+                    t["pnl"]+=8.0*t["rem"]; t["rem"]=0; t["result"]="FULL TP"; closed=True
             if closed:
                 if not t.get("result"):
-                    p2=t.get("tp1_hit",False); q=t.get("tp2_hit",False)
+                    q=t.get("tp2_hit",False); p2=t.get("tp1_hit",False)
                     t["result"]="TP2" if q else "TP1" if p2 else "STOP"
-                t["exit_idx"]=i; trades.append(t); in_trade=None; cooldown=8
+                t["exit_idx"]=i; trades.append(t); in_trade=None; cooldown=6
             continue
 
         if cooldown>0: cooldown-=1; continue
@@ -229,9 +261,10 @@ def run_backtest(candles):
         if not sig: continue
 
         is_long=sig=="LONG"
-        stop=(min(lows[max(0,i-16):i])-0.5*atr if is_long else max(highs[max(0,i-16):i])+0.5*atr)
+        # Stop baseado em ATR (1.5×): mais consistente entre coins
+        stop=(price - 1.5*atr if is_long else price + 1.5*atr)
         risk=abs(price-stop)
-        if risk<=0 or risk/price>0.06: continue
+        if risk<=0 or risk/price>0.08: continue
         tp1=price+(risk*2.5 if is_long else -risk*2.5)
         tp2=price+(risk*4.5 if is_long else -risk*4.5)
         tp3=price+(risk*8.0 if is_long else -risk*8.0)
@@ -241,7 +274,7 @@ def run_backtest(candles):
                   "date":datetime.utcfromtimestamp(candles[i][0]/1000).strftime("%d/%m")}
 
     if in_trade:
-        t=in_trade; p2=t.get("tp1_hit",False); q=t.get("tp2_hit",False)
+        t=in_trade; q=t.get("tp2_hit",False); p2=t.get("tp1_hit",False)
         t["result"]="TP2" if q else "TP1" if p2 else "OPEN"
         trades.append(t)
 
@@ -276,17 +309,37 @@ def calc_stats(trades):
             "profit_factor":pf,"max_dd":max_dd,
             "grade":performance_grade(wr,pf,total_r)}
 
-# ── Fetch com paginação (até 6 meses) ────────────────────────────────────────
+# ── Fetch com paginação startTime (até 6 meses) ───────────────────────────────
 
 def fetch_klines(symbol, interval=INTERVAL, total=CANDLES):
-    try:
-        r=requests.get(f"{BASE}/klines",
-                       params={"symbol":symbol,"interval":interval,"limit":min(total,1000)},
-                       timeout=15)
-        data=r.json()
-        if not isinstance(data,list) or len(data)<WARMUP+10: return None
-        return [[int(c[0]),float(c[1]),float(c[2]),float(c[3]),float(c[4]),float(c[5])] for c in data]
-    except: return None
+    step = INTERVAL_MS.get(interval, 1_800_000)
+    start = int(time.time() * 1000) - total * step
+    all_c = []
+    headers = {"X-MEXC-APIKEY": API_KEY} if API_KEY else {}
+
+    for _ in range(20):  # máx 20 batches = 20.000 candles
+        try:
+            r = requests.get(
+                f"{BASE}/klines",
+                params={"symbol":symbol,"interval":interval,
+                        "startTime":start,"limit":1000},
+                headers=headers, timeout=15)
+            data = r.json()
+            if not isinstance(data, list) or not data:
+                break
+            batch = [[int(c[0]),float(c[1]),float(c[2]),
+                      float(c[3]),float(c[4]),float(c[5])] for c in data]
+            all_c.extend(batch)
+            if len(data) < 1000:
+                break  # último batch, sem mais dados
+            start = batch[-1][0] + step
+            time.sleep(0.2)
+        except:
+            break
+
+    if len(all_c) < WARMUP + 10:
+        return None
+    return all_c
 
 def fetch_top_symbols(n=100):
     try:
@@ -304,71 +357,75 @@ def fetch_top_symbols(n=100):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    dias=CANDLES*30//60//24
-    print("🔍 GAUSS+DNA Backtest Scanner")
-    print(f"   Timeframe: {INTERVAL} | Candles: {CANDLES} (~{dias} dias | últimos dados disponíveis)")
+    step_ms = INTERVAL_MS.get(INTERVAL, 1_800_000)
+    dias_alvo = CANDLES * step_ms // 86_400_000
+    api_str = "autenticado" if API_KEY else "público"
+    print("🔍 GAUSS+DNA Backtest Scanner v2")
+    print(f"   Timeframe: {INTERVAL} | Alvo: {CANDLES} candles (~{dias_alvo}d) | API: {api_str}")
     print(f"   Buscando top {TOP_N} moedas do MEXC...\n")
 
     symbols=fetch_top_symbols(TOP_N)
     if not symbols: print("❌ Erro ao buscar símbolos"); return
     print(f"✅ {len(symbols)} moedas encontradas. Iniciando backtest...\n")
 
-    results=[]; no_data=0; few_trades=0
+    results=[]; no_data=0; few_trades=0; low_vol=0
     total=len(symbols)
     for idx,sym in enumerate(symbols):
         print(f"  [{idx+1:3d}/{total}] {sym:15s}", end="", flush=True)
         candles=fetch_klines(sym)
         if not candles:
             print("sem dados"); no_data+=1; time.sleep(0.3); continue
+        if not is_volatile_enough(candles):
+            print("baixa volatilidade"); low_vol+=1; time.sleep(0.2); continue
+        dias_real = len(candles) * step_ms // 86_400_000
         trades=run_backtest(candles)
         stats=calc_stats(trades)
+        closed_ct=len([t for t in trades if t["result"]!="OPEN"])
         if not stats:
-            print(f"poucos trades ({len(trades)})"); few_trades+=1; time.sleep(0.2); continue
-        results.append({"symbol":sym,"stats":stats,"trades":trades})
+            print(f"poucos trades ({closed_ct})"); few_trades+=1; time.sleep(0.2); continue
+        results.append({"symbol":sym,"stats":stats,"trades":trades,
+                        "candles":len(candles),"dias":dias_real})
         s=stats
         print(f"{s['grade']}  WR:{s['win_rate']:.0f}% R:{s['total_r']:+.1f} "
-              f"PF:{s['profit_factor']:.2f} {s['trades']}x DD:{s['max_dd']:.1f}R")
+              f"PF:{s['profit_factor']:.2f} {s['trades']}x DD:{s['max_dd']:.1f}R [{dias_real}d]")
         time.sleep(0.25)
 
-    # Ranking: score = PF × WR × √trades / (DD+1)
     def rank_score(r):
         s=r["stats"]
         return s["profit_factor"]*s["win_rate"]*math.sqrt(s["trades"])/(s["max_dd"]+1)
 
     results.sort(key=rank_score, reverse=True)
 
-    # ── Relatório completo ────────────────────────────────────────────────────
-    print(f"\n{'='*78}")
-    print("📊 RANKING COMPLETO — GAUSS+DNA FLEX | 6 meses | 30m")
-    print(f"{'='*78}")
-    print(f"{'#':4} {'Moeda':12} {'Grade':15} {'WR%':6} {'TotalR':8} {'PF':6} {'Trades':7} {'AvgR':6} {'DD':6}")
-    print(f"{'-'*78}")
+    print(f"\n{'='*82}")
+    print(f"📊 RANKING — GAUSS+DNA FLEX v2 | {INTERVAL} | top {TOP_N}")
+    print(f"{'='*82}")
+    print(f"{'#':4} {'Moeda':14} {'Grade':15} {'WR%':6} {'TotalR':8} {'PF':6} {'Trades':7} {'AvgR':6} {'DD':5} {'Dias':5}")
+    print(f"{'-'*82}")
 
     for i,r in enumerate(results, 1):
         s=r["stats"]
-        print(f"{i:3}. {r['symbol']:12} {s['grade']:15} "
+        print(f"{i:3}. {r['symbol']:14} {s['grade']:15} "
               f"{s['win_rate']:5.1f}% {s['total_r']:+7.1f}R "
               f"{s['profit_factor']:5.2f} {s['trades']:5}x "
-              f"{s['avg_r']:+5.2f}R {s['max_dd']:5.1f}R")
+              f"{s['avg_r']:+5.2f}R {s['max_dd']:4.1f}R {r['dias']:4}d")
 
-    # Sumário por grade
     from collections import Counter
     grades=Counter(r["stats"]["grade"] for r in results)
-    print(f"\n{'='*78}")
-    print("📈 SUMÁRIO POR PERFORMANCE:")
+    print(f"\n{'='*82}")
+    print("📈 SUMÁRIO:")
     for g in ["🏆 ELITE","⭐ ÓTIMO","✅ BOM","🔵 ACEITÁVEL","⚠️  FRACO"]:
         cnt=grades.get(g,0)
         if cnt: print(f"   {g}: {cnt} moedas")
-    print(f"   Sem dados: {no_data} | Poucos trades: {few_trades}")
+    print(f"   Sem dados: {no_data} | Baixa volatilidade: {low_vol} | Poucos trades: {few_trades}")
 
-    # ── Salvar JSON ───────────────────────────────────────────────────────────
     def safe_score(r):
         try: return rank_score(r)
         except: return 0
 
     output={"timestamp":datetime.utcnow().isoformat(),"interval":INTERVAL,
-            "candles":CANDLES,"dias":dias,"results":[
+            "candles_alvo":CANDLES,"dias_alvo":dias_alvo,"results":[
                 {"symbol":r["symbol"],"stats":r["stats"],
+                 "candles_fetched":r["candles"],"dias":r["dias"],
                  "rank_score":round(safe_score(r),2),
                  "last_trades":[{"date":t["date"],"sig":t["sig"],
                                  "pnl":round(t["pnl"],2),"result":t["result"]}
@@ -376,8 +433,8 @@ def main():
                 for r in results]}
     with open("backtest_results.json","w") as f:
         json.dump(output,f,indent=2)
-    print(f"\n✅ Resultados completos salvos em backtest_results.json")
-    print(f"   Total com resultado: {len(results)} moedas analisadas\n")
+    print(f"\n✅ Resultados salvos em backtest_results.json")
+    print(f"   Total com resultado: {len(results)} moedas\n")
 
 if __name__=="__main__":
     main()
