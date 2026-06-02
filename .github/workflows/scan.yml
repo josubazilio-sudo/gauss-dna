@@ -12,6 +12,9 @@ on:
         required: false
         default: '30m'
 
+permissions:
+  contents: write
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -35,7 +38,15 @@ jobs:
           INTERVAL: ${{ github.event.inputs.timeframe || '30m' }}
         run: python scan_backtest.py
 
-      - name: Upload resultados
+      - name: Salvar resultados no repositório
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backtest_results.json
+          git diff --cached --quiet || git commit -m "Resultados backtest $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
+
+      - name: Upload resultados (artefato)
         uses: actions/upload-artifact@v4
         with:
           name: backtest-results
