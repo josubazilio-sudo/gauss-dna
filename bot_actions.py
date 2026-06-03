@@ -1137,44 +1137,39 @@ async def run_cycle(session, last_sig, tf, coins):
             else:
                 mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
-                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"cooldown"))
+                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],f"⏳ cooldown {mins}min"))
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.15)
 
-    if sent == 0 and candidates:
-        # Top LONG: maior score positivo
-        top_long  = sorted([c for c in candidates if c[2]>0],  key=lambda x: x[2], reverse=True)[:3]
-        # Top SHORT: maior score negativo (mais bearish)
-        top_short = sorted([c for c in candidates if c[2]<0],  key=lambda x: x[2])[:3]
+    if sent == 0:
+        n_cd  = sum(1 for c in candidates if "cooldown" in c[5])
+        n_ok  = len(candidates) - n_cd
+        header = (f"🔍 [{tf}] Sem sinais | {len(coins)} moedas escaneadas\n"
+                  f"📊 {n_ok} sem sinal  ⏳ {n_cd} em cooldown\n")
+
+        top_long  = sorted([c for c in candidates if c[2]>0], key=lambda x: x[2], reverse=True)[:3]
+        top_short = sorted([c for c in candidates if c[2]<0], key=lambda x: x[2])[:3]
 
         lines = []
         if top_long:
-            best_adx_l = max(adx for _,_,_,_,adx,_ in top_long)
-            best_sc_l  = top_long[0][2]
-            motivo_l   = ("📉 ADX baixo" if best_adx_l < 17
-                          else "📊 Score baixo" if best_sc_l < 50
-                          else "⏳ MACD/HA pendente")
-            lines.append(f"📈 LONG — {motivo_l}")
-            lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_long]
+            lines.append("📈 Mais perto LONG:")
+            for _,sh,sc,rsi,adx,reason in top_long:
+                lines.append(f"  {sh}: {sc:+d} RSI {rsi:.0f} ADX {adx:.0f} — {reason}")
         if top_short:
-            best_adx_s = max(adx for _,_,_,_,adx,_ in top_short)
-            best_sc_s  = top_short[0][2]
-            motivo_s   = ("📉 ADX baixo" if best_adx_s < 17
-                          else "📊 Score baixo" if best_sc_s > -50
-                          else "⏳ MACD/HA pendente")
-            lines.append(f"📉 SHORT — {motivo_s}")
-            lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_short]
+            lines.append("📉 Mais perto SHORT:")
+            for _,sh,sc,rsi,adx,reason in top_short:
+                lines.append(f"  {sh}: {sc:+d} RSI {rsi:.0f} ADX {adx:.0f} — {reason}")
+        if not lines:
+            lines.append("Nenhum candidato com score relevante")
 
-        if lines:
-            txt = (f"🔍 [{tf}] Sem sinais no ciclo\nTop candidatos:\n" + "\n".join(lines) +
-                   f"\n⏰ {datetime.now().strftime('%H:%M')}")
-            url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-            try:
-                async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
-                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
-                    await r.json()
-            except: pass
+        txt = header + "\n".join(lines) + f"\n⏰ {datetime.now().strftime('%H:%M')}"
+        url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+        try:
+            async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
+                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
+                await r.json()
+        except: pass
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
@@ -1291,14 +1286,19 @@ async def run_mtf_cycle(session, last_sig, coins):
                     await r.json()
             except: pass
 
-    # Diagnóstico MTF: mostra setups 1H em análise quando não há sinal
-    if sent == 0 and setup_coins:
-        lines = [f"🔍 [MTF 4H→1H] Sem sinal — {len(setup_coins)} setup(s) 4H ativos"]
-        for sh, d, sc, rsi, motivo in setup_coins[:4]:
-            arrow = "📈" if d == "BULL" else "📉"
-            lines.append(f"  {arrow} {sh}: {sc:+d} RSI {rsi:.0f} → {motivo}")
-        if len(setup_coins) > 4:
-            lines.append(f"  ... +{len(setup_coins)-4} outros")
+    # Diagnóstico MTF: sempre informa estado mesmo sem sinal
+    if sent == 0:
+        btc_str = "🐂 BULL" if btc_bull_filter else "🐻 BEAR" if btc_bear_filter else "↔️ NEUTRO"
+        lines = [f"🔍 [MTF 4H→1H] Sem sinal | BTC {btc_str}"]
+        if setup_coins:
+            lines.append(f"📋 {len(setup_coins)} setup(s) 4H ativo(s):")
+            for sh, d, sc, rsi, motivo in setup_coins[:4]:
+                arrow = "📈" if d == "BULL" else "📉"
+                lines.append(f"  {arrow} {sh}: {sc:+d} RSI {rsi:.0f} → {motivo}")
+            if len(setup_coins) > 4:
+                lines.append(f"  ... +{len(setup_coins)-4} outros")
+        else:
+            lines.append("Nenhum setup 4H aprovado no momento")
         lines.append(f"⏰ {datetime.now().strftime('%H:%M')}")
         url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
         try:
