@@ -1145,31 +1145,13 @@ async def run_cycle(session, last_sig, tf, coins):
     if sent == 0:
         n_cd  = sum(1 for c in candidates if "cooldown" in c[5])
         n_ok  = len(candidates) - n_cd
-        header = (f"🔍 [{tf}] Sem sinais | {len(coins)} moedas escaneadas\n"
-                  f"📊 {n_ok} sem sinal  ⏳ {n_cd} em cooldown\n")
-
         top_long  = sorted([c for c in candidates if c[2]>0], key=lambda x: x[2], reverse=True)[:3]
         top_short = sorted([c for c in candidates if c[2]<0], key=lambda x: x[2])[:3]
-
-        lines = []
-        if top_long:
-            lines.append("📈 Mais perto LONG:")
-            for _,sh,sc,rsi,adx,reason in top_long:
-                lines.append(f"  {sh}: {sc:+d} RSI {rsi:.0f} ADX {adx:.0f} — {reason}")
-        if top_short:
-            lines.append("📉 Mais perto SHORT:")
-            for _,sh,sc,rsi,adx,reason in top_short:
-                lines.append(f"  {sh}: {sc:+d} RSI {rsi:.0f} ADX {adx:.0f} — {reason}")
-        if not lines:
-            lines.append("Nenhum candidato com score relevante")
-
-        txt = header + "\n".join(lines) + f"\n⏰ {datetime.now().strftime('%H:%M')}"
-        url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-        try:
-            async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
-                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
-                await r.json()
-        except: pass
+        log.info(f"[{tf}] Sem sinais | {len(coins)} moedas | {n_ok} sem sinal | {n_cd} cooldown")
+        for _,sh,sc,rsi,adx,reason in top_long[:2]:
+            log.info(f"  📈 {sh}: {sc:+d} RSI {rsi:.0f} ADX {adx:.0f} — {reason}")
+        for _,sh,sc,rsi,adx,reason in top_short[:2]:
+            log.info(f"  📉 {sh}: {sc:+d} RSI {rsi:.0f} ADX {adx:.0f} — {reason}")
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
