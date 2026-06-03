@@ -262,9 +262,13 @@ def analyze(sym, candles):
     macd_recovering=hist>hist_p                    # histograma subindo (para early long)
     macd_exhausting=hist<hist_p                    # histograma caindo (para early short)
 
-    # Heikin-Ashi bull/bear — closes e opens já são HA (calculados no topo)
-    ha_bull=closes[-1]>opens[-1] and closes[-2]>opens[-2]
-    ha_bear=closes[-1]<opens[-1] and closes[-2]<opens[-2]
+    # Heikin-Ashi: corpo mínimo (0.2 ATR) filtra dojis e candles fracos
+    ha_body_ok = abs(closes[-1] - opens[-1]) > atr * 0.2
+    ha_bull  = closes[-1]>opens[-1] and closes[-2]>opens[-2] and ha_body_ok
+    ha_bear  = closes[-1]<opens[-1] and closes[-2]<opens[-2] and ha_body_ok
+    # 3 candles HA consecutivos — confirmação mais forte para ELITE
+    ha_bull3 = ha_bull and closes[-3]>opens[-3]
+    ha_bear3 = ha_bear and closes[-3]<opens[-3]
 
     # RSI (elite usa zona mais estreita + momentum direcional)
     rsi=rsi_calc(closes[-50:])
@@ -432,12 +436,12 @@ def analyze(sym, candles):
 
     # ── SINAIS ELITE ── (máxima assertividade: todos os filtros de qualidade)
     long_elite=(strong_trend and trend_bull and align_bull and e200_rising and
-                macd_bull3 and ha_bull and f_bull and f_strong and adx_long_ok and
+                macd_bull3 and ha_bull3 and f_bull and f_strong and adx_long_ok and
                 rsi_bull_elite and (v_strong2 or obv_bull) and not_ext_long and
                 kalman_accel_up and above_vwap and trend_consistent_bull and
                 (bull_impulse or liq_long) and score>65 and safe_long)
     short_elite=(strong_trend and trend_bear and align_bear and e200_falling and
-                 macd_bear3 and ha_bear and f_bear and f_strong and adx_short_ok and
+                 macd_bear3 and ha_bear3 and f_bear and f_strong and adx_short_ok and
                  rsi_bear_elite and (v_strong2 or obv_bear) and not_ext_short and
                  kalman_accel_down and below_vwap and trend_consistent_bear and
                  (bear_impulse or liq_short) and score<-65 and safe_short)
@@ -450,10 +454,10 @@ def analyze(sym, candles):
 
     # Sinal de cruzamento (sem safe_long — não bloquear crossovers válidos)
     long_cross=(any_cross_bull and score>10 and adx>15 and
-                (macd_bull or ha_bull) and (f_bull or obv_bull) and
+                ha_bull and macd_bull and (f_bull or obv_bull) and
                 v_strong and not_ext_long and price>e200*0.97 and rsi<65)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
-                 (macd_bear or ha_bear) and (f_bear or obv_bear) and
+                 ha_bear and macd_bear and (f_bear or obv_bear) and
                  v_strong and not_ext_short and price<e200*1.03 and (rsi>35 or strong_bear_override))
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
@@ -494,11 +498,11 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and adx >= 14 and
+    long_flex = (flex_score > 30 and ha_bull and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and
                  safe_long and
                  rsi < 65)
-    short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and adx >= 14 and
+    short_flex = (flex_score < -30 and ha_bear and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and
                   safe_short and
                   (rsi > 35 or strong_bear_override))
