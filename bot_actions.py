@@ -495,11 +495,11 @@ def analyze(sym, candles):
     long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and adx >= 14 and
                  not sideways and not_ext_long_tight and
                  safe_long and
-                 rsi < 30)
+                 rsi < 52)
     short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and adx >= 14 and
                   not sideways and not_ext_short_tight and
                   safe_short and
-                  rsi > 70)
+                  rsi > 46)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
@@ -715,9 +715,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_long  = swing_low  - atr * 0.5
     stop_short = swing_high + atr * 0.5
 
-    # RSI zone: sobrevendido (<35) para compra / sobrecomprado (>65) para venda
-    rsi_ok_long  = rsi < 35
-    rsi_ok_short = rsi > 65
+    # RSI zone: neutro a sobrevendido para compra / neutro a sobrecomprado para venda
+    rsi_ok_long  = rsi < 55
+    rsi_ok_short = rsi > 45
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1090,11 +1090,11 @@ async def run_mtf_cycle(session, last_sig, coins):
         if not r4h: await asyncio.sleep(0.5); continue
 
         h4_rsi = r4h["rsi"]
-        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 40
-        # SHORT: sobrecomprado (>60) OU tendência bearish forte em andamento (score<-40, RSI>50)
+        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 52
+        # SHORT: sobrecomprado (>52) OU tendência bearish forte em andamento (score<-40, RSI>40)
         h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and (
-            (r4h["score"] < -15 and h4_rsi > 60) or
-            (r4h["score"] < -40 and h4_rsi > 50)
+            (r4h["score"] < -15 and h4_rsi > 52) or
+            (r4h["score"] < -40 and h4_rsi > 40)
         )
         direction = "BULL" if h4_bull else "BEAR"
 
