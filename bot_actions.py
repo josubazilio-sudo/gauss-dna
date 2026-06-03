@@ -478,10 +478,8 @@ def analyze(sym, candles):
     tbull_loose=e10>e21 and e21>e50
     tbear_loose=e10<e21 and e21<e50
 
-    # Score FLEX: credita alinhamento EMA mesmo sem EMA200
-    flex_bonus_bull = 30 if (tbull_loose and not trend_bull) else 0
-    flex_bonus_bear = 30 if (tbear_loose and not trend_bear) else 0
-    flex_score = score + flex_bonus_bull - flex_bonus_bear
+    # Score FLEX: sem bônus artificial — score real deve atingir o threshold
+    flex_score = score
 
     # ── FILTROS INSTITUCIONAIS ─────────────────────────────────────────────────
     # sideways: squeeze+ADX<18 = sem direção confirmada; FLEX exige ADX>17 sem squeeze
