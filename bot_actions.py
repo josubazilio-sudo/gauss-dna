@@ -1075,7 +1075,7 @@ async def scan_best_coins(session, tf="15m", top_n=20):
             if s>0:
                 scored.append((sym,f"{base}/USDT",base,s,vol_usd))
                 log.info(f"  ✓ {base:8s} | Score {s:.0f} | Vol ${vol_usd/1e6:.0f}M")
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(0.1)
 
     scored.sort(key=lambda x:x[3],reverse=True)
     top=[(s,l,b) for s,l,b,_,_ in scored[:top_n]]
@@ -1099,7 +1099,7 @@ async def run_cycle(session, last_sig, tf, coins):
     now=time.time(); sent=0
     cooldown=max(tf_to_minutes(tf)*60, 14400)  # mínimo 4h entre sinais por moeda
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
-    MAX_SIGNALS_PER_CYCLE = 2  # máximo 2 sinais por ciclo — preservar capital $180
+    MAX_SIGNALS_PER_CYCLE = 3  # máximo 3 sinais por ciclo
 
     # Crypto opera 24/7 — sem filtro de horário
 
@@ -1109,16 +1109,16 @@ async def run_cycle(session, last_sig, tf, coins):
             log.info(f"[{tf}] Limite de {MAX_SIGNALS_PER_CYCLE} sinais por ciclo atingido")
             break
         candles=await fetch_candles(session,sym,tf)
-        if not candles: await asyncio.sleep(0.4); continue
+        if not candles: await asyncio.sleep(0.15); continue
         result=analyze(sym,candles)
-        if not result: await asyncio.sleep(0.4); continue
+        if not result: await asyncio.sleep(0.15); continue
         grade=result.get("signal_grade","B")
 
         # ATR% — excluir moedas muito voláteis para $180
         atr_pct=(result["atr"]/result["price"])*100 if result["price"] else 0
         if atr_pct > 4.0:
             log.info(f"[{tf}] {short:7s} | ATR {atr_pct:.1f}% > 4% — muito volátil, ignorando")
-            await asyncio.sleep(0.2); continue
+            await asyncio.sleep(0.1); continue
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
@@ -1126,7 +1126,7 @@ async def run_cycle(session, last_sig, tf, coins):
             if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 50):
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
-                await asyncio.sleep(0.2); continue
+                await asyncio.sleep(0.1); continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
                 last_sig[key]=now; sent+=1
@@ -1140,7 +1140,7 @@ async def run_cycle(session, last_sig, tf, coins):
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"cooldown"))
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
-        await asyncio.sleep(0.4)
+        await asyncio.sleep(0.15)
 
     if sent == 0 and candidates:
         # Top LONG: maior score positivo
@@ -1201,10 +1201,10 @@ async def run_mtf_cycle(session, last_sig, coins):
     for sym, label, short in coins:
         # 4H — direção e setup (confirma tendência maior)
         candles_4h = await fetch_candles(session, sym, "4h")
-        if not candles_4h: await asyncio.sleep(0.5); continue
+        if not candles_4h: await asyncio.sleep(0.15); continue
 
         r4h = analyze(sym, candles_4h)
-        if not r4h: await asyncio.sleep(0.5); continue
+        if not r4h: await asyncio.sleep(0.15); continue
 
         h4_rsi  = r4h["rsi"]
         h4_vol  = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
@@ -1219,7 +1219,7 @@ async def run_mtf_cycle(session, last_sig, coins):
 
         if not (h4_bull or h4_bear):
             log.info(f"[MTF] {short:7s} | 4H sem setup | Score {r4h['score']:+d} RSI4H {h4_rsi:.0f}")
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.15)
             continue
 
         # BTC filter: não operar altcoin contra BTC
@@ -1228,11 +1228,11 @@ async def run_mtf_cycle(session, last_sig, coins):
             if h4_bull and btc_bear_filter:
                 setup_coins.append((short, direction, r4h["score"], h4_rsi, "BTC em queda"))
                 log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC 4H em queda")
-                await asyncio.sleep(0.2); continue
+                await asyncio.sleep(0.1); continue
             if h4_bear and btc_bull_filter:
                 setup_coins.append((short, direction, r4h["score"], h4_rsi, "BTC em alta"))
                 log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC 4H em alta")
-                await asyncio.sleep(0.2); continue
+                await asyncio.sleep(0.1); continue
         elif grade_s_exempt and short not in ("BTC", "WBTC"):
             log.info(f"[MTF] {short:7s} | Score {r4h['score']:+d} ≥ 120 — Grade S bypass BTC")
 
@@ -1240,13 +1240,13 @@ async def run_mtf_cycle(session, last_sig, coins):
 
         # 1H — entrada no pullback EMA21/50
         candles_1h = await fetch_candles(session, sym, "1h")
-        if not candles_1h: await asyncio.sleep(0.5); continue
+        if not candles_1h: await asyncio.sleep(0.15); continue
 
         result = analyze_mtf_entry(sym, candles_1h, h4_bull, h4_bear)
         if not result:
             setup_coins.append((short, direction, r4h["score"], h4_rsi, "pullback 1H pendente"))
             log.info(f"[MTF] {short:7s} | 1H sem entrada (não está no pullback)")
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.15)
             continue
 
         mtf_grade = result.get("signal_grade", "A")
@@ -1256,7 +1256,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         if mtf_grade == "B":
             setup_coins.append((short, direction, r4h["score"], h4_rsi, "Grade B"))
             log.info(f"[MTF] {short:7s} | Grade B ignorado — setup insuficiente")
-            await asyncio.sleep(0.3); continue
+            await asyncio.sleep(0.1); continue
 
         key = f"{sym}_MTF"
         if now - last_sig.get(key, 0) >= cooldown_mtf:
@@ -1273,7 +1273,7 @@ async def run_mtf_cycle(session, last_sig, coins):
             setup_coins.append((short, direction, r4h["score"], h4_rsi, f"cooldown {mins}min"))
             log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
 
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.15)
 
     # Informa no Telegram quando BTC está em queda bloqueando LONGs (máx 1x a cada 2h)
     if sent == 0 and btc_bear_filter:
