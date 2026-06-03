@@ -499,7 +499,7 @@ def analyze(sym, candles):
     short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and adx >= 17 and
                   not sideways and not_ext_short_tight and
                   safe_short and
-                  rsi > 58)
+                  rsi > 48)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
@@ -715,9 +715,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_long  = swing_low  - atr * 0.5
     stop_short = swing_high + atr * 0.5
 
-    # RSI zone: sobrevendido para compra, sobrecomprado para venda
+    # RSI zone: sobrevendido para compra / tendência em queda para venda
     rsi_ok_long  = rsi < 45
-    rsi_ok_short = rsi > 55
+    rsi_ok_short = rsi > 48
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1091,7 +1091,11 @@ async def run_mtf_cycle(session, last_sig, coins):
 
         h4_rsi = r4h["rsi"]
         h4_bull = r4h["score"] > 20 and r4h.get("tbull_r", False) and r4h["adx"] >= 15 and h4_rsi < 45
-        h4_bear = r4h["score"] < -20 and r4h.get("tbear_r", False) and r4h["adx"] >= 15 and h4_rsi > 55
+        # SHORT: sobrecomprado (>55) OU tendência bearish forte em andamento (score<-50, RSI>40)
+        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 15 and (
+            (r4h["score"] < -20 and h4_rsi > 55) or
+            (r4h["score"] < -50 and h4_rsi > 40)
+        )
         direction = "BULL" if h4_bull else "BEAR"
 
         if not (h4_bull or h4_bear):
