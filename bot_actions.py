@@ -270,9 +270,9 @@ def analyze(sym, candles):
     rsi=rsi_calc(closes[-50:])
     rsi_prev=rsi_calc(closes[-53:-3]) if n>=53 else rsi
     rsi_rising=rsi>rsi_prev; rsi_falling=rsi<rsi_prev
-    rsi_bull=50<rsi<70; rsi_bear=30<rsi<50              # score + FLEX (zona ampla)
-    rsi_bull_elite=48<rsi<65 and rsi_rising              # ELITE: evita sobrecompra + momentum
-    rsi_bear_elite=35<rsi<52 and rsi_falling             # ELITE: evita sobrevenda + momentum
+    rsi_bull=20<rsi<38; rsi_bear=55<rsi<80              # score: sobrevendido=bull, sobrecomprado=bear
+    rsi_bull_elite=20<rsi<38 and rsi_rising              # ELITE: sobrevendido + recuperando
+    rsi_bear_elite=55<rsi<80 and rsi_falling             # ELITE: sobrecomprado + caindo
 
     # DMI/ADX (strictly rising: ADX deve estar subindo, não apenas estável)
     pdi,mdi,adx,adx_p=dmi_adx(candles[-60:])
@@ -334,8 +334,8 @@ def analyze(sym, candles):
     vol3=[vols[-4],vols[-3],vols[-2]]
     vol_drying=vols[-1]<vol_ma*0.6 and vols[-1]<min(vol3)*0.7
 
-    rsi_not_overbought=rsi<75
-    rsi_not_oversold=rsi>25
+    rsi_not_overbought=rsi<65
+    rsi_not_oversold=rsi>30
 
     # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
     def _low_touched_ema(ema_arr, n=5):
@@ -449,21 +449,21 @@ def analyze(sym, candles):
     # Sinal de cruzamento (sem safe_long — não bloquear crossovers válidos)
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 (macd_bull or ha_bull) and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97)
+                v_strong and not_ext_long and price>e200*0.97 and rsi<55)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  (macd_bear or ha_bear) and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03)
+                 v_strong and not_ext_short and price<e200*1.03 and rsi>38)
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and (macd_bull or macd_recovering) and
                    adx>18 and (f_bull or obv_bull) and v_strong and
-                   above_vwap and score>15 and not any_cross_bull)
+                   above_vwap and score>15 and not any_cross_bull and rsi<38)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-15 and not any_cross_bear)
+                    below_vwap and score<-15 and not any_cross_bear and rsi>55)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -485,8 +485,8 @@ def analyze(sym, candles):
     # sideways: squeeze+ADX<18 = sem direção confirmada; FLEX exige ADX>17 sem squeeze
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
-    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 74
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 26
+    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 35
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
