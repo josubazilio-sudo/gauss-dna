@@ -35,8 +35,8 @@ macdSlow   = input.int(26, "MACD Slow",   group=groupMACD)
 macdSignal = input.int(9,  "MACD Signal", group=groupMACD)
 
 rsiLen = input.int(14, "RSI",               group=groupMACD)
-rsiOB  = input.int(70, "RSI Sobrecomprado", group=groupMACD)
-rsiOS  = input.int(30, "RSI Sobrevendido",  group=groupMACD)
+rsiOB  = input.int(65, "RSI Sobrecomprado", group=groupMACD)
+rsiOS  = input.int(35, "RSI Sobrevendido",  group=groupMACD)
 
 adxLen      = input.int(14,    "ADX",           group=groupFilter)
 adxSmooth   = input.int(14,    "ADX Smooth",    group=groupFilter)
@@ -47,7 +47,7 @@ adxStrong   = input.float(30.0,"ADX Forte",     step=0.5, group=groupFilter)
 atrLen     = input.int(14,   "ATR",          group=groupFilter)
 volLen     = input.int(20,   "Média Volume", group=groupFilter)
 volMult    = input.float(1.1,"Volume Mult",  step=0.05, group=groupFilter)
-maxDistATR = input.float(2.5,"Distância EMA50 ATR", step=0.1, group=groupFilter)
+maxDistATR = input.float(2.5,"Distância EMA21 ATR", step=0.1, group=groupFilter)
 
 riskPct     = input.float(3.0, "Risco por trade (%)", step=0.5, minval=0.5, maxval=5.0, group=groupRisk)
 leverage    = input.float(3.0, "Alavancagem (x)",     step=0.5, minval=1.0, maxval=5.0, group=groupRisk)
@@ -84,6 +84,18 @@ ema200 = ta.ema(close, ema200Len)
 //════════════════════════════════════════════════════════════
 atrRaw = ta.atr(atrLen)
 atr    = math.max(atrRaw, syminfo.mintick)
+
+//════════════════════════════════════════════════════════════
+// HEIKIN ASHI (PREÇO) — com body check > 0.2 ATR
+//════════════════════════════════════════════════════════════
+haCloseP = (open + high + low + close) / 4
+var float haOpenP = na
+haOpenP := na(haOpenP[1]) ? (open + close) / 2 : (haOpenP[1] + haCloseP[1]) / 2
+haBodyOk = math.abs(haCloseP - haOpenP) > atr * 0.2
+haBullP  = haCloseP > haOpenP and haCloseP[1] > haOpenP[1] and haBodyOk
+haBearP  = haCloseP < haOpenP and haCloseP[1] < haOpenP[1] and haBodyOk
+haBull3P = haBullP and haCloseP[2] > haOpenP[2]
+haBear3P = haBearP and haCloseP[2] < haOpenP[2]
 
 //════════════════════════════════════════════════════════════
 // KALMAN FILTER
@@ -307,13 +319,19 @@ ema200Rising  = ema200 > ema200[3]
 ema200Falling = ema200 < ema200[3]
 
 //════════════════════════════════════════════════════════════
-// DISTÂNCIA
+// STRONG BEAR OVERRIDE — SHORT mesmo com RSI < rsiOS
+// Válido quando ADX > 45, tendência bajista clara, HA confirma
 //════════════════════════════════════════════════════════════
-distLong  = atr > 0 ? (close - ema50) / atr : 0.0
-distShort = atr > 0 ? (ema50 - close) / atr : 0.0
+strongBearOverride = adx > 45 and trendBear and ema200Falling and flowBear and haBearP
 
-notExtendedLong  = distLong  < maxDistATR
-notExtendedShort = distShort < maxDistATR
+//════════════════════════════════════════════════════════════
+// DISTÂNCIA — referência EMA21 (mais próxima do preço)
+//════════════════════════════════════════════════════════════
+distLong  = atr > 0 ? (close - ema21) / atr : 0.0
+distShort = atr > 0 ? (ema21 - close) / atr : 0.0
+
+notExtendedLong  = distLong  < maxDistATR and rsiSmooth < rsiOB
+notExtendedShort = distShort < maxDistATR and (rsiSmooth > rsiOS or strongBearOverride)
 
 //════════════════════════════════════════════════════════════
 // IMPULSO
@@ -412,10 +430,12 @@ earlyLong =
      sellExhaustion       and
      liqSweepLong         and
      bullAbsorption       and
+     haBull3P             and
      bullDiv              and
      flowBull             and
      ema200Rising         and
      close > ema50        and
+     rsiSmooth < rsiOB    and
      (not useKalmanFilter or kalmanTrendUp)
 
 earlyShort =
@@ -427,10 +447,12 @@ earlyShort =
      buyExhaustion        and
      liqSweepShort        and
      bearAbsorption       and
+     haBear3P             and
      bearDiv              and
      flowBear             and
      ema200Falling        and
      close < ema50        and
+     (rsiSmooth > rsiOS or strongBearOverride) and
      (not useKalmanFilter or kalmanTrendDown)
 
 //════════════════════════════════════════════════════════════
@@ -444,6 +466,7 @@ longSignal =
      trendAlignmentBull   and
      ema200Rising         and
      macdBull             and
+     haBullP              and
      flowBull             and
      flowStrong           and
      adxLongOk            and
@@ -466,10 +489,11 @@ shortSignal =
      trendAlignmentBear   and
      ema200Falling        and
      macdBear             and
+     haBearP              and
      flowBear             and
      flowStrong           and
      adxShortOk           and
-     rsiMomentumBear      and
+     (rsiMomentumBear or strongBearOverride) and
      volStrong            and
      notExtendedShort     and
      (bearImpulse or liqSweepShort) and
@@ -628,6 +652,13 @@ fill(p1, p2, shortKalman, longKalman, na, color.new(kalmanTrendCol, 80))
 plotcandle(open, high, low, close,
      title="Kalman Candles",
      color=candleColK, wickcolor=candleColK, bordercolor=candleColK,
+     force_overlay=true)
+
+// Heikin Ashi de preço — destaca candles com body significativo
+haColP = haBullP ? color.new(upperCol, 70) : haBearP ? color.new(lowerCol, 70) : na
+plotcandle(haOpenP, math.max(haOpenP, haCloseP), math.min(haOpenP, haCloseP), haCloseP,
+     title="HA Preço",
+     color=haColP, wickcolor=haColP, bordercolor=haColP,
      force_overlay=true)
 
 //════════════════════════════════════════════════════════════
