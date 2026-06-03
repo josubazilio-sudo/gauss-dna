@@ -492,23 +492,23 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    long_flex = (flex_score > 40 and (macd_bull_r or ha_bull) and adx >= 17 and
+    long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and adx >= 14 and
                  not sideways and not_ext_long_tight and
                  safe_long and
-                 rsi < 42)
-    short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and adx >= 17 and
+                 rsi < 52)
+    short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and adx >= 14 and
                   not sideways and not_ext_short_tight and
                   safe_short and
-                  rsi > 48)
+                  rsi > 46)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
     long_bb_break  = (bb_break_long  and kalman_up   and k_short_rising  and
-                      flex_score > 30 and adx >= 17  and not sideways    and
+                      flex_score > 20 and adx >= 14  and not sideways    and
                       not ext_above_ema21 and not vol_drying and rsi < 80)
     short_bb_break = (bb_break_short and kalman_down and k_short_falling  and
-                      flex_score < -30 and adx >= 17 and not sideways    and
+                      flex_score < -20 and adx >= 14 and not sideways    and
                       not ext_below_ema21 and not vol_drying and rsi > 20)
 
     sig=None; sig_source=""
@@ -715,9 +715,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_long  = swing_low  - atr * 0.5
     stop_short = swing_high + atr * 0.5
 
-    # RSI zone: sobrevendido para compra / tendência em queda para venda
-    rsi_ok_long  = rsi < 45
-    rsi_ok_short = rsi > 48
+    # RSI zone: neutro a sobrevendido para compra / neutro a sobrecomprado para venda
+    rsi_ok_long  = rsi < 55
+    rsi_ok_short = rsi > 45
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1090,11 +1090,11 @@ async def run_mtf_cycle(session, last_sig, coins):
         if not r4h: await asyncio.sleep(0.5); continue
 
         h4_rsi = r4h["rsi"]
-        h4_bull = r4h["score"] > 20 and r4h.get("tbull_r", False) and r4h["adx"] >= 15 and h4_rsi < 45
-        # SHORT: sobrecomprado (>55) OU tendência bearish forte em andamento (score<-50, RSI>40)
-        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 15 and (
-            (r4h["score"] < -20 and h4_rsi > 55) or
-            (r4h["score"] < -50 and h4_rsi > 40)
+        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 52
+        # SHORT: sobrecomprado (>52) OU tendência bearish forte em andamento (score<-40, RSI>40)
+        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and (
+            (r4h["score"] < -15 and h4_rsi > 52) or
+            (r4h["score"] < -40 and h4_rsi > 40)
         )
         direction = "BULL" if h4_bull else "BEAR"
 
