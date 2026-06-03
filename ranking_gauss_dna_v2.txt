@@ -1,0 +1,250 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║       GAUSS+DNA FLEX v2 — RANKING BACKTEST — MEXC TOP 100                      ║
+║       Gerado: 2026-06-02T11:40:46  |  Timeframe: 30m  |  ~10 dias       ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+Melhorias v2: scoring adaptativo (threshold 30→15), stop ATR 1.5×,
+              breakeven automático no TP1, filtro de volatilidade ATR%
+
+Nota: API pública MEXC retornou ~10 dias (~480 candles) por coin.
+      Para 6 meses: adicione MEXC_API_KEY em Settings → Secrets → Actions.
+
+Comparativo v1 vs v2 (mesmo período ~10-20d):
+  v1: 37 coins com resultado | 0 ELITE | 0 ÓTIMO | 1 BOM | 1 ACEITÁVEL
+  v2: 76 coins com resultado | 0 ELITE | 2 ÓTIMO | 3 BOM | 16 ACEITÁVEL  ← +100%
+
+Legenda:
+  🏆 ELITE     WR≥62% | PF≥2.8 | R≥20
+  ⭐ ÓTIMO     WR≥55% | PF≥2.0 | R≥12
+  ✅ BOM       WR≥47% | PF≥1.5 | R≥6
+  🔵 ACEITÁVEL WR≥40% | PF≥1.2 | R≥2
+  ⚠️  FRACO    Abaixo dos critérios mínimos
+
+Score: PF × WR × √trades / (DD+1)
+
+════════════════════════════════════════════════════════════════════════════════════
+  ⭐ ÓTIMO — 2 moeda(s)
+────────────────────────────────────────────────────────────────────────────────────
+  #    Símbolo          WR%    R Total  PF      Trades  Avg R   DD     Score     
+────────────────────────────────────────────────────────────────────────────────────
+    1.  HOMEUSDT            80%  +13.73R  14.73      5x   +2.75R   1.0R      1317.0
+          25/05  LONG   STOP        +1.00R
+          26/05  LONG   FULL TP     +4.58R
+          30/05  SHORT  STOP        -1.00R
+          30/05  LONG   FULL TP     +4.58R
+          31/05  LONG   FULL TP     +4.58R
+
+    2.  CAKEUSDT            80%  +12.35R  13.35      5x   +2.47R   1.0R      1194.1
+          25/05  LONG   STOP        +3.20R
+          26/05  SHORT  FULL TP     +4.58R
+          30/05  LONG   FULL TP     +4.58R
+          30/05  LONG   STOP        +1.00R
+          01/06  SHORT  STOP        -1.00R
+
+════════════════════════════════════════════════════════════════════════════════════
+  ✅ BOM — 3 moeda(s)
+────────────────────────────────────────────────────────────────────────────────────
+  #    Símbolo          WR%    R Total  PF      Trades  Avg R   DD     Score     
+────────────────────────────────────────────────────────────────────────────────────
+    3.  PORTALUSDT          75%   +7.78R   8.78      4x   +1.94R   1.0R       658.1
+          25/05  LONG   STOP        +1.00R
+          26/05  SHORT  STOP        -1.00R
+          26/05  SHORT  FULL TP     +4.58R
+          29/05  LONG   STOP        +3.20R
+
+    4.  TONUSDT             67%   +6.78R   7.78      3x   +2.26R   1.0R       448.9
+          25/05  LONG   FULL TP     +4.58R
+          27/05  SHORT  STOP        +3.20R
+          01/06  LONG   STOP        -1.00R
+
+    5.  EPICUSDT            50%   +6.60R   3.20      6x   +1.10R   2.0R       130.6
+          26/05  SHORT  STOP        +3.20R
+          28/05  SHORT  STOP        -1.00R
+          29/05  LONG   STOP        -1.00R
+          01/06  LONG   STOP        +3.20R
+          01/06  LONG   STOP        +3.20R
+
+════════════════════════════════════════════════════════════════════════════════════
+  🔵 ACEITÁVEL — 16 moeda(s)
+────────────────────────────────────────────────────────────────────────────────────
+  #    Símbolo          WR%    R Total  PF      Trades  Avg R   DD     Score     
+────────────────────────────────────────────────────────────────────────────────────
+    6.  SIRENUSDT           75%   +5.58R   6.58      4x   +1.39R   1.0R       493.1
+          28/05  SHORT  STOP        +1.00R
+          29/05  LONG   STOP        +1.00R
+          01/06  LONG   FULL TP     +4.58R
+          01/06  LONG   STOP        -1.00R
+
+    7.  TROLLSOLUSDT        75%   +4.20R   5.20      4x   +1.05R   1.0R       390.0
+          26/05  SHORT  STOP        +1.00R
+          27/05  SHORT  STOP        -1.00R
+          28/05  LONG   STOP        +3.20R
+          01/06  SHORT  STOP        +1.00R
+
+    8.  SKYAIUSDT           67%   +4.58R   5.58      3x   +1.53R   1.0R       321.9
+          25/05  SHORT  FULL TP     +4.58R
+          27/05  SHORT  STOP        -1.00R
+          29/05  LONG   STOP        +1.00R
+
+    9.  SLXUSDT             67%   +4.58R   5.58      3x   +1.53R   1.0R       321.9
+          29/05  LONG   STOP        +1.00R
+          30/05  SHORT  FULL TP     +4.58R
+          31/05  SHORT  STOP        -1.00R
+
+   10.  OPGUSDT             67%   +4.20R   3.10      6x   +0.70R   1.0R       253.1
+          26/05  SHORT  STOP        +1.00R
+          27/05  SHORT  STOP        +3.20R
+          30/05  SHORT  STOP        +1.00R
+          01/06  SHORT  STOP        -1.00R
+          02/06  LONG   TP1         +1.00R
+
+   11.  ATOMUSDT            60%   +5.40R   3.70      5x   +1.08R   1.0R       248.2
+          25/05  LONG   STOP        +3.20R
+          27/05  SHORT  STOP        +3.20R
+          30/05  LONG   STOP        -1.00R
+          31/05  SHORT  STOP        +1.00R
+          31/05  SHORT  STOP        -1.00R
+
+   12.  TRIAUSDT            67%   +3.20R   4.20      3x   +1.07R   1.0R       242.5
+          26/05  SHORT  STOP        +3.20R
+          31/05  SHORT  STOP        -1.00R
+          31/05  LONG   STOP        +1.00R
+
+   13.  SUIUSDT             50%   +5.78R   3.89      4x   +1.44R   1.0R       194.4
+          26/05  SHORT  STOP        -1.00R
+          26/05  SHORT  FULL TP     +4.58R
+          29/05  SHORT  STOP        -1.00R
+          31/05  SHORT  STOP        +3.20R
+
+   14.  HBARUSDT            60%   +3.20R   2.60      5x   +0.64R   1.0R       174.4
+          25/05  LONG   STOP        -1.00R
+          26/05  SHORT  STOP        +3.20R
+          28/05  LONG   STOP        +1.00R
+          30/05  LONG   STOP        -1.00R
+          01/06  SHORT  TP1         +1.00R
+
+   15.  IRYSUSDT            50%   +4.40R   3.20      4x   +1.10R   1.0R       160.0
+          26/05  SHORT  STOP        -1.00R
+          27/05  SHORT  STOP        +3.20R
+          30/05  LONG   STOP        -1.00R
+          31/05  SHORT  STOP        +3.20R
+
+   16.  PENGUUSDT           50%   +3.58R   2.79      4x   +0.89R   1.0R       139.4
+          26/05  SHORT  STOP        -1.00R
+          26/05  SHORT  FULL TP     +4.58R
+          29/05  LONG   STOP        -1.00R
+          01/06  SHORT  STOP        +1.00R
+          02/06  SHORT  OPEN        +0.00R
+
+   17.  WLDUSDT             50%   +5.78R   3.89      4x   +1.44R   2.0R       129.6
+          25/05  LONG   FULL TP     +4.58R
+          26/05  LONG   STOP        -1.00R
+          30/05  LONG   STOP        -1.00R
+          01/06  LONG   STOP        +3.20R
+
+   18.  USELESSUSDT         50%   +3.58R   2.79      4x   +0.89R   2.0R        92.9
+          28/05  SHORT  STOP        -1.00R
+          29/05  LONG   STOP        -1.00R
+          31/05  SHORT  STOP        +1.00R
+          01/06  LONG   FULL TP     +4.58R
+
+   19.  HUSDT               50%   +3.58R   2.19      6x   +0.60R   2.0R        89.5
+          26/05  LONG   STOP        -1.00R
+          27/05  LONG   STOP        +1.00R
+          28/05  SHORT  STOP        -1.00R
+          29/05  LONG   STOP        -1.00R
+          30/05  LONG   FULL TP     +4.58R
+
+   20.  ZECUSDT             40%   +4.78R   2.59      5x   +0.96R   2.0R        77.3
+          25/05  SHORT  FULL TP     +4.58R
+          28/05  SHORT  STOP        -1.00R
+          28/05  LONG   STOP        -1.00R
+          30/05  LONG   STOP        +3.20R
+          01/06  SHORT  STOP        -1.00R
+
+   21.  HYPEUSDT            50%   +2.20R   1.55      8x   +0.28R   3.0R        54.8
+          27/05  LONG   STOP        -1.00R
+          27/05  SHORT  STOP        +1.00R
+          29/05  LONG   STOP        +3.20R
+          31/05  LONG   STOP        -1.00R
+          01/06  LONG   STOP        +1.00R
+
+════════════════════════════════════════════════════════════════════════════════════
+  ⚠️  FRACO — 55 moedas
+────────────────────────────────────────────────────────────────────────────────────
+  #    Símbolo          WR%    R Total  PF      Trades  Avg R   DD    
+────────────────────────────────────────────────────────────────────────────────────
+   22.  ALLOUSDT            33%   +2.58R   2.29      3x   +0.86R   1.0R
+   23.  RAINUSDT            33%   +2.58R   2.29      3x   +0.86R   2.0R
+   24.  AAVEUSDT            40%   +1.20R   1.40      5x   +0.24R   2.0R
+   25.  TIAUSDT             33%   +3.78R   1.94      6x   +0.63R   3.0R
+   26.  PENDLEUSDT          33%   +1.58R   1.39      6x   +0.26R   2.0R
+   27.  ICPUSDT             50%   +0.00R   1.00      4x   +0.00R   2.0R
+   28.  INJUSDT             40%   +1.20R   1.40      5x   +0.24R   3.0R
+   29.  POLUSDT             40%   +1.20R   1.40      5x   +0.24R   3.0R
+   30.  STARUSDT            33%   +1.20R   1.60      3x   +0.40R   2.0R
+   31.  BILLUSDT            33%   +1.20R   1.60      3x   +0.40R   2.0R
+   32.  ASTEROIDUSDT        33%   +1.20R   1.60      3x   +0.40R   2.0R
+   33.  XMRUSDT             25%   +0.20R   1.07      4x   +0.05R   2.0R
+   34.  EDGEUSDT            25%   +0.20R   1.07      4x   +0.05R   2.0R
+   35.  ASTERUSDT           20%   +0.58R   1.14      5x   +0.12R   2.0R
+   36.  PLAYUSDT            40%   -1.00R   0.67      5x   -0.20R   3.0R
+   37.  ZROUSDT             20%   +0.58R   1.14      5x   +0.12R   3.0R
+   38.  SENTISUSDT          29%   -0.80R   0.84      7x   -0.11R   4.0R
+   39.  VIRTUALUSDT         20%   -0.80R   0.80      5x   -0.16R   2.0R
+   40.  MRVLONUSDT          25%   -0.42R   0.93      8x   -0.05R   5.0R
+   41.  SOLUSDT             33%   -1.00R   0.50      3x   -0.33R   2.0R
+   42.  SEDAUSDT            33%   -1.00R   0.50      3x   -0.33R   2.0R
+   43.  XLMUSDT             17%   -0.42R   0.92      6x   -0.07R   3.0R
+   44.  MYXUSDT             25%   -1.80R   0.70      8x   -0.22R   5.0R
+   45.  ENAUSDT             14%   -1.42R   0.76      7x   -0.20R   3.0R
+   46.  LINKUSDT            17%   -1.80R   0.64      6x   -0.30R   3.0R
+   47.  ETHFIUSDT           29%   -3.00R   0.40      7x   -0.43R   4.0R
+   48.  BONKUSDT            14%   -1.42R   0.76      7x   -0.20R   4.0R
+   49.  LTCUSDT             20%   -1.42R   0.64      5x   -0.28R   4.0R
+   50.  NEARUSDT            20%   -1.42R   0.64      5x   -0.28R   4.0R
+   51.  GUAUSDT             25%   -2.00R   0.33      4x   -0.50R   2.0R
+   52.  ATLAUSDT            25%   -2.00R   0.33      4x   -0.50R   3.0R
+   53.  JTOUSDT             14%   -2.80R   0.53      7x   -0.40R   4.0R
+   54.  XRPUSDT             17%   -2.42R   0.52      6x   -0.40R   5.0R
+   55.  ADAUSDT             20%   -3.00R   0.25      5x   -0.60R   3.0R
+   56.  TRUMPUSDT           20%   -3.00R   0.25      5x   -0.60R   3.0R
+   57.  RIVERUSDT           20%   -3.00R   0.25      5x   -0.60R   3.0R
+   58.  SEIUSDT             11%   -3.42R   0.57      9x   -0.38R   7.0R
+   59.  RENDERUSDT          20%   -3.00R   0.25      5x   -0.60R   4.0R
+   60.  CHZUSDT             20%   -3.00R   0.25      5x   -0.60R   4.0R
+   61.  FILUSDT             17%   -4.00R   0.20      6x   -0.67R   5.0R
+   62.  DOGEUSDT            14%   -5.00R   0.17      7x   -0.71R   5.0R
+   63.  DASHUSDT            14%   -5.00R   0.17      7x   -0.71R   5.0R
+   64.  LUNCUSDT            14%   -5.00R   0.17      7x   -0.71R   5.0R
+   65.  TAOUSDT             14%   -5.00R   0.17      7x   -0.71R   6.0R
+   66.  AVAXUSDT            11%   -7.00R   0.12      9x   -0.78R   7.0R
+   67.  ETHUSDT              0%   -8.00R   0.00      8x   -1.00R   8.0R
+   68.  JGGLUSDT             0%   -8.00R   0.00      8x   -1.00R   8.0R
+   69.  AIXUSDT              0%   -3.00R   0.00      3x   -1.00R   3.0R
+   70.  XPLUSDT              0%   -5.00R   0.00      5x   -1.00R   5.0R
+   71.  APEUSDT              0%   -3.00R   0.00      3x   -1.00R   3.0R
+   72.  WUSDT                0%   -5.00R   0.00      5x   -1.00R   5.0R
+   73.  PEPEUSDT             0%   -7.00R   0.00      7x   -1.00R   7.0R
+   74.  KASUSDT              0%   -7.00R   0.00      7x   -1.00R   7.0R
+   75.  IOUSDT               0%   -4.00R   0.00      4x   -1.00R   4.0R
+   76.  CCDUSDT              0%   -3.00R   0.00      3x   -1.00R   3.0R
+
+════════════════════════════════════════════════════════════════════════════════════
+  DESTAQUES:
+  🥇 #1 HOMEUSDT    — WR 80% | +13.73R | PF 14.73 | 5 trades
+  🥈 #2 CAKEUSDT    — WR 80% | +12.35R | PF 13.35 | 5 trades
+  🥉 #3 PORTALUSDT  — WR 75% | +7.78R  | PF 8.78  | 4 trades
+
+  EVITAR (0% WR, todos stops):
+    ETHUSDT          — 0/8 trades ganhos | R: -8.0R
+    JGGLUSDT         — 0/8 trades ganhos | R: -8.0R
+    AIXUSDT          — 0/3 trades ganhos | R: -3.0R
+    XPLUSDT          — 0/5 trades ganhos | R: -5.0R
+    APEUSDT          — 0/3 trades ganhos | R: -3.0R
+    WUSDT            — 0/5 trades ganhos | R: -5.0R
+    PEPEUSDT         — 0/7 trades ganhos | R: -7.0R
+    KASUSDT          — 0/7 trades ganhos | R: -7.0R
+    IOUSDT           — 0/4 trades ganhos | R: -4.0R
+    CCDUSDT          — 0/3 trades ganhos | R: -3.0R
+════════════════════════════════════════════════════════════════════════════════════

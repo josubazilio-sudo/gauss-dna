@@ -1,0 +1,94 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║          GAUSS+DNA FLEX — RANKING BACKTEST — MEXC TOP 100                  ║
+║          Período: ~20 dias  |  Timeframe: 30m  |  Gerado: 2026-06-02       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Nota: A API pública do MEXC limita 1.000 candles por request (~20 dias em 30m).
+Dados paginados (6 meses) não são suportados pela API pública sem autenticação.
+
+Legenda de grades:
+  🏆 ELITE     WR ≥ 62%  |  PF ≥ 2.8  |  R ≥ 20
+  ⭐ ÓTIMO     WR ≥ 55%  |  PF ≥ 2.0  |  R ≥ 12
+  ✅ BOM       WR ≥ 47%  |  PF ≥ 1.5  |  R ≥ 6
+  🔵 ACEITÁVEL WR ≥ 40%  |  PF ≥ 1.2  |  R ≥ 2
+  ⚠️  FRACO    Abaixo dos critérios mínimos
+
+Fórmula rank: PF × WR × sqrt(trades) / (max_dd + 1)
+
+══════════════════════════════════════════════════════════════════════════════
+ RANK  SÍMBOLO         GRADE          WR%    PF      R       DD  TRADES  SCORE
+══════════════════════════════════════════════════════════════════════════════
+  #1   RAINUSDT        ✅ BOM        100.0%  999.0  +9.15R   0.0    2   141279.9
+  #2   EDGEUSDT        🔵 ACEITÁVEL   50.0%    4.6  +3.58R   1.0    2     161.8
+──────────────────────────────────────────────────────────────────────────────
+  #3   BTCUSDT         ⚠️  FRACO      50.0%    2.6  +1.58R   1.0    2      91.0
+  #4   PENDLEUSDT      ⚠️  FRACO      50.0%    2.6  +1.58R   1.0    2      91.0
+  #5   TONUSDT         ⚠️  FRACO      50.0%    2.3  +1.33R   1.0    2      82.2
+  #6   HBARUSDT        ⚠️  FRACO      66.7%    1.4  +0.40R   1.0    3      80.8
+  #7   MYXUSDT         ⚠️  FRACO      33.3%    2.3  +2.58R   2.0    3      44.0
+  #8   INJUSDT         ⚠️  FRACO      50.0%    1.0  +0.00R   1.0    2      35.4
+  #9   DASHUSDT        ⚠️  FRACO      50.0%    1.0  +0.00R   1.0    2      35.4
+ #10   ZROUSDT         ⚠️  FRACO      50.0%    1.0  +0.00R   1.0    2      35.4
+ #11   ASTERUSDT       ⚠️  FRACO      33.3%    1.3  +0.58R   2.0    3      24.8
+ #12   CAKEUSDT        ⚠️  FRACO      33.3%    1.3  +0.58R   2.0    3      24.8
+ #13   MRVLONUSDT      ⚠️  FRACO      33.3%    1.2  +0.33R   2.0    3      22.4
+ #14   MXUSDT          ⚠️  FRACO      50.0%    0.4  -0.60R   1.0    2      14.1
+ #15   POLUSDT         ⚠️  FRACO      50.0%    0.4  -0.60R   1.0    2      14.1
+ #16   HYPEUSDT        ⚠️  FRACO      25.0%    0.9  -0.42R   3.0    4      10.7
+ #17   XRPUSDT         ⚠️  FRACO      33.3%    0.5  -1.00R   2.0    3       9.6
+ #18   NEARUSDT        ⚠️  FRACO      33.3%    0.5  -1.00R   2.0    3       9.6
+ #19   ATOMUSDT        ⚠️  FRACO      33.3%    0.5  -1.00R   2.0    3       9.6
+ #20   SENTISUSDT      ⚠️  FRACO      33.3%    0.2  -1.60R   2.0    3       3.9
+ #21   XMRUSDT         ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+ #22   LTCUSDT         ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+ #23   EURUSDT         ⚠️  FRACO       0.0%    0.0  -3.00R   3.0    3       0.0
+ #24   FILUSDT         ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+ #25   GOLD(PAXG)USDT  ⚠️  FRACO       0.0%    0.0  -3.00R   3.0    3       0.0
+ #26   TAOUSDT         ⚠️  FRACO       0.0%    0.0  -3.00R   3.0    3       0.0
+ #27   GOLD(XAUT)USDT  ⚠️  FRACO       0.0%    0.0  -3.00R   3.0    3       0.0
+ #28   JGGLUSDT        ⚠️  FRACO       0.0%    0.0  -3.00R   3.0    3       0.0
+ #29   PORTALUSDT      ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+ #30   ENAUSDT         ⚠️  FRACO       0.0%    0.0  -4.00R   4.0    4       0.0
+ #31   JTOUSDT         ⚠️  FRACO       0.0%    0.0  -3.00R   3.0    3       0.0
+ #32   ONDOUSDT        ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+ #33   IOUSDT          ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+ #34   BRLUSDT         ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+ #35   VIRTUALUSDT     ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+ #36   BONKUSDT        ⚠️  FRACO       0.0%    0.0  -3.00R   3.0    3       0.0
+ #37   OSHIUSDT        ⚠️  FRACO       0.0%    0.0  -2.00R   2.0    2       0.0
+
+  (As demais moedas do top 100 não geraram sinais suficientes no período)
+
+══════════════════════════════════════════════════════════════════════════════
+ RESUMO
+══════════════════════════════════════════════════════════════════════════════
+  Total moedas com resultado:    37
+  🏆 ELITE:                       0
+  ⭐ ÓTIMO:                        0
+  ✅ BOM:                          1  →  RAINUSDT
+  🔵 ACEITÁVEL:                    1  →  EDGEUSDT
+  ⚠️  FRACO:                      35
+
+══════════════════════════════════════════════════════════════════════════════
+ MELHORES TRADES — DETALHES
+══════════════════════════════════════════════════════════════════════════════
+
+● RAINUSDT  [✅ BOM | Score: 141279.9]
+  Trade 1:  25/05  LONG   → FULL TP  +4.58R
+  Trade 2:  31/05  SHORT  → FULL TP  +4.58R
+  Total: +9.15R  |  WR: 100%  |  PF: 999  |  DD máx: 0R
+
+● EDGEUSDT  [🔵 ACEITÁVEL | Score: 161.8]
+  Trade 1:  25/05  LONG   → STOP    -1.00R
+  Trade 2:  31/05  SHORT  → FULL TP +4.58R
+  Total: +3.58R  |  WR: 50%  |  PF: 4.6  |  DD máx: 1R
+
+══════════════════════════════════════════════════════════════════════════════
+ OBSERVAÇÕES
+══════════════════════════════════════════════════════════════════════════════
+• Com apenas ~20 dias de dados, a amostra de trades é pequena (2–4 por moeda).
+• Resultados com poucos trades têm alta variância — não use como decisão final.
+• Para maior confiabilidade, rode com dados de 3–6 meses (requer API autenticada).
+• RAINUSDT se destacou com 2/2 FULL TP consecutivos (+9.15R total).
+• A maioria das moedas não passou nos 9 filtros simultâneos do GAUSS+DNA FLEX.
+══════════════════════════════════════════════════════════════════════════════
