@@ -270,9 +270,9 @@ def analyze(sym, candles):
     rsi=rsi_calc(closes[-50:])
     rsi_prev=rsi_calc(closes[-53:-3]) if n>=53 else rsi
     rsi_rising=rsi>rsi_prev; rsi_falling=rsi<rsi_prev
-    rsi_bull=20<rsi<38; rsi_bear=55<rsi<80              # score: sobrevendido=bull, sobrecomprado=bear
-    rsi_bull_elite=20<rsi<38 and rsi_rising              # ELITE: sobrevendido + recuperando
-    rsi_bear_elite=55<rsi<80 and rsi_falling             # ELITE: sobrecomprado + caindo
+    rsi_bull=50<rsi<65; rsi_bear=35<rsi<50              # score: zona saudável bull/bear
+    rsi_bull_elite=48<rsi<65 and rsi_rising              # ELITE: abaixo de overbought + subindo
+    rsi_bear_elite=35<rsi<52 and rsi_falling             # ELITE: acima de oversold + caindo
 
     # DMI/ADX (strictly rising: ADX deve estar subindo, não apenas estável)
     pdi,mdi,adx,adx_p=dmi_adx(candles[-60:])
@@ -449,21 +449,21 @@ def analyze(sym, candles):
     # Sinal de cruzamento (sem safe_long — não bloquear crossovers válidos)
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 (macd_bull or ha_bull) and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97 and rsi<55)
+                v_strong and not_ext_long and price>e200*0.97 and rsi<65)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  (macd_bear or ha_bear) and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03 and rsi>38)
+                 v_strong and not_ext_short and price<e200*1.03 and rsi>35)
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and (macd_bull or macd_recovering) and
                    adx>18 and (f_bull or obv_bull) and v_strong and
-                   above_vwap and score>15 and not any_cross_bull and rsi<38)
+                   above_vwap and score>15 and not any_cross_bull and rsi<65)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-15 and not any_cross_bear and rsi>55)
+                    below_vwap and score<-15 and not any_cross_bear and rsi>35)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -495,11 +495,11 @@ def analyze(sym, candles):
     long_flex = (flex_score > 30 and (macd_bull_r or ha_bull) and adx >= 14 and
                  not sideways and not_ext_long_tight and
                  safe_long and
-                 rsi < 38)
+                 rsi < 65)
     short_flex = (flex_score < -30 and (macd_bear_r or ha_bear) and adx >= 14 and
                   not sideways and not_ext_short_tight and
                   safe_short and
-                  rsi > 55)
+                  rsi > 35)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
@@ -716,8 +716,8 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_short = swing_high + atr * 0.5
 
     # RSI zone: neutro a sobrevendido para compra / neutro a sobrecomprado para venda
-    rsi_ok_long  = rsi < 38
-    rsi_ok_short = rsi > 55
+    rsi_ok_long  = rsi < 65
+    rsi_ok_short = rsi > 35
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1090,11 +1090,11 @@ async def run_mtf_cycle(session, last_sig, coins):
         if not r4h: await asyncio.sleep(0.5); continue
 
         h4_rsi = r4h["rsi"]
-        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 38
-        # SHORT: RSI elevado (>55) OU tendência bearish forte em andamento (score<-40, RSI>45)
+        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 65
+        # SHORT: RSI não sobrevendido (>35) OU tendência bearish forte (score<-40, RSI>25)
         h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and (
-            (r4h["score"] < -15 and h4_rsi > 55) or
-            (r4h["score"] < -40 and h4_rsi > 45)
+            (r4h["score"] < -15 and h4_rsi > 35) or
+            (r4h["score"] < -40 and h4_rsi > 25)
         )
         direction = "BULL" if h4_bull else "BEAR"
 
