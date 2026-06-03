@@ -19,7 +19,8 @@ LOOP_MODE    = os.environ.get("LOOP_MODE", "false").lower() == "true"
 TEST_MODE    = os.environ.get("TEST_MODE", "false").lower() == "true"
 DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
 SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top 50 por volume
-SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
+SCAN_EVERY      = int(os.environ.get("SCAN_EVERY", "16"))       # rescan a cada N ciclos
+CYCLE_INTERVAL  = int(os.environ.get("CYCLE_INTERVAL", "0"))    # 0 = aguarda vela; >0 = intervalo fixo (seg)
 STATE_FILE   = Path("last_signals.json")
 CAPITAL      = float(os.environ.get("CAPITAL", "180"))   # capital total em USD
 RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%)
@@ -1396,10 +1397,14 @@ async def main():
             cycle+=1
 
             if LOOP_MODE and cycle>1:   # ciclo 1 roda imediatamente
-                wait=seconds_to_candle_close(tf_min_base)
-                if wait>3:
-                    log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
-                    await asyncio.sleep(wait+2)
+                if CYCLE_INTERVAL > 0:
+                    log.info(f"⏳ Aguardando {CYCLE_INTERVAL//60}min entre ciclos...")
+                    await asyncio.sleep(CYCLE_INTERVAL)
+                else:
+                    wait=seconds_to_candle_close(tf_min_base)
+                    if wait>3:
+                        log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
+                        await asyncio.sleep(wait+2)
 
             # Rescan periódico (a cada SCAN_EVERY ciclos)
             if DYNAMIC_SCAN and cycle>1 and (cycle-last_scan_cycle)>=SCAN_EVERY:

@@ -63,7 +63,8 @@ jobs:
         env:
           TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
-          TIMEFRAMES: '15m,1h'
+          TIMEFRAMES: '1h,4h'
+          CYCLE_INTERVAL: '900'
           SIGNAL_MODE: 'FLEX'
           DYNAMIC_SCAN: 'true'
           SCANNER_TOP: '200'
