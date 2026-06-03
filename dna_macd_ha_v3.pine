@@ -1,0 +1,514 @@
+//@version=6
+strategy("SINAIS DE MOVIMENTO PRO - DNA INSTITUCIONAL MACD HA [BTC 1H]",
+     shorttitle="DNA MACD HA v3",
+     overlay=false,
+     max_bars_back=3000,
+     max_lines_count=500,
+     max_labels_count=500,
+     max_boxes_count=200,
+     initial_capital=500,
+     pyramiding=0,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=20,
+     commission_type=strategy.commission.percent,
+     commission_value=0.1,
+     slippage=3,
+     process_orders_on_close=true)
+
+//════════════════════════════════════════════════════════════
+// INPUTS
+//════════════════════════════════════════════════════════════
+groupTrend  = "TENDÊNCIA"
+groupMACD   = "MACD HA"
+groupRSI    = "RSI"
+groupFilter = "FILTROS"
+groupRisk   = "GESTÃO"
+groupVisual = "VISUAL"
+
+ema10Len  = input.int(8,   "EMA10",  group=groupTrend)
+ema21Len  = input.int(21,  "EMA21",  group=groupTrend)
+ema50Len  = input.int(50,  "EMA50",  group=groupTrend)
+ema200Len = input.int(200, "EMA200", group=groupTrend)
+
+macdFast   = input.int(8,  "MACD Fast",   group=groupMACD)
+macdSlow   = input.int(21, "MACD Slow",   group=groupMACD)
+macdSignal = input.int(5,  "MACD Signal", group=groupMACD)
+
+// RSI 65/35 — não comprar topo, não vender fundo
+rsiLen = input.int(14, "RSI",               group=groupRSI)
+rsiOB  = input.int(65, "RSI Sobrecomprado", group=groupRSI)
+rsiOS  = input.int(35, "RSI Sobrevendido",  group=groupRSI)
+
+adxLen      = input.int(14,   "ADX",           group=groupFilter)
+adxSmooth   = input.int(14,   "ADX Smooth",    group=groupFilter)
+adxMin      = input.float(16.0,"ADX Min LONG",  step=0.5, group=groupFilter)
+adxMinShort = input.float(18.0,"ADX Min SHORT", step=0.5, group=groupFilter)
+adxStrong   = input.float(28.0,"ADX Forte",     step=0.5, group=groupFilter)
+
+atrLen = input.int(14, "ATR", group=groupFilter)
+
+volLen  = input.int(20,  "Média Volume", group=groupFilter)
+volMult = input.float(0.9,"Volume Mult", step=0.05, group=groupFilter)
+
+// Distância medida de EMA21 (mais próxima do preço)
+maxDistATR = input.float(2.5,"Distância EMA21 ATR", step=0.1, group=groupFilter)
+
+stopAtrMult = input.float(1.8,"STOP ATR",   step=0.1, group=groupRisk)
+tp1R        = input.float(1.2,"TP1",        step=0.1, group=groupRisk)
+tpFinalR    = input.float(3.5,"ALVO FINAL", step=0.1, group=groupRisk)
+tp1Qty      = input.float(35, "TP1 %",               group=groupRisk)
+
+useBreakEven = input.bool(true, "Break Even",            group=groupRisk)
+useTrail     = input.bool(true, "Segurar Tendência Forte",group=groupRisk)
+
+bullColor = input.color(color.rgb(0, 204, 173),  "Bull", group=groupVisual)
+bearColor = input.color(color.rgb(255, 94, 116), "Bear", group=groupVisual)
+
+//════════════════════════════════════════════════════════════
+// MÉDIAS
+//════════════════════════════════════════════════════════════
+ema10  = ta.ema(close, ema10Len)
+ema21  = ta.ema(close, ema21Len)
+ema50  = ta.ema(close, ema50Len)
+ema200 = ta.ema(close, ema200Len)
+
+//════════════════════════════════════════════════════════════
+// ATR
+//════════════════════════════════════════════════════════════
+atr = math.max(ta.atr(atrLen), syminfo.mintick)
+
+//════════════════════════════════════════════════════════════
+// HEIKIN ASHI (PREÇO) — body check > 0.2 ATR
+//════════════════════════════════════════════════════════════
+haCloseP = (open + high + low + close) / 4
+var float haOpenP = na
+haOpenP := na(haOpenP[1]) ? (open + close) / 2 : (haOpenP[1] + haCloseP[1]) / 2
+haBodyOk = math.abs(haCloseP - haOpenP) > atr * 0.2
+haBullP  = haCloseP > haOpenP and haCloseP[1] > haOpenP[1] and haBodyOk
+haBearP  = haCloseP < haOpenP and haCloseP[1] < haOpenP[1] and haBodyOk
+haBull3P = haBullP and haCloseP[2] > haOpenP[2]
+haBear3P = haBearP and haCloseP[2] < haOpenP[2]
+
+//════════════════════════════════════════════════════════════
+// MACD
+//════════════════════════════════════════════════════════════
+[macdLine, signalLine, histLine] =
+     ta.macd(close, macdFast, macdSlow, macdSignal)
+
+//════════════════════════════════════════════════════════════
+// HEIKIN ASHI SOBRE MACD
+//════════════════════════════════════════════════════════════
+haClose = (macdLine + signalLine + histLine + histLine) / 4
+
+var float haOpen = na
+haOpen :=
+     na(haOpen[1])
+     ? (macdLine + signalLine) / 2
+     : (haOpen[1] + haClose[1]) / 2
+
+haHigh =
+     math.max(
+          math.max(macdLine, signalLine),
+          math.max(haOpen, haClose))
+
+haLow =
+     math.min(
+          math.min(macdLine, signalLine),
+          math.min(haOpen, haClose))
+
+haBull = haClose > haOpen
+haBear = haClose < haOpen
+
+// Histograma crescente exigido — confirma momentum real
+macdBull =
+     macdLine > signalLine and
+     histLine > 0           and
+     histLine > histLine[1] and
+     haBull
+
+macdBear =
+     macdLine < signalLine and
+     histLine < 0           and
+     histLine < histLine[1] and
+     haBear
+
+//════════════════════════════════════════════════════════════
+// RSI
+//════════════════════════════════════════════════════════════
+rsi       = ta.rsi(close, rsiLen)
+rsiSmooth = ta.ema(rsi, 5)
+
+rsiMomentumBull = rsiSmooth > 50 and rsiSmooth < rsiOB
+rsiMomentumBear = rsiSmooth < 50 and rsiSmooth > rsiOS
+
+//════════════════════════════════════════════════════════════
+// ADX
+//════════════════════════════════════════════════════════════
+[pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
+
+//════════════════════════════════════════════════════════════
+// VOLUME
+//════════════════════════════════════════════════════════════
+volMa     = ta.sma(volume, volLen)
+volStrong = volume > volMa * volMult
+volWeak   = volume < volMa * 0.85
+
+//════════════════════════════════════════════════════════════
+// FLUXO
+//════════════════════════════════════════════════════════════
+spread  = math.max(high - low, syminfo.mintick)
+flowRaw = ((close - open) / spread) * volume
+flow    = ta.ema(flowRaw, 13)
+
+flowBull = flow > 0
+flowBear = flow < 0
+
+//════════════════════════════════════════════════════════════
+// TENDÊNCIA
+//════════════════════════════════════════════════════════════
+trendBull =
+     close > ema200 and
+     ema10 > ema21  and
+     ema21 > ema50  and
+     ema50 > ema200
+
+trendBear =
+     close < ema200 and
+     ema10 < ema21  and
+     ema21 < ema50  and
+     ema50 < ema200
+
+trendAlignmentBull = close > ema10 and close > ema21 and close > ema50
+trendAlignmentBear = close < ema10 and close < ema21 and close < ema50
+
+ema200Rising  = ema200 > ema200[3]
+ema200Falling = ema200 < ema200[3]
+
+//════════════════════════════════════════════════════════════
+// STRONG BEAR OVERRIDE — SHORT mesmo com RSI < rsiOS
+// ADX > 45 + tendência bajista clara + HA confirma
+//════════════════════════════════════════════════════════════
+strongBearOverride = adx > 45 and trendBear and ema200Falling and flowBear and haBearP
+
+//════════════════════════════════════════════════════════════
+// DISTÂNCIA — referência EMA21
+//════════════════════════════════════════════════════════════
+distLong  = atr > 0 ? (close - ema21) / atr : 0.0
+distShort = atr > 0 ? (ema21 - close) / atr : 0.0
+
+notExtendedLong  = distLong  < maxDistATR and rsiSmooth < rsiOB
+notExtendedShort = distShort < maxDistATR and (rsiSmooth > rsiOS or strongBearOverride)
+
+//════════════════════════════════════════════════════════════
+// IMPULSO
+//════════════════════════════════════════════════════════════
+bullImpulse =
+     close > high[1] and close > open and
+     (close - open) > atr * 0.15
+
+bearImpulse =
+     close < low[1] and close < open and
+     (open - close) > atr * 0.15
+
+//════════════════════════════════════════════════════════════
+// SWEEP DE LIQUIDEZ
+//════════════════════════════════════════════════════════════
+liqSweepLong  = low < low[1]   and close > low[1]  and close > open
+liqSweepShort = high > high[1] and close < high[1] and close < open
+
+//════════════════════════════════════════════════════════════
+// SCORE
+//════════════════════════════════════════════════════════════
+scoreAdxRising = adx >= adx[1] ? 20 : -10
+scoreAdxStrong = adx > adxStrong ? 20 : 0
+scoreVolExtra  = volume > volMa * 1.5 ? 15 : 0
+scoreMomLong   = close > close[2] ? 10 : -5
+scoreMomShort  = close < close[2] ? 10 : -5
+scoreDILong    = pdi > mdi ? 15 : -10
+scoreDIShort   = mdi > pdi ? 15 : -10
+
+longScore =
+     scoreAdxRising +
+     scoreAdxStrong +
+     scoreVolExtra  +
+     scoreDILong    +
+     scoreMomLong
+
+shortScore =
+     scoreAdxRising +
+     scoreAdxStrong +
+     scoreVolExtra  +
+     scoreDIShort   +
+     scoreMomShort
+
+//════════════════════════════════════════════════════════════
+// COOLDOWN
+//════════════════════════════════════════════════════════════
+var int lastTradeBar = na
+
+cooldownBars =
+     adx > 35 ? 1 :
+     adx > 25 ? 2 : 4
+
+tradeCooldown =
+     na(lastTradeBar) or
+     (bar_index - lastTradeBar > cooldownBars)
+
+//════════════════════════════════════════════════════════════
+// ENTRADAS
+//════════════════════════════════════════════════════════════
+longSignal =
+     barstate.isconfirmed  and
+     tradeCooldown         and
+     trendBull             and
+     trendAlignmentBull    and
+     ema200Rising          and
+     macdBull              and
+     haBullP               and
+     flowBull              and
+     adx > adxMin          and
+     rsiMomentumBull       and
+     volStrong             and
+     notExtendedLong       and
+     (bullImpulse or liqSweepLong) and
+     longScore > 30
+
+shortSignal =
+     barstate.isconfirmed  and
+     tradeCooldown         and
+     trendBear             and
+     trendAlignmentBear    and
+     ema200Falling         and
+     macdBear              and
+     haBearP               and
+     flowBear              and
+     adx > adxMinShort     and
+     (rsiMomentumBear or strongBearOverride) and
+     volStrong             and
+     notExtendedShort      and
+     (bearImpulse or liqSweepShort) and
+     shortScore > 30
+
+newLong  = longSignal  and not longSignal[1]
+newShort = shortSignal and not shortSignal[1]
+
+//════════════════════════════════════════════════════════════
+// ATR CONGELADO
+//════════════════════════════════════════════════════════════
+var float longATR  = na
+var float shortATR = na
+
+if newLong
+    longATR := atr
+
+if newShort
+    shortATR := atr
+
+//════════════════════════════════════════════════════════════
+// EXECUÇÃO
+//════════════════════════════════════════════════════════════
+if newLong  and strategy.position_size == 0
+    strategy.entry("LONG",  strategy.long)
+
+if newShort and strategy.position_size == 0
+    strategy.entry("SHORT", strategy.short)
+
+//════════════════════════════════════════════════════════════
+// CONTROLE COOLDOWN
+//════════════════════════════════════════════════════════════
+if strategy.opentrades > strategy.opentrades[1]
+    lastTradeBar := bar_index
+
+//════════════════════════════════════════════════════════════
+// GESTÃO DE RISCO
+//════════════════════════════════════════════════════════════
+avgPrice = strategy.position_avg_price
+
+longStop  = avgPrice - longATR  * stopAtrMult
+shortStop = avgPrice + shortATR * stopAtrMult
+
+longRisk  = avgPrice - longStop
+shortRisk = shortStop - avgPrice
+
+longTP1   = avgPrice + longRisk * tp1R
+longFinal = avgPrice + longRisk * tpFinalR
+
+shortTP1   = avgPrice - shortRisk * tp1R
+shortFinal = avgPrice - shortRisk * tpFinalR
+
+//════════════════════════════════════════════════════════════
+// BREAK EVEN
+//════════════════════════════════════════════════════════════
+var bool beLong  = false
+var bool beShort = false
+
+if strategy.position_size == 0
+    beLong  := false
+    beShort := false
+
+if strategy.position_size > 0 and high >= longTP1
+    beLong := true
+
+if strategy.position_size < 0 and low <= shortTP1
+    beShort := true
+
+longStopFinal  = beLong  and useBreakEven ? avgPrice : longStop
+shortStopFinal = beShort and useBreakEven ? avgPrice : shortStop
+
+//════════════════════════════════════════════════════════════
+// TRAILING
+//════════════════════════════════════════════════════════════
+trendStrongLong =
+     strategy.position_size > 0 and
+     ema10 > ema21 and close > ema21 and flowBull
+
+trendStrongShort =
+     strategy.position_size < 0 and
+     ema10 < ema21 and close < ema21 and flowBear
+
+trailOffsetLong  = math.round(nz(longATR,  atr) * stopAtrMult / syminfo.mintick)
+trailOffsetShort = math.round(nz(shortATR, atr) * stopAtrMult / syminfo.mintick)
+
+finalLongLimit  = useTrail and trendStrongLong  ? na : longFinal
+finalShortLimit = useTrail and trendStrongShort ? na : shortFinal
+
+finalLongTrailP  = useTrail and trendStrongLong  ? longTP1  : na
+finalShortTrailP = useTrail and trendStrongShort ? shortTP1 : na
+
+finalLongTrailO  = useTrail and trendStrongLong  ? trailOffsetLong  : na
+finalShortTrailO = useTrail and trendStrongShort ? trailOffsetShort : na
+
+//════════════════════════════════════════════════════════════
+// SAÍDAS
+//════════════════════════════════════════════════════════════
+strategy.exit("LONG TP1",   from_entry="LONG",  qty_percent=tp1Qty, stop=longStopFinal,  limit=longTP1)
+strategy.exit("LONG FINAL", from_entry="LONG",  qty_percent=100,    stop=longStopFinal,  limit=finalLongLimit,
+     trail_price=finalLongTrailP, trail_offset=finalLongTrailO)
+
+strategy.exit("SHORT TP1",   from_entry="SHORT", qty_percent=tp1Qty, stop=shortStopFinal, limit=shortTP1)
+strategy.exit("SHORT FINAL", from_entry="SHORT", qty_percent=100,    stop=shortStopFinal, limit=finalShortLimit,
+     trail_price=finalShortTrailP, trail_offset=finalShortTrailO)
+
+//════════════════════════════════════════════════════════════
+// SAÍDA ESTRUTURAL
+//════════════════════════════════════════════════════════════
+exitLong =
+     strategy.position_size > 0 and
+     close < ema21 and ema10 < ema21 and
+     volWeak and flowBear and
+     close > longStopFinal
+
+exitShort =
+     strategy.position_size < 0 and
+     close > ema21 and ema10 > ema21 and
+     volWeak and flowBull and
+     close < shortStopFinal
+
+if exitLong
+    strategy.close("LONG")
+
+if exitShort
+    strategy.close("SHORT")
+
+//════════════════════════════════════════════════════════════
+// VISUAL — HISTOGRAMA MACD
+//════════════════════════════════════════════════════════════
+plot(histLine,
+     title="Histograma",
+     style=plot.style_columns,
+     color=histLine >= 0 ? color.new(bullColor, 0) : color.new(bearColor, 0),
+     linewidth=4)
+
+//════════════════════════════════════════════════════════════
+// VISUAL — MACD + SIGNAL
+//════════════════════════════════════════════════════════════
+plot(macdLine,   title="MACD",   color=color.rgb(0, 132, 255), linewidth=2)
+plot(signalLine, title="Signal", color=color.orange,           linewidth=2)
+
+//════════════════════════════════════════════════════════════
+// VISUAL — HEIKIN ASHI MACD
+//════════════════════════════════════════════════════════════
+plotcandle(haOpen, haHigh, haLow, haClose,
+     title="MACD HA",
+     color=       haBull ? color.lime : color.red,
+     wickcolor=   haBull ? color.lime : color.red,
+     bordercolor= haBull ? color.lime : color.red)
+
+//════════════════════════════════════════════════════════════
+// VISUAL — ZERO LINE
+//════════════════════════════════════════════════════════════
+hline(0, "ZERO", color=color.new(color.gray, 50))
+
+//════════════════════════════════════════════════════════════
+// VISUAL — ESCALA
+//════════════════════════════════════════════════════════════
+scaleFix = math.max(math.abs(histLine), math.abs(macdLine))
+plot( scaleFix * 1.8, display=display.none)
+plot(-scaleFix * 1.8, display=display.none)
+
+//════════════════════════════════════════════════════════════
+// VISUAL — RSI (normalizado na escala MACD)
+//════════════════════════════════════════════════════════════
+rsiVisual = ((rsiSmooth - 50) / 50) * scaleFix
+
+plot(rsiVisual,
+     title="RSI Zone",
+     color=
+          rsiSmooth > rsiOB ? color.red  :
+          rsiSmooth < rsiOS ? color.lime :
+          rsiMomentumBull   ? color.new(color.lime, 50) :
+          color.gray,
+     linewidth=2)
+
+bgcolor(rsiSmooth < rsiOS ? color.new(color.lime, 92) : na)
+bgcolor(rsiSmooth > rsiOB ? color.new(color.red,  92) : na)
+
+//════════════════════════════════════════════════════════════
+// VISUAL — EMAS (overlay)
+//════════════════════════════════════════════════════════════
+plot(ema10,  "EMA10",  color=color.green,  force_overlay=true)
+plot(ema21,  "EMA21",  color=color.red,    force_overlay=true)
+plot(ema50,  "EMA50",  color=color.yellow, linewidth=2, force_overlay=true)
+plot(ema200, "EMA200", color=color.white,  linewidth=2, force_overlay=true)
+
+//════════════════════════════════════════════════════════════
+// VISUAL — HA PREÇO (overlay) — candles com body significativo
+//════════════════════════════════════════════════════════════
+haColP = haBullP ? color.new(color.lime, 70) : haBearP ? color.new(color.red, 70) : na
+plotcandle(haOpenP, math.max(haOpenP, haCloseP), math.min(haOpenP, haCloseP), haCloseP,
+     title="HA Preço",
+     color=haColP, wickcolor=haColP, bordercolor=haColP,
+     force_overlay=true)
+
+//════════════════════════════════════════════════════════════
+// VISUAL — SINAIS BUY / SELL
+//════════════════════════════════════════════════════════════
+plotshape(newLong,
+     title="BUY",
+     style=shape.labelup,
+     location=location.bottom,
+     color=bullColor,
+     text="BUY",
+     textcolor=color.white)
+
+plotshape(newShort,
+     title="SELL",
+     style=shape.labeldown,
+     location=location.top,
+     color=bearColor,
+     text="SELL",
+     textcolor=color.white)
+
+//════════════════════════════════════════════════════════════
+// VISUAL — FUNDO TENDÊNCIA
+//════════════════════════════════════════════════════════════
+bgcolor(
+     trendBull ? color.new(bullColor, 94) :
+     trendBear ? color.new(bearColor, 94) : na)
+
+//════════════════════════════════════════════════════════════
+// ALERTAS
+//════════════════════════════════════════════════════════════
+alertcondition(newLong,              "LONG",  "COMPRA")
+alertcondition(newShort,             "SHORT", "VENDA")
+alertcondition(exitLong or exitShort,"EXIT",  "SAÍDA")
