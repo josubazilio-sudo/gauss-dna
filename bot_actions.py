@@ -894,7 +894,7 @@ _EXCLUDE = {"USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH",
             "EUR","GBP","BRL","UST","USDD","FRAX","USD1","USDE","USDT0"}
 _EXCLUDE_SUB = ("UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S")
 
-async def fetch_top_usdt_pairs(session, min_vol_m=3.0, max_pairs=100):
+async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
     """Busca top pares USDT do MEXC ordenados por volume 24h (USD)."""
     url="https://api.mexc.com/api/v3/ticker/24hr"
     try:
