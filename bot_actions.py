@@ -335,7 +335,6 @@ def analyze(sym, candles):
     vol_drying=vols[-1]<vol_ma*0.6 and vols[-1]<min(vol3)*0.7
 
     rsi_not_overbought=rsi<65
-    rsi_not_oversold=rsi>35 or strong_bear_override
 
     # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
     def _low_touched_ema(ema_arr, n=5):
@@ -352,9 +351,7 @@ def analyze(sym, candles):
     exhaustion_top=uwick_ratio>0.40 and price<(highs[-1]-bb_range*0.02)  # rejeição no topo
     exhaustion_bot=lwick_ratio>0.40 and price>(lows[-1]+bb_range*0.02)    # rejeição no fundo
 
-    # Filtro combinado: evita entrar no topo ou no fundo de uma move
-    safe_long=not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought
-    safe_short=not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_oversold
+    # safe_long definido após score (safe_short depende de strong_bear_override que usa score)
 
     # Consistência de tendência: 4 das últimas 5 velas acima/abaixo da EMA21
     bulls_5=sum(1 for i in range(-5,0) if closes[i]>e21_arr[i])
@@ -429,6 +426,9 @@ def analyze(sym, candles):
     score=max(-145,min(145,score))
     # Exceção tendência muito forte: permite SHORT com RSI < 35 se ADX > 45 + score < -80
     strong_bear_override = adx > 45 and score < -80 and trend_bear
+    rsi_not_oversold = rsi > 35 or strong_bear_override
+    safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought
+    safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_oversold
 
     # ── SINAIS ELITE ── (máxima assertividade: todos os filtros de qualidade)
     long_elite=(strong_trend and trend_bull and align_bull and e200_rising and
