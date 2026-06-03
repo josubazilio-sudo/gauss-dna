@@ -335,7 +335,7 @@ def analyze(sym, candles):
     vol_drying=vols[-1]<vol_ma*0.6 and vols[-1]<min(vol3)*0.7
 
     rsi_not_overbought=rsi<65
-    rsi_not_oversold=rsi>30
+    rsi_not_oversold=rsi>35
 
     # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
     def _low_touched_ema(ema_arr, n=5):
