@@ -594,7 +594,8 @@ def analyze(sym, candles):
             "ha_bull":ha_bull,"obv_bull":obv_bull,"above_vwap":above_vwap,
             "signal_grade":signal_grade,"quality_score":quality_score,
             "tbull_r":tbull_r,"tbear_r":tbear_r,
-            "bb_break_long":bb_break_long,"bb_break_short":bb_break_short}
+            "bb_break_long":bb_break_long,"bb_break_short":bb_break_short,
+            "v_strong":v_strong,"obv_bear":obv_bear}
 
 def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     """Entrada na 15m dado setup confirmado na 1h.
@@ -1089,10 +1090,12 @@ async def run_mtf_cycle(session, last_sig, coins):
         r4h = analyze(sym, candles_4h)
         if not r4h: await asyncio.sleep(0.5); continue
 
-        h4_rsi = r4h["rsi"]
-        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 65
+        h4_rsi  = r4h["rsi"]
+        h4_vol  = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
+        h4_vol_s = r4h.get("v_strong", False) or r4h.get("obv_bear", False)
+        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol
         # SHORT: RSI não sobrevendido (>35) OU tendência bearish forte (score<-40, RSI>25)
-        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and (
+        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and (
             (r4h["score"] < -15 and h4_rsi > 35) or
             (r4h["score"] < -40 and h4_rsi > 25)
         )
