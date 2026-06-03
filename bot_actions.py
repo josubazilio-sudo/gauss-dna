@@ -495,11 +495,11 @@ def analyze(sym, candles):
     long_flex = (flex_score > 40 and (macd_bull_r or ha_bull) and adx >= 17 and
                  not sideways and not_ext_long_tight and
                  safe_long and
-                 35 < rsi < 72)
+                 rsi < 42)
     short_flex = (flex_score < -40 and (macd_bear_r or ha_bear) and adx >= 17 and
                   not sideways and not_ext_short_tight and
                   safe_short and
-                  28 < rsi < 65)
+                  rsi > 58)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
@@ -715,9 +715,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_long  = swing_low  - atr * 0.5
     stop_short = swing_high + atr * 0.5
 
-    # RSI zone: evita entrar em extremos, mantém na zona saudável de pullback
-    rsi_ok_long  = 40 < rsi < 65
-    rsi_ok_short = 35 < rsi < 60
+    # RSI zone: sobrevendido para compra, sobrecomprado para venda
+    rsi_ok_long  = rsi < 45
+    rsi_ok_short = rsi > 55
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
