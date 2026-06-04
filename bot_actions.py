@@ -240,6 +240,10 @@ COINS = [
     ("APEXUSDT","APEX/USDT","APEX"),("BSVUSDT","BSV/USDT","BSV"),
     ("AMBUSDT","AMB/USDT","AMB"),("HFTUSDT","HFT/USDT","HFT"),
     ("IRISUSDT","IRIS/USDT","IRIS"),("MDXUSDT","MDX/USDT","MDX"),
+    # ── Watchlist usuário ─────────────────────────────────────────────────
+    ("IRYSUSDT","IRYS/USDT","IRYS"),("ASTERUSDT","ASTER/USDT","ASTER"),
+    ("PENGUUSDT","PENGU/USDT","PENGU"),("EPICUSDT","EPIC/USDT","EPIC"),
+    ("HOMEUSDT","HOME/USDT","HOME"),
 ]
 
 # ── INDICADORES ──────────────────────────────────────────────────────────────
