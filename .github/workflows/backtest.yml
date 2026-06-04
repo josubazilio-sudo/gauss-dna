@@ -1,0 +1,53 @@
+name: GAUSS+DNA Backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: 'Par (ex: BTCUSDT, SOLUSDT, ETHUSDT, BNBUSDT)'
+        required: false
+        default: 'BTCUSDT'
+      months:
+        description: 'Meses de histórico (1-12)'
+        required: false
+        default: '3'
+      interval:
+        description: 'Timeframe (1h, 4h, 15m)'
+        required: false
+        default: '1h'
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install aiohttp
+
+      - name: Rodar backtest
+        run: |
+          python backtest/generate.py \
+            --symbol "${{ github.event.inputs.symbol || 'BTCUSDT' }}" \
+            --months "${{ github.event.inputs.months || '3' }}" \
+            --interval "${{ github.event.inputs.interval || '1h' }}"
+
+      - name: Publicar resultados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backtest/results/latest.json
+          git diff --cached --quiet && echo "Sem alterações" || \
+            git commit -m "backtest: ${{ github.event.inputs.symbol || 'BTCUSDT' }} ${{ github.event.inputs.interval || '1h' }} $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
