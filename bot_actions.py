@@ -22,7 +22,7 @@ SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top 50 por volume
 SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
 STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
-CAPITAL      = float(os.environ.get("CAPITAL", "180"))   # capital total em USD
+CAPITAL      = float(os.environ.get("CAPITAL", "200"))   # capital total em USD ($200 → $1000 com 5x)
 RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%)
 
 _JOURNAL_FIELDS = ["datetime","symbol","timeframe","direction","entry","stop",
@@ -1029,34 +1029,26 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     dna_flow_ok = extra.get("dna_flow", False)
     trl_ok      = extra.get("trendilo_dir", False)
     liq_event   = extra.get("liq_event", "")
-    # These are computed below — initialised here so journal can use them
-    _stop = _tp1 = _final = _r1 = _r_final = 0
-
-    # Stop fixo em 1.2 ATR — previsível, nunca bloqueia sinais válidos
-    stop = price - 1.2 * atr if is_long else price + 1.2 * atr
-    risk = 1.2 * atr
+    # ── SAÍDA 1: Stop 1.5 ATR ─────────────────────────────────────────────────
+    stop = price - 1.5 * atr if is_long else price + 1.5 * atr
+    risk = 1.5 * atr
     if risk <= 0: return
 
-    # TP dinâmico por grade — mínimo 2R no TP1 (protege capital)
-    if signal_grade=="S":
-        r1,r2,r_final=2.5,4.5,8.0   # setup perfeito — deixa correr
-    elif signal_grade=="A":
-        r1,r2,r_final=2.0,3.5,6.0   # setup sólido
-    else:
-        r1,r2,r_final=2.0,3.0,5.0   # grade B com R/R mínimo 2:1
+    # ── SAÍDA 2: Reversão de tendência (descrita na mensagem) ─────────────────
+    # LONG  → fechar quando EMA10 < EMA21 + DNA Flow Bear + Trendilo Bear
+    # SHORT → fechar quando EMA10 > EMA21 + DNA Flow Bull + Trendilo Bull
+    rev_long  = "EMA10 < EMA21 \\+ Flow ↓ \\+ Trendilo ↓"
+    rev_short = "EMA10 > EMA21 \\+ Flow ↑ \\+ Trendilo ↑"
+    rev_cond  = rev_long if is_long else rev_short
 
-    tp1  =price+risk*r1     if is_long else price-risk*r1
-    tp2  =price+risk*r2     if is_long else price-risk*r2
-    final=price+risk*r_final if is_long else price-risk*r_final
-
-    # Capture for journal
-    _stop=stop; _tp1=tp1; _final=final; _r1=r1; _r_final=r_final
-
-    # Cálculo de posição baseado em capital e risco 3%
-    risk_amount = CAPITAL * RISK_PCT          # ex: $5.40
+    # Cálculo de posição baseado em capital e risco 3% ($200 → $1000 com 5x)
+    risk_amount = CAPITAL * RISK_PCT          # $6.00 com $200
     contracts   = risk_amount / risk if risk > 0 else 0  # unidades da moeda
     pos_value   = contracts * price           # valor em USD (spot)
     pos_5x      = pos_value / 5               # collateral com 5x alavancagem
+
+    # Capture for journal (sem TP fixo — saída por reversão)
+    _stop=stop; _tp1=0; _final=0; _r1=0; _r_final=0
 
     grade_info={
         "S": ("🏆 GRADE S — Setup perfeito",),
@@ -1112,10 +1104,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"{cross_line}"
         f"{esc(grade_label)}{inst_line}{liq_line}\n\n"
         f"💰 Entrada: `${raw(fmt_price(price))}`\n"
-        f"🛑 Stop: `${raw(d(stop))}`\n"
-        f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 40%\n"
-        f"✨ TP2 \\({esc(str(r2))}R\\): `${raw(d(tp2))}` → fechar 35%\n"
-        f"🏆 Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → últimos 25%\n\n"
+        f"🛑 Saída 1 — Stop: `${raw(d(stop))}` \\(1\\.5 ATR\\)\n"
+        f"🔄 Saída 2 — Reversão: {rev_cond}\n\n"
         f"📐 *Gestão de risco \\(3% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${raw(f'{risk_amount:.2f}')}`\n"
         f"  Spot: `{raw(f'{contracts:.4f}')} {raw(short)}` \\(aprox `${raw(f'{pos_value:.2f}')} USDT`\\)\n"
