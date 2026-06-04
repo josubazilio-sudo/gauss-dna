@@ -286,6 +286,7 @@ input[type=number]:focus,input[type=text]:focus{border-color:var(--green)}
         <select id="inp-tipo" onchange="recalc()">
           <option value="FLEX">⚡ DNA FLEX</option>
           <option value="PULLBACK">🎯 DNA PULLBACK</option>
+          <option value="MOMENTUM">🚀 DNA MOMENTUM</option>
           <option value="MTF">📡 MTF 4H→1H</option>
           <option value="BB_BREAK">💥 BB BREAK</option>
           <option value="ELITE">🔬 DNA ELITE</option>
@@ -328,6 +329,10 @@ let S = {capital:180, riskPct:3, dir:'LONG', grade:'S', trades:[]};
 function init() {
   const raw = localStorage.getItem('gauss_journal');
   if (raw) { try { Object.assign(S, JSON.parse(raw)); } catch(e){} }
+  // Validar grade/dir para evitar crash se localStorage estiver corrompido
+  if (!['S','A','B'].includes(S.grade)) S.grade = 'S';
+  if (!['LONG','SHORT'].includes(S.dir)) S.dir = 'LONG';
+  if (![1,2,3,5].includes(S.riskPct)) S.riskPct = 3;
   document.getElementById('cap-slider').value = S.capital;
   document.getElementById('cap-input').value  = S.capital;
   setRisk(S.riskPct, true);
@@ -402,7 +407,8 @@ function calcSig(entry, atr, dir, grade, capital, riskPct) {
   const posV  = qty * entry;
   const pos5x = posV / 5;
   const isL   = dir==='LONG';
-  const tgt = {S:{r1:2.5,rf:8.0},A:{r1:2.0,rf:6.0},B:{r1:2.0,rf:5.0}}[grade];
+  const tgt = ({S:{r1:2.5,rf:8.0},A:{r1:2.0,rf:6.0},B:{r1:2.0,rf:5.0}}[grade])
+              || {r1:2.5,rf:8.0}; // fallback para grade inválido
   return {
     entry, atr, dist, risk, qty, posV, pos5x, dir, grade, capital, riskPct,
     stop:   isL ? entry-dist : entry+dist,
@@ -419,31 +425,39 @@ function calcSig(entry, atr, dir, grade, capital, riskPct) {
 let _lastSig = null;
 
 function recalc() {
-  const entry = parseFloat(document.getElementById('inp-entry').value);
-  let   atr   = parseFloat(document.getElementById('inp-atr').value);
-  const sym   = document.getElementById('inp-sym').value.toUpperCase()||'?';
+  try {
+    // Aceita vírgula como separador decimal (teclado BR)
+    const rawE = document.getElementById('inp-entry').value.replace(',','.');
+    const rawA = document.getElementById('inp-atr').value.replace(',','.');
+    const entry = parseFloat(rawE);
+    let   atr   = parseFloat(rawA);
+    const sym   = document.getElementById('inp-sym').value.toUpperCase()||'?';
 
-  if (!entry||entry<=0) {
+    if (!entry||entry<=0) {
+      document.getElementById('dna-preview').innerHTML =
+        '<div class="no-sig">Preencha o preço de entrada para gerar o sinal</div>';
+      document.getElementById('open-btn').disabled = true;
+      _lastSig = null; return;
+    }
+    if (!atr||atr<=0) atr = entry*0.01;
+
+    const sig = calcSig(entry, atr, S.dir, S.grade, S.capital, S.riskPct);
+    sig.sym   = sym;
+    sig.score = document.getElementById('inp-score').value||'';
+    sig.rsi   = document.getElementById('inp-rsi').value||'';
+    sig.adx   = document.getElementById('inp-adx').value||'';
+    sig.trend = document.getElementById('inp-trend').value;
+    sig.kalman= document.getElementById('inp-kalman').value;
+    sig.tipo  = document.getElementById('inp-tipo').value;
+    sig.autoAtr = !parseFloat(rawA);
+
+    _lastSig = sig;
+    document.getElementById('dna-preview').innerHTML = buildDnaCard(sig, false);
+    document.getElementById('open-btn').disabled = false;
+  } catch(err) {
     document.getElementById('dna-preview').innerHTML =
-      '<div class="no-sig">Preencha o preço de entrada para gerar o sinal</div>';
-    document.getElementById('open-btn').disabled = true;
-    _lastSig = null; return;
+      `<div class="no-sig" style="color:var(--red)">⚠️ Erro: ${err.message}</div>`;
   }
-  if (!atr||atr<=0) atr = entry*0.01;
-
-  const sig = calcSig(entry, atr, S.dir, S.grade, S.capital, S.riskPct);
-  sig.sym   = sym;
-  sig.score = document.getElementById('inp-score').value||'';
-  sig.rsi   = document.getElementById('inp-rsi').value||'';
-  sig.adx   = document.getElementById('inp-adx').value||'';
-  sig.trend = document.getElementById('inp-trend').value;
-  sig.kalman= document.getElementById('inp-kalman').value;
-  sig.tipo  = document.getElementById('inp-tipo').value;
-  sig.autoAtr = !parseFloat(document.getElementById('inp-atr').value);
-
-  _lastSig = sig;
-  document.getElementById('dna-preview').innerHTML = buildDnaCard(sig, false);
-  document.getElementById('open-btn').disabled = false;
 }
 
 function buildDnaCard(sig, forHistory, status, closedData) {
@@ -452,7 +466,7 @@ function buildDnaCard(sig, forHistory, status, closedData) {
   const gradeLabel = {S:'🏆 GRADE S — Setup perfeito',A:'⭐ GRADE A — Setup sólido',B:'📊 GRADE B — Setup básico'}[sig.grade];
   const gradeColor = {S:'var(--gold)',A:'var(--orange)',B:'var(--blue)'}[sig.grade];
   const tipoMap = {
-    FLEX:'⚡ DNA FLEX', PULLBACK:'🎯 DNA PULLBACK',
+    FLEX:'⚡ DNA FLEX', PULLBACK:'🎯 DNA PULLBACK', MOMENTUM:'🚀 DNA MOMENTUM',
     MTF:'📡 MTF 4H→1H', BB_BREAK:'💥 BB BREAK', ELITE:'🔬 DNA ELITE'
   };
   const tipo = tipoMap[sig.tipo]||'⚡ DNA FLEX';
