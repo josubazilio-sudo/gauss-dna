@@ -600,7 +600,7 @@ def analyze(sym, candles):
                 v_strong and not_ext_long and price>e200*0.97 and rsi<65)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  ha_bear and macd_bear and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03 and rsi>35)
+                 v_strong and not_ext_short and price<e200*1.03 and rsi>25)
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
@@ -611,7 +611,7 @@ def analyze(sym, candles):
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-15 and not any_cross_bear and rsi>35)
+                    below_vwap and score<-15 and not any_cross_bear and rsi>25)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -651,6 +651,20 @@ def analyze(sym, candles):
                   not sideways and not_ext_short_tight and
                   safe_short)
 
+    # ── MOMENTUM (breakout com volume forte — RSI relaxado) ───────────────────────
+    # LONG: RSI até 77 permitido quando score > 55, ADX > 22 e v_strong
+    # SHORT: RSI até 19 permitido quando score < -55, ADX > 22 e v_strong
+    not_ext_mom_long  = (price - e21) / atr < 3.5 and rsi < 78
+    not_ext_mom_short = (e21 - price) / atr < 3.5 and rsi > 18
+    safe_long_mom  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top
+    safe_short_mom = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot
+    long_momentum  = (flex_score > 55 and ha_bull2 and macd_bull_r and adx >= 22 and
+                      v_strong and not sideways and not_ext_mom_long and
+                      safe_long_mom and tbull_loose and rsi < 78)
+    short_momentum = (flex_score < -55 and ha_bear2 and macd_bear_r and adx >= 22 and
+                      v_strong and not sideways and not_ext_mom_short and
+                      safe_short_mom and tbear_loose and rsi > 18)
+
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
@@ -665,13 +679,15 @@ def analyze(sym, candles):
     if SIGNAL_MODE=="ELITE":
         if long_elite or early_long: sig="LONG"; sig_source="ELITE"
         elif short_elite or early_short: sig="SHORT"; sig_source="ELITE"
-    else:  # FLEX — pullback > cross > bb_break > flex (prioridade melhor preço)
+    else:  # FLEX — pullback > cross > bb_break > momentum > flex
         if long_pullback: sig="LONG"; sig_source="PULLBACK"
         elif short_pullback: sig="SHORT"; sig_source="PULLBACK"
         elif long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
         elif short_cross: sig="SHORT"; sig_source=f"CROSS:{cross_label}"
         elif long_bb_break: sig="LONG"; sig_source="BB_BREAK"
         elif short_bb_break: sig="SHORT"; sig_source="BB_BREAK"
+        elif long_momentum: sig="LONG"; sig_source="MOMENTUM"
+        elif short_momentum: sig="SHORT"; sig_source="MOMENTUM"
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
 
