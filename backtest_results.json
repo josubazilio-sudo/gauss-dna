@@ -1,0 +1,2262 @@
+{
+  "timestamp": "2026-06-04T12:34:03.816708",
+  "interval": "30m",
+  "candles_alvo": 8640,
+  "dias_alvo": 180,
+  "results": [
+    {
+      "symbol": "PENGUUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 4,
+        "losses": 0,
+        "win_rate": 100.0,
+        "total_r": 6.6499999999999995,
+        "avg_r": 1.6624999999999999,
+        "profit_factor": 999,
+        "max_dd": 0,
+        "grade": "\u2705 BOM"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 199800.0,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 3,
+        "losses": 1,
+        "win_rate": 75.0,
+        "total_r": 8.575,
+        "avg_r": 2.14375,
+        "profit_factor": 9.575,
+        "max_dd": 1.0,
+        "grade": "\u2705 BOM"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 718.12,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        }
+      ]
+    },
+    {
+      "symbol": "SOLUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 4,
+        "losses": 1,
+        "win_rate": 80.0,
+        "total_r": 6.65,
+        "avg_r": 1.33,
+        "profit_factor": 7.65,
+        "max_dd": 1.0,
+        "grade": "\u2705 BOM"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 684.24,
+      "last_trades": [
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "EPICUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 2,
+        "losses": 1,
+        "win_rate": 66.66666666666666,
+        "total_r": 5.4,
+        "avg_r": 1.8,
+        "profit_factor": 6.4,
+        "max_dd": 1.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 369.5,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": 3.2,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": 3.2,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "ETHFIUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 2,
+        "losses": 1,
+        "win_rate": 66.66666666666666,
+        "total_r": 4.05,
+        "avg_r": 1.3499999999999999,
+        "profit_factor": 5.05,
+        "max_dd": 1.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 291.56,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 2,
+        "losses": 1,
+        "win_rate": 66.66666666666666,
+        "total_r": 3.325,
+        "avg_r": 1.1083333333333334,
+        "profit_factor": 4.325,
+        "max_dd": 1.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 249.7,
+      "last_trades": [
+        {
+          "date": "27/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "29/05",
+          "sig": "LONG",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        }
+      ]
+    },
+    {
+      "symbol": "ASTERUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 2,
+        "losses": 1,
+        "win_rate": 66.66666666666666,
+        "total_r": 3.325,
+        "avg_r": 1.1083333333333334,
+        "profit_factor": 4.325,
+        "max_dd": 1.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 249.7,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "LONG",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "30/05",
+          "sig": "LONG",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "BTCUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 3,
+        "losses": 2,
+        "win_rate": 60.0,
+        "total_r": 7.324999999999999,
+        "avg_r": 1.4649999999999999,
+        "profit_factor": 4.6625,
+        "max_dd": 2.0,
+        "grade": "\u2705 BOM"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 208.51,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 2.9,
+          "result": "FULL TP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "AAVEUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 3,
+        "losses": 2,
+        "win_rate": 60.0,
+        "total_r": 3.8499999999999996,
+        "avg_r": 0.7699999999999999,
+        "profit_factor": 2.925,
+        "max_dd": 1.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 196.21,
+      "last_trades": [
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "CAKEUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 2,
+        "losses": 1,
+        "win_rate": 66.66666666666666,
+        "total_r": 2.325,
+        "avg_r": 0.775,
+        "profit_factor": 3.325,
+        "max_dd": 1.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 191.97,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "ATOMUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 3,
+        "losses": 1,
+        "win_rate": 75.0,
+        "total_r": 1.2000000000000002,
+        "avg_r": 0.30000000000000004,
+        "profit_factor": 2.2,
+        "max_dd": 1.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 165.0,
+      "last_trades": [
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": 0.6,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "TP1"
+        }
+      ]
+    },
+    {
+      "symbol": "LTCUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "total_r": 4.425,
+        "avg_r": 1.10625,
+        "profit_factor": 3.2125,
+        "max_dd": 1.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 160.62,
+      "last_trades": [
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 2.9,
+          "result": "FULL TP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "WBTCUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "total_r": 3.8,
+        "avg_r": 0.95,
+        "profit_factor": 2.9,
+        "max_dd": 2.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 96.67,
+      "last_trades": [
+        {
+          "date": "27/05",
+          "sig": "SHORT",
+          "pnl": 2.9,
+          "result": "FULL TP"
+        },
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 2.9,
+          "result": "FULL TP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "ADAUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 3,
+        "losses": 2,
+        "win_rate": 60.0,
+        "total_r": 2.125,
+        "avg_r": 0.425,
+        "profit_factor": 2.0625,
+        "max_dd": 2.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 92.24,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "TP1"
+        }
+      ]
+    },
+    {
+      "symbol": "TIAUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "total_r": 1.325,
+        "avg_r": 0.33125,
+        "profit_factor": 1.6625,
+        "max_dd": 1.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 83.12,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 2,
+        "losses": 3,
+        "win_rate": 40.0,
+        "total_r": 3.05,
+        "avg_r": 0.61,
+        "profit_factor": 2.0166666666666666,
+        "max_dd": 2.0,
+        "grade": "\ud83d\udd35 ACEIT\u00c1VEL"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 60.13,
+      "last_trades": [
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "LINKUSDT",
+      "stats": {
+        "trades": 6,
+        "wins": 3,
+        "losses": 3,
+        "win_rate": 50.0,
+        "total_r": 1.125,
+        "avg_r": 0.1875,
+        "profit_factor": 1.375,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 56.13,
+      "last_trades": [
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "HBARUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "total_r": 1.325,
+        "avg_r": 0.33125,
+        "profit_factor": 1.6625,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 55.42,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "USELESSUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": 2.575,
+        "avg_r": 0.8583333333333334,
+        "profit_factor": 2.2875,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 44.02,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "LONG",
+          "pnl": 4.58,
+          "result": "FULL TP"
+        }
+      ]
+    },
+    {
+      "symbol": "PIUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": 0.8999999999999999,
+        "avg_r": 0.3,
+        "profit_factor": 1.45,
+        "max_dd": 1.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 41.86,
+      "last_trades": [
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 2.9,
+          "result": "FULL TP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "XMRUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": 1.525,
+        "avg_r": 0.5083333333333333,
+        "profit_factor": 1.7625,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 33.92,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "CLOUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": 1.525,
+        "avg_r": 0.5083333333333333,
+        "profit_factor": 1.7625,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 33.92,
+      "last_trades": [
+        {
+          "date": "27/05",
+          "sig": "LONG",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "28/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "PLAYUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "total_r": 0.0,
+        "avg_r": 0.0,
+        "profit_factor": 1.0,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 33.33,
+      "last_trades": [
+        {
+          "date": "27/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "SHORT",
+          "pnl": 1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "LONG",
+          "pnl": 1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "EDENUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 2,
+        "losses": 3,
+        "win_rate": 40.0,
+        "total_r": 1.325,
+        "avg_r": 0.265,
+        "profit_factor": 1.4416666666666667,
+        "max_dd": 3.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 32.24,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "TRUMPUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "total_r": -0.19999999999999996,
+        "avg_r": -0.04999999999999999,
+        "profit_factor": 0.9,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 30.0,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 1.0,
+          "result": "TP1"
+        }
+      ]
+    },
+    {
+      "symbol": "MAGMAUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "total_r": -0.19999999999999996,
+        "avg_r": -0.04999999999999999,
+        "profit_factor": 0.9,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 30.0,
+      "last_trades": [
+        {
+          "date": "27/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "LONG",
+          "pnl": 1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": 0.8,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "CHIPUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 2,
+        "losses": 3,
+        "win_rate": 40.0,
+        "total_r": 1.0,
+        "avg_r": 0.2,
+        "profit_factor": 1.3333333333333333,
+        "max_dd": 3.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 29.81,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": 3.2,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "SUIUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 2,
+        "losses": 2,
+        "win_rate": 50.0,
+        "total_r": -0.3999999999999999,
+        "avg_r": -0.09999999999999998,
+        "profit_factor": 0.8,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 26.67,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "TP1"
+        }
+      ]
+    },
+    {
+      "symbol": "XLMUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": 0.5249999999999999,
+        "avg_r": 0.17499999999999996,
+        "profit_factor": 1.2625,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 24.3,
+      "last_trades": [
+        {
+          "date": "27/05",
+          "sig": "LONG",
+          "pnl": 2.52,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "PEPEUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 1,
+        "losses": 3,
+        "win_rate": 25.0,
+        "total_r": 0.5249999999999999,
+        "avg_r": 0.13124999999999998,
+        "profit_factor": 1.175,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 19.58,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "SENTISUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": 0.02499999999999991,
+        "avg_r": 0.008333333333333304,
+        "profit_factor": 1.0125,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 19.49,
+      "last_trades": [
+        {
+          "date": "31/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "LONG",
+          "pnl": 2.02,
+          "result": "TP2"
+        }
+      ]
+    },
+    {
+      "symbol": "JGGLUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 2,
+        "losses": 3,
+        "win_rate": 40.0,
+        "total_r": -1.7999999999999998,
+        "avg_r": -0.36,
+        "profit_factor": 0.4000000000000001,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 11.93,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "LONG",
+          "pnl": 0.6,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 0.6,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "MYXUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": -1.0,
+        "avg_r": -0.3333333333333333,
+        "profit_factor": 0.5,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 9.62,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": 1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "INUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": -1.0,
+        "avg_r": -0.3333333333333333,
+        "profit_factor": 0.5,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 9.62,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "29/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "PYTHUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 1,
+        "losses": 3,
+        "win_rate": 25.0,
+        "total_r": -0.9750000000000001,
+        "avg_r": -0.24375000000000002,
+        "profit_factor": 0.6749999999999999,
+        "max_dd": 3.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 8.44,
+      "last_trades": [
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": 2.02,
+          "result": "TP2"
+        }
+      ]
+    },
+    {
+      "symbol": "TONUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": -1.2,
+        "avg_r": -0.39999999999999997,
+        "profit_factor": 0.4,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 7.7,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "KASUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": -1.2,
+        "avg_r": -0.39999999999999997,
+        "profit_factor": 0.4,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 7.7,
+      "last_trades": [
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "CHZUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": -1.2,
+        "avg_r": -0.39999999999999997,
+        "profit_factor": 0.4,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 7.7,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "GALAUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": -1.2,
+        "avg_r": -0.39999999999999997,
+        "profit_factor": 0.4,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 7.7,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 0.8,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "ARUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": -1.2,
+        "avg_r": -0.39999999999999997,
+        "profit_factor": 0.4,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 7.7,
+      "last_trades": [
+        {
+          "date": "27/05",
+          "sig": "LONG",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "win_rate": 33.33333333333333,
+        "total_r": -1.4,
+        "avg_r": -0.4666666666666666,
+        "profit_factor": 0.30000000000000004,
+        "max_dd": 2.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 5.77,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": 0.6,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "CRVUSDT",
+      "stats": {
+        "trades": 6,
+        "wins": 1,
+        "losses": 5,
+        "win_rate": 16.666666666666664,
+        "total_r": -1.475,
+        "avg_r": -0.24583333333333335,
+        "profit_factor": 0.705,
+        "max_dd": 4.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 5.76,
+      "last_trades": [
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 3.52,
+          "result": "FULL TP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "TAOUSDT",
+      "stats": {
+        "trades": 5,
+        "wins": 1,
+        "losses": 4,
+        "win_rate": 20.0,
+        "total_r": -1.975,
+        "avg_r": -0.395,
+        "profit_factor": 0.50625,
+        "max_dd": 4.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 4.53,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "29/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": 2.02,
+          "result": "TP2"
+        }
+      ]
+    },
+    {
+      "symbol": "GIGGLEUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 1,
+        "losses": 3,
+        "win_rate": 25.0,
+        "total_r": -2.2,
+        "avg_r": -0.55,
+        "profit_factor": 0.26666666666666666,
+        "max_dd": 2.2,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 4.17,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "LONG",
+          "pnl": 0.8,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "DASHUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 1,
+        "losses": 3,
+        "win_rate": 25.0,
+        "total_r": -2.0,
+        "avg_r": -0.5,
+        "profit_factor": 0.3333333333333333,
+        "max_dd": 3.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 4.17,
+      "last_trades": [
+        {
+          "date": "30/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 1.0,
+          "result": "TP1"
+        }
+      ]
+    },
+    {
+      "symbol": "NEARUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 0,
+        "losses": 4,
+        "win_rate": 0.0,
+        "total_r": -4.0,
+        "avg_r": -1.0,
+        "profit_factor": 0.0,
+        "max_dd": 4.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 0.0,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "30/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "FILUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 0,
+        "losses": 4,
+        "win_rate": 0.0,
+        "total_r": -4.0,
+        "avg_r": -1.0,
+        "profit_factor": 0.0,
+        "max_dd": 4.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 0.0,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "ZROUSDT",
+      "stats": {
+        "trades": 4,
+        "wins": 0,
+        "losses": 4,
+        "win_rate": 0.0,
+        "total_r": -4.0,
+        "avg_r": -1.0,
+        "profit_factor": 0.0,
+        "max_dd": 4.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 0.0,
+      "last_trades": [
+        {
+          "date": "27/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "03/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "XPLUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "total_r": -3.0,
+        "avg_r": -1.0,
+        "profit_factor": 0.0,
+        "max_dd": 3.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 0.0,
+      "last_trades": [
+        {
+          "date": "28/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "PENDLEUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "total_r": -3.0,
+        "avg_r": -1.0,
+        "profit_factor": 0.0,
+        "max_dd": 3.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 0.0,
+      "last_trades": [
+        {
+          "date": "01/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    },
+    {
+      "symbol": "ICPUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "total_r": -3.0,
+        "avg_r": -1.0,
+        "profit_factor": 0.0,
+        "max_dd": 3.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 500,
+      "dias": 10,
+      "rank_score": 0.0,
+      "last_trades": [
+        {
+          "date": "30/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "01/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "02/06",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "04/06",
+          "sig": "SHORT",
+          "pnl": 0,
+          "result": "OPEN"
+        }
+      ]
+    },
+    {
+      "symbol": "SLXUSDT",
+      "stats": {
+        "trades": 3,
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "total_r": -3.0,
+        "avg_r": -1.0,
+        "profit_factor": 0.0,
+        "max_dd": 3.0,
+        "grade": "\u26a0\ufe0f  FRACO"
+      },
+      "candles_fetched": 478,
+      "dias": 9,
+      "rank_score": 0.0,
+      "last_trades": [
+        {
+          "date": "29/05",
+          "sig": "LONG",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        },
+        {
+          "date": "31/05",
+          "sig": "SHORT",
+          "pnl": -1.0,
+          "result": "STOP"
+        }
+      ]
+    }
+  ]
+}
