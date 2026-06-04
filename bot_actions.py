@@ -651,19 +651,20 @@ def analyze(sym, candles):
                   not sideways and not_ext_short_tight and
                   safe_short)
 
-    # ── MOMENTUM (breakout com volume forte — RSI relaxado) ───────────────────────
-    # LONG: RSI até 77 permitido quando score > 55, ADX > 22 e v_strong
-    # SHORT: RSI até 19 permitido quando score < -55, ADX > 22 e v_strong
-    not_ext_mom_long  = (price - e21) / atr < 3.5 and rsi < 78
-    not_ext_mom_short = (e21 - price) / atr < 3.5 and rsi > 18
-    safe_long_mom  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top
-    safe_short_mom = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot
-    long_momentum  = (flex_score > 55 and ha_bull2 and macd_bull_r and adx >= 22 and
-                      v_strong and not sideways and not_ext_mom_long and
-                      safe_long_mom and tbull_loose and rsi < 78)
-    short_momentum = (flex_score < -55 and ha_bear2 and macd_bear_r and adx >= 22 and
-                      v_strong and not sideways and not_ext_mom_short and
-                      safe_short_mom and tbear_loose and rsi > 18)
+    # ── MOMENTUM (captura o exato momento do breakout de RSI) ────────────────────
+    # Só dispara quando RSI acabou de cruzar o limiar (nas últimas ~3 velas)
+    # LONG : RSI saiu da zona neutra e cruzou acima de 65 → breakout bullish
+    # SHORT: RSI entrou na zona de sobrevenda e cruzou abaixo de 35 → breakdown
+    rsi_fresh_long  = rsi_prev < 65 <= rsi < 78   # cruzou 65 recentemente
+    rsi_fresh_short = rsi_prev > 35 >= rsi > 18   # cruzou abaixo de 35 recentemente
+    long_momentum  = (flex_score > 70 and ha_bull2 and macd_bull_r and adx >= 22 and
+                      v_strong and not sideways and not near_bb_top and
+                      not ext_above_ema21 and not vol_drying and
+                      tbull_loose and rsi_fresh_long)
+    short_momentum = (flex_score < -70 and ha_bear2 and macd_bear_r and adx >= 22 and
+                      v_strong and not sideways and not near_bb_bot and
+                      not ext_below_ema21 and not vol_drying and
+                      tbear_loose and rsi_fresh_short)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
@@ -747,7 +748,7 @@ def analyze(sym, candles):
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
-            if rsi <= 35: b.append(f"rsi={rsi:.1f} sobrevendido (≤35)")
+            if rsi <= 25: b.append(f"rsi={rsi:.1f} fundo extremo (≤25)")
             bb_info = f"bb_break={'✓' if bb_break_short else f'F(p>={bb_lower:.4f})'} k={'↓' if kalman_down else '↑'} ks={'↓' if k_short_falling else '↑'}"
             b.append(bb_info)
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
