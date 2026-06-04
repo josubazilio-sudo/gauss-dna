@@ -308,8 +308,7 @@ def analyze_flex(candles):
     )
     score = max(-145, min(145, score))
 
-    strong_bear_override  = adx > 45 and score < -80 and trend_bear
-    rsi_not_oversold      = rsi > 35 or strong_bear_override
+    rsi_not_oversold         = rsi > 25   # SHORT: bloquear apenas fundo extremo
     rsi_not_oversold_long    = rsi > 40
     rsi_not_overbought_short = rsi < 70
     safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought and rsi_not_oversold_long
@@ -317,13 +316,13 @@ def analyze_flex(candles):
 
     sideways = bb_squeeze and adx < 18
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and (rsi > 35 or strong_bear_override)
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 25
 
     flex_score = score
     long_flex  = (flex_score > 30 and ha_bull and macd_bull_r and adx >= 14 and
                   not sideways and not_ext_long_tight and safe_long and rsi < 65)
     short_flex = (flex_score < -30 and ha_bear and macd_bear_r and adx >= 14 and
-                  not sideways and not_ext_short_tight and safe_short and (rsi > 35 or strong_bear_override))
+                  not sideways and not_ext_short_tight and safe_short and rsi > 25)
 
     trend_bull_relaxed = price > e200 and e10 > e21 and e21 > e50
     long_pullback = (pullback_bull and trend_bull_relaxed and (macd_bull or macd_recovering) and
@@ -332,12 +331,12 @@ def analyze_flex(candles):
     trend_bear_relaxed = price < e200 and e10 < e21 and e21 < e50
     short_pullback = (pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                       adx > 18 and (f_bear or obv_bear) and v_strong and
-                      below_vwap and score < -15 and not any_cross_bear and (rsi > 35 or strong_bear_override))
+                      below_vwap and score < -15 and not any_cross_bear and rsi > 25)
 
     long_cross  = (any_cross_bull and score > 10 and adx > 15 and ha_bull and macd_bull and
                    (f_bull or obv_bull) and v_strong and not_ext_long and price > e200 * 0.97 and rsi < 65)
     short_cross = (any_cross_bear and score < -10 and adx > 15 and ha_bear and macd_bear and
-                   (f_bear or obv_bear) and v_strong and not_ext_short and price < e200 * 1.03 and (rsi > 35 or strong_bear_override))
+                   (f_bear or obv_bear) and v_strong and not_ext_short and price < e200 * 1.03 and rsi > 25)
 
     long_bb_break  = (bb_break_long  and kalman_up   and k_short_rising  and flex_score > 20 and
                       adx >= 14 and not sideways and not ext_above_ema21 and not vol_drying and 40 < rsi < 80)

@@ -570,9 +570,9 @@ def analyze(sym, candles):
         (10 if trendilo_long else -10 if trendilo_short else 0)
     )
     score=max(-145,min(145,score))
-    # Evitar compra no topo (RSI>70) e venda no fundo (RSI<30)
-    rsi_not_top    = rsi < 65   # LONG: não entrar quando sobrecomprado
-    rsi_not_bottom = rsi > 35   # SHORT: não entrar quando sobrevendido (≤35)
+    # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
+    rsi_not_top    = rsi < 65   # LONG: não entrar sobrecomprado
+    rsi_not_bottom = rsi > 25   # SHORT: bloquear apenas fundo extremo (≤25)
     safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_top
     safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_bottom
 
@@ -634,7 +634,7 @@ def analyze(sym, candles):
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 35
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 25
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
@@ -659,7 +659,7 @@ def analyze(sym, candles):
                       not ext_above_ema21 and not vol_drying and rsi < 65)
     short_bb_break = (bb_break_short and kalman_down and k_short_falling  and
                       flex_score < -20 and adx >= 14 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and rsi > 35)
+                      not ext_below_ema21 and not vol_drying and rsi > 25)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -866,9 +866,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_long  = swing_low  - atr * 0.5
     stop_short = swing_high + atr * 0.5
 
-    # Evitar compra no topo (RSI>70) e venda no fundo (RSI<30)
+    # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
     rsi_ok_long  = rsi < 65
-    rsi_ok_short = rsi > 35
+    rsi_ok_short = rsi > 25
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1301,7 +1301,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         h4_vol  = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
         h4_vol_s = r4h.get("v_strong", False) or r4h.get("obv_bear", False)
         h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol
-        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and r4h["score"] < -15 and h4_rsi > 35
+        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and r4h["score"] < -15 and h4_rsi > 25
         direction = "BULL" if h4_bull else "BEAR"
 
         if not (h4_bull or h4_bear):
