@@ -1,0 +1,53 @@
+name: GAUSS+DNA Backtest Scanner
+
+on:
+  workflow_dispatch:
+    inputs:
+      top:
+        description: 'Quantas moedas escanear (ex: 20, 30, 50)'
+        required: false
+        default: '20'
+      months:
+        description: 'Meses de histórico (1-6)'
+        required: false
+        default: '3'
+      interval:
+        description: 'Timeframe (1h, 4h, 15m)'
+        required: false
+        default: '1h'
+
+jobs:
+  scanner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install aiohttp
+
+      - name: Rodar scanner
+        run: |
+          python backtest/scan.py \
+            --top "${{ github.event.inputs.top || '20' }}" \
+            --months "${{ github.event.inputs.months || '3' }}" \
+            --interval "${{ github.event.inputs.interval || '1h' }}"
+
+      - name: Publicar resultados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backtest/results/summary.json
+          git diff --cached --quiet && echo "Sem alterações" || \
+            git commit -m "scan: top ${{ github.event.inputs.top || '20' }} ${{ github.event.inputs.interval || '1h' }} $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push

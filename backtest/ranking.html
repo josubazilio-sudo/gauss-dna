@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GAUSS+DNA Ranking</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#131722;color:#d1d4dc;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;min-height:100vh}
+header{background:#1e222d;border-bottom:1px solid #2a2e39;padding:12px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+h1{font-size:16px;font-weight:700;color:#fff}
+h1 span{color:#26a69a}
+.meta{color:#505560;font-size:11px}
+.meta b{color:#848994}
+.sort-btns{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+button{background:#2a2e39;color:#d1d4dc;border:1px solid #3d4250;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer}
+button.active{background:#26a69a;color:#fff;border-color:#26a69a}
+button:hover:not(.active){border-color:#5d6470}
+
+.summary-bar{background:#1a1e2a;border-bottom:1px solid #2a2e39;padding:10px 16px;display:flex;gap:24px;flex-wrap:wrap}
+.s-stat{display:flex;flex-direction:column;gap:2px}
+.s-label{color:#505560;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.s-value{font-size:18px;font-weight:700}
+.green{color:#26a69a}.red{color:#ef5350}.orange{color:#ff9800}.white{color:#fff}
+
+#loading{text-align:center;padding:60px;color:#505560;font-size:14px}
+#error{text-align:center;padding:60px;color:#ef5350;font-size:14px;display:none;line-height:1.8}
+
+.grid{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+
+.card{background:#1e222d;border:1px solid #2a2e39;border-radius:6px;padding:14px;cursor:default;transition:border-color .15s}
+.card:hover{border-color:#3d4250}
+.card.top{border-left:3px solid #ffd700}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sym{font-size:15px;font-weight:700;color:#fff}
+.rank{font-size:11px;color:#505560;background:#13171e;padding:2px 6px;border-radius:3px}
+.r-total{font-size:22px;font-weight:700;margin-bottom:8px}
+.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.mini-stat{display:flex;flex-direction:column;gap:1px}
+.mini-label{font-size:9px;color:#505560;text-transform:uppercase;letter-spacing:.4px}
+.mini-value{font-size:12px;font-weight:600;color:#d1d4dc}
+.grades-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.grade-chip{padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600}
+.g-s{background:#ffd70015;color:#ffd700;border:1px solid #ffd70040}
+.g-a{background:#ff980015;color:#ff9800;border:1px solid #ff980040}
+.g-b{background:#2196f315;color:#2196f3;border:1px solid #2196f340}
+.sources-row{display:flex;gap:4px;flex-wrap:wrap}
+.src-chip{background:#2a2e39;color:#848994;padding:1px 6px;border-radius:3px;font-size:10px}
+.src-pos{color:#26a69a}
+.best-worst{margin-top:8px;padding-top:8px;border-top:1px solid #2a2e3960;font-size:10px;color:#505560;display:flex;gap:8px;flex-wrap:wrap}
+.bw-item b{color:#d1d4dc}
+
+@media(max-width:500px){
+  .grid{grid-template-columns:1fr;padding:8px;gap:8px}
+  .sort-btns{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GAUSS<span>+DNA</span> Ranking</h1>
+  <div class="meta">
+    <b id="meta-coins">—</b> moedas &nbsp;|&nbsp;
+    <b id="meta-tf">—</b> &nbsp;|&nbsp;
+    <b id="meta-months">—</b> &nbsp;|&nbsp;
+    <span id="meta-date">—</span>
+  </div>
+  <div class="sort-btns">
+    <span style="color:#505560;font-size:11px;align-self:center">Ordenar:</span>
+    <button class="active" onclick="sortBy('total_r')">R Total</button>
+    <button onclick="sortBy('win_rate')">Win Rate</button>
+    <button onclick="sortBy('total')">Trades</button>
+    <button onclick="sortBy('avg_r')">R Médio</button>
+  </div>
+</header>
+
+<div class="summary-bar" id="summary-bar" style="display:none">
+  <div class="s-stat"><span class="s-label">Moedas</span><span class="s-value white" id="tot-coins">—</span></div>
+  <div class="s-stat"><span class="s-label">Trades Total</span><span class="s-value white" id="tot-trades">—</span></div>
+  <div class="s-stat"><span class="s-label">Win Rate Geral</span><span class="s-value" id="tot-wr">—</span></div>
+  <div class="s-stat"><span class="s-label">R Total Acum.</span><span class="s-value" id="tot-r">—</span></div>
+  <div class="s-stat"><span class="s-label">Moedas +R</span><span class="s-value green" id="coins-pos">—</span></div>
+  <div class="s-stat"><span class="s-label">Moedas -R</span><span class="s-value red" id="coins-neg">—</span></div>
+</div>
+
+<div id="loading">⏳ Carregando ranking...</div>
+<div id="error"></div>
+<div class="grid" id="grid"></div>
+
+<script>
+let allCoins = [];
+let sortKey = 'total_r';
+
+function sortBy(key) {
+  sortKey = key;
+  document.querySelectorAll('.sort-btns button').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderCards();
+}
+
+function renderCards() {
+  const sorted = [...allCoins].sort((a, b) => b[sortKey] - a[sortKey]);
+  const grid = document.getElementById('grid');
+  grid.innerHTML = sorted.map((c, i) => {
+    const rCls = c.total_r > 0 ? 'green' : 'red';
+    const rStr = (c.total_r > 0 ? '+' : '') + c.total_r + 'R';
+    const wrCls = c.win_rate >= 50 ? 'green' : c.win_rate >= 40 ? 'orange' : 'red';
+    const isTop = c.total_r >= 10;
+
+    const gradesHtml = ['S','A','B'].map(g => {
+      const gd = c.by_grade[g];
+      if (!gd) return '';
+      const wr = gd.total ? Math.round(gd.wins/gd.total*100) : 0;
+      return `<span class="grade-chip g-${g.toLowerCase()}" title="WR ${wr}% | ${gd.r > 0 ? '+' : ''}${gd.r}R">
+        ${g}: ${gd.total} (${wr}%)
+      </span>`;
+    }).join('');
+
+    const srcHtml = Object.entries(c.by_source)
+      .sort((a,b) => b[1].r - a[1].r)
+      .map(([src, sd]) => {
+        const wr = sd.total ? Math.round(sd.wins/sd.total*100) : 0;
+        const cls = sd.r > 0 ? 'src-pos' : '';
+        return `<span class="src-chip ${cls}" title="${sd.total} trades | WR ${wr}% | ${sd.r > 0?'+':''}${sd.r}R">
+          ${src} ${sd.total}
+        </span>`;
+      }).join('');
+
+    const bt = c.best_trade;
+    const wt = c.worst_trade;
+
+    return `<div class="card ${isTop ? 'top' : ''}">
+      <div class="card-head">
+        <span class="sym">${c.symbol.replace('USDT','')}<span style="color:#505560;font-weight:400;font-size:11px">/USDT</span></span>
+        <span class="rank">#${i+1}</span>
+      </div>
+      <div class="r-total ${rCls}">${rStr}</div>
+      <div class="stats-row">
+        <div class="mini-stat"><span class="mini-label">Trades</span><span class="mini-value">${c.total}</span></div>
+        <div class="mini-stat"><span class="mini-label">Win Rate</span><span class="mini-value ${wrCls}">${c.win_rate}%</span></div>
+        <div class="mini-stat"><span class="mini-label">R Médio</span><span class="mini-value ${c.avg_r>=0?'green':'red'}">${c.avg_r>0?'+':''}${c.avg_r}R</span></div>
+        <div class="mini-stat"><span class="mini-label">W/L</span><span class="mini-value">${c.wins}/${c.losses}</span></div>
+      </div>
+      <div class="grades-row">${gradesHtml}</div>
+      <div class="sources-row">${srcHtml}</div>
+      <div class="best-worst">
+        <span class="bw-item">★ <b>${bt.r > 0 ? '+' : ''}${bt.r}R</b> ${bt.sig} ${bt.grade} ${bt.datetime.slice(5,16)}</span>
+        <span class="bw-item">✗ <b>${wt.r}R</b> ${wt.sig} ${wt.grade} ${wt.datetime.slice(5,16)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function load() {
+  try {
+    const r = await fetch('./results/summary.json');
+    if (!r.ok) throw new Error(`HTTP ${r.status} — Rode o workflow "GAUSS+DNA Backtest Scanner" primeiro.`);
+    const data = await r.json();
+
+    document.getElementById('meta-coins').textContent   = data.coins.length;
+    document.getElementById('meta-tf').textContent      = (data.interval||'1h').toUpperCase();
+    document.getElementById('meta-months').textContent  = (data.months||'?') + ' meses';
+    document.getElementById('meta-date').textContent    = 'Gerado: ' + (data.generated||'—');
+
+    allCoins = data.coins;
+
+    const totTrades = allCoins.reduce((s,c) => s+c.total, 0);
+    const totWins   = allCoins.reduce((s,c) => s+c.wins, 0);
+    const totR      = allCoins.reduce((s,c) => s+c.total_r, 0);
+    const posCoins  = allCoins.filter(c => c.total_r > 0).length;
+
+    document.getElementById('tot-coins').textContent  = allCoins.length;
+    document.getElementById('tot-trades').textContent = totTrades;
+    const wrEl = document.getElementById('tot-wr');
+    wrEl.textContent = (totWins/totTrades*100).toFixed(1)+'%';
+    wrEl.className = 's-value ' + (totWins/totTrades >= 0.4 ? 'green' : 'orange');
+    const rEl = document.getElementById('tot-r');
+    rEl.textContent = (totR>0?'+':'')+totR.toFixed(1)+'R';
+    rEl.className = 's-value ' + (totR>0?'green':'red');
+    document.getElementById('coins-pos').textContent = posCoins;
+    document.getElementById('coins-neg').textContent = allCoins.length - posCoins;
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('summary-bar').style.display = 'flex';
+    renderCards();
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    const el = document.getElementById('error');
+    el.style.display = 'block';
+    el.innerHTML = '❌ ' + e.message.replace(/\n/g,'<br>') +
+      '<br><br><a href="https://github.com/josubazilio-sudo/gauss-dna/actions" style="color:#26a69a;text-decoration:none">→ Abrir GitHub Actions</a>';
+  }
+}
+
+load();
+</script>
+</body>
+</html>
