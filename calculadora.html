@@ -288,7 +288,10 @@ input[type=number]:focus,input[type=text]:focus{border-color:var(--green)}
   <div id="tab-diario" style="display:none">
     <div class="sect-title">
       <span>Histórico de Trades</span>
-      <button class="small-btn" onclick="clearDiary()">🗑 Limpar</button>
+      <div style="display:flex;gap:6px">
+        <button class="small-btn" onclick="exportDiaryCsv()">📥 Exportar CSV</button>
+        <button class="small-btn" onclick="clearDiary()">🗑 Limpar</button>
+      </div>
     </div>
     <div id="diary-list"></div>
   </div>
@@ -710,6 +713,31 @@ function renderDiary() {
 function clearDiary() {
   if (!confirm('Apagar todo o histórico?')) return;
   S.trades = []; persist(); renderDash(); renderDiary();
+}
+
+function exportDiaryCsv() {
+  const closed = S.trades.filter(t => ['win','loss','manual'].includes(t.status));
+  if (!closed.length) { alert('Nenhum trade fechado para exportar.'); return; }
+  const header = ['data','simbolo','direcao','entrada','stop','tp_parcial','tp_total','resultado','notas'];
+  const rows = closed.map(t => [
+    t.closedAt || t.date || '',
+    (t.sym || '').replace('USDT','') + '/USDT',
+    t.dir || '',
+    (t.entry || '').toString(),
+    (t.stop  || '').toString(),
+    (t.tp1   || '').toString(),
+    (t.tpF   || '').toString(),
+    (t.rResult != null ? (t.rResult >= 0 ? '+' : '') + t.rResult.toFixed(2) + 'R' : ''),
+    (t.closedNote || '').replace(/;/g, ','),
+  ]);
+  const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(';')).join('\n');
+  const today = new Date().toISOString().slice(0, 10);
+  const filename = `diario_trades_${today}.csv`;
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────

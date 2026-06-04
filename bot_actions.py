@@ -3,7 +3,7 @@ GAUSS+DNA ELITE + FLEX — Bot GitHub Actions v2
 SIGNAL_MODE=ELITE: criterios completos (sinais raros, precisos)
 SIGNAL_MODE=FLEX:  criterios suavizados (mais sinais, funciona em BEAR)
 """
-import asyncio, os, json, time, math, logging, aiohttp
+import asyncio, os, json, time, math, logging, aiohttp, csv
 from datetime import datetime
 from pathlib import Path
 
@@ -21,8 +21,42 @@ DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
 SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top 50 por volume
 SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
 STATE_FILE   = Path("last_signals.json")
+JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
 CAPITAL      = float(os.environ.get("CAPITAL", "180"))   # capital total em USD
 RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%)
+
+_JOURNAL_FIELDS = ["datetime","symbol","timeframe","direction","entry","stop",
+                   "tp_parcial","tp_total","r1","r_final","grade","score",
+                   "rsi","adx","source"]
+
+def append_journal(symbol, timeframe, direction, entry, stop, tp_parcial, tp_total,
+                   r1, r_final, grade, score, rsi, adx, source):
+    """Appends one row to signals_log.csv (creates with header if needed)."""
+    try:
+        write_header = not JOURNAL_FILE.exists() or JOURNAL_FILE.stat().st_size == 0
+        with JOURNAL_FILE.open("a", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=_JOURNAL_FIELDS, delimiter=";")
+            if write_header:
+                w.writeheader()
+            w.writerow({
+                "datetime":   datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "symbol":     symbol,
+                "timeframe":  timeframe,
+                "direction":  direction,
+                "entry":      f"{entry:.6f}",
+                "stop":       f"{stop:.6f}",
+                "tp_parcial": f"{tp_parcial:.6f}",
+                "tp_total":   f"{tp_total:.6f}",
+                "r1":         f"{r1}",
+                "r_final":    f"{r_final}",
+                "grade":      grade,
+                "score":      score,
+                "rsi":        f"{rsi:.1f}",
+                "adx":        f"{adx:.1f}",
+                "source":     source,
+            })
+    except Exception as e:
+        log.warning(f"journal write error: {e}")
 
 def tf_to_minutes(tf):
     """Converte '15m', '1h', '4h' em minutos."""
@@ -602,10 +636,14 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    long_flex = (flex_score > 30 and ha_bull and macd_bull_r and adx >= 14 and
+    # 2-candle HA confirmation for FLEX: current AND previous candle must be bull/bear
+    ha_bull2 = ha_body_ok and closes[-1]>opens[-1] and closes[-2]>opens[-2]
+    ha_bear2 = ha_body_ok and closes[-1]<opens[-1] and closes[-2]<opens[-2]
+
+    long_flex = (flex_score > 30 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and
                  safe_long)
-    short_flex = (flex_score < -30 and ha_bear and macd_bear_r and adx >= 14 and
+    short_flex = (flex_score < -30 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and
                   safe_short)
 
@@ -882,6 +920,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
                         rsi, adx, trend, kalman_up, swing_low, swing_high,
                         sig_source, tf, signal_grade):
     is_long=sig_type=="LONG"
+    # These are computed below — initialised here so journal can use them
+    _stop = _tp1 = _final = _r1 = _r_final = 0
 
     # Stop fixo em 1.2 ATR — previsível, nunca bloqueia sinais válidos
     stop = price - 1.2 * atr if is_long else price + 1.2 * atr
@@ -899,6 +939,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     tp1  =price+risk*r1     if is_long else price-risk*r1
     tp2  =price+risk*r2     if is_long else price-risk*r2
     final=price+risk*r_final if is_long else price-risk*r_final
+
+    # Capture for journal
+    _stop=stop; _tp1=tp1; _final=final; _r1=r1; _r_final=r_final
 
     # Cálculo de posição baseado em capital e risco 3%
     risk_amount = CAPITAL * RISK_PCT          # ex: $5.40
@@ -963,7 +1006,11 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         async with session.post(url,json={"chat_id":TG_CHATID,"text":text,"parse_mode":"MarkdownV2"},
                                 timeout=aiohttp.ClientTimeout(total=10)) as r:
             data=await r.json()
-            if data.get("ok"): log.info(f"✅ {sig_type} {short} Grade:{signal_grade} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{sig_source}]")
+            if data.get("ok"):
+                log.info(f"✅ {sig_type} {short} Grade:{signal_grade} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{sig_source}]")
+                # ── Trade Journal ───────────────────────────────────────────────
+                append_journal(sym, tf, sig_type, price, _stop, _tp1, _final,
+                               _r1, _r_final, signal_grade, score, rsi, adx, sig_source)
             else: log.warning(f"❌ {data.get('description')}")
     except Exception as e: log.error(f"Erro: {e}")
 
@@ -974,17 +1021,35 @@ _MEXC_TF={"1h":"60m","2h":"120m","4h":"4h","6h":"6h","8h":"8h","12h":"12h","1d":
 async def fetch_candles(session, sym, tf, limit=250):
     interval=_MEXC_TF.get(tf,tf)
     url=f"https://api.mexc.com/api/v3/klines?symbol={sym}&interval={interval}&limit={limit}"
-    try:
-        async with session.get(url,timeout=aiohttp.ClientTimeout(total=10)) as r:
-            data=await r.json()
-        if not isinstance(data,list):
-            log.warning(f"fetch_candles {sym} [{tf}]: {str(data)[:80]}")
-            return None
-        if len(data)<60: return None
-        return [{"o":float(k[1]),"h":float(k[2]),"l":float(k[3]),"c":float(k[4]),"v":float(k[5])} for k in data]
-    except Exception as e:
-        log.warning(f"fetch_candles {sym} [{tf}]: {e}")
-        return None
+    delays=[1,2,4]  # backoff: 1s, 2s, 4s
+    for attempt in range(3):
+        try:
+            async with session.get(url,timeout=aiohttp.ClientTimeout(total=10)) as r:
+                status=r.status
+                if status==404:
+                    log.warning(f"fetch_candles {sym} [{tf}]: HTTP 404 — símbolo não encontrado, ignorando")
+                    return None  # don't retry on 404
+                if status==429:
+                    log.warning(f"fetch_candles {sym} [{tf}]: HTTP 429 — rate limit, aguardando 5s (tentativa {attempt+1}/3)")
+                    await asyncio.sleep(5)
+                    if attempt<2: continue
+                    return None
+                data=await r.json()
+            if not isinstance(data,list):
+                log.warning(f"fetch_candles {sym} [{tf}]: {str(data)[:80]}")
+                return None
+            if len(data)<60: return None
+            return [{"o":float(k[1]),"h":float(k[2]),"l":float(k[3]),"c":float(k[4]),"v":float(k[5])} for k in data]
+        except asyncio.TimeoutError:
+            wait=delays[attempt] if attempt<len(delays) else delays[-1]
+            log.warning(f"fetch_candles {sym} [{tf}]: timeout (tentativa {attempt+1}/3), aguardando {wait}s")
+            if attempt<2: await asyncio.sleep(wait)
+        except Exception as e:
+            wait=delays[attempt] if attempt<len(delays) else delays[-1]
+            log.warning(f"fetch_candles {sym} [{tf}]: {e} (tentativa {attempt+1}/3), aguardando {wait}s")
+            if attempt<2: await asyncio.sleep(wait)
+    log.warning(f"fetch_candles {sym} [{tf}]: falha após 3 tentativas — ignorando")
+    return None
 
 def load_state():
     try:
@@ -1125,6 +1190,11 @@ async def run_cycle(session, last_sig, tf, coins):
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
     MAX_SIGNALS_PER_CYCLE = 3  # máximo 3 sinais por ciclo
 
+    # ── Circuit Breaker: limite diário de sinais ──────────────────────────────
+    DAILY_LIMIT = 8
+    today_key = f"daily_{datetime.utcnow().strftime('%Y-%m-%d')}"
+    daily_count = last_sig.get(today_key, 0)
+
     # Pré-busca paralela de candles (lotes de 15 simultâneos)
     all_candles = await _prefetch_batch(session, coins, tf)
 
@@ -1152,7 +1222,13 @@ async def run_cycle(session, last_sig, tf, coins):
                 continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
+                # ── Circuit Breaker check ────────────────────────────────────
+                if daily_count >= DAILY_LIMIT:
+                    log.warning(f"  🚫 Circuit Breaker: limite diário de {DAILY_LIMIT} sinais atingido — ignorando {short}")
+                    candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"circuit-breaker"))
+                    continue
                 last_sig[key]=now; sent+=1
+                daily_count+=1; last_sig[today_key]=daily_count
                 await send_telegram(session,sym,label,short,result["sig"],result["price"],
                                     result["atr"],result["score"],result["rsi"],result["adx"],
                                     result["trend"],result["kalman_up"],
@@ -1466,6 +1542,21 @@ async def main():
                 log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total}")
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{cycle}: {e}")
+
+            # ── Heartbeat: a cada 5 ciclos, ping Telegram ────────────────────────
+            if LOOP_MODE and cycle % 5 == 0:
+                try:
+                    hb_txt = (f"⚡ Bot ativo | Ciclo #{cycle} | "
+                              f"{datetime.now().strftime('%H:%M')} | "
+                              f"{len(active_coins)} moedas")
+                    hb_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+                    async with session.post(hb_url,
+                                            json={"chat_id": TG_CHATID, "text": hb_txt},
+                                            timeout=aiohttp.ClientTimeout(total=10)) as _r:
+                        await _r.json()
+                    log.info(f"💓 Heartbeat ciclo #{cycle} enviado")
+                except Exception as _e:
+                    log.warning(f"Heartbeat falhou (não crítico): {_e}")
 
             if not LOOP_MODE:
                 break
