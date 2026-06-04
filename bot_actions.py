@@ -420,6 +420,9 @@ def analyze(sym, candles):
     rsi=rsi_calc(closes[-50:])
     rsi_prev=rsi_calc(closes[-53:-3]) if n>=53 else rsi
     rsi_rising=rsi>rsi_prev; rsi_falling=rsi<rsi_prev
+    # Divergências RSI
+    rsi_div_bull = closes[-1]<closes[-4] and rsi>rsi_prev and rsi<45   # fundo mais baixo no preço, mais alto no RSI
+    rsi_div_bear = closes[-1]>closes[-4] and rsi<rsi_prev and rsi>55   # topo mais alto no preço, mais baixo no RSI
     rsi_bull=50<rsi<65; rsi_bear=35<rsi<50              # score: zona saudável bull/bear
     rsi_bull_elite=48<rsi<65 and rsi_rising              # ELITE: abaixo de overbought + subindo
     rsi_bear_elite=35<rsi<52 and rsi_falling             # ELITE: acima de oversold + caindo
@@ -653,14 +656,14 @@ def analyze(sym, candles):
 
     # ── SURGE (pump/dump com volume explosivo — captura moves tipo HOME +16%) ────
     # Não exige safe_long/safe_short: ignora ext e BB pois o move JÁ está em curso
-    vol_3x          = vols[-1] > vol_ma * 3.0
+    vol_surge       = vols[-1] > vol_ma * 2.0
     candle_bull_pct = (price - opens[-1]) / max(opens[-1], 1e-10)
     candle_bear_pct = (opens[-1] - price) / max(opens[-1], 1e-10)
     surge_break_h   = price > max(highs[-11:-1])  # rompeu máxima das últimas 10 velas
     surge_break_l   = price < min(lows[-11:-1])   # rompeu mínima das últimas 10 velas
-    long_surge  = (vol_3x and candle_bull_pct > 0.04 and surge_break_h and
+    long_surge  = (vol_surge and candle_bull_pct > 0.04 and surge_break_h and
                    price > e200 and score >= 0 and not vol_drying and not exhaustion_top)
-    short_surge = (vol_3x and candle_bear_pct > 0.04 and surge_break_l and
+    short_surge = (vol_surge and candle_bear_pct > 0.04 and surge_break_l and
                    price < e200 and score <= 0 and not vol_drying and not exhaustion_bot)
 
     # ── MOMENTUM (captura o exato momento do breakout de RSI) ────────────────────
