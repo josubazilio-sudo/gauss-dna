@@ -897,17 +897,16 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     risk = 1.2 * atr
     if risk <= 0: return
 
-    # TP dinâmico por grade — mínimo 2R no TP1 (protege capital)
+    # TP dinâmico por grade — 2 saídas: 60% no Parcial, 40% no Total
     if signal_grade=="S":
-        r1,r2,r_final=2.5,4.5,8.0   # setup perfeito — deixa correr
+        r1,r_final=2.5,8.0
     elif signal_grade=="A":
-        r1,r2,r_final=2.0,3.5,6.0   # setup sólido
+        r1,r_final=2.0,6.0
     else:
-        r1,r2,r_final=2.0,3.0,5.0   # grade B com R/R mínimo 2:1
+        r1,r_final=2.0,5.0
 
-    tp1  =price+risk*r1     if is_long else price-risk*r1
-    tp2  =price+risk*r2     if is_long else price-risk*r2
-    final=price+risk*r_final if is_long else price-risk*r_final
+    tp1  =price+risk*r1      if is_long else price-risk*r1
+    final=price+risk*r_final  if is_long else price-risk*r_final
 
     # Cálculo de posição baseado em capital e risco 3%
     risk_amount = CAPITAL * RISK_PCT          # ex: $5.40
@@ -956,9 +955,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"{esc(grade_label)}\n\n"
         f"💰 Entrada: `${raw(fmt_price(price))}`\n"
         f"🛑 Stop: `${raw(d(stop))}`\n"
-        f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 40%\n"
-        f"✨ TP2 \\({esc(str(r2))}R\\): `${raw(d(tp2))}` → fechar 35%\n"
-        f"🏆 Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → últimos 25%\n\n"
+        f"🎯 TP Parcial \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 60%\n"
+        f"🏆 TP Total \\({esc(str(r_final))}R\\): `${raw(d(final))}` → fechar 40%\n\n"
         f"📐 *Gestão de risco \\(3% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${raw(f'{risk_amount:.2f}')}`\n"
         f"  Spot: `{raw(f'{contracts:.4f}')} {raw(short)}` \\(aprox `${raw(f'{pos_value:.2f}')} USDT`\\)\n"
