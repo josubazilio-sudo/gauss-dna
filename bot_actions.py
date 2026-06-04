@@ -19,8 +19,7 @@ LOOP_MODE    = os.environ.get("LOOP_MODE", "false").lower() == "true"
 TEST_MODE    = os.environ.get("TEST_MODE", "false").lower() == "true"
 DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
 SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top 50 por volume
-SCAN_EVERY      = int(os.environ.get("SCAN_EVERY", "16"))       # rescan a cada N ciclos
-CYCLE_INTERVAL  = int(os.environ.get("CYCLE_INTERVAL", "0"))    # 0 = aguarda vela; >0 = intervalo fixo (seg)
+SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
 STATE_FILE   = Path("last_signals.json")
 CAPITAL      = float(os.environ.get("CAPITAL", "180"))   # capital total em USD
 RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%)
@@ -447,8 +446,6 @@ def analyze(sym, candles):
     vol3=[vols[-4],vols[-3],vols[-2]]
     vol_drying=vols[-1]<vol_ma*0.6 and vols[-1]<min(vol3)*0.7
 
-    rsi_not_overbought=rsi<65
-
     # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
     def _low_touched_ema(ema_arr, n=5):
         return any(lows[i]<=ema_arr[i]*1.008 for i in range(-n,-1))
@@ -463,8 +460,6 @@ def analyze(sym, candles):
     lwick_ratio=(min(opens[-1],price)-lows[-1])/max(highs[-1]-lows[-1],1e-10)
     exhaustion_top=uwick_ratio>0.40 and price<(highs[-1]-bb_range*0.02)  # rejeição no topo
     exhaustion_bot=lwick_ratio>0.40 and price>(lows[-1]+bb_range*0.02)    # rejeição no fundo
-
-    # safe_long definido após score (safe_short depende de strong_bear_override que usa score)
 
     # Consistência de tendência: 4 das últimas 5 velas acima/abaixo da EMA21
     bulls_5=sum(1 for i in range(-5,0) if closes[i]>e21_arr[i])
@@ -537,13 +532,11 @@ def analyze(sym, candles):
         (10 if trendilo_long else -10 if trendilo_short else 0)
     )
     score=max(-145,min(145,score))
-    # Exceção tendência muito forte: permite SHORT com RSI < 35 se ADX > 45 + score < -80
-    strong_bear_override = adx > 45 and score < -80 and trend_bear
-    rsi_not_oversold      = rsi > 35 or strong_bear_override
-    rsi_not_oversold_long  = rsi > 40          # LONG: RSI mínimo 40
-    rsi_not_overbought_short = rsi < 70        # SHORT: RSI máximo 70
-    safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought and rsi_not_oversold_long
-    safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_oversold and rsi_not_overbought_short
+    # Evitar compra no topo (RSI>70) e venda no fundo (RSI<30)
+    rsi_not_top    = rsi < 65   # LONG: não entrar quando sobrecomprado
+    rsi_not_bottom = rsi > 30   # SHORT: não entrar quando sobrevendido
+    safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_top
+    safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_bottom
 
     # ── SINAIS ELITE ── (máxima assertividade: todos os filtros de qualidade)
     long_elite=(strong_trend and trend_bull and align_bull and e200_rising and
@@ -563,13 +556,13 @@ def analyze(sym, candles):
                  bear_absorb and f_bear and trend_bear and e200_falling and
                  kalman_down and below_vwap and macd_exhausting and safe_short)
 
-    # Sinal de cruzamento (sem safe_long — não bloquear crossovers válidos)
+    # Sinal de cruzamento
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 ha_bull and macd_bull and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97 and 40<rsi<65)
+                v_strong and not_ext_long and price>e200*0.97 and rsi<65)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  ha_bear and macd_bear and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03 and (35<rsi<70 or strong_bear_override))
+                 v_strong and not_ext_short and price<e200*1.03 and rsi>30)
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
@@ -580,7 +573,7 @@ def analyze(sym, candles):
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-15 and not any_cross_bear and (rsi>35 or strong_bear_override))
+                    below_vwap and score<-15 and not any_cross_bear and rsi>30)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -603,7 +596,7 @@ def analyze(sym, candles):
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and (rsi > 35 or strong_bear_override)
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 30
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
@@ -611,22 +604,20 @@ def analyze(sym, candles):
 
     long_flex = (flex_score > 30 and ha_bull and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and
-                 safe_long and
-                 rsi < 65)
+                 safe_long)
     short_flex = (flex_score < -30 and ha_bear and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and
-                  safe_short and
-                  (rsi > 35 or strong_bear_override))
+                  safe_short)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
     long_bb_break  = (bb_break_long  and kalman_up   and k_short_rising  and
                       flex_score > 20 and adx >= 14  and not sideways    and
-                      not ext_above_ema21 and not vol_drying and 40 < rsi < 80)
+                      not ext_above_ema21 and not vol_drying and rsi < 65)
     short_bb_break = (bb_break_short and kalman_down and k_short_falling  and
                       flex_score < -20 and adx >= 14 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and 20 < rsi < 70)
+                      not ext_below_ema21 and not vol_drying and rsi > 30)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -686,7 +677,7 @@ def analyze(sym, candles):
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
-            if not (35<rsi<72): b.append(f"rsi={rsi:.1f} fora 35-72")
+            if rsi >= 70: b.append(f"rsi={rsi:.1f} sobrecomprado (≥65)")
             if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR rsi={rsi:.0f}")
             bb_info = f"bb_break={'✓' if bb_break_long else f'F(p<={bb_upper:.4f})'} k={'↑' if kalman_up else '↓'} ks={'↑' if k_short_rising else '↓'}"
             b.append(bb_info)
@@ -698,7 +689,7 @@ def analyze(sym, candles):
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
-            if not (28<rsi<65): b.append(f"rsi={rsi:.1f} fora 28-65")
+            if rsi <= 30: b.append(f"rsi={rsi:.1f} sobrevendido (≤30)")
             bb_info = f"bb_break={'✓' if bb_break_short else f'F(p>={bb_lower:.4f})'} k={'↓' if kalman_down else '↑'} ks={'↓' if k_short_falling else '↑'}"
             b.append(bb_info)
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
@@ -833,11 +824,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_long  = swing_low  - atr * 0.5
     stop_short = swing_high + atr * 0.5
 
-    # RSI zone: neutro a sobrevendido para compra / neutro a sobrecomprado para venda
-    # Exceção: tendência bearish muito forte no 1H (ADX > 45 + HA bear + EMAs alinhadas + OBV)
-    strong_bear_mtf = adx > 45 and ha_bear and ema_aligned_short and obv_bear
+    # Evitar compra no topo (RSI>70) e venda no fundo (RSI<30)
     rsi_ok_long  = rsi < 65
-    rsi_ok_short = rsi > 35 or strong_bear_mtf
+    rsi_ok_short = rsi > 30
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -899,16 +888,17 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     risk = 1.2 * atr
     if risk <= 0: return
 
-    # TP dinâmico por grade — 2 saídas: 60% no Parcial, 40% no Total
+    # TP dinâmico por grade — mínimo 2R no TP1 (protege capital)
     if signal_grade=="S":
-        r1,r_final=2.5,8.0
+        r1,r2,r_final=2.5,4.5,8.0   # setup perfeito — deixa correr
     elif signal_grade=="A":
-        r1,r_final=2.0,6.0
+        r1,r2,r_final=2.0,3.5,6.0   # setup sólido
     else:
-        r1,r_final=2.0,5.0
+        r1,r2,r_final=2.0,3.0,5.0   # grade B com R/R mínimo 2:1
 
-    tp1  =price+risk*r1      if is_long else price-risk*r1
-    final=price+risk*r_final  if is_long else price-risk*r_final
+    tp1  =price+risk*r1     if is_long else price-risk*r1
+    tp2  =price+risk*r2     if is_long else price-risk*r2
+    final=price+risk*r_final if is_long else price-risk*r_final
 
     # Cálculo de posição baseado em capital e risco 3%
     risk_amount = CAPITAL * RISK_PCT          # ex: $5.40
@@ -924,7 +914,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     grade_label=grade_info[signal_grade][0]
 
     if sig_source.startswith("MTF"):
-        mode_tag=f"📡 MTF PULLBACK 4H→{tf.upper()}"; cross_info=""
+        mode_tag=f"📡 MTF PULLBACK 1H→{tf.upper()}"; cross_info=""
     elif sig_source=="PULLBACK":
         mode_tag="🎯 DNA PULLBACK"; cross_info=""
     elif sig_source.startswith("CROSS"):
@@ -957,8 +947,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"{esc(grade_label)}\n\n"
         f"💰 Entrada: `${raw(fmt_price(price))}`\n"
         f"🛑 Stop: `${raw(d(stop))}`\n"
-        f"🎯 TP Parcial \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 60%\n"
-        f"🏆 TP Total \\({esc(str(r_final))}R\\): `${raw(d(final))}` → fechar 40%\n\n"
+        f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 40%\n"
+        f"✨ TP2 \\({esc(str(r2))}R\\): `${raw(d(tp2))}` → fechar 35%\n"
+        f"🏆 Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → últimos 25%\n\n"
         f"📐 *Gestão de risco \\(3% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${raw(f'{risk_amount:.2f}')}`\n"
         f"  Spot: `{raw(f'{contracts:.4f}')} {raw(short)}` \\(aprox `${raw(f'{pos_value:.2f}')} USDT`\\)\n"
@@ -1138,21 +1129,44 @@ async def run_cycle(session, last_sig, tf, coins):
             else:
                 mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
-                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],f"⏳ cooldown {mins}min"))
+                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"cooldown"))
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
         await asyncio.sleep(0.15)
 
-    if sent == 0:
-        n_cd  = sum(1 for c in candidates if "cooldown" in c[5])
-        n_ok  = len(candidates) - n_cd
-        top_long  = sorted([c for c in candidates if c[2]>0], key=lambda x: x[2], reverse=True)[:3]
-        top_short = sorted([c for c in candidates if c[2]<0], key=lambda x: x[2])[:3]
-        log.info(f"[{tf}] Sem sinais | {len(coins)} moedas | {n_ok} sem sinal | {n_cd} cooldown")
-        for _,sh,sc,rsi,adx,reason in top_long[:2]:
-            log.info(f"  📈 {sh}: {sc:+d} RSI {rsi:.0f} ADX {adx:.0f} — {reason}")
-        for _,sh,sc,rsi,adx,reason in top_short[:2]:
-            log.info(f"  📉 {sh}: {sc:+d} RSI {rsi:.0f} ADX {adx:.0f} — {reason}")
+    if sent == 0 and candidates:
+        # Top LONG: maior score positivo
+        top_long  = sorted([c for c in candidates if c[2]>0],  key=lambda x: x[2], reverse=True)[:3]
+        # Top SHORT: maior score negativo (mais bearish)
+        top_short = sorted([c for c in candidates if c[2]<0],  key=lambda x: x[2])[:3]
+
+        lines = []
+        if top_long:
+            best_adx_l = max(adx for _,_,_,_,adx,_ in top_long)
+            best_sc_l  = top_long[0][2]
+            motivo_l   = ("📉 ADX baixo" if best_adx_l < 17
+                          else "📊 Score baixo" if best_sc_l < 50
+                          else "⏳ MACD/HA pendente")
+            lines.append(f"📈 LONG — {motivo_l}")
+            lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_long]
+        if top_short:
+            best_adx_s = max(adx for _,_,_,_,adx,_ in top_short)
+            best_sc_s  = top_short[0][2]
+            motivo_s   = ("📉 ADX baixo" if best_adx_s < 17
+                          else "📊 Score baixo" if best_sc_s > -50
+                          else "⏳ MACD/HA pendente")
+            lines.append(f"📉 SHORT — {motivo_s}")
+            lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_short]
+
+        if lines:
+            txt = (f"🔍 [{tf}] Sem sinais no ciclo\nTop candidatos:\n" + "\n".join(lines) +
+                   f"\n⏰ {datetime.now().strftime('%H:%M')}")
+            url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+            try:
+                async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
+                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
+                    await r.json()
+            except: pass
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
@@ -1188,11 +1202,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         h4_vol  = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
         h4_vol_s = r4h.get("v_strong", False) or r4h.get("obv_bear", False)
         h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol
-        # SHORT: RSI não sobrevendido (>35) OU tendência bearish forte (score<-40, RSI>25)
-        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and (
-            (r4h["score"] < -15 and h4_rsi > 35) or
-            (r4h["score"] < -40 and h4_rsi > 25)
-        )
+        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and r4h["score"] < -15 and h4_rsi > 30
         direction = "BULL" if h4_bull else "BEAR"
 
         if not (h4_bull or h4_bear):
@@ -1269,19 +1279,14 @@ async def run_mtf_cycle(session, last_sig, coins):
                     await r.json()
             except: pass
 
-    # Diagnóstico MTF: sempre informa estado mesmo sem sinal
-    if sent == 0:
-        btc_str = "🐂 BULL" if btc_bull_filter else "🐻 BEAR" if btc_bear_filter else "↔️ NEUTRO"
-        lines = [f"🔍 [MTF 4H→1H] Sem sinal | BTC {btc_str}"]
-        if setup_coins:
-            lines.append(f"📋 {len(setup_coins)} setup(s) 4H ativo(s):")
-            for sh, d, sc, rsi, motivo in setup_coins[:4]:
-                arrow = "📈" if d == "BULL" else "📉"
-                lines.append(f"  {arrow} {sh}: {sc:+d} RSI {rsi:.0f} → {motivo}")
-            if len(setup_coins) > 4:
-                lines.append(f"  ... +{len(setup_coins)-4} outros")
-        else:
-            lines.append("Nenhum setup 4H aprovado no momento")
+    # Diagnóstico MTF: mostra setups 1H em análise quando não há sinal
+    if sent == 0 and setup_coins:
+        lines = [f"🔍 [MTF 4H→1H] Sem sinal — {len(setup_coins)} setup(s) 4H ativos"]
+        for sh, d, sc, rsi, motivo in setup_coins[:4]:
+            arrow = "📈" if d == "BULL" else "📉"
+            lines.append(f"  {arrow} {sh}: {sc:+d} RSI {rsi:.0f} → {motivo}")
+        if len(setup_coins) > 4:
+            lines.append(f"  ... +{len(setup_coins)-4} outros")
         lines.append(f"⏰ {datetime.now().strftime('%H:%M')}")
         url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
         try:
@@ -1397,14 +1402,10 @@ async def main():
             cycle+=1
 
             if LOOP_MODE and cycle>1:   # ciclo 1 roda imediatamente
-                if CYCLE_INTERVAL > 0:
-                    log.info(f"⏳ Aguardando {CYCLE_INTERVAL//60}min entre ciclos...")
-                    await asyncio.sleep(CYCLE_INTERVAL)
-                else:
-                    wait=seconds_to_candle_close(tf_min_base)
-                    if wait>3:
-                        log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
-                        await asyncio.sleep(wait+2)
+                wait=seconds_to_candle_close(tf_min_base)
+                if wait>3:
+                    log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
+                    await asyncio.sleep(wait+2)
 
             # Rescan periódico (a cada SCAN_EVERY ciclos)
             if DYNAMIC_SCAN and cycle>1 and (cycle-last_scan_cycle)>=SCAN_EVERY:
