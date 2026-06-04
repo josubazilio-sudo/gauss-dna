@@ -744,11 +744,28 @@ def analyze(sym, candles):
     short_div = (rsi_div_bear and ha_bear and v_good and rsi < 65 and
                  price < e200 and not exhaustion_bot)
 
+    # ── SCOUT (early signal — mais flexível que FLEX, captura setups em formação) ─
+    # Relaxa: score ≥ 15, HA 1 candle, ADX ≥ 10, sem MACD obrigatório, RSI 30–65
+    ha_bull1 = closes[-1] > opens[-1] and ha_body_ok
+    ha_bear1 = closes[-1] < opens[-1] and ha_body_ok
+    long_scout  = (flex_score > 15 and ha_bull1 and adx >= 10 and
+                   (obv_bull or f_bull or dna_flow_bull) and
+                   (kalman_up or v_strong) and
+                   rsi > 30 and rsi < 65 and price > e200 and
+                   not vol_drying and not exhaustion_top and not near_bb_top and
+                   not ext_above_ema21)
+    short_scout = (flex_score < -15 and ha_bear1 and adx >= 10 and
+                   (obv_bear or f_bear or dna_flow_bear) and
+                   (not kalman_up or v_strong) and
+                   rsi < 60 and rsi > 25 and price < e200 and
+                   not vol_drying and not exhaustion_bot and not near_bb_bot and
+                   not ext_below_ema21)
+
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
         if long_elite or early_long: sig="LONG"; sig_source="ELITE"
         elif short_elite or early_short: sig="SHORT"; sig_source="ELITE"
-    else:  # FLEX — pullback > cross > bb_break > sm_sweep > surge > momentum > div > flex
+    else:  # FLEX — pullback > cross > bb_break > sm_sweep > surge > momentum > div > flex > scout
         if long_pullback: sig="LONG"; sig_source="PULLBACK"
         elif short_pullback: sig="SHORT"; sig_source="PULLBACK"
         elif long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
@@ -765,6 +782,8 @@ def analyze(sym, candles):
         elif short_div: sig="SHORT"; sig_source="DIV"
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
+        elif long_scout: sig="LONG"; sig_source="SCOUT"
+        elif short_scout: sig="SHORT"; sig_source="SCOUT"
 
     # ── QUALIDADE DO SINAL (S / A / B) ───────────────────────────────────────
     # Conta quantos dos filtros premium estão alinhados
@@ -1083,6 +1102,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         mode_tag="🚀 DNA MOMENTUM"; cross_info=""
     elif sig_source=="DIV":
         mode_tag="📐 RSI DIVERGÊNCIA"; cross_info=""
+    elif sig_source=="SCOUT":
+        mode_tag="🔭 DNA SCOUT"; cross_info=""
     elif SIGNAL_MODE=="ELITE":
         mode_tag="🔬 DNA ELITE KALMAN"; cross_info=""
     else:
@@ -1361,8 +1382,9 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # ELITE: só Grade A/S; FLEX: aceita B se score alto o suficiente
-            if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 50):
+            # ELITE: só Grade A/S; FLEX: aceita B se score alto o suficiente; SCOUT: sempre passa
+            is_scout = result.get("sig_source") == "SCOUT"
+            if grade == "B" and not is_scout and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 50):
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 continue
