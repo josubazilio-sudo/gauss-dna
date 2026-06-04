@@ -651,6 +651,18 @@ def analyze(sym, candles):
                   not sideways and not_ext_short_tight and
                   safe_short)
 
+    # ── SURGE (pump/dump com volume explosivo — captura moves tipo HOME +16%) ────
+    # Não exige safe_long/safe_short: ignora ext e BB pois o move JÁ está em curso
+    vol_3x          = vols[-1] > vol_ma * 3.0
+    candle_bull_pct = (price - opens[-1]) / max(opens[-1], 1e-10)
+    candle_bear_pct = (opens[-1] - price) / max(opens[-1], 1e-10)
+    surge_break_h   = price > max(highs[-11:-1])  # rompeu máxima das últimas 10 velas
+    surge_break_l   = price < min(lows[-11:-1])   # rompeu mínima das últimas 10 velas
+    long_surge  = (vol_3x and candle_bull_pct > 0.04 and surge_break_h and
+                   price > e200 and score >= 0 and not vol_drying and not exhaustion_top)
+    short_surge = (vol_3x and candle_bear_pct > 0.04 and surge_break_l and
+                   price < e200 and score <= 0 and not vol_drying and not exhaustion_bot)
+
     # ── MOMENTUM (captura o exato momento do breakout de RSI) ────────────────────
     # Só dispara quando RSI acabou de cruzar o limiar (nas últimas ~3 velas)
     # LONG : RSI saiu da zona neutra e cruzou acima de 65 → breakout bullish
@@ -680,13 +692,15 @@ def analyze(sym, candles):
     if SIGNAL_MODE=="ELITE":
         if long_elite or early_long: sig="LONG"; sig_source="ELITE"
         elif short_elite or early_short: sig="SHORT"; sig_source="ELITE"
-    else:  # FLEX — pullback > cross > bb_break > momentum > flex
+    else:  # FLEX — pullback > cross > bb_break > surge > momentum > flex
         if long_pullback: sig="LONG"; sig_source="PULLBACK"
         elif short_pullback: sig="SHORT"; sig_source="PULLBACK"
         elif long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
         elif short_cross: sig="SHORT"; sig_source=f"CROSS:{cross_label}"
         elif long_bb_break: sig="LONG"; sig_source="BB_BREAK"
         elif short_bb_break: sig="SHORT"; sig_source="BB_BREAK"
+        elif long_surge: sig="LONG"; sig_source="SURGE"
+        elif short_surge: sig="SHORT"; sig_source="SURGE"
         elif long_momentum: sig="LONG"; sig_source="MOMENTUM"
         elif short_momentum: sig="SHORT"; sig_source="MOMENTUM"
         elif long_flex: sig="LONG"; sig_source="FLEX"

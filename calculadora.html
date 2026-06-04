@@ -287,6 +287,7 @@ input[type=number]:focus,input[type=text]:focus{border-color:var(--green)}
           <option value="FLEX">⚡ DNA FLEX</option>
           <option value="PULLBACK">🎯 DNA PULLBACK</option>
           <option value="MOMENTUM">🚀 DNA MOMENTUM</option>
+          <option value="SURGE">⚡ DNA SURGE</option>
           <option value="MTF">📡 MTF 4H→1H</option>
           <option value="BB_BREAK">💥 BB BREAK</option>
           <option value="ELITE">🔬 DNA ELITE</option>
@@ -467,7 +468,7 @@ function buildDnaCard(sig, forHistory, status, closedData) {
   const gradeColor = {S:'var(--gold)',A:'var(--orange)',B:'var(--blue)'}[sig.grade];
   const tipoMap = {
     FLEX:'⚡ DNA FLEX', PULLBACK:'🎯 DNA PULLBACK', MOMENTUM:'🚀 DNA MOMENTUM',
-    MTF:'📡 MTF 4H→1H', BB_BREAK:'💥 BB BREAK', ELITE:'🔬 DNA ELITE'
+    SURGE:'⚡ DNA SURGE', MTF:'📡 MTF 4H→1H', BB_BREAK:'💥 BB BREAK', ELITE:'🔬 DNA ELITE'
   };
   const tipo = tipoMap[sig.tipo]||'⚡ DNA FLEX';
   const now  = sig.date || new Date().toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
