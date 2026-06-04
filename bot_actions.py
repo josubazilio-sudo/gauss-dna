@@ -1029,26 +1029,29 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     dna_flow_ok = extra.get("dna_flow", False)
     trl_ok      = extra.get("trendilo_dir", False)
     liq_event   = extra.get("liq_event", "")
-    # ── SAÍDA 1: Stop 1.5 ATR ─────────────────────────────────────────────────
+    # Stop 1.5 ATR
     stop = price - 1.5 * atr if is_long else price + 1.5 * atr
     risk = 1.5 * atr
     if risk <= 0: return
 
-    # ── SAÍDA 2: Reversão de tendência (descrita na mensagem) ─────────────────
-    # LONG  → fechar quando EMA10 < EMA21 + DNA Flow Bear + Trendilo Bear
-    # SHORT → fechar quando EMA10 > EMA21 + DNA Flow Bull + Trendilo Bull
-    rev_long  = "EMA10 < EMA21 \\+ Flow ↓ \\+ Trendilo ↓"
-    rev_short = "EMA10 > EMA21 \\+ Flow ↑ \\+ Trendilo ↑"
-    rev_cond  = rev_long if is_long else rev_short
+    # TP por grade
+    if signal_grade == "S":
+        r1, r_final = 2.5, 8.0
+    elif signal_grade == "A":
+        r1, r_final = 2.0, 6.0
+    else:
+        r1, r_final = 2.0, 5.0
+
+    tp1   = price + risk * r1      if is_long else price - risk * r1
+    final = price + risk * r_final if is_long else price - risk * r_final
 
     # Cálculo de posição baseado em capital e risco 3% ($200 → $1000 com 5x)
-    risk_amount = CAPITAL * RISK_PCT          # $6.00 com $200
-    contracts   = risk_amount / risk if risk > 0 else 0  # unidades da moeda
-    pos_value   = contracts * price           # valor em USD (spot)
-    pos_5x      = pos_value / 5               # collateral com 5x alavancagem
+    risk_amount = CAPITAL * RISK_PCT
+    contracts   = risk_amount / risk if risk > 0 else 0
+    pos_value   = contracts * price
+    pos_5x      = pos_value / 5
 
-    # Capture for journal (sem TP fixo — saída por reversão)
-    _stop=stop; _tp1=0; _final=0; _r1=0; _r_final=0
+    _stop=stop; _tp1=tp1; _final=final; _r1=r1; _r_final=r_final
 
     grade_info={
         "S": ("🏆 GRADE S — Setup perfeito",),
@@ -1104,8 +1107,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"{cross_line}"
         f"{esc(grade_label)}{inst_line}{liq_line}\n\n"
         f"💰 Entrada: `${raw(fmt_price(price))}`\n"
-        f"🛑 Saída 1 — Stop: `${raw(d(stop))}` \\(1\\.5 ATR\\)\n"
-        f"🔄 Saída 2 — Reversão: {rev_cond}\n\n"
+        f"🛑 Stop: `${raw(d(stop))}` \\(1\\.5 ATR\\)\n"
+        f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 50%\n"
+        f"🏆 TP Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → fechar 50%\n\n"
         f"📐 *Gestão de risco \\(3% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${raw(f'{risk_amount:.2f}')}`\n"
         f"  Spot: `{raw(f'{contracts:.4f}')} {raw(short)}` \\(aprox `${raw(f'{pos_value:.2f}')} USDT`\\)\n"
