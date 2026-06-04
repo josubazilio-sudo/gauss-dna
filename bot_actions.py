@@ -638,28 +638,23 @@ def analyze(sym, candles):
                  bear_absorb and f_bear and trend_bear and e200_falling and
                  kalman_down and below_vwap and macd_exhausting and safe_short)
 
-    # Sinal de cruzamento
-    long_cross=(any_cross_bull and score>10 and adx>15 and
-                ha_bull and macd_bull and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97 and
+    # Sinal de cruzamento (não está no Pine — mantém trendilo + safe como guards)
+    long_cross=(any_cross_bull and dna_flow_bull and adx_long_ok and
+                price>e200 and inst_score_long>=50 and
                 safe_long and (trendilo_long or kalman_up))
-    short_cross=(any_cross_bear and score<-10 and adx>15 and
-                 ha_bear and macd_bear and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03 and
+    short_cross=(any_cross_bear and dna_flow_bear and adx_short_ok and
+                 price<e200 and inst_score_short>=50 and
                  safe_short and (trendilo_short or not kalman_up))
 
-    # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
-    # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
+    # ── SINAL PULLBACK (Pine: close<e21*1.02 + flow_bull + adx_long_ok + trl_bull + score>=55)
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
-    long_pullback=(pullback_bull and trend_bull_relaxed and (macd_bull or macd_recovering) and
-                   adx>18 and (f_bull or obv_bull) and v_strong and
-                   above_vwap and score>15 and not any_cross_bull and
-                   safe_long and (trendilo_long or kalman_up))
+    long_pullback=(pullback_bull and trend_bull_relaxed and price<e21*1.03 and
+                   dna_flow_bull and adx_long_ok and
+                   inst_score_long>=55 and safe_long and trendilo_long)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
-    short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
-                    adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-15 and not any_cross_bear and
-                    safe_short and (trendilo_short or not kalman_up))
+    short_pullback=(pullback_bear and trend_bear_relaxed and price>e21*0.97 and
+                    dna_flow_bear and adx_short_ok and
+                    inst_score_short>=55 and safe_short and trendilo_short)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -700,35 +695,25 @@ def analyze(sym, candles):
                   (trendilo_short or not kalman_up))
 
     # ── SURGE (pump/dump com volume explosivo — captura moves tipo HOME +16%) ────
-    # Não exige safe_long/safe_short: ignora ext e BB pois o move JÁ está em curso
-    vol_surge       = vols[-1] > vol_ma * 2.0
+    # ── SURGE (Pine: rvol_tier>=3 + 4%+ candle + break_h + not bb_break — sem trendilo)
     candle_bull_pct = (price - opens[-1]) / max(opens[-1], 1e-10)
     candle_bear_pct = (opens[-1] - price) / max(opens[-1], 1e-10)
     surge_break_h   = price > max(highs[-11:-1])  # rompeu máxima das últimas 10 velas
     surge_break_l   = price < min(lows[-11:-1])   # rompeu mínima das últimas 10 velas
-    long_surge  = (vol_surge and candle_bull_pct > 0.04 and surge_break_h and
-                   price > e200 and score >= 0 and not vol_drying and not exhaustion_top and
-                   kalman_up)
-    short_surge = (vol_surge and candle_bear_pct > 0.04 and surge_break_l and
-                   price < e200 and score <= 0 and not vol_drying and not exhaustion_bot and
-                   kalman_down)
+    long_surge  = (rvol_tier >= 3 and candle_bull_pct > 0.04 and surge_break_h and
+                   price > e200 and not bb_break_long and not exhaustion_top and
+                   not vol_drying and kalman_up)
+    short_surge = (rvol_tier >= 3 and candle_bear_pct > 0.04 and surge_break_l and
+                   price < e200 and not bb_break_short and not exhaustion_bot and
+                   not vol_drying and kalman_down)
 
-    # ── MOMENTUM (captura o exato momento do breakout de RSI) ────────────────────
-    # Só dispara quando RSI acabou de cruzar o limiar (nas últimas ~3 velas)
-    # LONG : RSI saiu da zona neutra e cruzou acima de 65 → breakout bullish
-    # SHORT: RSI entrou na zona de sobrevenda e cruzou abaixo de 35 → breakdown
+    # ── MOMENTUM (Pine: rsi_fresh + ha_bull + flow_bull + adx>22 + v_strong + trl_bull + score>=70)
     rsi_fresh_long  = rsi_prev < 65 <= rsi < 78   # cruzou 65 recentemente
     rsi_fresh_short = rsi_prev > 35 >= rsi > 18   # cruzou abaixo de 35 recentemente
-    long_momentum  = (flex_score > 70 and ha_bull2 and macd_bull_r and adx >= 22 and
-                      v_strong and not sideways and not near_bb_top and
-                      not ext_above_ema21 and not vol_drying and
-                      tbull_loose and rsi_fresh_long and
-                      (trendilo_long or kalman_up))
-    short_momentum = (flex_score < -70 and ha_bear2 and macd_bear_r and adx >= 22 and
-                      v_strong and not sideways and not near_bb_bot and
-                      not ext_below_ema21 and not vol_drying and
-                      tbear_loose and rsi_fresh_short and
-                      (trendilo_short or not kalman_up))
+    long_momentum  = (rsi_fresh_long  and ha_bull and dna_flow_bull and
+                      adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 70)
+    short_momentum = (rsi_fresh_short and ha_bear and dna_flow_bear and
+                      adx > 22 and v_strong and trendilo_short and inst_score_short >= 70)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
@@ -740,21 +725,17 @@ def analyze(sym, candles):
                       flex_score < -20 and adx >= 14 and not sideways    and
                       not ext_below_ema21 and not vol_drying and rsi > 25)
 
-    # ── SMART MONEY REVERSAL (sweep institucional + confirmação) ─────────────────
-    long_sm  = (sm_bull and rsi > 25 and rsi < 65 and
-                price > e200 and inst_score_long >= 60 and
-                (trendilo_long or kalman_up))
-    short_sm = (sm_bear and rsi > 25 and rsi < 65 and
-                price < e200 and inst_score_short >= 60 and
-                (trendilo_short or not kalman_up))
+    # ── SMART MONEY REVERSAL (Pine: sm_bull + rsi>25 + not rsi_block + score>=60 — sem trendilo)
+    long_sm  = (sm_bull and rsi > 25 and rsi < 80 and
+                price > e200 and inst_score_long >= 60)
+    short_sm = (sm_bear and rsi > 20 and rsi < 75 and
+                price < e200 and inst_score_short >= 60)
 
-    # ── DIV (divergência RSI + estrutura — preço diverge do momentum) ────────────
-    long_div  = (rsi_div_bull and ha_bull and v_good and rsi > 25 and
-                 price > e200 and not exhaustion_top and not near_bb_top and
-                 (trendilo_long or kalman_up))
-    short_div = (rsi_div_bear and ha_bear and v_good and rsi < 65 and
-                 price < e200 and not exhaustion_bot and not near_bb_bot and
-                 (trendilo_short or not kalman_up))
+    # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
+    long_div  = (rsi_div_bull and ha_bull and v_good and
+                 rsi > 25 and rsi < 80 and price > e200 and not exhaustion_top)
+    short_div = (rsi_div_bear and ha_bear and v_good and
+                 rsi > 20 and rsi < 75 and price < e200 and not exhaustion_bot)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
