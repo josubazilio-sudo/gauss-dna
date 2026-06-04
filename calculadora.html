@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>GAUSS+DNA Calculadora</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#131722;--panel:#1e222d;--border:#2a2e39;--text:#d1d4dc;--muted:#848994;
+  --green:#26a69a;--red:#ef5350;--orange:#ff9800;--gold:#ffd700;--blue:#2196f3;
+  --purple:#9c27b0;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;
+  font-size:14px;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── HEADER ── */
+header{background:var(--panel);border-bottom:1px solid var(--border);
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+header h1{font-size:16px;font-weight:800;letter-spacing:.3px}
+header h1 span{color:var(--green)}
+.version{color:var(--muted);font-size:11px}
+
+/* ── CAPITAL BAR ── */
+#capital-bar{background:var(--panel);border-bottom:1px solid var(--border);
+  padding:12px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.cap-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cap-label{color:var(--muted);font-size:11px;white-space:nowrap}
+.cap-val{font-size:20px;font-weight:800;color:var(--green);min-width:70px}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--green);cursor:pointer;height:4px}
+.risk-row{display:flex;gap:16px;flex-wrap:wrap}
+.risk-item{display:flex;flex-direction:column;gap:2px}
+.risk-item .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.risk-item .val{font-size:15px;font-weight:700}
+.cap-inputs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=number]{background:var(--border);color:var(--text);border:1px solid #3d4250;
+  border-radius:4px;padding:4px 8px;font-size:13px;width:80px;outline:none}
+input[type=number]:focus{border-color:var(--green)}
+.risk-pct-btns{display:flex;gap:4px}
+.rpb{background:var(--border);border:1px solid #3d4250;color:var(--muted);padding:3px 8px;
+  border-radius:3px;cursor:pointer;font-size:12px;transition:.15s}
+.rpb.active,.rpb:hover{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* ── TABS ── */
+#tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;
+  color:var(--muted);border-bottom:2px solid transparent;transition:.15s}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;padding:12px 16px}
+
+/* ── CALCULADORA ── */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+@media(min-width:500px){.calc-grid{grid-template-columns:1fr 1fr 1fr}}
+.inp-group{display:flex;flex-direction:column;gap:4px}
+.inp-group label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.inp-group input,.inp-group select{background:var(--border);color:var(--text);
+  border:1px solid #3d4250;border-radius:4px;padding:7px 10px;font-size:14px;
+  width:100%;outline:none}
+.inp-group input:focus,.inp-group select:focus{border-color:var(--green)}
+.dir-btns{display:flex;gap:6px}
+.dir-btn{flex:1;padding:7px;border-radius:4px;border:1px solid var(--border);
+  background:var(--border);color:var(--muted);font-weight:700;cursor:pointer;font-size:13px;transition:.15s}
+.dir-btn.long.active{background:#26a69a20;color:var(--green);border-color:var(--green)}
+.dir-btn.short.active{background:#ef535020;color:var(--red);border-color:var(--red)}
+.grade-btns{display:flex;gap:6px}
+.grade-btn{flex:1;padding:7px;border-radius:4px;border:1px solid var(--border);
+  background:var(--border);color:var(--muted);font-weight:700;cursor:pointer;font-size:13px;transition:.15s}
+.grade-btn.active-s{background:#ffd70020;color:var(--gold);border-color:var(--gold)}
+.grade-btn.active-a{background:#ff980020;color:var(--orange);border-color:var(--orange)}
+.grade-btn.active-b{background:#2196f320;color:var(--blue);border-color:var(--blue)}
+
+/* ── RESULT CARD ── */
+.result-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:14px;margin-bottom:10px}
+.result-card.long{border-left:3px solid var(--green)}
+.result-card.short{border-left:3px solid var(--red)}
+.rc-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.rc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(min-width:450px){.rc-grid{grid-template-columns:1fr 1fr 1fr}}
+.rc-item{display:flex;flex-direction:column;gap:2px}
+.rc-item .lbl{font-size:10px;color:var(--muted)}
+.rc-item .val{font-size:14px;font-weight:700}
+.divider{border:none;border-top:1px solid var(--border);margin:10px 0}
+.exit-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;
+  border-bottom:1px solid var(--border)}
+.exit-row:last-child{border-bottom:none}
+.exit-label{display:flex;align-items:center;gap:8px}
+.exit-badge{padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700}
+.exit-pct{font-size:11px;color:var(--muted)}
+.exit-values{text-align:right}
+.exit-price{font-size:14px;font-weight:700}
+.exit-profit{font-size:12px;color:var(--muted)}
+.summary-row{display:flex;justify-content:space-between;align-items:center;
+  background:#26a69a15;border:1px solid #26a69a30;border-radius:6px;padding:10px 12px;margin-top:10px}
+.summary-row .slabel{color:var(--muted);font-size:12px}
+.summary-row .sval{font-size:16px;font-weight:800;color:var(--green)}
+.save-btn{width:100%;padding:10px;background:var(--green);color:#fff;border:none;
+  border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;transition:.15s}
+.save-btn:hover{background:#2bbbad}
+.no-calc{text-align:center;color:var(--muted);padding:30px;font-size:13px}
+
+/* ── RANKING ── */
+.rank-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.rank-header h2{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.rank-meta{font-size:11px;color:var(--muted)}
+.rank-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:12px;margin-bottom:8px;cursor:pointer;transition:.15s;position:relative}
+.rank-card:hover{border-color:#3d4250;background:#252836}
+.rank-card .rc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.rank-card .sym{font-size:15px;font-weight:800}
+.rank-card .grade-tag{padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700}
+.gt-bom{background:#26a69a20;color:var(--green);border:1px solid #26a69a50}
+.gt-aceit{background:#2196f320;color:var(--blue);border:1px solid #2196f350}
+.gt-fraco{background:#ef535015;color:#ef535080;border:1px solid #ef535030}
+.rank-card .rc-stats{display:flex;gap:16px;flex-wrap:wrap}
+.rank-stat{display:flex;flex-direction:column;gap:1px}
+.rank-stat .ls{font-size:10px;color:var(--muted)}
+.rank-stat .lv{font-size:13px;font-weight:700}
+.rank-num{position:absolute;top:10px;right:12px;font-size:11px;color:var(--muted)}
+.calc-cta{font-size:11px;color:var(--green);margin-top:8px;text-align:right}
+
+/* ── HISTÓRICO ── */
+.hist-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:12px;margin-bottom:8px}
+.hist-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hist-sym{font-weight:800;font-size:14px}
+.hist-dir{padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700}
+.hd-long{background:#26a69a20;color:var(--green)}
+.hd-short{background:#ef535020;color:var(--red)}
+.hist-stats{display:flex;gap:12px;flex-wrap:wrap}
+.hist-stat{font-size:12px;color:var(--muted)}
+.hist-stat span{color:var(--text);font-weight:600}
+.hist-empty{text-align:center;color:var(--muted);padding:40px;font-size:13px}
+.clear-btn{background:var(--border);border:1px solid #3d4250;color:var(--muted);
+  padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;float:right}
+.clear-btn:hover{color:var(--red);border-color:var(--red)}
+.hist-date{font-size:10px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GAUSS<span>+DNA</span> Calculadora</h1>
+  <span class="version">FLEX · 2 Saídas</span>
+</header>
+
+<!-- CAPITAL BAR -->
+<div id="capital-bar">
+  <div class="cap-row">
+    <span class="cap-label">💰 CAPITAL</span>
+    <span class="cap-val" id="cap-display">$180</span>
+    <input type="range" id="cap-slider" min="180" max="1000" step="10" value="180">
+    <input type="number" id="cap-input" min="180" max="9999" value="180" placeholder="$">
+  </div>
+  <div class="cap-row">
+    <span class="cap-label">⚖️ RISCO</span>
+    <div class="risk-pct-btns">
+      <button class="rpb active" onclick="setRisk(1)">1%</button>
+      <button class="rpb active" onclick="setRisk(2)">2%</button>
+      <button class="rpb active" onclick="setRisk(3)" id="rpb3">3%</button>
+      <button class="rpb" onclick="setRisk(5)">5%</button>
+    </div>
+    <div class="risk-row" style="margin-left:8px">
+      <div class="risk-item">
+        <span class="lbl">Por trade</span>
+        <span class="val" id="risk-usd" style="color:var(--orange)">$5.40</span>
+      </div>
+      <div class="risk-item">
+        <span class="lbl">Max lucro (S)</span>
+        <span class="val" id="max-profit-cap" style="color:var(--green)">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div id="tabs">
+  <div class="tab active" onclick="showTab('calc')">🎯 Calculadora</div>
+  <div class="tab" onclick="showTab('ranking')">📊 Ranking</div>
+  <div class="tab" onclick="showTab('hist')">📋 Histórico</div>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <!-- ── CALCULADORA ── -->
+  <div id="tab-calc">
+    <div class="calc-grid">
+      <div class="inp-group" style="grid-column:1/-1">
+        <label>Par</label>
+        <input type="text" id="inp-sym" placeholder="ex: SOLUSDT" value="SOLUSDT" oninput="recalc()">
+      </div>
+      <div class="inp-group">
+        <label>Direção</label>
+        <div class="dir-btns">
+          <button class="dir-btn long active" id="btn-long" onclick="setDir('LONG')">▲ LONG</button>
+          <button class="dir-btn short" id="btn-short" onclick="setDir('SHORT')">▼ SHORT</button>
+        </div>
+      </div>
+      <div class="inp-group">
+        <label>Grade</label>
+        <div class="grade-btns">
+          <button class="grade-btn active-s" id="btn-s" onclick="setGrade('S')">S</button>
+          <button class="grade-btn" id="btn-a" onclick="setGrade('A')">A</button>
+          <button class="grade-btn" id="btn-b" onclick="setGrade('B')">B</button>
+        </div>
+      </div>
+      <div class="inp-group">
+        <label>Entrada ($)</label>
+        <input type="number" id="inp-entry" placeholder="0.00" step="any" oninput="recalc()">
+      </div>
+      <div class="inp-group">
+        <label>ATR ($)</label>
+        <input type="number" id="inp-atr" placeholder="auto (1%)" step="any" oninput="recalc()">
+      </div>
+    </div>
+
+    <div id="calc-result"><div class="no-calc">Preencha entrada e ATR para calcular</div></div>
+  </div>
+
+  <!-- ── RANKING ── -->
+  <div id="tab-ranking" style="display:none">
+    <div class="rank-header">
+      <h2>Backtest MEXC Top 100</h2>
+      <span class="rank-meta">~20 dias · 30m · Jun 2026</span>
+    </div>
+    <div id="ranking-list"></div>
+  </div>
+
+  <!-- ── HISTÓRICO ── -->
+  <div id="tab-hist" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:13px;color:var(--muted)">Trades calculados</span>
+      <button class="clear-btn" onclick="clearHistory()">🗑 Limpar</button>
+    </div>
+    <div id="hist-list"></div>
+  </div>
+
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────────
+let S = {
+  capital: 180, riskPct: 3,
+  dir: 'LONG', grade: 'S',
+  history: [],
+};
+
+// ── RANKING DATA (embutido do backtest) ──────────────────────────────────────
+const RANKING = [
+  {sym:'RAINUSDT', grade:'BOM', wr:100, pf:999, r:9.15, dd:0, trades:2},
+  {sym:'EDGEUSDT', grade:'ACEITÁVEL', wr:50, pf:4.6, r:3.58, dd:1, trades:2},
+  {sym:'BTCUSDT',  grade:'FRACO', wr:50, pf:2.6, r:1.58, dd:1, trades:2},
+  {sym:'PENDLEUSDT',grade:'FRACO', wr:50, pf:2.6, r:1.58, dd:1, trades:2},
+  {sym:'TONUSDT',  grade:'FRACO', wr:50, pf:2.3, r:1.33, dd:1, trades:2},
+  {sym:'HBARUSDT', grade:'FRACO', wr:66.7, pf:1.4, r:0.40, dd:1, trades:3},
+  {sym:'MYXUSDT',  grade:'FRACO', wr:33.3, pf:2.3, r:2.58, dd:2, trades:3},
+  {sym:'INJUSDT',  grade:'FRACO', wr:50, pf:1.0, r:0.00, dd:1, trades:2},
+  {sym:'DASHUSDT', grade:'FRACO', wr:50, pf:1.0, r:0.00, dd:1, trades:2},
+  {sym:'ZROUSDT',  grade:'FRACO', wr:50, pf:1.0, r:0.00, dd:1, trades:2},
+  {sym:'ASTERUSDT',grade:'FRACO', wr:33.3, pf:1.3, r:0.58, dd:2, trades:3},
+  {sym:'CAKEUSDT', grade:'FRACO', wr:33.3, pf:1.3, r:0.58, dd:2, trades:3},
+  {sym:'HYPEUSDT', grade:'FRACO', wr:25, pf:0.9, r:-0.42, dd:3, trades:4},
+  {sym:'XRPUSDT',  grade:'FRACO', wr:33.3, pf:0.5, r:-1.00, dd:2, trades:3},
+  {sym:'NEARUSDT', grade:'FRACO', wr:33.3, pf:0.5, r:-1.00, dd:2, trades:3},
+  {sym:'ATOMUSDT', grade:'FRACO', wr:33.3, pf:0.5, r:-1.00, dd:2, trades:3},
+];
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  const saved = localStorage.getItem('gauss_calc_state');
+  if (saved) {
+    try {
+      const p = JSON.parse(saved);
+      S.capital  = p.capital  || 180;
+      S.riskPct  = p.riskPct  || 3;
+      S.history  = p.history  || [];
+      S.dir      = p.dir      || 'LONG';
+      S.grade    = p.grade    || 'S';
+      const sym = p.sym || 'SOLUSDT';
+      document.getElementById('inp-sym').value = sym;
+    } catch(e){}
+  }
+  document.getElementById('cap-slider').value = S.capital;
+  document.getElementById('cap-input').value  = S.capital;
+  setRisk(S.riskPct, true);
+  setDir(S.dir);
+  setGrade(S.grade);
+  updateCapDisplay();
+  renderRanking();
+  renderHistory();
+}
+
+function save() {
+  const sym = document.getElementById('inp-sym').value;
+  localStorage.setItem('gauss_calc_state', JSON.stringify({...S, sym}));
+}
+
+// ── CAPITAL ──────────────────────────────────────────────────────────────────
+document.getElementById('cap-slider').addEventListener('input', function(){
+  S.capital = +this.value;
+  document.getElementById('cap-input').value = S.capital;
+  updateCapDisplay(); recalc(); save();
+});
+document.getElementById('cap-input').addEventListener('input', function(){
+  const v = Math.max(1, Math.min(9999, +this.value || 180));
+  S.capital = v;
+  document.getElementById('cap-slider').value = Math.min(1000, v);
+  updateCapDisplay(); recalc(); save();
+});
+
+function updateCapDisplay() {
+  document.getElementById('cap-display').textContent = '$' + S.capital;
+  const risk = S.capital * S.riskPct / 100;
+  document.getElementById('risk-usd').textContent = '$' + risk.toFixed(2);
+  // Max profit Grade S, 2-exit: 0.6*2.5R + 0.4*8.0R = 4.7R
+  const maxP = risk * 4.7;
+  document.getElementById('max-profit-cap').textContent = '+$' + maxP.toFixed(2);
+}
+
+function setRisk(pct, silent) {
+  S.riskPct = pct;
+  document.querySelectorAll('.rpb').forEach(b => b.classList.remove('active'));
+  const vals = [1,2,3,5];
+  document.querySelectorAll('.rpb').forEach((b,i) => {
+    if (vals[i] === pct) b.classList.add('active');
+  });
+  updateCapDisplay();
+  if (!silent) { recalc(); save(); }
+}
+
+// ── DIRECTION & GRADE ────────────────────────────────────────────────────────
+function setDir(d) {
+  S.dir = d;
+  document.getElementById('btn-long').classList.toggle('active', d === 'LONG');
+  document.getElementById('btn-short').classList.toggle('active', d === 'SHORT');
+  recalc(); save();
+}
+function setGrade(g) {
+  S.grade = g;
+  ['S','A','B'].forEach(x => {
+    const btn = document.getElementById('btn-' + x.toLowerCase());
+    btn.classList.remove('active-s','active-a','active-b');
+  });
+  document.getElementById('btn-' + g.toLowerCase()).classList.add('active-' + g.toLowerCase());
+  recalc(); save();
+}
+
+// ── CORE CALC ────────────────────────────────────────────────────────────────
+function fmt(v, decs) {
+  if (v >= 1000) return v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (v >= 1)    return v.toFixed(decs ?? 3);
+  if (v >= 0.01) return v.toFixed(4);
+  if (v >= 0.0001) return v.toFixed(5);
+  return v.toFixed(7);
+}
+function fmtUsd(v) { return '$' + Math.abs(v).toFixed(2); }
+function fmtR(r) { return (r >= 0 ? '+' : '') + r.toFixed(2) + 'R'; }
+
+function calcPosition(entry, atrVal, dir, grade, capital, riskPct) {
+  const risk_usd  = capital * riskPct / 100;
+  const stop_dist = 1.2 * atrVal;
+  const contracts = risk_usd / stop_dist;
+  const pos_value = contracts * entry;
+  const pos_5x    = pos_value / 5;
+  const is_long   = dir === 'LONG';
+
+  // 2-exit targets by grade
+  const targets = {S:{r1:2.5,rf:8.0}, A:{r1:2.0,rf:6.0}, B:{r1:2.0,rf:5.0}};
+  const {r1, rf} = targets[grade];
+
+  const stop     = is_long ? entry - stop_dist : entry + stop_dist;
+  const tp1      = is_long ? entry + stop_dist * r1 : entry - stop_dist * r1;
+  const tp_final = is_long ? entry + stop_dist * rf  : entry - stop_dist * rf;
+
+  // Two exits: 60% partial at TP1, 40% total at Final
+  const pct1 = 0.60, pct2 = 0.40;
+  const profit_partial = pct1 * risk_usd * r1;
+  const profit_final   = pct2 * risk_usd * rf;
+  const max_profit     = profit_partial + profit_final;
+  const avg_r          = pct1 * r1 + pct2 * rf;
+  const stop_loss_usd  = risk_usd;
+
+  return {
+    risk_usd, stop_dist, contracts, pos_value, pos_5x,
+    stop, tp1, tp_final,
+    profit_partial, profit_final, max_profit, avg_r,
+    pct1, pct2, r1, rf,
+    stop_loss_usd, entry, dir, grade, capital,
+  };
+}
+
+function recalc() {
+  const entry = parseFloat(document.getElementById('inp-entry').value);
+  let atrVal  = parseFloat(document.getElementById('inp-atr').value);
+
+  if (!entry || entry <= 0) {
+    document.getElementById('calc-result').innerHTML =
+      '<div class="no-calc">Preencha o preço de entrada</div>';
+    return;
+  }
+  // Auto ATR: 1% do preço se não preenchido
+  if (!atrVal || atrVal <= 0) atrVal = entry * 0.01;
+
+  const c = calcPosition(entry, atrVal, S.dir, S.grade, S.capital, S.riskPct);
+  renderCalcResult(c);
+}
+
+function renderCalcResult(c) {
+  const isLong = c.dir === 'LONG';
+  const sym    = document.getElementById('inp-sym').value.toUpperCase().replace('USDT','');
+  const gradeColor = {S:'var(--gold)', A:'var(--orange)', B:'var(--blue)'}[c.grade];
+
+  const atrUsed = parseFloat(document.getElementById('inp-atr').value) || c.entry * 0.01;
+  const isAutoAtr = !parseFloat(document.getElementById('inp-atr').value);
+
+  document.getElementById('calc-result').innerHTML = `
+  <div class="result-card ${isLong ? 'long' : 'short'}">
+    <div class="rc-title" style="display:flex;justify-content:space-between">
+      <span>${isLong ? '▲ LONG' : '▼ SHORT'} ${sym}/USDT</span>
+      <span style="color:${gradeColor}">Grade ${c.grade}${isAutoAtr ? ' · ATR auto' : ''}</span>
+    </div>
+
+    <div class="rc-grid">
+      <div class="rc-item">
+        <span class="lbl">Entrada</span>
+        <span class="val">${fmt(c.entry)}</span>
+      </div>
+      <div class="rc-item">
+        <span class="lbl">Stop Loss</span>
+        <span class="val" style="color:var(--red)">${fmt(c.stop)}</span>
+      </div>
+      <div class="rc-item">
+        <span class="lbl">Risco (1.2 ATR)</span>
+        <span class="val" style="color:var(--orange)">${fmtUsd(c.risk_usd)}</span>
+      </div>
+      <div class="rc-item">
+        <span class="lbl">Tamanho posição</span>
+        <span class="val">${c.contracts.toFixed(4)} ${sym}</span>
+      </div>
+      <div class="rc-item">
+        <span class="lbl">Valor total</span>
+        <span class="val">${fmtUsd(c.pos_value)}</span>
+      </div>
+      <div class="rc-item">
+        <span class="lbl">Collateral 5x</span>
+        <span class="val" style="color:var(--blue)">${fmtUsd(c.pos_5x)}</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- SAÍDA 1 — PARCIAL -->
+    <div class="exit-row">
+      <div class="exit-label">
+        <span class="exit-badge" style="background:#26a69a20;color:var(--green);border:1px solid #26a69a50">
+          🎯 PARCIAL ${Math.round(c.pct1*100)}%
+        </span>
+        <span class="exit-pct">+${c.r1}R</span>
+      </div>
+      <div class="exit-values">
+        <div class="exit-price" style="color:var(--green)">${fmt(c.tp1)}</div>
+        <div class="exit-profit">+${fmtUsd(c.profit_partial)}</div>
+      </div>
+    </div>
+
+    <!-- SAÍDA 2 — TOTAL -->
+    <div class="exit-row">
+      <div class="exit-label">
+        <span class="exit-badge" style="background:#ffd70020;color:var(--gold);border:1px solid #ffd70050">
+          🏆 TOTAL ${Math.round(c.pct2*100)}%
+        </span>
+        <span class="exit-pct">+${c.rf}R</span>
+      </div>
+      <div class="exit-values">
+        <div class="exit-price" style="color:var(--gold)">${fmt(c.tp_final)}</div>
+        <div class="exit-profit">+${fmtUsd(c.profit_final)}</div>
+      </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary-row">
+      <div>
+        <div class="slabel">R médio esperado</div>
+        <div style="font-size:12px;color:var(--muted)">${fmtUsd(c.stop_loss_usd)} risco</div>
+      </div>
+      <div style="text-align:right">
+        <div class="sval">+${fmtUsd(c.max_profit)}</div>
+        <div style="font-size:12px;color:var(--green)">Avg ${c.avg_r.toFixed(2)}R</div>
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="saveToHistory()">💾 Salvar no Histórico</button>
+  </div>`;
+}
+
+// ── SALVAR HISTÓRICO ──────────────────────────────────────────────────────────
+function saveToHistory() {
+  const entry = parseFloat(document.getElementById('inp-entry').value);
+  let atrVal  = parseFloat(document.getElementById('inp-atr').value);
+  if (!entry || entry <= 0) return;
+  if (!atrVal || atrVal <= 0) atrVal = entry * 0.01;
+
+  const c   = calcPosition(entry, atrVal, S.dir, S.grade, S.capital, S.riskPct);
+  const sym = document.getElementById('inp-sym').value.toUpperCase();
+  const now = new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+
+  S.history.unshift({
+    id: Date.now(), sym, dir: S.dir, grade: S.grade,
+    entry: c.entry, stop: c.stop, tp1: c.tp1, tp_final: c.tp_final,
+    risk_usd: c.risk_usd, pos_value: c.pos_value, contracts: c.contracts,
+    profit_partial: c.profit_partial, profit_final: c.profit_final,
+    max_profit: c.max_profit, avg_r: c.avg_r, capital: c.capital, r1: c.r1, rf: c.rf,
+    date: now,
+  });
+  if (S.history.length > 30) S.history = S.history.slice(0, 30);
+
+  save();
+  renderHistory();
+  showTab('hist');
+}
+
+function clearHistory() {
+  if (!confirm('Limpar todo o histórico?')) return;
+  S.history = [];
+  save();
+  renderHistory();
+}
+
+// ── RENDER HISTÓRICO ──────────────────────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('hist-list');
+  if (!S.history.length) {
+    el.innerHTML = '<div class="hist-empty">Sem histórico ainda.<br>Calcule um sinal e clique em Salvar.</div>';
+    return;
+  }
+
+  const totalR   = S.history.reduce((a,t) => a + t.avg_r, 0);
+  const totalUsd = S.history.reduce((a,t) => a + t.max_profit, 0);
+
+  el.innerHTML = `
+    <div style="background:#26a69a15;border:1px solid #26a69a30;border-radius:6px;
+      padding:10px 12px;margin-bottom:12px;display:flex;justify-content:space-between">
+      <div><div style="font-size:10px;color:var(--muted)">TOTAL CALCULADO</div>
+        <div style="font-size:16px;font-weight:800;color:var(--green)">+$${totalUsd.toFixed(2)}</div></div>
+      <div style="text-align:right"><div style="font-size:10px;color:var(--muted)">${S.history.length} TRADES · AVG R</div>
+        <div style="font-size:16px;font-weight:800;color:var(--green)">${(totalR/S.history.length).toFixed(2)}R</div></div>
+    </div>
+  ` + S.history.map(t => {
+    const isLong = t.dir === 'LONG';
+    const baseSym = t.sym.replace('USDT','');
+    return `
+    <div class="hist-card">
+      <div class="hist-top">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="hist-sym">${baseSym}/USDT</span>
+          <span class="hist-dir ${isLong ? 'hd-long' : 'hd-short'}">${t.dir}</span>
+          <span style="font-size:11px;color:${t.grade==='S'?'var(--gold)':t.grade==='A'?'var(--orange)':'var(--blue)'}">Grade ${t.grade}</span>
+        </div>
+        <span class="hist-date">${t.date}</span>
+      </div>
+      <div class="hist-stats">
+        <div class="hist-stat">Entrada <span>${fmt(t.entry)}</span></div>
+        <div class="hist-stat">Stop <span style="color:var(--red)">${fmt(t.stop)}</span></div>
+        <div class="hist-stat">Parcial <span style="color:var(--green)">${fmt(t.tp1)}</span></div>
+        <div class="hist-stat">Total <span style="color:var(--gold)">${fmt(t.tp_final)}</span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--muted)">💰 Risco <span style="color:var(--orange)">${fmtUsd(t.risk_usd)}</span>
+          · Posição <span style="color:var(--text)">${fmtUsd(t.pos_value)}</span></div>
+        <div style="font-size:13px;font-weight:800;color:var(--green)">+${fmtUsd(t.max_profit)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER RANKING ────────────────────────────────────────────────────────────
+function renderRanking() {
+  const el = document.getElementById('ranking-list');
+  const gradeTag = {
+    'BOM':       '<span class="grade-tag gt-bom">✅ BOM</span>',
+    'ACEITÁVEL': '<span class="grade-tag gt-aceit">🔵 ACEITÁVEL</span>',
+    'FRACO':     '<span class="grade-tag gt-fraco">⚠️ FRACO</span>',
+  };
+  el.innerHTML = RANKING.map((r, i) => {
+    const rColor = r.r >= 0 ? 'var(--green)' : 'var(--red)';
+    const wrColor = r.wr >= 60 ? 'var(--green)' : r.wr >= 45 ? 'var(--orange)' : 'var(--red)';
+    const baseSym = r.sym.replace('USDT','');
+    return `
+    <div class="rank-card" onclick="selectRanking('${r.sym}')">
+      <span class="rank-num">#${i+1}</span>
+      <div class="rc-top">
+        <span class="sym">${baseSym}/USDT</span>
+        ${gradeTag[r.grade] || ''}
+      </div>
+      <div class="rc-stats">
+        <div class="rank-stat"><span class="ls">WR</span><span class="lv" style="color:${wrColor}">${r.wr}%</span></div>
+        <div class="rank-stat"><span class="ls">R Total</span><span class="lv" style="color:${rColor}">${r.r >= 0 ? '+' : ''}${r.r}R</span></div>
+        <div class="rank-stat"><span class="ls">PF</span><span class="lv">${r.pf}</span></div>
+        <div class="rank-stat"><span class="ls">DD máx</span><span class="lv" style="color:var(--red)">${r.dd}R</span></div>
+        <div class="rank-stat"><span class="ls">Trades</span><span class="lv">${r.trades}</span></div>
+      </div>
+      <div class="calc-cta">→ Calcular posição</div>
+    </div>`;
+  }).join('');
+}
+
+function selectRanking(sym) {
+  document.getElementById('inp-sym').value = sym;
+  showTab('calc');
+  document.getElementById('inp-entry').focus();
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  ['calc','ranking','hist'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['calc','ranking','hist'][i] === name);
+  });
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
