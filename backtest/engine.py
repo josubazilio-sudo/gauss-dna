@@ -526,6 +526,7 @@ def backtest_symbol(symbol, candles, cooldown_bars=12):
 
         trades.append({
             "symbol":   symbol,
+            "ts":       candles[i]["t"] // 1000,
             "datetime": ts,
             "sig":      signal["sig"],
             "source":   signal["sig_source"],

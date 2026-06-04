@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GAUSS+DNA Backtest</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#131722;color:#d1d4dc;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── HEADER ── */
+header{background:#1e222d;border-bottom:1px solid #2a2e39;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+header h1{font-size:15px;font-weight:700;color:#fff;letter-spacing:.5px;margin-right:8px}
+header h1 span{color:#26a69a}
+select,button{background:#2a2e39;color:#d1d4dc;border:1px solid #3d4250;border-radius:4px;padding:5px 10px;font-size:12px;cursor:pointer;outline:none}
+select:hover,button:hover{border-color:#5d6470}
+select:focus{border-color:#26a69a}
+button#run-btn{background:#26a69a;color:#fff;border-color:#26a69a;font-weight:600;padding:5px 16px;transition:background .2s}
+button#run-btn:hover{background:#2bbbad}
+button#run-btn:disabled{background:#2a2e39;color:#666;border-color:#3d4250;cursor:not-allowed}
+label{color:#848994;font-size:11px}
+.ema-toggles{display:flex;gap:8px;margin-left:auto}
+.ema-toggle{display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 8px;border-radius:3px;border:1px solid transparent;transition:border-color .15s}
+.ema-toggle:hover{border-color:#3d4250}
+.ema-toggle input{display:none}
+.ema-dot{width:10px;height:3px;border-radius:2px}
+.ema-toggle.off{opacity:.35}
+
+/* ── CHART ── */
+#chart-wrap{flex:1;min-height:0;position:relative}
+#chart{width:100%;height:100%}
+#loading{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(19,23,34,.85);z-index:10;font-size:14px;color:#848994;gap:10px}
+#loading.show{display:flex}
+.spinner{width:20px;height:20px;border:2px solid #2a2e39;border-top-color:#26a69a;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── STATS BAR ── */
+#stats-bar{background:#1e222d;border-top:1px solid #2a2e39;border-bottom:1px solid #2a2e39;padding:8px 16px;display:flex;gap:24px;flex-shrink:0;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat-label{color:#848994;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.stat-value{font-size:16px;font-weight:700}
+.green{color:#26a69a} .red{color:#ef5350} .orange{color:#ff9800} .white{color:#fff}
+.grade-badges{display:flex;gap:6px;align-items:center}
+.badge{padding:2px 7px;border-radius:3px;font-size:11px;font-weight:600}
+.badge-s{background:#ffd70020;color:#ffd700;border:1px solid #ffd70050}
+.badge-a{background:#ff980020;color:#ff9800;border:1px solid #ff980050}
+.badge-b{background:#2196f320;color:#2196f3;border:1px solid #2196f350}
+.source-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.src-tag{padding:1px 6px;border-radius:3px;font-size:10px;background:#2a2e39;color:#848994}
+
+/* ── TABLE ── */
+#table-wrap{overflow-y:auto;flex-shrink:0;max-height:220px;border-top:1px solid #2a2e39}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead{position:sticky;top:0;background:#1e222d;z-index:1}
+th{padding:6px 10px;text-align:left;color:#848994;font-weight:600;border-bottom:1px solid #2a2e39;white-space:nowrap}
+td{padding:5px 10px;border-bottom:1px solid #1e222d;white-space:nowrap}
+tr:hover td{background:#1e222d}
+.dir-long{color:#26a69a;font-weight:700} .dir-short{color:#ef5350;font-weight:700}
+.r-pos{color:#26a69a;font-weight:600} .r-neg{color:#ef5350;font-weight:600} .r-neutral{color:#ff9800;font-weight:600}
+.outcome-badge{padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600}
+.oc-full{background:#26a69a20;color:#26a69a;border:1px solid #26a69a40}
+.oc-stop{background:#ef535020;color:#ef5350;border:1px solid #ef535040}
+.oc-timeout{background:#ff980020;color:#ff9800;border:1px solid #ff980040}
+.oc-partial{background:#2196f320;color:#2196f3;border:1px solid #2196f340}
+.grade-s{color:#ffd700;font-weight:700} .grade-a{color:#ff9800;font-weight:700} .grade-b{color:#2196f3;font-weight:700}
+#empty-state{text-align:center;padding:40px;color:#848994;display:none}
+#empty-state.show{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GAUSS<span>+DNA</span> Backtest</h1>
+  <div style="display:flex;align-items:center;gap:6px">
+    <label>Par</label>
+    <select id="sym-select" style="min-width:120px">
+      <option value="SOLUSDT">SOLUSDT</option>
+    </select>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <label>Período</label>
+    <select id="months-select">
+      <option value="1">1 mês</option>
+      <option value="3">3 meses</option>
+      <option value="6" selected>6 meses</option>
+      <option value="12">12 meses</option>
+    </select>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <label>TF</label>
+    <select id="interval-select">
+      <option value="1h" selected>1H</option>
+      <option value="4h">4H</option>
+      <option value="15m">15m</option>
+    </select>
+  </div>
+  <button id="run-btn" onclick="runBacktest()">▶ Rodar Backtest</button>
+
+  <div class="ema-toggles">
+    <label class="ema-toggle" id="tog10" onclick="toggleEma('ema10')">
+      <span class="ema-dot" style="background:#7b61ff"></span><span>EMA10</span>
+    </label>
+    <label class="ema-toggle" id="tog21" onclick="toggleEma('ema21')">
+      <span class="ema-dot" style="background:#ff9800"></span><span>EMA21</span>
+    </label>
+    <label class="ema-toggle" id="tog50" onclick="toggleEma('ema50')">
+      <span class="ema-dot" style="background:#2196f3"></span><span>EMA50</span>
+    </label>
+    <label class="ema-toggle" id="tog200" onclick="toggleEma('ema200')">
+      <span class="ema-dot" style="background:#9c27b0"></span><span>EMA200</span>
+    </label>
+  </div>
+</header>
+
+<div id="chart-wrap">
+  <div id="chart"></div>
+  <div id="loading"><div class="spinner"></div><span id="loading-text">Carregando dados...</span></div>
+</div>
+
+<div id="stats-bar">
+  <div class="stat"><span class="stat-label">Trades</span><span class="stat-value white" id="st-total">—</span></div>
+  <div class="stat"><span class="stat-label">Win Rate</span><span class="stat-value" id="st-wr">—</span></div>
+  <div class="stat"><span class="stat-label">R Médio</span><span class="stat-value" id="st-avgr">—</span></div>
+  <div class="stat"><span class="stat-label">R Total</span><span class="stat-value" id="st-totalr">—</span></div>
+  <div class="stat" style="flex-direction:row;align-items:center;gap:12px">
+    <div><span class="stat-label" style="display:block">Por Grade</span><div class="grade-badges" id="st-grades"></div></div>
+  </div>
+  <div class="stat" style="flex-direction:row;align-items:center;gap:12px">
+    <div><span class="stat-label" style="display:block">Por Tipo</span><div class="source-tags" id="st-sources"></div></div>
+  </div>
+</div>
+
+<div id="table-wrap">
+  <div id="empty-state" class="show">Selecione um par e clique em <b>Rodar Backtest</b></div>
+  <table id="trade-table" style="display:none">
+    <thead>
+      <tr>
+        <th>#</th><th>Data/Hora</th><th>Dir</th><th>Tipo</th><th>Grade</th>
+        <th>Score</th><th>RSI</th><th>ADX</th><th>Trend</th>
+        <th>R resultado</th><th>TP1</th><th>TP2</th><th>Final</th><th>Stop</th><th>Resultado</th>
+      </tr>
+    </thead>
+    <tbody id="trade-body"></tbody>
+  </table>
+</div>
+
+<script>
+// ── Chart globals ──────────────────────────────────────────────────────────
+let chart, candleSeries;
+const emaLines = {};
+const emaVis   = {ema10:true, ema21:true, ema50:true, ema200:true};
+const emaCfg   = {
+  ema10:  {color:'#7b61ff', lineWidth:1},
+  ema21:  {color:'#ff9800', lineWidth:1},
+  ema50:  {color:'#2196f3', lineWidth:1},
+  ema200: {color:'#9c27b0', lineWidth:2},
+};
+
+function initChart() {
+  const wrap = document.getElementById('chart-wrap');
+  chart = LightweightCharts.createChart(document.getElementById('chart'), {
+    width:  wrap.clientWidth,
+    height: wrap.clientHeight,
+    layout: { background:{color:'#131722'}, textColor:'#d1d4dc' },
+    grid:   { vertLines:{color:'#2a2e3940'}, horzLines:{color:'#2a2e3940'} },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor:'#2a2e39' },
+    timeScale: { borderColor:'#2a2e39', timeVisible:true, secondsVisible:false },
+  });
+
+  candleSeries = chart.addCandlestickSeries({
+    upColor:'#26a69a', downColor:'#ef5350',
+    borderVisible:false, wickUpColor:'#26a69a', wickDownColor:'#ef5350',
+  });
+
+  Object.entries(emaCfg).forEach(([key, cfg]) => {
+    emaLines[key] = chart.addLineSeries({...cfg, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false});
+  });
+
+  window.addEventListener('resize', () => {
+    chart.resize(wrap.clientWidth, wrap.clientHeight);
+  });
+}
+
+function toggleEma(key) {
+  emaVis[key] = !emaVis[key];
+  const tog = document.getElementById('tog' + key.replace('ema',''));
+  tog.classList.toggle('off', !emaVis[key]);
+  if (emaLines[key]) emaLines[key].applyOptions({visible: emaVis[key]});
+}
+
+// ── Load symbols ──────────────────────────────────────────────────────────
+async function loadSymbols() {
+  try {
+    const r = await fetch('/api/symbols');
+    const d = await r.json();
+    const sel = document.getElementById('sym-select');
+    sel.innerHTML = d.symbols.map(s => `<option value="${s}">${s}</option>`).join('');
+  } catch(e) { console.warn('Symbols load failed:', e); }
+}
+
+// ── Run backtest ───────────────────────────────────────────────────────────
+async function runBacktest() {
+  const symbol   = document.getElementById('sym-select').value;
+  const months   = document.getElementById('months-select').value;
+  const interval = document.getElementById('interval-select').value;
+
+  const btn = document.getElementById('run-btn');
+  const loading = document.getElementById('loading');
+  btn.disabled = true;
+  loading.classList.add('show');
+  document.getElementById('loading-text').textContent = `Baixando ${symbol}...`;
+
+  try {
+    const resp = await fetch('/api/run', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({symbol, months:+months, interval}),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { alert('Erro: ' + (data.error || resp.statusText)); return; }
+
+    document.getElementById('loading-text').textContent = 'Renderizando...';
+    setTimeout(() => renderAll(data), 10);
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    loading.classList.remove('show');
+  }
+}
+
+function renderAll(data) {
+  // Chart
+  candleSeries.setData(data.candles);
+  candleSeries.setMarkers(data.markers);
+  Object.entries(data.indicators).forEach(([key, vals]) => {
+    if (emaLines[key]) emaLines[key].setData(vals);
+  });
+  chart.timeScale().fitContent();
+
+  // Stats
+  renderStats(data.stats);
+
+  // Table
+  renderTable(data.trades);
+}
+
+function renderStats(s) {
+  document.getElementById('st-total').textContent = s.total || '0';
+  const wr = s.win_rate || 0;
+  const wrEl = document.getElementById('st-wr');
+  wrEl.textContent = wr + '%';
+  wrEl.className = 'stat-value ' + (wr >= 55 ? 'green' : wr >= 45 ? 'orange' : 'red');
+
+  const ar = s.avg_r || 0;
+  const arEl = document.getElementById('st-avgr');
+  arEl.textContent = (ar >= 0 ? '+' : '') + ar + 'R';
+  arEl.className = 'stat-value ' + (ar > 0 ? 'green' : ar < 0 ? 'red' : 'orange');
+
+  const tr = s.total_r || 0;
+  const trEl = document.getElementById('st-totalr');
+  trEl.textContent = (tr >= 0 ? '+' : '') + tr + 'R';
+  trEl.className = 'stat-value ' + (tr > 0 ? 'green' : tr < 0 ? 'red' : 'orange');
+
+  // By grade badges
+  const grades = s.by_grade || {};
+  document.getElementById('st-grades').innerHTML = ['S','A','B'].map(g => {
+    const d = grades[g];
+    if (!d) return '';
+    const wr = Math.round(d.wins / d.total * 100);
+    return `<span class="badge badge-${g.toLowerCase()}" title="${d.total} trades | WR ${wr}%">${g}: ${d.total} (${wr}%) ${d.r >= 0 ? '+' : ''}${d.r}R</span>`;
+  }).join('');
+
+  // By source
+  const sources = s.by_source || {};
+  document.getElementById('st-sources').innerHTML = Object.entries(sources).map(([src, d]) => {
+    const wr = Math.round(d.wins / d.total * 100);
+    return `<span class="src-tag" title="${src}: ${d.total} trades | WR ${wr}% | ${d.r >= 0 ? '+' : ''}${d.r}R">${src} ${d.total}</span>`;
+  }).join('');
+}
+
+function outcomeClass(o) {
+  if (o === 'FULL_TP') return 'oc-full';
+  if (o && o.startsWith('STOP')) return 'oc-stop';
+  if (o && o.startsWith('TIMEOUT')) return 'oc-timeout';
+  return 'oc-partial';
+}
+function outcomeLabel(o) {
+  const map = {
+    'FULL_TP':'✅ FULL TP','STOP':'🛑 STOP',
+    'STOP_AFTER_TP1':'🛑 STOP>TP1','STOP_AFTER_TP2':'🛑 STOP>TP2',
+    'TIMEOUT':'⏱ TIMEOUT','TIMEOUT_AFTER_TP1':'⏱ T>TP1','TIMEOUT_AFTER_TP2':'⏱ T>TP2',
+  };
+  return map[o] || o;
+}
+
+function renderTable(trades) {
+  const empty = document.getElementById('empty-state');
+  const tbl   = document.getElementById('trade-table');
+  const tbody = document.getElementById('trade-body');
+
+  if (!trades || trades.length === 0) {
+    empty.textContent = 'Nenhum trade encontrado no período.';
+    empty.classList.add('show');
+    tbl.style.display = 'none';
+    return;
+  }
+
+  empty.classList.remove('show');
+  tbl.style.display = 'table';
+
+  tbody.innerHTML = [...trades].reverse().map((t, idx) => {
+    const r = t.r_result;
+    const rCls = r >= 1 ? 'r-pos' : r <= -0.5 ? 'r-neg' : 'r-neutral';
+    const rStr = (r >= 0 ? '+' : '') + r.toFixed(2) + 'R';
+    const num = trades.length - idx;
+    const gradeCls = `grade-${t.grade.toLowerCase()}`;
+    const dirCls   = t.sig === 'LONG' ? 'dir-long' : 'dir-short';
+    const tp1  = t.tp1_hit  ? '✅' : '—';
+    const tp2  = t.tp2_hit  ? '✅' : '—';
+    const fin  = t.final_hit? '✅' : '—';
+    const stp  = t.stop_hit ? '🛑' : '—';
+    return `<tr>
+      <td style="color:#848994">${num}</td>
+      <td>${t.datetime}</td>
+      <td class="${dirCls}">${t.sig}</td>
+      <td>${t.source}</td>
+      <td class="${gradeCls}">${t.grade}</td>
+      <td>${t.score}</td>
+      <td style="color:${t.rsi>65?'#ef5350':t.rsi<35?'#ff9800':'#d1d4dc'}">${t.rsi}</td>
+      <td style="color:${t.adx>30?'#26a69a':'#d1d4dc'}">${t.adx}</td>
+      <td style="color:${t.trend==='BULL'?'#26a69a':t.trend==='BEAR'?'#ef5350':'#848994'}">${t.trend}</td>
+      <td class="${rCls}" style="font-weight:700">${rStr}</td>
+      <td>${tp1}</td><td>${tp2}</td><td>${fin}</td><td>${stp}</td>
+      <td><span class="outcome-badge ${outcomeClass(t.outcome)}">${outcomeLabel(t.outcome)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+initChart();
+loadSymbols();
+</script>
+</body>
+</html>
