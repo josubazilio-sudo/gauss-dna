@@ -1,7 +1,7 @@
 {
   "name": "GAUSS Scanner",
   "short_name": "Scanner",
-  "description": "Scanner ao vivo: 100 moedas · Trendilo · OBV · Sinais LONG/SHORT GAUSS+DNA",
+  "description": "Scanner ao vivo: 155 moedas · Trendilo · OBV · Sinais LONG/SHORT GAUSS+DNA",
   "start_url": "/gauss-dna/scanner.html",
   "scope": "/gauss-dna/",
   "display": "standalone",
@@ -22,7 +22,7 @@
       "name": "Monitor",
       "short_name": "Monitor",
       "url": "/gauss-dna/scanner.html",
-      "description": "100 moedas ao vivo com Trendilo"
+      "description": "155 moedas ao vivo com Trendilo"
     },
     {
       "name": "GAUSS Sinais",

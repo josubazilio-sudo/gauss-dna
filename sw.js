@@ -1,10 +1,12 @@
-const CACHE = 'gauss-scanner-v2';
+const CACHE = 'gauss-scanner-v3';
 const ASSETS = [
   '/gauss-dna/scanner.html',
   '/gauss-dna/calculadora.html',
   '/gauss-dna/manifest.json',
+  '/gauss-dna/scanner-manifest.json',
   '/gauss-dna/icon-192.png',
   '/gauss-dna/icon-512.png',
+  '/gauss-dna/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', e => {
