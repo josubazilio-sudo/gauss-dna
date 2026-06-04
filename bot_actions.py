@@ -1059,15 +1059,29 @@ async def scan_best_coins(session, tf="15m", top_n=20):
     if not pairs:
         log.warning("Rastreador: sem dados, mantendo lista atual"); return None
 
-    scored=[]
-    for sym,base,vol_usd in pairs:
-        candles=await fetch_candles(session,sym,tf,limit=250)
-        if candles:
-            s=quick_rank(candles)
-            if s>0:
-                scored.append((sym,f"{base}/USDT",base,s,vol_usd))
-                log.info(f"  ✓ {base:8s} | Score {s:.0f} | Vol ${vol_usd/1e6:.0f}M")
-        await asyncio.sleep(0.1)
+    # Busca candles em lotes paralelos de 15
+    async def _fetch_pair(sym, base, vol_usd):
+        try:
+            candles = await fetch_candles(session, sym, tf, limit=250)
+            if candles:
+                s = quick_rank(candles)
+                if s > 0:
+                    return (sym, f"{base}/USDT", base, s, vol_usd)
+        except Exception:
+            pass
+        return None
+
+    scored = []
+    batch_size = 15
+    for i in range(0, len(pairs), batch_size):
+        batch = pairs[i:i+batch_size]
+        results = await asyncio.gather(*[_fetch_pair(sym, base, vol) for sym, base, vol in batch])
+        for r in results:
+            if r:
+                scored.append(r)
+                log.info(f"  ✓ {r[2]:8s} | Score {r[3]:.0f} | Vol ${r[4]/1e6:.0f}M")
+        if i + batch_size < len(pairs):
+            await asyncio.sleep(0.05)
 
     scored.sort(key=lambda x:x[3],reverse=True)
     top=[(s,l,b) for s,l,b,_,_ in scored[:top_n]]
@@ -1086,6 +1100,24 @@ def in_trading_hours():
     h = datetime.now(brt).hour
     return (9 <= h < 13) or (14 <= h < 21)
 
+async def _fetch_safe(session, sym, tf):
+    """Busca candles sem lançar exceção — retorna None em caso de falha."""
+    try:
+        return await fetch_candles(session, sym, tf)
+    except Exception:
+        return None
+
+async def _prefetch_batch(session, coins, tf, batch_size=15):
+    """Busca candles de todas as moedas em lotes paralelos. Retorna lista alinhada com coins."""
+    results = []
+    for i in range(0, len(coins), batch_size):
+        batch = coins[i:i+batch_size]
+        fetched = await asyncio.gather(*[_fetch_safe(session, sym, tf) for sym,_,_ in batch])
+        results.extend(fetched)
+        if i + batch_size < len(coins):
+            await asyncio.sleep(0.05)
+    return results
+
 async def run_cycle(session, last_sig, tf, coins):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     now=time.time(); sent=0
@@ -1093,24 +1125,23 @@ async def run_cycle(session, last_sig, tf, coins):
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
     MAX_SIGNALS_PER_CYCLE = 3  # máximo 3 sinais por ciclo
 
-    # Crypto opera 24/7 — sem filtro de horário
+    # Pré-busca paralela de candles (lotes de 15 simultâneos)
+    all_candles = await _prefetch_batch(session, coins, tf)
 
-
-    for sym,label,short in coins:
+    for (sym,label,short), candles in zip(coins, all_candles):
         if sent >= MAX_SIGNALS_PER_CYCLE:
             log.info(f"[{tf}] Limite de {MAX_SIGNALS_PER_CYCLE} sinais por ciclo atingido")
             break
-        candles=await fetch_candles(session,sym,tf)
-        if not candles: await asyncio.sleep(0.15); continue
+        if not candles: continue
         result=analyze(sym,candles)
-        if not result: await asyncio.sleep(0.15); continue
+        if not result: continue
         grade=result.get("signal_grade","B")
 
         # ATR% — excluir moedas muito voláteis para $180
         atr_pct=(result["atr"]/result["price"])*100 if result["price"] else 0
         if atr_pct > 4.0:
             log.info(f"[{tf}] {short:7s} | ATR {atr_pct:.1f}% > 4% — muito volátil, ignorando")
-            await asyncio.sleep(0.1); continue
+            continue
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
@@ -1118,7 +1149,7 @@ async def run_cycle(session, last_sig, tf, coins):
             if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 50):
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
-                await asyncio.sleep(0.1); continue
+                continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
                 last_sig[key]=now; sent+=1
@@ -1132,7 +1163,6 @@ async def run_cycle(session, last_sig, tf, coins):
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"cooldown"))
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
-        await asyncio.sleep(0.15)
 
     if sent == 0 and candidates:
         # Top LONG: maior score positivo

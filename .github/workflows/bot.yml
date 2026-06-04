@@ -72,7 +72,7 @@ jobs:
           CYCLE_INTERVAL: '900'
           SIGNAL_MODE: 'FLEX'
           DYNAMIC_SCAN: 'true'
-          SCANNER_TOP: '200'
+          SCANNER_TOP: '250'
           LOOP_MODE: ${{ github.event.inputs.test_mode == 'true' && 'false' || 'true' }}
           TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
           CAPITAL: '180'
