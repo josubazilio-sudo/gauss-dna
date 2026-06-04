@@ -20,6 +20,7 @@ TEST_MODE    = os.environ.get("TEST_MODE", "false").lower() == "true"
 DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
 SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top 50 por volume
 SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
+CYCLE_INTERVAL = int(os.environ.get("CYCLE_INTERVAL", "0"))  # intervalo máximo em segundos (0=aguarda vela)
 STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
 CAPITAL      = float(os.environ.get("CAPITAL", "200"))   # capital total em USD ($200 → $1000 com 5x)
@@ -1676,8 +1677,10 @@ async def main():
 
             if LOOP_MODE and cycle>1:   # ciclo 1 roda imediatamente
                 wait=seconds_to_candle_close(tf_min_base)
+                if CYCLE_INTERVAL > 0:
+                    wait=min(wait, CYCLE_INTERVAL)
                 if wait>3:
-                    log.info(f"⏳ Próxima vela [{TIMEFRAMES[0]}] em {wait:.0f}s ({wait/60:.1f}min)...")
+                    log.info(f"⏳ Próximo ciclo em {wait:.0f}s ({wait/60:.1f}min)...")
                     await asyncio.sleep(wait+2)
 
             # Rescan periódico (a cada SCAN_EVERY ciclos)
