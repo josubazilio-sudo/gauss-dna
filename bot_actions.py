@@ -1190,11 +1190,6 @@ async def run_cycle(session, last_sig, tf, coins):
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
     MAX_SIGNALS_PER_CYCLE = 3  # máximo 3 sinais por ciclo
 
-    # ── Circuit Breaker: limite diário de sinais ──────────────────────────────
-    DAILY_LIMIT = 8
-    today_key = f"daily_{datetime.utcnow().strftime('%Y-%m-%d')}"
-    daily_count = last_sig.get(today_key, 0)
-
     # Pré-busca paralela de candles (lotes de 15 simultâneos)
     all_candles = await _prefetch_batch(session, coins, tf)
 
@@ -1222,13 +1217,7 @@ async def run_cycle(session, last_sig, tf, coins):
                 continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
-                # ── Circuit Breaker check ────────────────────────────────────
-                if daily_count >= DAILY_LIMIT:
-                    log.warning(f"  🚫 Circuit Breaker: limite diário de {DAILY_LIMIT} sinais atingido — ignorando {short}")
-                    candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"circuit-breaker"))
-                    continue
                 last_sig[key]=now; sent+=1
-                daily_count+=1; last_sig[today_key]=daily_count
                 await send_telegram(session,sym,label,short,result["sig"],result["price"],
                                     result["atr"],result["score"],result["rsi"],result["adx"],
                                     result["trend"],result["kalman_up"],
