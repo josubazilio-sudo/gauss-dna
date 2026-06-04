@@ -19,22 +19,16 @@
   ],
   "shortcuts": [
     {
+      "name": "Journal",
+      "short_name": "Journal",
+      "url": "/gauss-dna/calculadora.html",
+      "description": "Calculadora e diário de trades GAUSS+DNA"
+    },
+    {
       "name": "Scanner",
       "short_name": "Scanner",
       "url": "/gauss-dna/scanner.html",
       "description": "Monitor 100 moedas ao vivo"
-    },
-    {
-      "name": "Radar",
-      "short_name": "Radar",
-      "url": "/gauss-dna/radar.html",
-      "description": "Top 20 moedas próximas de sinal"
-    },
-    {
-      "name": "Calculadora",
-      "short_name": "Calc",
-      "url": "/gauss-dna/risk.html",
-      "description": "Calculadora de risco"
     }
   ]
 }

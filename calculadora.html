@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 <title>GAUSS+DNA Journal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#26a69a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GAUSS+DNA">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -170,9 +177,24 @@ input[type=number]:focus,input[type=text]:focus{border-color:var(--green)}
 </head>
 <body>
 
+<!-- Banner iOS: só aparece no Safari iOS quando não está instalado -->
+<div id="ios-banner" style="display:none;background:#1e2d1e;border-bottom:1px solid #26a69a40;
+  padding:10px 14px;font-size:12px;color:#d1d4dc;line-height:1.6">
+  📲 <b>Instalar no iPhone:</b> toque em <b>⎙ Compartilhar</b> → <b>"Adicionar à Tela Inicial"</b>
+  <button onclick="document.getElementById('ios-banner').style.display='none'"
+    style="float:right;background:none;border:none;color:#848994;font-size:16px;cursor:pointer;margin-top:-2px">✕</button>
+</div>
+
 <header>
   <h1>GAUSS<span>+DNA</span> Journal</h1>
-  <span class="hbadge">FLEX · 2 Saídas</span>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="hbadge">FLEX · 2 Saídas</span>
+    <button id="install-btn" onclick="installApp()" style="display:none;
+      background:#26a69a;color:#fff;border:none;border-radius:5px;
+      padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer">
+      📲 Instalar
+    </button>
+  </div>
 </header>
 
 <!-- CAPITAL BAR -->
@@ -753,6 +775,44 @@ function showTab(name) {
 }
 
 init();
+
+// ── PWA ───────────────────────────────────────────────────────────────────────
+let _deferredPrompt = null;
+
+// Captura o evento de instalação (Android/Chrome)
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredPrompt = e;
+  document.getElementById('install-btn').style.display = 'block';
+});
+
+async function installApp() {
+  if (!_deferredPrompt) return;
+  _deferredPrompt.prompt();
+  const { outcome } = await _deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('install-btn').style.display = 'none';
+  }
+  _deferredPrompt = null;
+}
+
+// Esconde o botão se já estiver instalado
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-btn').style.display = 'none';
+});
+
+// iOS: mostra banner se for Safari no iPhone e não estiver em standalone
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone;
+if (isIos && !isStandalone) {
+  document.getElementById('ios-banner').style.display = 'block';
+}
+
+// Registra service worker para funcionar offline
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
