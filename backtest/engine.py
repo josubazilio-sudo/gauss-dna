@@ -483,58 +483,108 @@ def simulate_trade(signal, future_candles, max_bars=72):
 # ── FETCH DADOS ───────────────────────────────────────────────────────────────
 
 async def _bybit_chunk(session, symbol, interval_by, end_ms):
-    """Busca 1 chunk de até 1000 velas do Bybit (mais recente primeiro)."""
+    """Busca 1 chunk do Bybit com logging detalhado."""
     url = f"{BYBIT_BASE}/v5/market/kline"
     params = {"category": "spot", "symbol": symbol,
               "interval": interval_by, "limit": 1000, "end": end_ms}
-    async with session.get(url, params=params,
-                           timeout=aiohttp.ClientTimeout(total=20)) as r:
-        if r.status != 200: return []
-        data = await r.json()
-        if data.get("retCode") != 0: return []
-        return [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]),
-                 "l": float(k[3]), "c": float(k[4]), "v": float(k[5])}
-                for k in data["result"]["list"]]
+    try:
+        async with session.get(url, params=params,
+                               timeout=aiohttp.ClientTimeout(total=20),
+                               headers={"User-Agent": "Mozilla/5.0"}) as r:
+            if r.status != 200:
+                print(f"  Bybit HTTP {r.status}")
+                return []
+            data = await r.json()
+            rc = data.get("retCode", -1)
+            if rc != 0:
+                print(f"  Bybit retCode={rc} msg='{data.get('retMsg', '')}'")
+                return []
+            klines = data.get("result", {}).get("list", [])
+            if not klines:
+                print(f"  Bybit lista vazia para {symbol}")
+                return []
+            return [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]),
+                     "l": float(k[3]), "c": float(k[4]), "v": float(k[5])}
+                    for k in klines]
+    except asyncio.TimeoutError:
+        print(f"  Bybit timeout")
+        return []
+    except Exception as e:
+        print(f"  Bybit erro: {type(e).__name__}: {e}")
+        return []
+
+async def _cryptocompare_candles(session, symbol, interval="1h", months=6):
+    """CryptoCompare — acessível de GitHub Actions, sem restrições geo."""
+    if symbol.endswith("USDT"):
+        fsym, tsym = symbol[:-4], "USDT"
+    elif symbol.endswith("BTC"):
+        fsym, tsym = symbol[:-3], "BTC"
+    else:
+        return []
+    endpoint  = {"1d": "histoday", "4h": "histohour", "15m": "histominute"}.get(interval, "histohour")
+    aggregate = {"4h": 4, "15m": 15}.get(interval, 1)
+    limit     = min(months * 30 * 24 // aggregate, 2000)
+    url = f"https://min-api.cryptocompare.com/data/v2/{endpoint}"
+    params = {"fsym": fsym, "tsym": tsym, "limit": limit, "aggregate": aggregate}
+    try:
+        async with session.get(url, params=params,
+                               timeout=aiohttp.ClientTimeout(total=20)) as r:
+            if r.status != 200:
+                print(f"  CryptoCompare HTTP {r.status}")
+                return []
+            data = await r.json()
+            if data.get("Response") != "Success":
+                print(f"  CryptoCompare erro: {data.get('Message', '')}")
+                return []
+            raw = data["Data"]["Data"]
+            result = [{"t": int(c["time"]) * 1000, "o": c["open"], "h": c["high"],
+                       "l": c["low"], "c": c["close"], "v": c["volumefrom"]}
+                      for c in raw if c["open"] > 0]
+            if result:
+                print(f"  CryptoCompare OK: {len(result)} velas de {symbol}")
+            return result
+    except Exception as e:
+        print(f"  CryptoCompare erro: {type(e).__name__}: {e}")
+        return []
 
 async def fetch_candles(session, symbol, interval="1h", months=6):
-    """
-    Busca velas via Bybit (primário, funciona no GitHub Actions)
-    com fallback para Binance.
-    """
+    """Busca velas: Bybit → CryptoCompare → Binance."""
     mins_per_candle = INTERVAL_MINUTES.get(interval, 60)
     target = months * 30 * 24 * 60 // mins_per_candle
     interval_by = BYBIT_INTERVAL.get(interval, "60")
 
-    # ── Bybit com paginação ──────────────────────────────────────────────────
-    try:
-        all_candles = []
-        end_ms = int(_time.time() * 1000)
-        for _ in range(12):
-            chunk = await _bybit_chunk(session, symbol, interval_by, end_ms)
-            if not chunk:
-                break
-            # Bybit retorna do mais novo pro mais antigo — inverte
-            chunk.sort(key=lambda x: x["t"])
-            all_candles = chunk + all_candles
-            if len(all_candles) >= target:
-                break
-            end_ms = chunk[0]["t"] - 1
-            if len(chunk) < 1000:
-                break
+    # ── 1. Bybit ─────────────────────────────────────────────────────────────
+    all_candles = []
+    end_ms = int(_time.time() * 1000)
+    for _ in range(12):
+        chunk = await _bybit_chunk(session, symbol, interval_by, end_ms)
+        if not chunk:
+            break
+        chunk.sort(key=lambda x: x["t"])
+        all_candles = chunk + all_candles
+        if len(all_candles) >= target:
+            break
+        end_ms = chunk[0]["t"] - 1
+        if len(chunk) < 1000:
+            break
 
-        if all_candles:
-            # deduplica e ordena
-            seen, unique = set(), []
-            for c in sorted(all_candles, key=lambda x: x["t"]):
-                if c["t"] not in seen:
-                    seen.add(c["t"])
-                    unique.append(c)
-            print(f"  Bybit OK: {len(unique)} velas de {symbol}")
-            return unique[-target:] if len(unique) > target else unique
-    except Exception as e:
-        print(f"  Bybit falhou ({e}), tentando Binance...")
+    if all_candles:
+        seen, unique = set(), []
+        for c in sorted(all_candles, key=lambda x: x["t"]):
+            if c["t"] not in seen:
+                seen.add(c["t"])
+                unique.append(c)
+        print(f"  Bybit OK: {len(unique)} velas de {symbol}")
+        return unique[-target:] if len(unique) > target else unique
 
-    # ── Binance fallback ─────────────────────────────────────────────────────
+    # ── 2. CryptoCompare ─────────────────────────────────────────────────────
+    print(f"  Bybit sem dados, tentando CryptoCompare...")
+    candles = await _cryptocompare_candles(session, symbol, interval, months)
+    if candles:
+        return candles
+
+    # ── 3. Binance ───────────────────────────────────────────────────────────
+    print(f"  CryptoCompare sem dados, tentando Binance...")
     try:
         limit = min(target, 1000)
         url = f"{BINANCE_BASE}/api/v3/klines"
