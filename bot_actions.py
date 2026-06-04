@@ -432,16 +432,29 @@ def analyze(sym, candles):
     adx_long_ok=adx>22 and pdi>mdi and adx>adx_p
     adx_short_ok=adx>22 and mdi>pdi and adx>adx_p
 
-    # Volume (v_strong2: 2 velas consecutivas com bom volume = confirmação mais sólida)
+    # Volume — RVOL 4 tiers institucionais (1.2/1.5/2.0/3.0)
     vol_ma=sum(vols[-20:])/20
-    v_strong=vols[-1]>vol_ma*1.1
-    v_strong2=v_strong and vols[-2]>vol_ma*0.9
+    rvol       = vols[-1] / max(vol_ma, 1e-10)
+    rvol_tier  = (4 if rvol >= 3.0 else 3 if rvol >= 2.0 else
+                  2 if rvol >= 1.5 else 1 if rvol >= 1.2 else 0)
+    rvol_label = ("INST" if rvol_tier==4 else "VSTRONG" if rvol_tier==3 else
+                  "STRONG" if rvol_tier==2 else "GOOD" if rvol_tier==1 else "LOW")
+    v_good   = rvol_tier >= 1   # 1.2x+
+    v_strong = rvol_tier >= 2   # 1.5x+  (Strong)
+    v_inst   = rvol_tier >= 4   # 3.0x+  (institucional)
+    v_strong2= v_strong and vols[-2] > vol_ma * 0.9
 
     # Flow
     flow_raw=[((c["c"]-c["o"])/max(c["h"]-c["l"],1e-10))*c["v"] for c in candles]
     flow_ema=ema_series(flow_raw,13); flow=flow_ema[-1]
     flow_sma=sum(abs(f) for f in flow_ema[-20:])/20
     f_bull=flow>0; f_bear=flow<0; f_strong=abs(flow)>flow_sma*1.2
+    # Pressão compradora/vendedora + DNA Flow Institucional (MACD + pressão + v_good)
+    mid_body      = (highs[-1] + lows[-1]) / 2
+    bull_press    = price > mid_body
+    bear_press    = price < mid_body
+    dna_flow_bull = macd_bull and bull_press and v_good
+    dna_flow_bear = macd_bear and bear_press and v_good
 
     # Bollinger Bands
     bb_upper,bb_lower,bb_basis,bb_bw,bb_bw_prev=bb_calc(closes)
@@ -511,6 +524,15 @@ def analyze(sym, candles):
     bear_impulse=price<lows[-2] and price<opens[-1] and (opens[-1]-price)>atr*0.2
     liq_long=lows[-1]<lows[-2] and price>lows[-2] and price>opens[-1]
     liq_short=highs[-1]>highs[-2] and price<highs[-2] and price<opens[-1]
+    # Smart Money — varredura de liquidez institucional (Pine Script: sweep de 20 velas)
+    sm_swing_h = max(highs[-21:-1])
+    sm_swing_l = min(lows[-21:-1])
+    liq_top    = (highs[-2] >= sm_swing_h and closes[-2] < sm_swing_h and
+                  (highs[-2] - closes[-2]) > atr * 0.3)
+    liq_bot    = (lows[-2] <= sm_swing_l and closes[-2] > sm_swing_l and
+                  (closes[-2] - lows[-2]) > atr * 0.3)
+    sm_bull    = liq_bot and ha_bull and (dna_flow_bull or f_bull)
+    sm_bear    = liq_top and ha_bear and (dna_flow_bear or f_bear)
 
     crange=highs[-1]-lows[-1]
     lwick=min(opens[-1],price)-lows[-1]
@@ -573,6 +595,24 @@ def analyze(sym, candles):
         (10 if trendilo_long else -10 if trendilo_short else 0)
     )
     score=max(-145,min(145,score))
+    # Score institucional 0–100 por direção (espelha Pine Script DNA FLOW ELITE)
+    def _isc(htf_ok, adx_ok_d, flow_d, ha_d, trl_d, rsi_d, v_s, div_d, sm_d):
+        return max(0, min(100,
+            (20 if htf_ok else 0) + (15 if adx_ok_d else 0) + (15 if flow_d else 0) +
+            (10 if ha_d else 0) + (10 if trl_d else 0) + (10 if rsi_d else 0) +
+            (10 if v_s else 0) + (5 if div_d else 0) + (5 if sm_d else 0)
+        ))
+    inst_score_long  = _isc(trend_bull, adx_long_ok,
+                            dna_flow_bull or (f_bull and bull_press),
+                            ha_bull, trendilo_long, rsi_rising,
+                            v_strong, rsi_div_bull, sm_bull)
+    inst_score_short = _isc(trend_bear, adx_short_ok,
+                            dna_flow_bear or (f_bear and bear_press),
+                            ha_bear, trendilo_short, rsi_falling,
+                            v_strong, rsi_div_bear, sm_bear)
+    def inst_class(s): return "ELITE" if s>=85 else "FORTE" if s>=70 else "MÉDIO" if s>=55 else "FRACO"
+    inst_cls_long  = inst_class(inst_score_long)
+    inst_cls_short = inst_class(inst_score_short)
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
     rsi_not_top    = rsi < 65   # LONG: não entrar sobrecomprado
     rsi_not_bottom = rsi > 25   # SHORT: bloquear apenas fundo extremo (≤25)
@@ -691,21 +731,37 @@ def analyze(sym, candles):
                       flex_score < -20 and adx >= 14 and not sideways    and
                       not ext_below_ema21 and not vol_drying and rsi > 25)
 
+    # ── SMART MONEY REVERSAL (sweep institucional + confirmação) ─────────────────
+    long_sm  = (sm_bull and rsi > 25 and rsi < 65 and
+                price > e200 and inst_score_long >= 60)
+    short_sm = (sm_bear and rsi > 25 and rsi < 65 and
+                price < e200 and inst_score_short >= 60)
+
+    # ── DIV (divergência RSI + estrutura — preço diverge do momentum) ────────────
+    long_div  = (rsi_div_bull and ha_bull and v_good and rsi > 25 and
+                 price > e200 and not exhaustion_top)
+    short_div = (rsi_div_bear and ha_bear and v_good and rsi < 65 and
+                 price < e200 and not exhaustion_bot)
+
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
         if long_elite or early_long: sig="LONG"; sig_source="ELITE"
         elif short_elite or early_short: sig="SHORT"; sig_source="ELITE"
-    else:  # FLEX — pullback > cross > bb_break > surge > momentum > flex
+    else:  # FLEX — pullback > cross > bb_break > sm_sweep > surge > momentum > div > flex
         if long_pullback: sig="LONG"; sig_source="PULLBACK"
         elif short_pullback: sig="SHORT"; sig_source="PULLBACK"
         elif long_cross: sig="LONG"; sig_source=f"CROSS:{cross_label}"
         elif short_cross: sig="SHORT"; sig_source=f"CROSS:{cross_label}"
         elif long_bb_break: sig="LONG"; sig_source="BB_BREAK"
         elif short_bb_break: sig="SHORT"; sig_source="BB_BREAK"
+        elif long_sm: sig="LONG"; sig_source="SM_SWEEP"
+        elif short_sm: sig="SHORT"; sig_source="SM_SWEEP"
         elif long_surge: sig="LONG"; sig_source="SURGE"
         elif short_surge: sig="SHORT"; sig_source="SURGE"
         elif long_momentum: sig="LONG"; sig_source="MOMENTUM"
         elif short_momentum: sig="SHORT"; sig_source="MOMENTUM"
+        elif long_div: sig="LONG"; sig_source="DIV"
+        elif short_div: sig="SHORT"; sig_source="DIV"
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
 
@@ -779,7 +835,14 @@ def analyze(sym, candles):
             "signal_grade":signal_grade,"quality_score":quality_score,
             "tbull_r":tbull_r,"tbear_r":tbear_r,
             "bb_break_long":bb_break_long,"bb_break_short":bb_break_short,
-            "v_strong":v_strong,"obv_bear":obv_bear}
+            "v_strong":v_strong,"obv_bear":obv_bear,
+            # Institucional
+            "rvol":rvol,"rvol_label":rvol_label,"rvol_tier":rvol_tier,
+            "inst_score_long":inst_score_long,"inst_score_short":inst_score_short,
+            "inst_cls_long":inst_cls_long,"inst_cls_short":inst_cls_short,
+            "liq_bot":liq_bot,"liq_top":liq_top,
+            "dna_flow_bull":dna_flow_bull,"dna_flow_bear":dna_flow_bear,
+            "trendilo_long":trendilo_long,"trendilo_short":trendilo_short}
 
 def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     """Entrada na 15m dado setup confirmado na 1h.
@@ -956,8 +1019,16 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
 
 async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
                         rsi, adx, trend, kalman_up, swing_low, swing_high,
-                        sig_source, tf, signal_grade):
+                        sig_source, tf, signal_grade, extra=None):
     is_long=sig_type=="LONG"
+    if extra is None: extra = {}
+    rvol_lbl    = extra.get("rvol_label", "")
+    rvol_val    = extra.get("rvol", 0.0)
+    inst_sc     = extra.get("inst_score", 0)
+    inst_cls_v  = extra.get("inst_cls", "")
+    dna_flow_ok = extra.get("dna_flow", False)
+    trl_ok      = extra.get("trendilo_dir", False)
+    liq_event   = extra.get("liq_event", "")
     # These are computed below — initialised here so journal can use them
     _stop = _tp1 = _final = _r1 = _r_final = 0
 
@@ -1001,6 +1072,14 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     elif sig_source.startswith("CROSS"):
         mode_tag="🔀 DNA CROSS"
         cross_info=sig_source.split(":",1)[1]
+    elif sig_source=="SM_SWEEP":
+        mode_tag="🏦 SMART MONEY SWEEP"; cross_info=""
+    elif sig_source=="SURGE":
+        mode_tag="⚡ DNA SURGE"; cross_info=""
+    elif sig_source=="MOMENTUM":
+        mode_tag="🚀 DNA MOMENTUM"; cross_info=""
+    elif sig_source=="DIV":
+        mode_tag="📐 RSI DIVERGÊNCIA"; cross_info=""
     elif SIGNAL_MODE=="ELITE":
         mode_tag="🔬 DNA ELITE KALMAN"; cross_info=""
     else:
@@ -1021,11 +1100,17 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     k_str="↑" if kalman_up else "↓"
     cross_line=f"📉 Cross: {esc(cross_info)}\n" if cross_info else ""
 
+    rvol_line = (f"📊 RVOL: `{raw(f'{rvol_val:.2f}')}x` {esc(rvol_lbl)}" if rvol_lbl else "")
+    flow_line = ("✅" if dna_flow_ok else "—") + " DNA Flow"
+    trl_line  = ("✅" if trl_ok else "—") + " Trendilo"
+    inst_line = (f"\n🏛 Score Inst: *{esc(str(inst_sc))}/100* {esc(inst_cls_v)}" if inst_sc else "")
+    liq_line  = (f"\n🔍 SM: {esc(liq_event)}" if liq_event else "")
+
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
         f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| ⏱ {esc(tf)}\n"
         f"{cross_line}"
-        f"{esc(grade_label)}\n\n"
+        f"{esc(grade_label)}{inst_line}{liq_line}\n\n"
         f"💰 Entrada: `${raw(fmt_price(price))}`\n"
         f"🛑 Stop: `${raw(d(stop))}`\n"
         f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 40%\n"
@@ -1036,7 +1121,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"  Spot: `{raw(f'{contracts:.4f}')} {raw(short)}` \\(aprox `${raw(f'{pos_value:.2f}')} USDT`\\)\n"
         f"  5x Lev: `${raw(f'{pos_5x:.2f}')} collateral`\n\n"
         f"📊 Score: *{esc(score)}/145* \\| RSI: {esc(f'{rsi:.0f}')} \\| ADX: {esc(f'{adx:.0f}')}\n"
-        f"📈 Trend: {esc(trend)} \\| Kalman: {esc(k_str)}\n"
+        + (f"{esc(rvol_line)}\n" if rvol_line else "")
+        + f"🔬 {esc(flow_line)} \\| {esc(trl_line)}\n"
+        + f"📈 Trend: {esc(trend)} \\| Kalman: {esc(k_str)}\n"
         f"⏰ {esc(now)}"
     )
     url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
@@ -1256,10 +1343,22 @@ async def run_cycle(session, last_sig, tf, coins):
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
                 last_sig[key]=now; sent+=1
+                _is_long = result["sig"]=="LONG"
+                _extra = {
+                    "rvol_label":    result.get("rvol_label",""),
+                    "rvol":          result.get("rvol",0.0),
+                    "inst_score":    result.get("inst_score_long" if _is_long else "inst_score_short",0),
+                    "inst_cls":      result.get("inst_cls_long" if _is_long else "inst_cls_short",""),
+                    "dna_flow":      result.get("dna_flow_bull" if _is_long else "dna_flow_bear",False),
+                    "trendilo_dir":  result.get("trendilo_long" if _is_long else "trendilo_short",False),
+                    "liq_event":     ("LIQ BOT ↑" if result.get("liq_bot") else
+                                      "LIQ TOP ↓" if result.get("liq_top") else ""),
+                }
                 await send_telegram(session,sym,label,short,result["sig"],result["price"],
                                     result["atr"],result["score"],result["rsi"],result["adx"],
                                     result["trend"],result["kalman_up"],
-                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade)
+                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade,
+                                    extra=_extra)
             else:
                 mins=int((cooldown-(now-last_sig.get(key,0)))/60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
