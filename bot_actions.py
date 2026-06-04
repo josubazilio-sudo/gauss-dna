@@ -1094,6 +1094,13 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     now=datetime.now().strftime("%H:%M — %d/%m/%Y")
     k_str="↑" if kalman_up else "↓"
     cross_line=f"📉 Cross: {esc(cross_info)}\n" if cross_info else ""
+    # Rótulo do timeframe legível (15m → 15M · 1h → H1 · 4h → H4 · 1d → D1)
+    def _tf_label(t):
+        t = t.lower()
+        if t.endswith('d'): return f"D{t[:-1]}"
+        if t.endswith('h'): return f"H{t[:-1]}"
+        return t.upper()
+    tf_label = _tf_label(tf)
 
     rvol_line = (f"📊 RVOL: `{raw(f'{rvol_val:.2f}')}x` {esc(rvol_lbl)}" if rvol_lbl else "")
     flow_line = ("✅" if dna_flow_ok else "—") + " DNA Flow"
@@ -1103,7 +1110,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
 
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
-        f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| ⏱ {esc(tf)}\n"
+        f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| 🕐 Gráfico: *{esc(tf_label)}*\n"
         f"{cross_line}"
         f"{esc(grade_label)}{inst_line}{liq_line}\n\n"
         f"💰 Entrada: `${raw(fmt_price(price))}`\n"
