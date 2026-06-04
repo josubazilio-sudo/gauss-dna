@@ -532,11 +532,11 @@ def analyze(sym, candles):
         (10 if trendilo_long else -10 if trendilo_short else 0)
     )
     score=max(-145,min(145,score))
-    # Mean-reversion: LONG só dispara com RSI sobrevendido (<35), SHORT só com sobrecomprado (>65)
-    rsi_oversold  = rsi < 35
-    rsi_overbought = rsi > 65
-    safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_oversold
-    safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_overbought
+    # Evitar compra no topo (RSI>70) e venda no fundo (RSI<30)
+    rsi_not_top    = rsi < 70   # LONG: não entrar quando sobrecomprado
+    rsi_not_bottom = rsi > 30   # SHORT: não entrar quando sobrevendido
+    safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_top
+    safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_bottom
 
     # ── SINAIS ELITE ── (máxima assertividade: todos os filtros de qualidade)
     long_elite=(strong_trend and trend_bull and align_bull and e200_rising and
@@ -559,21 +559,21 @@ def analyze(sym, candles):
     # Sinal de cruzamento
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 ha_bull and macd_bull and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97 and rsi<35)
+                v_strong and not_ext_long and price>e200*0.97 and rsi<70)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  ha_bear and macd_bear and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03 and rsi>65)
+                 v_strong and not_ext_short and price<e200*1.03 and rsi>30)
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and (macd_bull or macd_recovering) and
                    adx>18 and (f_bull or obv_bull) and v_strong and
-                   above_vwap and score>15 and not any_cross_bull and rsi<35)
+                   above_vwap and score>15 and not any_cross_bull and rsi<70)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-15 and not any_cross_bear and rsi>65)
+                    below_vwap and score<-15 and not any_cross_bear and rsi>30)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -595,8 +595,8 @@ def analyze(sym, candles):
     # sideways: squeeze+ADX<18 = sem direção confirmada; FLEX exige ADX>17 sem squeeze
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
-    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 35
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 65
+    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 70
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 30
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
@@ -614,10 +614,10 @@ def analyze(sym, candles):
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
     long_bb_break  = (bb_break_long  and kalman_up   and k_short_rising  and
                       flex_score > 20 and adx >= 14  and not sideways    and
-                      not ext_above_ema21 and not vol_drying and rsi < 35)
+                      not ext_above_ema21 and not vol_drying and rsi < 70)
     short_bb_break = (bb_break_short and kalman_down and k_short_falling  and
                       flex_score < -20 and adx >= 14 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and rsi > 65)
+                      not ext_below_ema21 and not vol_drying and rsi > 30)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -677,7 +677,7 @@ def analyze(sym, candles):
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
-            if not rsi < 35: b.append(f"rsi={rsi:.1f} não sobrevendido (<35)")
+            if rsi >= 70: b.append(f"rsi={rsi:.1f} sobrecomprado (≥70)")
             if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR rsi={rsi:.0f}")
             bb_info = f"bb_break={'✓' if bb_break_long else f'F(p<={bb_upper:.4f})'} k={'↑' if kalman_up else '↓'} ks={'↑' if k_short_rising else '↓'}"
             b.append(bb_info)
@@ -689,7 +689,7 @@ def analyze(sym, candles):
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
-            if not rsi > 65: b.append(f"rsi={rsi:.1f} não sobrecomprado (>65)")
+            if rsi <= 30: b.append(f"rsi={rsi:.1f} sobrevendido (≤30)")
             bb_info = f"bb_break={'✓' if bb_break_short else f'F(p>={bb_lower:.4f})'} k={'↓' if kalman_down else '↑'} ks={'↓' if k_short_falling else '↑'}"
             b.append(bb_info)
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
@@ -824,9 +824,9 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_long  = swing_low  - atr * 0.5
     stop_short = swing_high + atr * 0.5
 
-    # Mean-reversion: LONG só sobrevendido (RSI<35), SHORT só sobrecomprado (RSI>65)
-    rsi_ok_long  = rsi < 35
-    rsi_ok_short = rsi > 65
+    # Evitar compra no topo (RSI>70) e venda no fundo (RSI<30)
+    rsi_ok_long  = rsi < 70
+    rsi_ok_short = rsi > 30
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1201,8 +1201,8 @@ async def run_mtf_cycle(session, last_sig, coins):
         h4_rsi  = r4h["rsi"]
         h4_vol  = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
         h4_vol_s = r4h.get("v_strong", False) or r4h.get("obv_bear", False)
-        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 35 and h4_vol
-        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and r4h["score"] < -15 and h4_rsi > 65
+        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 70 and h4_vol
+        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and r4h["score"] < -15 and h4_rsi > 30
         direction = "BULL" if h4_bull else "BEAR"
 
         if not (h4_bull or h4_bear):
