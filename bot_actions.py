@@ -534,7 +534,7 @@ def analyze(sym, candles):
     score=max(-145,min(145,score))
     # Evitar compra no topo (RSI>70) e venda no fundo (RSI<30)
     rsi_not_top    = rsi < 65   # LONG: não entrar quando sobrecomprado
-    rsi_not_bottom = rsi > 30   # SHORT: não entrar quando sobrevendido
+    rsi_not_bottom = rsi > 35   # SHORT: não entrar quando sobrevendido (≤35)
     safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_top
     safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_bottom
 
@@ -562,7 +562,7 @@ def analyze(sym, candles):
                 v_strong and not_ext_long and price>e200*0.97 and rsi<65)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  ha_bear and macd_bear and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03 and rsi>30)
+                 v_strong and not_ext_short and price<e200*1.03 and rsi>35)
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
@@ -573,7 +573,7 @@ def analyze(sym, candles):
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and (macd_bear or macd_exhausting) and
                     adx>18 and (f_bear or obv_bear) and v_strong and
-                    below_vwap and score<-15 and not any_cross_bear and rsi>30)
+                    below_vwap and score<-15 and not any_cross_bear and rsi>35)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -596,7 +596,7 @@ def analyze(sym, candles):
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 30
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 35
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
@@ -617,7 +617,7 @@ def analyze(sym, candles):
                       not ext_above_ema21 and not vol_drying and rsi < 65)
     short_bb_break = (bb_break_short and kalman_down and k_short_falling  and
                       flex_score < -20 and adx >= 14 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and rsi > 30)
+                      not ext_below_ema21 and not vol_drying and rsi > 35)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -689,7 +689,7 @@ def analyze(sym, candles):
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
             if not safe_short:  b.append(f"safe_short=F")
-            if rsi <= 30: b.append(f"rsi={rsi:.1f} sobrevendido (≤30)")
+            if rsi <= 35: b.append(f"rsi={rsi:.1f} sobrevendido (≤35)")
             bb_info = f"bb_break={'✓' if bb_break_short else f'F(p>={bb_lower:.4f})'} k={'↓' if kalman_down else '↑'} ks={'↓' if k_short_falling else '↑'}"
             b.append(bb_info)
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
@@ -826,7 +826,7 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
 
     # Evitar compra no topo (RSI>70) e venda no fundo (RSI<30)
     rsi_ok_long  = rsi < 65
-    rsi_ok_short = rsi > 30
+    rsi_ok_short = rsi > 35
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1202,7 +1202,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         h4_vol  = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
         h4_vol_s = r4h.get("v_strong", False) or r4h.get("obv_bear", False)
         h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol
-        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and r4h["score"] < -15 and h4_rsi > 30
+        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and r4h["score"] < -15 and h4_rsi > 35
         direction = "BULL" if h4_bull else "BEAR"
 
         if not (h4_bull or h4_bear):
