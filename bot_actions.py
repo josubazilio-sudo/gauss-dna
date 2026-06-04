@@ -1546,11 +1546,22 @@ async def run_test(session):
         sig_force="LONG" if result["score"]>=0 else "SHORT"
         sig_src=result["sig_source"] or f"TEST({result['score']:+d})"
         log.info(f"🧪 {short} | Score {result['score']:+d} | Grade {grade} | Enviando sinal {sig_force}...")
+        _is_l = sig_force == "LONG"
+        _extra_t = {
+            "rvol_label":   result.get("rvol_label",""),
+            "rvol":         result.get("rvol",0.0),
+            "inst_score":   result.get("inst_score_long" if _is_l else "inst_score_short",0),
+            "inst_cls":     result.get("inst_cls_long" if _is_l else "inst_cls_short",""),
+            "dna_flow":     result.get("dna_flow_bull" if _is_l else "dna_flow_bear",False),
+            "trendilo_dir": result.get("trendilo_long" if _is_l else "trendilo_short",False),
+            "liq_event":    ("LIQ BOT ↑" if result.get("liq_bot") else
+                             "LIQ TOP ↓" if result.get("liq_top") else ""),
+        }
         await send_telegram(session,sym,label,short,sig_force,result["price"],
                             result["atr"],result["score"],result["rsi"],result["adx"],
                             result["trend"],result["kalman_up"],
                             result["swing_low"],result["swing_high"],
-                            f"TESTE — {sig_src}","15m",grade)
+                            f"TESTE — {sig_src}","15m",grade, extra=_extra_t)
         await asyncio.sleep(1)
     log.info("✅ Teste concluído — verifique o Telegram!")
 
