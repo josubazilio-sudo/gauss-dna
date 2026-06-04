@@ -18,10 +18,14 @@ on:
         required: false
         default: 'false'
 
+concurrency:
+  group: bot-sinais
+  cancel-in-progress: false
+
 jobs:
   scanner:
     runs-on: ubuntu-latest
-    timeout-minutes: 359
+    timeout-minutes: 345
 
     steps:
       - name: Checkout
@@ -36,7 +40,8 @@ jobs:
         run: pip install aiohttp
 
       - name: Restaurar cooldown entre runs
-        uses: actions/cache@v4
+        id: cache-restore
+        uses: actions/cache/restore@v4
         with:
           path: last_signals.json
           key: last-signals-${{ github.run_id }}
@@ -73,3 +78,10 @@ jobs:
           CAPITAL: '180'
           RISK_PCT: '0.03'
         run: python bot_actions.py
+
+      - name: Salvar cooldown entre runs
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: last_signals.json
+          key: last-signals-${{ github.run_id }}
