@@ -308,9 +308,10 @@ def analyze_flex(candles):
     )
     score = max(-145, min(145, score))
 
-    strong_bear_override = adx > 45 and score < -80 and trend_bear
-    rsi_not_oversold = rsi > 35 or strong_bear_override
-    safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought
+    strong_bear_override  = adx > 45 and score < -80 and trend_bear
+    rsi_not_oversold      = rsi > 35 or strong_bear_override
+    rsi_not_oversold_long = rsi > 30
+    safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought and rsi_not_oversold_long
     safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_oversold
 
     sideways = bb_squeeze and adx < 18
@@ -338,7 +339,7 @@ def analyze_flex(candles):
                    (f_bear or obv_bear) and v_strong and not_ext_short and price < e200 * 1.03 and (rsi > 35 or strong_bear_override))
 
     long_bb_break  = (bb_break_long  and kalman_up   and k_short_rising  and flex_score > 20 and
-                      adx >= 14 and not sideways and not ext_above_ema21 and not vol_drying and rsi < 80)
+                      adx >= 14 and not sideways and not ext_above_ema21 and not vol_drying and 30 < rsi < 80)
     short_bb_break = (bb_break_short and kalman_down and k_short_falling and flex_score < -20 and
                       adx >= 14 and not sideways and not ext_below_ema21 and not vol_drying and rsi > 20)
 
