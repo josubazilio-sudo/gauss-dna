@@ -1030,18 +1030,48 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     dna_flow_ok = extra.get("dna_flow", False)
     trl_ok      = extra.get("trendilo_dir", False)
     liq_event   = extra.get("liq_event", "")
-    # Stop 1.5 ATR
-    stop = price - 1.5 * atr if is_long else price + 1.5 * atr
-    risk = 1.5 * atr
+    # ── STOP ADAPTATIVO ──────────────────────────────────────────────────────
+    # Multiplicador ATR por tipo de sinal
+    stop_atr_mult = (2.0 if sig_source == "SURGE"     else  # breakout: wicks grandes
+                     1.0 if sig_source == "SM_SWEEP"  else  # stop no nível varrido
+                     1.5)                                    # padrão todos os outros
+
+    atr_stop = price - stop_atr_mult * atr if is_long else price + stop_atr_mult * atr
+
+    # Stop estrutural: swing_low/swing_high + buffer 0.1 ATR
+    struct_stop = swing_low - atr * 0.1 if is_long else swing_high + atr * 0.1
+    swing_dist  = abs(price - struct_stop)
+
+    # Usar estrutural quando: sinal de tendência/pullback + swing próximo (0.3–2.0 ATR)
+    use_struct = (sig_source not in ("SURGE", "BB_BREAK", "MOMENTUM") and
+                  atr * 0.3 < swing_dist < atr * 2.0 and
+                  (struct_stop < price if is_long else struct_stop > price))
+
+    if use_struct:
+        # Prefere o stop mais próximo (menor risco $)
+        stop = max(atr_stop, struct_stop) if is_long else min(atr_stop, struct_stop)
+        stop_label = "Estrutura"
+    else:
+        stop = atr_stop
+        stop_label = f"{stop_atr_mult:.1f} ATR"
+
+    risk = abs(price - stop)
     if risk <= 0: return
 
-    # TP por grade
+    # ── TP POR GRADE + TIPO DE SINAL ─────────────────────────────────────────
     if signal_grade == "S":
         r1, r_final = 2.5, 5.0
     elif signal_grade == "A":
         r1, r_final = 2.0, 4.0
     else:
         r1, r_final = 1.8, 3.0
+
+    # Ajuste fino por tipo de sinal
+    if sig_source == "SURGE":
+        r1      = max(1.5, r1 - 0.5)           # fechar parcial rápido — fades quickly
+        r_final = max(3.0, r_final - 1.0)
+    elif sig_source == "DIV":
+        r_final = max(2.5, r_final - 0.5)      # divergência = convergência, não extensão
 
     tp1   = price + risk * r1      if is_long else price - risk * r1
     final = price + risk * r_final if is_long else price - risk * r_final
@@ -1115,8 +1145,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"{cross_line}"
         f"{esc(grade_label)}{inst_line}{liq_line}\n\n"
         f"💰 Entrada: `${raw(fmt_price(price))}`\n"
-        f"🛑 Stop: `${raw(d(stop))}` \\(1\\.5 ATR\\)\n"
-        f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 50%\n"
+        f"🛑 Stop: `${raw(d(stop))}` \\({esc(stop_label)}\\)\n"
+        f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
         f"🏆 TP Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → fechar 50%\n\n"
         f"📐 *Gestão de risco \\(3% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${raw(f'{risk_amount:.2f}')}`\n"
