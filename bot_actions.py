@@ -1319,7 +1319,31 @@ async def run_cycle(session, last_sig, tf, coins):
     # Pré-busca paralela de candles (lotes de 15 simultâneos)
     all_candles = await _prefetch_batch(session, coins, tf)
 
-    for (sym,label,short), candles in zip(coins, all_candles):
+    # H4 direction filter: quando rodando em H1, pré-busca H4 para confirmar direção
+    all_h4_candles = None
+    if tf == "1h":
+        log.info(f"[{tf}] Buscando H4 de {len(coins)} moedas para filtro de direção...")
+        all_h4_candles = await _prefetch_batch(session, coins, "4h")
+
+    def _h4_ok(h4_candles, sig_direction):
+        """Retorna True se H4 confirma a direção do sinal H1."""
+        if h4_candles is None: return True   # sem H4 → não bloqueia
+        r4 = analyze(None, h4_candles)
+        if not r4: return True
+        h4_rsi  = r4["rsi"]
+        h4_vol  = r4.get("v_strong", False) or r4.get("obv_bull", False)
+        h4_vols = r4.get("v_strong", False) or r4.get("obv_bear", False)
+        h4_bull = (r4["score"] > 15 and r4.get("tbull_r", False) and
+                   r4["adx"] >= 13 and h4_rsi < 65 and h4_vol)
+        h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
+                   h4_vols and r4["score"] < -15 and h4_rsi > 25)
+        if sig_direction == "LONG"  and h4_bear: return False   # H4 bear bloqueia LONG H1
+        if sig_direction == "SHORT" and h4_bull: return False   # H4 bull bloqueia SHORT H1
+        return True
+
+    for (sym,label,short), candles, h4c in zip(
+            coins, all_candles,
+            all_h4_candles if all_h4_candles else [None]*len(coins)):
         if sent >= MAX_SIGNALS_PER_CYCLE:
             log.info(f"[{tf}] Limite de {MAX_SIGNALS_PER_CYCLE} sinais por ciclo atingido")
             break
@@ -1328,7 +1352,7 @@ async def run_cycle(session, last_sig, tf, coins):
         if not result: continue
         grade=result.get("signal_grade","B")
 
-        # ATR% — excluir moedas muito voláteis para $180
+        # ATR% — excluir moedas muito voláteis para $200
         atr_pct=(result["atr"]/result["price"])*100 if result["price"] else 0
         if atr_pct > 4.0:
             log.info(f"[{tf}] {short:7s} | ATR {atr_pct:.1f}% > 4% — muito volátil, ignorando")
@@ -1340,6 +1364,11 @@ async def run_cycle(session, last_sig, tf, coins):
             if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 50):
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
+                continue
+            # H4 direction filter (H1 apenas)
+            if tf == "1h" and not _h4_ok(h4c, result["sig"]):
+                log.info(f"  🚫 {short} [{tf}] {result['sig']} bloqueado — H4 oposto à direção H1")
+                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"H4 oposto"))
                 continue
             key=f"{sym}_{tf}"
             if now-last_sig.get(key,0)>=cooldown:
