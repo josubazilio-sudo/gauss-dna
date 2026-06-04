@@ -1,0 +1,496 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0
+// © gauss-dna
+//@version=6
+strategy(
+  title         = "DNA FLOW ELITE MTF INSTITUTIONAL PRO",
+  shorttitle    = "DNA FLOW ELITE",
+  overlay       = true,
+  pyramiding    = 0,
+  default_qty_type  = strategy.percent_of_equity,
+  default_qty_value = 2,
+  commission_type   = strategy.commission.percent,
+  commission_value  = 0.05,
+  slippage          = 1,
+  calc_on_every_tick = false
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════════════════════
+grpMTF   = "Multi-Timeframe"
+grpEMA   = "EMAs"
+grpRSI   = "RSI"
+grpFlow  = "DNA Flow"
+grpSM    = "Smart Money"
+grpRisk  = "Risk Management"
+grpDisp  = "Display"
+
+// MTF
+htf      = input.timeframe("240",  "H4 Direction Timeframe",   group=grpMTF)
+etf      = input.timeframe("60",   "H1 Entry Timeframe",        group=grpMTF)
+use_mtf  = input.bool(true,        "Enable MTF Filter",          group=grpMTF)
+
+// EMAs
+ema10_l  = input.int(10,  "EMA Fast",     minval=5,   group=grpEMA)
+ema21_l  = input.int(21,  "EMA Mid",      minval=10,  group=grpEMA)
+ema50_l  = input.int(50,  "EMA Slow",     minval=20,  group=grpEMA)
+ema200_l = input.int(200, "EMA Trend",    minval=100, group=grpEMA)
+trendilo_l = input.int(8, "Trendilo Len", minval=3,   group=grpEMA)
+
+// RSI
+rsi_src  = input.source(close,   "RSI Source",     group=grpRSI)
+rsi_len  = input.int(14,         "RSI Length",     minval=5, group=grpRSI)
+rsi_ob   = input.int(80,         "RSI OB Block",   minval=65, maxval=95, group=grpRSI)
+rsi_os   = input.int(25,         "RSI OS Block",   minval=5,  maxval=35, group=grpRSI)
+
+// DNA Flow
+macd_f   = input.int(12,  "MACD Fast",   minval=5,  group=grpFlow)
+macd_s   = input.int(26,  "MACD Slow",   minval=10, group=grpFlow)
+macd_sig = input.int(9,   "MACD Signal", minval=3,  group=grpFlow)
+rvol_good   = input.float(1.2, "RVOL Good",        minval=1.0, step=0.1, group=grpFlow)
+rvol_strong = input.float(1.5, "RVOL Strong",       minval=1.0, step=0.1, group=grpFlow)
+rvol_vstrong= input.float(2.0, "RVOL Very Strong",  minval=1.0, step=0.1, group=grpFlow)
+rvol_inst   = input.float(3.0, "RVOL Institutional",minval=1.0, step=0.1, group=grpFlow)
+
+// Smart Money
+sweep_bars  = input.int(20, "Sweep Lookback", minval=5,  maxval=50, group=grpSM)
+sweep_pct   = input.float(0.3, "Sweep Wick % of ATR", minval=0.1, step=0.05, group=grpSM)
+
+// Risk
+atr_len     = input.int(14,  "ATR Length", group=grpRisk)
+stop_atr    = input.float(1.5, "Stop ATR Mult", minval=0.5, step=0.1, group=grpRisk)
+
+// Display
+show_cloud  = input.bool(true, "Show EMA Cloud",   group=grpDisp)
+show_trl    = input.bool(true, "Show Trendilo",    group=grpDisp)
+show_table  = input.bool(true, "Show Info Table",  group=grpDisp)
+show_labels = input.bool(true, "Show Signal Labels", group=grpDisp)
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EMAs + TRENDILO
+// ═══════════════════════════════════════════════════════════════════════════════
+e10  = ta.ema(close, ema10_l)
+e21  = ta.ema(close, ema21_l)
+e50  = ta.ema(close, ema50_l)
+e200 = ta.ema(close, ema200_l)
+
+// Trendilo: double-smoothed EMA (EMA of EMA)
+trl_base    = ta.ema(close, trendilo_l)
+trendilo    = ta.ema(trl_base, trendilo_l)
+trl_bull    = trendilo > trendilo[1]
+trl_bear    = trendilo < trendilo[1]
+
+// EMA cloud: e10/e21 with fill
+cloud_bull  = e10 > e21
+cloud_bear  = e10 < e21
+
+plot(show_cloud ? e10  : na, "EMA10",  color=cloud_bull ? color.new(#00e5ff,0) : color.new(#ff4444,0), linewidth=1)
+plot(show_cloud ? e21  : na, "EMA21",  color=cloud_bull ? color.new(#00e5ff,30): color.new(#ff4444,30), linewidth=1)
+plot(show_cloud ? e50  : na, "EMA50",  color=color.new(#ffaa00,0), linewidth=1)
+plot(show_cloud ? e200 : na, "EMA200", color=color.new(#888888,0), linewidth=2)
+
+e10_p  = plot(show_cloud ? e10 : na, display=display.none)
+e21_p  = plot(show_cloud ? e21 : na, display=display.none)
+fill(e10_p, e21_p,
+  top_color    = cloud_bull ? color.new(#00e5ff,75) : color.new(#ff4444,75),
+  bottom_color = cloud_bull ? color.new(#00e5ff,95) : color.new(#ff4444,95),
+  title="EMA Cloud")
+
+trl_col = trl_bull ? color.new(#7cfc00,0) : color.new(#ff6600,0)
+plot(show_trl ? trendilo : na, "Trendilo", color=trl_col, linewidth=2, style=plot.style_line)
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RSI + DIVERGENCES
+// ═══════════════════════════════════════════════════════════════════════════════
+rsi_val   = ta.rsi(rsi_src, rsi_len)
+rsi_prev  = rsi_val[3]
+rsi_rising  = rsi_val > rsi_prev
+rsi_falling = rsi_val < rsi_prev
+
+// RSI divergences
+rsi_div_bull = close < close[4] and rsi_val > rsi_val[3] and rsi_val < 45
+rsi_div_bear = close > close[4] and rsi_val < rsi_val[3] and rsi_val > 55
+
+// Block zones
+rsi_block_long  = rsi_val >= rsi_ob
+rsi_block_short = rsi_val <= rsi_os
+
+// Fresh momentum crossover (RSI freshly crossed threshold)
+rsi_fresh_long  = rsi_val[3] < 65 and rsi_val >= 65 and rsi_val < 78
+rsi_fresh_short = rsi_val[3] > 35 and rsi_val <= 35 and rsi_val > 18
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DNA FLOW INSTITUTIONAL
+// ═══════════════════════════════════════════════════════════════════════════════
+[macd_line, macd_sig_line, macd_hist] = ta.macd(close, macd_f, macd_s, macd_sig)
+macd_bull  = macd_hist > 0 and macd_hist > macd_hist[1]
+macd_bear  = macd_hist < 0 and macd_hist < macd_hist[1]
+
+// Buy/sell pressure (close vs midpoint of candle)
+mid_body   = (high + low) / 2
+bull_press = close > mid_body
+bear_press = close < mid_body
+
+// RVOL
+vol_ma20   = ta.sma(volume, 20)
+rvol       = volume / math.max(vol_ma20, 1)
+rvol_tier  = rvol >= rvol_inst   ? 4 :
+             rvol >= rvol_vstrong ? 3 :
+             rvol >= rvol_strong  ? 2 :
+             rvol >= rvol_good    ? 1 : 0
+
+rvol_label = rvol_tier == 4 ? "INST" :
+             rvol_tier == 3 ? "VSTRONG" :
+             rvol_tier == 2 ? "STRONG" :
+             rvol_tier == 1 ? "GOOD" : "LOW"
+
+v_good    = rvol_tier >= 1
+v_strong  = rvol_tier >= 2
+v_inst    = rvol_tier >= 4
+
+// DNA Flow composite
+flow_bull = macd_bull and bull_press and v_good
+flow_bear = macd_bear and bear_press and v_good
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADX / DMI
+// ═══════════════════════════════════════════════════════════════════════════════
+[di_plus, di_minus, adx_val] = ta.dmi(14, 14)
+adx_ok      = adx_val > 22
+adx_rising  = adx_val > adx_val[1]
+trend_bull  = di_plus > di_minus
+trend_bear  = di_minus > di_plus
+adx_long_ok  = adx_ok and trend_bull
+adx_short_ok = adx_ok and trend_bear
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HEIKIN-ASHI (local calculation for overlay mode)
+// ═══════════════════════════════════════════════════════════════════════════════
+ha_close = (open + high + low + close) / 4
+ha_open  = float(na)
+ha_open := na(ha_open[1]) ? (open + close) / 2 : (ha_open[1] + ha_close[1]) / 2
+ha_bull  = ha_close > ha_open and ha_close[1] > ha_open[1]
+ha_bear  = ha_close < ha_open and ha_close[1] < ha_open[1]
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOLLINGER BANDS
+// ═══════════════════════════════════════════════════════════════════════════════
+[bb_mid, bb_upper, bb_lower] = ta.bb(close, 20, 2.0)
+bb_break_up   = close > bb_upper
+bb_break_down = close < bb_lower
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ATR
+// ═══════════════════════════════════════════════════════════════════════════════
+atr_val = ta.atr(atr_len)
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SMART MONEY — LIQUIDITY SWEEPS
+// ═══════════════════════════════════════════════════════════════════════════════
+swing_high = ta.highest(high, sweep_bars)
+swing_low  = ta.lowest(low,  sweep_bars)
+
+// Sweep: price wicked above/below swing and closed back inside
+liq_top = high[1] >= swing_high[1] and close[1] < swing_high[1] and
+          (high[1] - close[1]) > atr_val * sweep_pct
+
+liq_bot = low[1] <= swing_low[1] and close[1] > swing_low[1] and
+          (close[1] - low[1]) > atr_val * sweep_pct
+
+// Smart Money Reversal: sweep + immediate counter move
+sm_bull = liq_bot and ha_bull and flow_bull
+sm_bear = liq_top and ha_bear and flow_bear
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUMP HUNTER (SURGE) — Catches HOME-type +16% moves
+// ═══════════════════════════════════════════════════════════════════════════════
+candle_bull_pct = (close - open) / math.max(open, 0.000001)
+candle_bear_pct = (open - close) / math.max(open, 0.000001)
+surge_break_h   = close > ta.highest(high[1], 10)
+surge_break_l   = close < ta.lowest(low[1],   10)
+
+pump_long  = rvol_tier >= 3 and candle_bull_pct > 0.04 and surge_break_h and
+             close > e200 and not bb_break_up
+pump_short = rvol_tier >= 3 and candle_bear_pct > 0.04 and surge_break_l and
+             close < e200 and not bb_break_down
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// H4 DIRECTION (MTF FILTER)
+// ═══════════════════════════════════════════════════════════════════════════════
+htf_close   = request.security(syminfo.tickerid, htf, close,    lookahead=barmerge.lookahead_off)
+htf_e50     = request.security(syminfo.tickerid, htf, ta.ema(close, 50), lookahead=barmerge.lookahead_off)
+htf_e200    = request.security(syminfo.tickerid, htf, ta.ema(close, 200), lookahead=barmerge.lookahead_off)
+htf_rsi     = request.security(syminfo.tickerid, htf, ta.rsi(close, 14), lookahead=barmerge.lookahead_off)
+[htf_dip, htf_dim, htf_adx] = ta.dmi(14, 14)
+htf_di_plus  = request.security(syminfo.tickerid, htf, htf_dip, lookahead=barmerge.lookahead_off)
+htf_di_minus = request.security(syminfo.tickerid, htf, htf_dim, lookahead=barmerge.lookahead_off)
+htf_adx_val  = request.security(syminfo.tickerid, htf, htf_adx, lookahead=barmerge.lookahead_off)
+
+htf_bull = htf_close > htf_e50 and htf_e50 > htf_e200 and
+           htf_di_plus > htf_di_minus and htf_rsi > 40 and htf_rsi < 80
+htf_bear = htf_close < htf_e50 and htf_e50 < htf_e200 and
+           htf_di_minus > htf_di_plus and htf_rsi < 65 and htf_rsi > 25
+
+mtf_long_ok  = not use_mtf or htf_bull
+mtf_short_ok = not use_mtf or htf_bear
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCORE 0–100
+// ═══════════════════════════════════════════════════════════════════════════════
+score_long = 0
+score_long += htf_bull        ? 20 : 0    // H4 alignment
+score_long += adx_long_ok     ? 15 : 0    // Trend strength
+score_long += flow_bull       ? 15 : 0    // DNA Flow
+score_long += ha_bull         ? 10 : 0    // HA structure
+score_long += trl_bull        ? 10 : 0    // Trendilo
+score_long += rsi_rising      ? 10 : 0    // RSI direction
+score_long += v_strong        ? 10 : 0    // Volume
+score_long += rsi_div_bull    ?  5 : 0    // Divergence bonus
+score_long += sm_bull         ?  5 : 0    // Smart money sweep
+
+score_short = 0
+score_short += htf_bear       ? 20 : 0
+score_short += adx_short_ok   ? 15 : 0
+score_short += flow_bear      ? 15 : 0
+score_short += ha_bear        ? 10 : 0
+score_short += trl_bear       ? 10 : 0
+score_short += rsi_falling    ? 10 : 0
+score_short += v_strong       ? 10 : 0
+score_short += rsi_div_bear   ?  5 : 0
+score_short += sm_bear        ?  5 : 0
+
+score_class(s) =>
+    s >= 85 ? "ELITE" : s >= 70 ? "FORTE" : s >= 55 ? "MÉDIO" : "FRACO"
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENTRY CONDITIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+// PULLBACK: retração para EMA zone + structure
+pullback_long  = close > e200 and close < e21 * 1.02 and close > e50 and
+                 ha_bull and flow_bull and rsi_val < 65 and not rsi_block_long and
+                 adx_long_ok and trl_bull and mtf_long_ok and score_long >= 55
+
+pullback_short = close < e200 and close > e21 * 0.98 and close < e50 and
+                 ha_bear and flow_bear and rsi_val > 25 and not rsi_block_short and
+                 adx_short_ok and trl_bear and mtf_short_ok and score_short >= 55
+
+// MOMENTUM: fresh RSI crossover (RSI freshly crossed 65/35)
+momentum_long  = rsi_fresh_long and ha_bull and flow_bull and adx_ok and
+                 v_strong and trl_bull and not rsi_block_long and
+                 mtf_long_ok and score_long >= 70
+
+momentum_short = rsi_fresh_short and ha_bear and flow_bear and adx_ok and
+                 v_strong and trl_bear and not rsi_block_short and
+                 mtf_short_ok and score_short >= 70
+
+// SMART MONEY REVERSAL
+sm_long  = sm_bull and rsi_val > 25 and not rsi_block_long and
+            mtf_long_ok and score_long >= 60
+
+sm_short = sm_bear and rsi_val < 65 and not rsi_block_short and
+            mtf_short_ok and score_short >= 60
+
+// PUMP HUNTER (SURGE)
+surge_long  = pump_long  and mtf_long_ok
+surge_short = pump_short and mtf_short_ok
+
+// RSI DIVERGENCE entry
+div_long  = rsi_div_bull and ha_bull and v_good and not rsi_block_long and
+            close > e200 and mtf_long_ok
+
+div_short = rsi_div_bear and ha_bear and v_good and not rsi_block_short and
+            close < e200 and mtf_short_ok
+
+// Final LONG/SHORT (priority: PULLBACK > MOMENTUM > SM > SURGE > DIV)
+entry_long  = pullback_long  or momentum_long  or sm_long  or surge_long  or div_long
+entry_short = pullback_short or momentum_short or sm_short or surge_short or div_short
+
+entry_type_long  = pullback_long  ? "PULLBACK" :
+                   momentum_long  ? "MOMENTUM" :
+                   sm_long        ? "SM_SWEEP" :
+                   surge_long     ? "SURGE"    :
+                   div_long       ? "DIV_BULL" : ""
+
+entry_type_short = pullback_short ? "PULLBACK" :
+                   momentum_short ? "MOMENTUM" :
+                   sm_short       ? "SM_SWEEP" :
+                   surge_short    ? "SURGE"    :
+                   div_short      ? "DIV_BEAR" : ""
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STRATEGY EXECUTION
+// ═══════════════════════════════════════════════════════════════════════════════
+var float stop_long  = na
+var float stop_short = na
+
+if strategy.position_size == 0
+    if entry_long and not entry_short
+        stop_long := close - atr_val * stop_atr
+        strategy.entry("LONG", strategy.long)
+
+    if entry_short and not entry_long
+        stop_short := close + atr_val * stop_atr
+        strategy.entry("SHORT", strategy.short)
+
+// EXIT 1: Fixed ATR stop
+if strategy.position_size > 0 and not na(stop_long)
+    strategy.exit("LONG_SL", from_entry="LONG", stop=stop_long)
+
+if strategy.position_size < 0 and not na(stop_short)
+    strategy.exit("SHORT_SL", from_entry="SHORT", stop=stop_short)
+
+// EXIT 2: Trend reversal (EMA10 cross + opposing flow + trendilo flip)
+trend_rev_long  = e10 < e21 and flow_bear and trl_bear
+trend_rev_short = e10 > e21 and flow_bull and trl_bull
+
+if strategy.position_size > 0 and trend_rev_long
+    strategy.close("LONG", comment="TREND_REV")
+    stop_long := na
+
+if strategy.position_size < 0 and trend_rev_short
+    strategy.close("SHORT", comment="TREND_REV")
+    stop_short := na
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL SIGNALS
+// ═══════════════════════════════════════════════════════════════════════════════
+plotshape(show_labels and entry_long  and strategy.position_size[1] == 0,
+  title="LONG Entry", style=shape.triangleup,
+  location=location.belowbar, color=color.new(#00ff88,0), size=size.small, text="▲")
+
+plotshape(show_labels and entry_short and strategy.position_size[1] == 0,
+  title="SHORT Entry", style=shape.triangledown,
+  location=location.abovebar, color=color.new(#ff4444,0), size=size.small, text="▼")
+
+plotshape(show_labels and liq_bot, title="LIQ BOT", style=shape.xcross,
+  location=location.belowbar, color=color.new(#00bfff,0), size=size.tiny, text="LIQ↑")
+
+plotshape(show_labels and liq_top, title="LIQ TOP", style=shape.xcross,
+  location=location.abovebar, color=color.new(#ff9900,0), size=size.tiny, text="LIQ↓")
+
+plotshape(show_labels and rsi_div_bull, title="RSI DIV Bull", style=shape.circle,
+  location=location.belowbar, color=color.new(#00e5ff,30), size=size.tiny, text="D↑")
+
+plotshape(show_labels and rsi_div_bear, title="RSI DIV Bear", style=shape.circle,
+  location=location.abovebar, color=color.new(#ff6600,30), size=size.tiny, text="D↓")
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INFO TABLE
+// ═══════════════════════════════════════════════════════════════════════════════
+var table info_tbl = table.new(position.top_right, 2, 12,
+  bgcolor=color.new(#060810,80), border_color=color.new(#333355,60), border_width=1)
+
+if show_table and barstate.islast
+    lbl_col  = color.new(#888899,0)
+    val_bull = color.new(#00ff88,0)
+    val_bear = color.new(#ff4444,0)
+    val_neut = color.new(#cccccc,0)
+
+    // Helper: bool → color
+    bc(cond) => cond ? val_bull : val_bear
+
+    table.cell(info_tbl, 0, 0,  "DNA FLOW ELITE", text_color=color.new(#00e5ff,0), text_size=size.small)
+    table.cell(info_tbl, 1, 0,  "MTF INSTITUTIONAL", text_color=color.new(#aaaaaa,0), text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 1,  "H4 Dir",  text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 1,  htf_bull ? "BULL ▲" : htf_bear ? "BEAR ▼" : "NEUTRAL",
+      text_color=htf_bull ? val_bull : htf_bear ? val_bear : val_neut, text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 2,  "Trendilo", text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 2,  trl_bull ? "↑ BULL" : "↓ BEAR",
+      text_color=bc(trl_bull), text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 3,  "ADX",     text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 3,  str.tostring(math.round(adx_val, 1)) + (adx_rising ? " ↑" : " →"),
+      text_color=adx_ok ? val_bull : val_neut, text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 4,  "RSI",     text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 4,  str.tostring(math.round(rsi_val, 1)),
+      text_color=rsi_block_long ? val_bear : rsi_block_short ? val_bull : val_neut, text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 5,  "DNA Flow", text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 5,  flow_bull ? "BULL" : flow_bear ? "BEAR" : "—",
+      text_color=flow_bull ? val_bull : flow_bear ? val_bear : val_neut, text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 6,  "RVOL",    text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 6,  str.tostring(math.round(rvol, 2)) + " " + rvol_label,
+      text_color=v_strong ? val_bull : v_good ? val_neut : val_bear, text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 7,  "Smart $", text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 7,  liq_bot ? "LIQ BOT ↑" : liq_top ? "LIQ TOP ↓" : "—",
+      text_color=liq_bot ? val_bull : liq_top ? val_bear : val_neut, text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 8,  "RSI Div", text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 8,  rsi_div_bull ? "BULL DIV" : rsi_div_bear ? "BEAR DIV" : "—",
+      text_color=rsi_div_bull ? val_bull : rsi_div_bear ? val_bear : val_neut, text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 9,  "Score L", text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 9,  str.tostring(score_long) + " " + score_class(score_long),
+      text_color=score_long >= 70 ? val_bull : score_long >= 55 ? val_neut : val_bear, text_size=size.tiny)
+
+    table.cell(info_tbl, 0, 10, "Score S", text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 10, str.tostring(score_short) + " " + score_class(score_short),
+      text_color=score_short >= 70 ? val_bear : score_short >= 55 ? val_neut : val_bull, text_size=size.tiny)
+
+    pos_txt = strategy.position_size > 0 ? "▲ LONG" :
+              strategy.position_size < 0 ? "▼ SHORT" : "—"
+    pos_col = strategy.position_size > 0 ? val_bull :
+              strategy.position_size < 0 ? val_bear : val_neut
+    table.cell(info_tbl, 0, 11, "Position", text_color=lbl_col, text_size=size.tiny)
+    table.cell(info_tbl, 1, 11, pos_txt, text_color=pos_col, text_size=size.tiny)
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════
+alertcondition(entry_long  and strategy.position_size[1] == 0,
+  title="LONG Signal",
+  message="[DNA FLOW ELITE] LONG {{ticker}} | Tipo: {{plot_0}} | Score: {{plot_1}} | RVOL: {{plot_2}} | RSI: {{plot_3}}")
+
+alertcondition(entry_short and strategy.position_size[1] == 0,
+  title="SHORT Signal",
+  message="[DNA FLOW ELITE] SHORT {{ticker}} | Tipo: {{plot_0}} | Score: {{plot_1}} | RVOL: {{plot_2}} | RSI: {{plot_3}}")
+
+alertcondition(liq_top,
+  title="LIQ TOP Sweep",
+  message="[DNA FLOW ELITE] LIQ TOP varredura de liquidez acima — {{ticker}}")
+
+alertcondition(liq_bot,
+  title="LIQ BOT Sweep",
+  message="[DNA FLOW ELITE] LIQ BOT varredura de liquidez abaixo — {{ticker}}")
+
+alertcondition(rsi_div_bull,
+  title="RSI Divergência Bullish",
+  message="[DNA FLOW ELITE] Divergência RSI Bullish — {{ticker}} RSI={{plot_3}}")
+
+alertcondition(rsi_div_bear,
+  title="RSI Divergência Bearish",
+  message="[DNA FLOW ELITE] Divergência RSI Bearish — {{ticker}} RSI={{plot_3}}")
+
+alertcondition(trend_rev_long and strategy.position_size > 0,
+  title="Saída LONG — Reversão de Tendência",
+  message="[DNA FLOW ELITE] FECHAR LONG — reversão detectada — {{ticker}}")
+
+alertcondition(trend_rev_short and strategy.position_size < 0,
+  title="Saída SHORT — Reversão de Tendência",
+  message="[DNA FLOW ELITE] FECHAR SHORT — reversão detectada — {{ticker}}")
+
+// Hidden plots for alert placeholders
+plot(entry_long ? score_long : entry_short ? score_short : na, display=display.none, title="Score")
+plot(rvol, display=display.none, title="RVOL val")
+plot(rsi_val, display=display.none, title="RSI val")
