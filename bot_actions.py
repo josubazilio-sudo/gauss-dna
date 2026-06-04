@@ -540,9 +540,10 @@ def analyze(sym, candles):
     # Exceção tendência muito forte: permite SHORT com RSI < 35 se ADX > 45 + score < -80
     strong_bear_override = adx > 45 and score < -80 and trend_bear
     rsi_not_oversold      = rsi > 35 or strong_bear_override
-    rsi_not_oversold_long = rsi > 30   # LONG não entra em zona sobrevendida extrema
+    rsi_not_oversold_long  = rsi > 40          # LONG: RSI mínimo 40
+    rsi_not_overbought_short = rsi < 70        # SHORT: RSI máximo 70
     safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_overbought and rsi_not_oversold_long
-    safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_oversold
+    safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_oversold and rsi_not_overbought_short
 
     # ── SINAIS ELITE ── (máxima assertividade: todos os filtros de qualidade)
     long_elite=(strong_trend and trend_bull and align_bull and e200_rising and
@@ -565,10 +566,10 @@ def analyze(sym, candles):
     # Sinal de cruzamento (sem safe_long — não bloquear crossovers válidos)
     long_cross=(any_cross_bull and score>10 and adx>15 and
                 ha_bull and macd_bull and (f_bull or obv_bull) and
-                v_strong and not_ext_long and price>e200*0.97 and rsi<65)
+                v_strong and not_ext_long and price>e200*0.97 and 40<rsi<65)
     short_cross=(any_cross_bear and score<-10 and adx>15 and
                  ha_bear and macd_bear and (f_bear or obv_bear) and
-                 v_strong and not_ext_short and price<e200*1.03 and (rsi>35 or strong_bear_override))
+                 v_strong and not_ext_short and price<e200*1.03 and (35<rsi<70 or strong_bear_override))
 
     # ── SINAL PULLBACK ── entrada após recuo nas EMAs (melhor preço)
     # trend_bull usa align relaxado (e10>e21>e50, sem exigir e50>e200)
@@ -622,10 +623,10 @@ def analyze(sym, candles):
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
     long_bb_break  = (bb_break_long  and kalman_up   and k_short_rising  and
                       flex_score > 20 and adx >= 14  and not sideways    and
-                      not ext_above_ema21 and not vol_drying and 30 < rsi < 80)
+                      not ext_above_ema21 and not vol_drying and 40 < rsi < 80)
     short_bb_break = (bb_break_short and kalman_down and k_short_falling  and
                       flex_score < -20 and adx >= 14 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and rsi > 20)
+                      not ext_below_ema21 and not vol_drying and 20 < rsi < 70)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
