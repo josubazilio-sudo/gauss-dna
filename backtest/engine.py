@@ -2,13 +2,24 @@
 GAUSS+DNA Backtest Engine
 Replica exata da estratégia FLEX do bot_actions.py
 """
-import asyncio, aiohttp, math, csv, json, os
+import asyncio, aiohttp, math, csv, json, os, time as _time
 from datetime import datetime, timedelta
 from pathlib import Path
 
 BINANCE_BASE = "https://api.binance.com"
+BYBIT_BASE   = "https://api.bybit.com"
 RESULTS_DIR  = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
+
+BYBIT_INTERVAL = {
+    "1m":"1","3m":"3","5m":"5","15m":"15","30m":"30",
+    "1h":"60","2h":"120","4h":"240","6h":"360","12h":"720",
+    "1d":"D","1w":"W",
+}
+INTERVAL_MINUTES = {
+    "1m":1,"5m":5,"15m":15,"30m":30,"1h":60,
+    "2h":120,"4h":240,"6h":360,"12h":720,"1d":1440,
+}
 
 # ── INDICADORES (cópia fiel do bot_actions.py) ────────────────────────────────
 
@@ -471,33 +482,110 @@ def simulate_trade(signal, future_candles, max_bars=72):
 
 # ── FETCH DADOS ───────────────────────────────────────────────────────────────
 
+async def _bybit_chunk(session, symbol, interval_by, end_ms):
+    """Busca 1 chunk de até 1000 velas do Bybit (mais recente primeiro)."""
+    url = f"{BYBIT_BASE}/v5/market/kline"
+    params = {"category": "spot", "symbol": symbol,
+              "interval": interval_by, "limit": 1000, "end": end_ms}
+    async with session.get(url, params=params,
+                           timeout=aiohttp.ClientTimeout(total=20)) as r:
+        if r.status != 200: return []
+        data = await r.json()
+        if data.get("retCode") != 0: return []
+        return [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]),
+                 "l": float(k[3]), "c": float(k[4]), "v": float(k[5])}
+                for k in data["result"]["list"]]
+
 async def fetch_candles(session, symbol, interval="1h", months=6):
-    """Busca até 6 meses de velas 1H do Binance."""
-    limit = min(months * 30 * 24, 1000)
-    url   = f"{BINANCE_BASE}/api/v3/klines"
-    params = {"symbol": symbol, "interval": interval, "limit": limit}
+    """
+    Busca velas via Bybit (primário, funciona no GitHub Actions)
+    com fallback para Binance.
+    """
+    mins_per_candle = INTERVAL_MINUTES.get(interval, 60)
+    target = months * 30 * 24 * 60 // mins_per_candle
+    interval_by = BYBIT_INTERVAL.get(interval, "60")
+
+    # ── Bybit com paginação ──────────────────────────────────────────────────
     try:
-        async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=15)) as r:
-            if r.status != 200: return []
+        all_candles = []
+        end_ms = int(_time.time() * 1000)
+        for _ in range(12):
+            chunk = await _bybit_chunk(session, symbol, interval_by, end_ms)
+            if not chunk:
+                break
+            # Bybit retorna do mais novo pro mais antigo — inverte
+            chunk.sort(key=lambda x: x["t"])
+            all_candles = chunk + all_candles
+            if len(all_candles) >= target:
+                break
+            end_ms = chunk[0]["t"] - 1
+            if len(chunk) < 1000:
+                break
+
+        if all_candles:
+            # deduplica e ordena
+            seen, unique = set(), []
+            for c in sorted(all_candles, key=lambda x: x["t"]):
+                if c["t"] not in seen:
+                    seen.add(c["t"])
+                    unique.append(c)
+            print(f"  Bybit OK: {len(unique)} velas de {symbol}")
+            return unique[-target:] if len(unique) > target else unique
+    except Exception as e:
+        print(f"  Bybit falhou ({e}), tentando Binance...")
+
+    # ── Binance fallback ─────────────────────────────────────────────────────
+    try:
+        limit = min(target, 1000)
+        url = f"{BINANCE_BASE}/api/v3/klines"
+        params = {"symbol": symbol, "interval": interval, "limit": limit}
+        async with session.get(url, params=params,
+                               timeout=aiohttp.ClientTimeout(total=15)) as r:
+            if r.status != 200:
+                print(f"  Binance HTTP {r.status}")
+                return []
             data = await r.json()
-            return [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]),
-                     "l": float(k[3]), "c": float(k[4]), "v": float(k[5])} for k in data]
-    except Exception:
+            candles = [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]),
+                        "l": float(k[3]), "c": float(k[4]), "v": float(k[5])}
+                       for k in data]
+            print(f"  Binance OK: {len(candles)} velas de {symbol}")
+            return candles
+    except Exception as e:
+        print(f"  Binance falhou: {e}")
         return []
 
 async def get_top_usdt_pairs(session, top_n=100):
-    """Top N pares USDT por volume em 24h no Binance."""
-    url = f"{BINANCE_BASE}/api/v3/ticker/24hr"
+    """Top N pares USDT por volume — tenta Binance, depois Bybit."""
+    # Binance
     try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
-            if r.status != 200: return []
-            data = await r.json()
-            usdt = [d for d in data if d["symbol"].endswith("USDT") and
-                    not any(s in d["symbol"] for s in ["BUSD", "USDC", "EUR", "BRL", "UP", "DOWN", "BEAR", "BULL"])]
-            usdt.sort(key=lambda x: float(x["quoteVolume"]), reverse=True)
-            return [d["symbol"] for d in usdt[:top_n]]
+        async with session.get(f"{BINANCE_BASE}/api/v3/ticker/24hr",
+                               timeout=aiohttp.ClientTimeout(total=15)) as r:
+            if r.status == 200:
+                data = await r.json()
+                usdt = [d for d in data if d["symbol"].endswith("USDT") and
+                        not any(s in d["symbol"] for s in
+                                ["BUSD","USDC","EUR","BRL","UP","DOWN","BEAR","BULL"])]
+                usdt.sort(key=lambda x: float(x["quoteVolume"]), reverse=True)
+                return [d["symbol"] for d in usdt[:top_n]]
     except Exception:
-        return []
+        pass
+
+    # Bybit fallback
+    try:
+        async with session.get(f"{BYBIT_BASE}/v5/market/tickers",
+                               params={"category": "spot"},
+                               timeout=aiohttp.ClientTimeout(total=15)) as r:
+            if r.status == 200:
+                data = await r.json()
+                tickers = data.get("result", {}).get("list", [])
+                usdt = [t for t in tickers if t["symbol"].endswith("USDT") and
+                        not any(s in t["symbol"] for s in
+                                ["USDC","EUR","BRL","UP","DOWN","BEAR","BULL"])]
+                usdt.sort(key=lambda x: float(x.get("turnover24h", 0)), reverse=True)
+                return [t["symbol"] for t in usdt[:top_n]]
+    except Exception:
+        pass
+    return []
 
 # ── BACKTEST DE UM SÍMBOLO ────────────────────────────────────────────────────
 
