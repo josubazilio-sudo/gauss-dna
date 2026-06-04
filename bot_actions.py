@@ -1061,8 +1061,15 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     }
     grade_label=grade_info[signal_grade][0]
 
+    def _tf_label(t):
+        t = t.lower()
+        if t.endswith('d'): return f"D{t[:-1]}"
+        if t.endswith('h'): return f"H{t[:-1]}"
+        return t.upper()
+    tf_label = _tf_label(tf)
+
     if sig_source.startswith("MTF"):
-        mode_tag=f"📡 MTF PULLBACK 1H→{tf.upper()}"; cross_info=""
+        mode_tag=f"📡 MTF PULLBACK H4→{tf_label}"; cross_info=""
     elif sig_source=="PULLBACK":
         mode_tag="🎯 DNA PULLBACK"; cross_info=""
     elif sig_source.startswith("CROSS"):
@@ -1095,13 +1102,6 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     now=datetime.now().strftime("%H:%M — %d/%m/%Y")
     k_str="↑" if kalman_up else "↓"
     cross_line=f"📉 Cross: {esc(cross_info)}\n" if cross_info else ""
-    # Rótulo do timeframe legível (15m → 15M · 1h → H1 · 4h → H4 · 1d → D1)
-    def _tf_label(t):
-        t = t.lower()
-        if t.endswith('d'): return f"D{t[:-1]}"
-        if t.endswith('h'): return f"H{t[:-1]}"
-        return t.upper()
-    tf_label = _tf_label(tf)
 
     rvol_line = (f"📊 RVOL: `{raw(f'{rvol_val:.2f}')}x` {esc(rvol_lbl)}" if rvol_lbl else "")
     flow_line = ("✅" if dna_flow_ok else "—") + " DNA Flow"
@@ -1513,12 +1513,24 @@ async def run_mtf_cycle(session, last_sig, coins):
         if now - last_sig.get(key, 0) >= cooldown_mtf:
             last_sig[key] = now
             sent += 1
+            _is_long_mtf = result["sig"] == "LONG"
+            _extra_mtf = {
+                "rvol_label":   r4h.get("rvol_label", ""),
+                "rvol":         r4h.get("rvol", 0.0),
+                "inst_score":   r4h.get("inst_score_long" if _is_long_mtf else "inst_score_short", 0),
+                "inst_cls":     r4h.get("inst_cls_long" if _is_long_mtf else "inst_cls_short", ""),
+                "dna_flow":     r4h.get("dna_flow_bull" if _is_long_mtf else "dna_flow_bear", False),
+                "trendilo_dir": r4h.get("trendilo_long" if _is_long_mtf else "trendilo_short", False),
+                "liq_event":    ("LIQ BOT ↑" if r4h.get("liq_bot") else
+                                 "LIQ TOP ↓" if r4h.get("liq_top") else ""),
+            }
             await send_telegram(session, sym, label, short, result["sig"],
                                 result["price"], result["atr"], r4h["score"],
                                 result["rsi"], result["adx"], result["trend"],
                                 result["kalman_up"],
                                 result["swing_low"], result["swing_high"],
-                                result["sig_source"], "1h", mtf_grade)
+                                result["sig_source"], "1h", mtf_grade,
+                                extra=_extra_mtf)
         else:
             mins = int((cooldown_mtf - (now - last_sig.get(key, 0))) / 60)
             setup_coins.append((short, direction, r4h["score"], h4_rsi, f"cooldown {mins}min"))
