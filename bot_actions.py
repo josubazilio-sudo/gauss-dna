@@ -651,11 +651,11 @@ def analyze(sym, candles):
     # ── SINAL PULLBACK (Pine: close<e21*1.02 + flow_bull + adx_long_ok + trl_bull + score>=55)
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and price<e21*1.03 and
-                   dna_flow_bull and adx>18 and pdi>mdi and rsi<58 and
+                   dna_flow_bull and adx>18 and pdi>mdi and rsi<65 and
                    inst_score_long>=50 and safe_long and trendilo_long)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and price>e21*0.97 and
-                    dna_flow_bear and adx>18 and mdi>pdi and rsi>42 and
+                    dna_flow_bear and adx>18 and mdi>pdi and rsi>38 and
                     inst_score_short>=50 and safe_short and trendilo_short)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
@@ -678,8 +678,8 @@ def analyze(sym, candles):
     # sideways: squeeze+ADX<18 = sem direção confirmada; FLEX exige ADX>17 sem squeeze
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
-    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 58
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 42
+    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 38
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
@@ -734,15 +734,15 @@ def analyze(sym, candles):
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
     long_bb_break  = (bb_break_long  and bb_expand and kalman_up   and k_short_rising  and
                       flex_score > 40 and adx >= 14  and not sideways    and
-                      not ext_above_ema21 and not vol_drying and rsi < 58)
+                      not ext_above_ema21 and not vol_drying and rsi < 65)
     short_bb_break = (bb_break_short and bb_expand and kalman_down and k_short_falling  and
                       flex_score < -40 and adx >= 14 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and rsi > 42)
+                      not ext_below_ema21 and not vol_drying and rsi > 38)
 
     # ── SMART MONEY REVERSAL (Pine: sm_bull + rsi>25 + not rsi_block + score>=60 — sem trendilo)
-    long_sm  = (sm_bull and rsi > 25 and rsi < 58 and
+    long_sm  = (sm_bull and rsi > 25 and rsi < 65 and
                 price > e200 and inst_score_long >= 60)
-    short_sm = (sm_bear and rsi > 42 and rsi < 75 and
+    short_sm = (sm_bear and rsi > 38 and rsi < 75 and
                 price < e200 and inst_score_short >= 60)
 
     # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
@@ -996,8 +996,8 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_short = swing_high + atr * 0.5
 
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
-    rsi_ok_long  = rsi < 58
-    rsi_ok_short = rsi > 42
+    rsi_ok_long  = rsi < 65
+    rsi_ok_short = rsi > 38
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
