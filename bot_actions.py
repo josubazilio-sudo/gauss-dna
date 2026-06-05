@@ -503,9 +503,9 @@ def analyze(sym, candles):
 
     # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
     def _low_touched_ema(ema_arr, n=5):
-        return any(lows[i]<=ema_arr[i]*1.008 for i in range(-n,-1))
+        return any(lows[i]<=ema_arr[i]*1.015 for i in range(-n,-1))
     def _high_touched_ema(ema_arr, n=5):
-        return any(highs[i]>=ema_arr[i]*0.992 for i in range(-n,-1))
+        return any(highs[i]>=ema_arr[i]*0.985 for i in range(-n,-1))
 
     pullback_bull=(_low_touched_ema(e10_arr) or _low_touched_ema(e21_arr)) and price>e10 and price>opens[-1] and ha_bull
     pullback_bear=(_high_touched_ema(e10_arr) or _high_touched_ema(e21_arr)) and price<e10 and price<opens[-1] and ha_bear
@@ -528,10 +528,12 @@ def analyze(sym, candles):
     # Smart Money — varredura de liquidez institucional (Pine Script: sweep de 20 velas)
     sm_swing_h = max(highs[-21:-1])
     sm_swing_l = min(lows[-21:-1])
-    liq_top    = (highs[-2] >= sm_swing_h and closes[-2] < sm_swing_h and
-                  (highs[-2] - closes[-2]) > atr * 0.3)
-    liq_bot    = (lows[-2] <= sm_swing_l and closes[-2] > sm_swing_l and
-                  (closes[-2] - lows[-2]) > atr * 0.3)
+    liq_top    = ((highs[-2] >= sm_swing_h or highs[-1] >= sm_swing_h) and
+                  closes[-1] < sm_swing_h and
+                  (highs[-1] - closes[-1]) > atr * 0.2)
+    liq_bot    = ((lows[-2] <= sm_swing_l or lows[-1] <= sm_swing_l) and
+                  closes[-1] > sm_swing_l and
+                  (closes[-1] - lows[-1]) > atr * 0.2)
     sm_bull    = liq_bot and ha_bull and (dna_flow_bull or f_bull)
     sm_bear    = liq_top and ha_bear and (dna_flow_bear or f_bear)
 
@@ -687,10 +689,10 @@ def analyze(sym, candles):
     ha_bull2 = ha_body_ok and closes[-1]>opens[-1] and closes[-2]>opens[-2]
     ha_bear2 = ha_body_ok and closes[-1]<opens[-1] and closes[-2]<opens[-2]
 
-    long_flex = (flex_score > 30 and ha_bull2 and macd_bull_r and adx >= 14 and
+    long_flex = (flex_score > 40 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and
                  (trendilo_long or kalman_up))
-    short_flex = (flex_score < -30 and ha_bear2 and macd_bear_r and adx >= 14 and
+    short_flex = (flex_score < -40 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and
                   (trendilo_short or not kalman_up))
 
@@ -698,13 +700,13 @@ def analyze(sym, candles):
     # Cenário: MACD ainda não cruzou positivo mas histograma JÁ está subindo (recuperação)
     # + OBV acumulando + acima do VWAP = dinheiro entrando antes da confirmação total
     long_setup  = (score > 50 and ha_bull2 and macd_recovering and adx > 18 and
-                   obv_bull and v_good and above_vwap and
+                   obv_bull and v_strong and above_vwap and
                    not sideways and not_ext_long_tight and safe_long and
-                   price > e200)
+                   price > e200 and inst_score_long >= 45)
     short_setup = (score < -50 and ha_bear2 and macd_exhausting and adx > 18 and
-                   obv_bear and v_good and below_vwap and
+                   obv_bear and v_strong and below_vwap and
                    not sideways and not_ext_short_tight and safe_short and
-                   price < e200)
+                   price < e200 and inst_score_short >= 45)
 
     # ── SURGE (pump/dump com volume explosivo — captura moves tipo HOME +16%) ────
     # ── SURGE (Pine: rvol_tier>=3 + 4%+ candle + break_h + not bb_break — sem trendilo)
@@ -714,10 +716,10 @@ def analyze(sym, candles):
     surge_break_l   = price < min(lows[-11:-1])   # rompeu mínima das últimas 10 velas
     long_surge  = (rvol_tier >= 3 and candle_bull_pct > 0.04 and surge_break_h and
                    price > e200 and not bb_break_long and not exhaustion_top and
-                   not vol_drying and kalman_up)
+                   not vol_drying and kalman_up and ha_bull)
     short_surge = (rvol_tier >= 3 and candle_bear_pct > 0.04 and surge_break_l and
                    price < e200 and not bb_break_short and not exhaustion_bot and
-                   not vol_drying and kalman_down)
+                   not vol_drying and kalman_down and ha_bear)
 
     # ── MOMENTUM (Pine: rsi_fresh + ha_bull + flow_bull + adx>22 + v_strong + trl_bull + score>=70)
     rsi_fresh_long  = rsi_prev < 65 <= rsi < 78   # cruzou 65 recentemente
@@ -730,11 +732,11 @@ def analyze(sym, candles):
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
-    long_bb_break  = (bb_break_long  and kalman_up   and k_short_rising  and
-                      flex_score > 20 and adx >= 14  and not sideways    and
+    long_bb_break  = (bb_break_long  and bb_expand and kalman_up   and k_short_rising  and
+                      flex_score > 40 and adx >= 14  and not sideways    and
                       not ext_above_ema21 and not vol_drying and rsi < 65)
-    short_bb_break = (bb_break_short and kalman_down and k_short_falling  and
-                      flex_score < -20 and adx >= 14 and not sideways    and
+    short_bb_break = (bb_break_short and bb_expand and kalman_down and k_short_falling  and
+                      flex_score < -40 and adx >= 14 and not sideways    and
                       not ext_below_ema21 and not vol_drying and rsi > 25)
 
     # ── SMART MONEY REVERSAL (Pine: sm_bull + rsi>25 + not rsi_block + score>=60 — sem trendilo)
@@ -744,19 +746,23 @@ def analyze(sym, candles):
                 price < e200 and inst_score_short >= 60)
 
     # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
-    long_div  = (rsi_div_bull and ha_bull and v_good and
-                 rsi > 25 and rsi < 80 and price > e200 and not exhaustion_top)
-    short_div = (rsi_div_bear and ha_bear and v_good and
-                 rsi > 20 and rsi < 75 and price < e200 and not exhaustion_bot)
+    long_div  = (rsi_div_bull and ha_bull and v_strong and
+                 rsi > 25 and rsi < 75 and price > e200 and not exhaustion_top and
+                 inst_score_long >= 45)
+    short_div = (rsi_div_bear and ha_bear and v_strong and
+                 rsi > 25 and rsi < 70 and price < e200 and not exhaustion_bot and
+                 inst_score_short >= 45)
 
     # ── REVERSAL — fundo/topo extremo com estrutura de inversão ──────────────────
     # RSI < 25 → LONG: capitulação + primeiro sinal de reversão estrutural
     # RSI > 75 → SHORT: euforia + rejeição estrutural
     # Não exige score (extremo RSI já é filtro forte) mas exige wick + volume + HA virando
     long_reversal  = (rsi < 25 and ha_bull and v_strong and
-                      (liq_bot or bull_absorb) and macd_recovering and not vol_drying)
+                      (liq_bot or bull_absorb) and macd_recovering and not vol_drying and
+                      adx > 12 and price > e200 * 0.96)
     short_reversal = (rsi > 75 and ha_bear and v_strong and
-                      (liq_top or bear_absorb) and macd_exhausting and not vol_drying)
+                      (liq_top or bear_absorb) and macd_exhausting and not vol_drying and
+                      adx > 12 and price < e200 * 1.04)
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -795,7 +801,7 @@ def analyze(sym, candles):
         quality_score += 2 if adx_long_ok else (1 if adx > 15 else 0)
         quality_score += 1 if obv_bull else 0
         quality_score += 1 if above_vwap else 0
-        quality_score += 1 if v_strong2 else (0 if not v_strong else 0)
+        quality_score += 1 if v_strong else 0
         quality_score += 1 if kalman_accel_up else 0
         quality_score += 1 if e200_rising else 0
         quality_score += 1 if f_strong else 0
@@ -808,7 +814,7 @@ def analyze(sym, candles):
         quality_score += 2 if adx_short_ok else (1 if adx > 15 else 0)
         quality_score += 1 if obv_bear else 0
         quality_score += 1 if below_vwap else 0
-        quality_score += 1 if v_strong2 else 0
+        quality_score += 1 if v_strong else 0
         quality_score += 1 if kalman_accel_down else 0
         quality_score += 1 if e200_falling else 0
         quality_score += 1 if f_strong else 0
@@ -1281,17 +1287,17 @@ def quick_rank(candles):
     # ATR%
     atr=atr_series(candles,14)[-1]
     atr_pct=(atr/price)*100
-    if atr_pct<0.25 or atr_pct>4.0: return 0   # muito quieto ou muito volátil para $180
+    if atr_pct<0.25 or atr_pct>4.0: return 0
     # ADX
     try: _,_,adx,_=dmi_adx(candles[-60:])
     except: return 0
-    if adx<15: return 0   # sem tendência
+    if adx<18: return 0   # sem tendência clara
     # Trend
     e200=ema_series(closes,200)[-1]
-    trend_ok=abs(price-e200)/e200>0.005  # preço não colado na EMA200
+    trend_ok=abs(price-e200)/e200>0.01  # preço pelo menos 1% afastado da EMA200
     # Volume crescente
     vol_ma=sum(vols[-20:])/20
-    vol_ok=vols[-1]>vol_ma*1.0
+    vol_ok=vols[-1]>vol_ma*1.2  # acima da média por margem real
     # Score composto
     atr_ideal=max(0,25-abs(atr_pct-1.5)*8)
     score=adx*0.40 + (20 if trend_ok else 0) + (15 if vol_ok else 0) + atr_ideal
