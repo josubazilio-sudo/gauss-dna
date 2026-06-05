@@ -1231,7 +1231,8 @@ def save_state(state):
 
 # Stablecoins e tokens alavancados para excluir
 _EXCLUDE = {"USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH",
-            "EUR","GBP","BRL","UST","USDD","FRAX","USD1","USDE","USDT0"}
+            "EUR","GBP","BRL","UST","USDD","FRAX","USD1","USDE","USDT0",
+            "AIXDROP"}
 _EXCLUDE_SUB = ("UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S")
 
 async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
