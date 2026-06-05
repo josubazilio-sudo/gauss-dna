@@ -1528,16 +1528,20 @@ async def run_cycle(session, last_sig, tf, coins):
         if top_long:
             best_adx_l = max(adx for _,_,_,_,adx,_ in top_long)
             best_sc_l  = top_long[0][2]
-            motivo_l   = ("📉 ADX baixo" if best_adx_l < 17
-                          else "📊 Score baixo" if best_sc_l < 50
+            best_rsi_l = top_long[0][3]
+            motivo_l   = ("🔴 RSI sobrecomprado" if best_rsi_l >= 65
+                          else "📉 ADX baixo"      if best_adx_l < 17
+                          else "📊 Score baixo"    if best_sc_l < 50
                           else "⏳ MACD/HA pendente")
             lines.append(f"📈 LONG — {motivo_l}")
             lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_long]
         if top_short:
             best_adx_s = max(adx for _,_,_,_,adx,_ in top_short)
             best_sc_s  = top_short[0][2]
-            motivo_s   = ("📉 ADX baixo" if best_adx_s < 17
-                          else "📊 Score baixo" if best_sc_s > -50
+            best_rsi_s = top_short[0][3]
+            motivo_s   = ("🔴 RSI sobrevendido" if best_rsi_s <= 38
+                          else "📉 ADX baixo"    if best_adx_s < 17
+                          else "📊 Score baixo"  if best_sc_s > -50
                           else "⏳ MACD/HA pendente")
             lines.append(f"📉 SHORT — {motivo_s}")
             lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_short]
