@@ -21,7 +21,7 @@ LOOP_MODE    = os.environ.get("LOOP_MODE", "false").lower() == "true"
 TEST_MODE    = os.environ.get("TEST_MODE", "false").lower() == "true"
 DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
 SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top 50 por volume
-SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "16"))    # rescan a cada N ciclos (~4h em 15m)
+SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "4"))     # rescan a cada N ciclos (~20min em 5min)
 CYCLE_INTERVAL = int(os.environ.get("CYCLE_INTERVAL", "0"))  # intervalo máximo em segundos (0=aguarda vela)
 STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
@@ -1808,9 +1808,9 @@ async def main():
         except Exception as e:
             log.error(f"Diagnóstico falhou: {e}")
 
-        # Scanner inicial rápido (top 20) antes do primeiro ciclo
+        # Scanner inicial antes do primeiro ciclo (top 50 para não começar cego)
         if DYNAMIC_SCAN:
-            result=await scan_best_coins(session,scan_tf,min(20,SCANNER_TOP))
+            result=await scan_best_coins(session,scan_tf,min(50,SCANNER_TOP))
             if result: active_coins=result
             last_scan_cycle=0
 
