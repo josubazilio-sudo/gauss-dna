@@ -655,7 +655,7 @@ def analyze(sym, candles):
                    inst_score_long>=50 and safe_long and trendilo_long)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and price>e21*0.97 and
-                    dna_flow_bear and adx>18 and mdi>pdi and
+                    dna_flow_bear and adx>18 and mdi>pdi and rsi>42 and
                     inst_score_short>=50 and safe_short and trendilo_short)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
@@ -679,7 +679,7 @@ def analyze(sym, candles):
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 25
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 42
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
@@ -737,12 +737,12 @@ def analyze(sym, candles):
                       not ext_above_ema21 and not vol_drying and rsi < 65)
     short_bb_break = (bb_break_short and bb_expand and kalman_down and k_short_falling  and
                       flex_score < -40 and adx >= 14 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and rsi > 25)
+                      not ext_below_ema21 and not vol_drying and rsi > 42)
 
     # ── SMART MONEY REVERSAL (Pine: sm_bull + rsi>25 + not rsi_block + score>=60 — sem trendilo)
     long_sm  = (sm_bull and rsi > 25 and rsi < 80 and
                 price > e200 and inst_score_long >= 60)
-    short_sm = (sm_bear and rsi > 20 and rsi < 75 and
+    short_sm = (sm_bear and rsi > 42 and rsi < 75 and
                 price < e200 and inst_score_short >= 60)
 
     # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
@@ -750,7 +750,7 @@ def analyze(sym, candles):
                  rsi > 25 and rsi < 75 and price > e200 and not exhaustion_top and
                  inst_score_long >= 45)
     short_div = (rsi_div_bear and ha_bear and v_good and
-                 rsi > 25 and rsi < 70 and price < e200 and not exhaustion_bot and
+                 rsi > 38 and rsi < 70 and price < e200 and not exhaustion_bot and
                  inst_score_short >= 45)
 
     # ── REVERSAL — fundo/topo extremo com estrutura de inversão ──────────────────
@@ -997,7 +997,7 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
 
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
     rsi_ok_long  = rsi < 65
-    rsi_ok_short = rsi > 25
+    rsi_ok_short = rsi > 42
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
