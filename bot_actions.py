@@ -1452,7 +1452,7 @@ async def run_cycle(session, last_sig, tf, coins):
         h4_bull = (r4["score"] > 15 and r4.get("tbull_r", False) and
                    r4["adx"] >= 13 and h4_rsi < 65 and h4_vol)
         h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
-                   h4_vols and r4["score"] < -15 and h4_rsi > 25)
+                   h4_vols and r4["score"] < -15 and h4_rsi > 38)
         # Só bloqueia se H4 for FORTEMENTE oposto (score < -30 para LONG, > 30 para SHORT)
         if sig_direction == "LONG"  and h4_bear and r4["score"] < -30: return False
         if sig_direction == "SHORT" and h4_bull and r4["score"] >  30: return False
@@ -1596,7 +1596,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         h4_bull  = (r4h["score"] > 15 and r4h.get("tbull_r", False) and
                     r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol)
         h4_bear  = (r4h.get("tbear_r", False) and r4h["adx"] >= 13 and
-                    h4_vol_s and r4h["score"] < -15 and h4_rsi > 25)
+                    h4_vol_s and r4h["score"] < -15 and h4_rsi > 38)
         if not (h4_bull or h4_bear):
             log.info(f"[MTF] {short:7s} | 4H sem setup | Score {r4h['score']:+d} RSI4H {h4_rsi:.0f}")
             continue
