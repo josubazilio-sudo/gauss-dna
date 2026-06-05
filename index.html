@@ -312,36 +312,54 @@ const $=id=>document.getElementById(id);
 // ── PORTFOLIO ── (lista padrão usada como fallback)
 let COINS=[
   // Mega caps
-  {sym:'BTCUSDT',  label:'BTC/USDT',  short:'BTC'},
-  {sym:'ETHUSDT',  label:'ETH/USDT',  short:'ETH'},
-  {sym:'BNBUSDT',  label:'BNB/USDT',  short:'BNB'},
-  {sym:'XRPUSDT',  label:'XRP/USDT',  short:'XRP'},
+  {sym:'BTCUSDT',    label:'BTC/USDT',    short:'BTC'},
+  {sym:'ETHUSDT',    label:'ETH/USDT',    short:'ETH'},
+  {sym:'BNBUSDT',    label:'BNB/USDT',    short:'BNB'},
+  {sym:'XRPUSDT',    label:'XRP/USDT',    short:'XRP'},
+  {sym:'TRXUSDT',    label:'TRX/USDT',    short:'TRX'},
   // L1
-  {sym:'SOLUSDT',  label:'SOL/USDT',  short:'SOL'},
-  {sym:'AVAXUSDT', label:'AVAX/USDT', short:'AVAX'},
-  {sym:'SUIUSDT',  label:'SUI/USDT',  short:'SUI'},
-  {sym:'APTUSDT',  label:'APT/USDT',  short:'APT'},
-  {sym:'NEARUSDT', label:'NEAR/USDT', short:'NEAR'},
-  {sym:'TONUSDT',  label:'TON/USDT',  short:'TON'},
+  {sym:'SOLUSDT',    label:'SOL/USDT',    short:'SOL'},
+  {sym:'AVAXUSDT',   label:'AVAX/USDT',   short:'AVAX'},
+  {sym:'SUIUSDT',    label:'SUI/USDT',    short:'SUI'},
+  {sym:'APTUSDT',    label:'APT/USDT',    short:'APT'},
+  {sym:'NEARUSDT',   label:'NEAR/USDT',   short:'NEAR'},
+  {sym:'TONUSDT',    label:'TON/USDT',    short:'TON'},
+  {sym:'HBARUSDT',   label:'HBAR/USDT',   short:'HBAR'},
+  {sym:'ALGOUSDT',   label:'ALGO/USDT',   short:'ALGO'},
+  {sym:'ICPUSDT',    label:'ICP/USDT',    short:'ICP'},
   // DeFi / infra
-  {sym:'LINKUSDT', label:'LINK/USDT', short:'LINK'},
-  {sym:'INJUSDT',  label:'INJ/USDT',  short:'INJ'},
-  {sym:'JUPUSDT',  label:'JUP/USDT',  short:'JUP'},
-  {sym:'ARBUSDT',  label:'ARB/USDT',  short:'ARB'},
-  {sym:'OPUSDT',   label:'OP/USDT',   short:'OP'},
-  {sym:'UNIUSDT',  label:'UNI/USDT',  short:'UNI'},
-  // Meme
-  {sym:'DOGEUSDT', label:'DOGE/USDT', short:'DOGE'},
-  {sym:'PEPEUSDT', label:'PEPE/USDT', short:'PEPE'},
-  {sym:'WIFUSDT',  label:'WIF/USDT',  short:'WIF'},
-  {sym:'SHIBUSDT', label:'SHIB/USDT', short:'SHIB'},
-  // Estabelecidas
-  {sym:'ADAUSDT',  label:'ADA/USDT',  short:'ADA'},
-  {sym:'DOTUSDT',  label:'DOT/USDT',  short:'DOT'},
-  {sym:'ATOMUSDT', label:'ATOM/USDT', short:'ATOM'},
-  {sym:'LTCUSDT',  label:'LTC/USDT',  short:'LTC'},
+  {sym:'LINKUSDT',   label:'LINK/USDT',   short:'LINK'},
+  {sym:'INJUSDT',    label:'INJ/USDT',    short:'INJ'},
+  {sym:'JUPUSDT',    label:'JUP/USDT',    short:'JUP'},
+  {sym:'ARBUSDT',    label:'ARB/USDT',    short:'ARB'},
+  {sym:'OPUSDT',     label:'OP/USDT',     short:'OP'},
+  {sym:'UNIUSDT',    label:'UNI/USDT',    short:'UNI'},
+  {sym:'AAVEUSDT',   label:'AAVE/USDT',   short:'AAVE'},
+  {sym:'RUNEUSDT',   label:'RUNE/USDT',   short:'RUNE'},
+  {sym:'STRKUSDT',   label:'STRK/USDT',   short:'STRK'},
+  // RWA / Narrativa
+  {sym:'ONDOUSDT',   label:'ONDO/USDT',   short:'ONDO'},
+  {sym:'ZROUSDT',    label:'ZRO/USDT',    short:'ZRO'},
+  {sym:'WLDUSDT',    label:'WLD/USDT',    short:'WLD'},
+  {sym:'TIAUSDT',    label:'TIA/USDT',    short:'TIA'},
+  {sym:'SEIUSDT',    label:'SEI/USDT',    short:'SEI'},
+  {sym:'FILUSDT',    label:'FIL/USDT',    short:'FIL'},
   // IA
-  {sym:'FETUSDT',  label:'FET/USDT',  short:'FET'},
+  {sym:'FETUSDT',    label:'FET/USDT',    short:'FET'},
+  {sym:'RENDERUSDT', label:'RENDER/USDT', short:'RENDER'},
+  {sym:'TAOUSDT',    label:'TAO/USDT',    short:'TAO'},
+  {sym:'ENAUSDT',    label:'ENA/USDT',    short:'ENA'},
+  // Meme
+  {sym:'DOGEUSDT',   label:'DOGE/USDT',   short:'DOGE'},
+  {sym:'PEPEUSDT',   label:'PEPE/USDT',   short:'PEPE'},
+  {sym:'WIFUSDT',    label:'WIF/USDT',    short:'WIF'},
+  {sym:'SHIBUSDT',   label:'SHIB/USDT',   short:'SHIB'},
+  {sym:'BONKUSDT',   label:'BONK/USDT',   short:'BONK'},
+  // Estabelecidas
+  {sym:'ADAUSDT',    label:'ADA/USDT',    short:'ADA'},
+  {sym:'DOTUSDT',    label:'DOT/USDT',    short:'DOT'},
+  {sym:'ATOMUSDT',   label:'ATOM/USDT',   short:'ATOM'},
+  {sym:'LTCUSDT',    label:'LTC/USDT',    short:'LTC'},
 ];
 
 // ── STATE ──
@@ -1211,32 +1229,7 @@ function renderScanRows(rows){
 <script>
 // ── PWA SERVICE WORKER ──
 if('serviceWorker' in navigator){
-  const swCode=`
-    const CACHE='gauss-dna-v10';
-    const ASSETS=[self.location.href];
-    self.addEventListener('install',e=>{
-      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
-    });
-    self.addEventListener('activate',e=>{
-      e.waitUntil(clients.claim());
-    });
-    self.addEventListener('fetch',e=>{
-      // Deixa passar APIs externas (Binance, Telegram), cacheia só o app
-      const url=e.request.url;
-      if(url.includes('binance.com')||url.includes('telegram.org')||url.includes('googleapis.com')){
-        e.respondWith(fetch(e.request));
-        return;
-      }
-      e.respondWith(
-        caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
-          return caches.open(CACHE).then(c=>{c.put(e.request,res.clone());return res;});
-        }))
-      );
-    });
-  `;
-  const blob=new Blob([swCode],{type:'application/javascript'});
-  const swUrl=URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl,{scope:'./'})
+  navigator.serviceWorker.register('./tracker-sw.js',{scope:'./'})
     .then(()=>console.log('SW registrado'))
     .catch(e=>console.log('SW erro:',e));
 }
