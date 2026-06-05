@@ -652,11 +652,11 @@ def analyze(sym, candles):
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and price<e21*1.03 and
                    dna_flow_bull and adx>18 and pdi>mdi and
-                   inst_score_long>=55 and safe_long and trendilo_long)
+                   inst_score_long>=50 and safe_long and trendilo_long)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and price>e21*0.97 and
                     dna_flow_bear and adx>18 and mdi>pdi and
-                    inst_score_short>=55 and safe_short and trendilo_short)
+                    inst_score_short>=50 and safe_short and trendilo_short)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
     # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
@@ -757,10 +757,10 @@ def analyze(sym, candles):
     # RSI < 25 → LONG: capitulação + primeiro sinal de reversão estrutural
     # RSI > 75 → SHORT: euforia + rejeição estrutural
     # Não exige score (extremo RSI já é filtro forte) mas exige wick + volume + HA virando
-    long_reversal  = (rsi < 25 and ha_bull and v_strong and
+    long_reversal  = (rsi < 30 and ha_bull and v_strong and
                       (liq_bot or bull_absorb) and macd_recovering and not vol_drying and
                       adx > 12 and price > e200 * 0.96)
-    short_reversal = (rsi > 75 and ha_bear and v_strong and
+    short_reversal = (rsi > 70 and ha_bear and v_strong and
                       (liq_top or bear_absorb) and macd_exhausting and not vol_drying and
                       adx > 12 and price < e200 * 1.04)
 
