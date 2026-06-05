@@ -689,10 +689,10 @@ def analyze(sym, candles):
     ha_bull2 = ha_body_ok and closes[-1]>opens[-1] and closes[-2]>opens[-2]
     ha_bear2 = ha_body_ok and closes[-1]<opens[-1] and closes[-2]<opens[-2]
 
-    long_flex = (flex_score > 35 and ha_bull2 and macd_bull_r and adx >= 14 and
+    long_flex = (flex_score > 45 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and v_good and
                  (trendilo_long or kalman_up))
-    short_flex = (flex_score < -35 and ha_bear2 and macd_bear_r and adx >= 14 and
+    short_flex = (flex_score < -45 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and v_good and
                   (trendilo_short or not kalman_up))
 
@@ -702,11 +702,11 @@ def analyze(sym, candles):
     long_setup  = (score > 50 and ha_bull2 and macd_recovering and adx > 18 and
                    obv_bull and v_good and above_vwap and
                    not sideways and not_ext_long_tight and safe_long and
-                   price > e200 and inst_score_long >= 45)
+                   price > e200 and inst_score_long >= 50)
     short_setup = (score < -50 and ha_bear2 and macd_exhausting and adx > 18 and
                    obv_bear and v_good and below_vwap and
                    not sideways and not_ext_short_tight and safe_short and
-                   price < e200 and inst_score_short >= 45)
+                   price < e200 and inst_score_short >= 50)
 
     # ── SURGE (pump/dump com volume explosivo — captura moves tipo HOME +16%) ────
     # ── SURGE (Pine: rvol_tier>=3 + 4%+ candle + break_h + not bb_break — sem trendilo)
@@ -733,10 +733,10 @@ def analyze(sym, candles):
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
     long_bb_break  = (bb_break_long  and bb_expand and kalman_up   and k_short_rising  and
-                      flex_score > 40 and adx >= 14  and not sideways    and
+                      flex_score > 40 and adx >= 18  and not sideways    and
                       not ext_above_ema21 and not vol_drying and rsi < 65)
     short_bb_break = (bb_break_short and bb_expand and kalman_down and k_short_falling  and
-                      flex_score < -40 and adx >= 14 and not sideways    and
+                      flex_score < -40 and adx >= 18 and not sideways    and
                       not ext_below_ema21 and not vol_drying and rsi > 38)
 
     # ── SMART MONEY REVERSAL (Pine: sm_bull + rsi>25 + not rsi_block + score>=60 — sem trendilo)
@@ -748,10 +748,10 @@ def analyze(sym, candles):
     # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
     long_div  = (rsi_div_bull and ha_bull and v_good and
                  rsi > 25 and rsi < 62 and price > e200 and not exhaustion_top and
-                 inst_score_long >= 45)
+                 inst_score_long >= 55)
     short_div = (rsi_div_bear and ha_bear and v_good and
                  rsi > 38 and rsi < 70 and price < e200 and not exhaustion_bot and
-                 inst_score_short >= 45)
+                 inst_score_short >= 55)
 
     # ── REVERSAL — fundo/topo extremo com estrutura de inversão ──────────────────
     # RSI < 25 → LONG: capitulação + primeiro sinal de reversão estrutural
@@ -759,10 +759,10 @@ def analyze(sym, candles):
     # Não exige score (extremo RSI já é filtro forte) mas exige wick + volume + HA virando
     long_reversal  = (rsi < 30 and ha_bull and v_strong and
                       (liq_bot or bull_absorb) and macd_recovering and not vol_drying and
-                      adx > 12 and price > e200 * 0.96)
+                      adx > 12 and price > e200 * 0.96 and (dna_flow_bull or obv_bull))
     short_reversal = (rsi > 70 and ha_bear and v_strong and
                       (liq_top or bear_absorb) and macd_exhausting and not vol_drying and
-                      adx > 12 and price < e200 * 1.04)
+                      adx > 12 and price < e200 * 1.04 and (dna_flow_bear or obv_bear))
 
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
@@ -821,7 +821,7 @@ def analyze(sym, candles):
         quality_score += 1 if trend_consistent_bear else 0
 
     if quality_score >= 14:   signal_grade = "S"   # setup perfeito
-    elif quality_score >= 10: signal_grade = "A"   # setup sólido
+    elif quality_score >= 11: signal_grade = "A"   # setup sólido
     elif quality_score >= 6:  signal_grade = "B"   # setup básico
     else:                     signal_grade = "B"
 
@@ -1436,8 +1436,8 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # ELITE: só Grade A/S; FLEX: aceita B se score alto o suficiente
-            if grade == "B" and (SIGNAL_MODE == "ELITE" or abs(result["score"]) < 50):
+            # Só Grade A/S — Grade B sem confirmação suficiente
+            if grade == "B":
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 continue
