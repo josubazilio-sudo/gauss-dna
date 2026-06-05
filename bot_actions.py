@@ -649,11 +649,11 @@ def analyze(sym, candles):
     # ── SINAL PULLBACK (Pine: close<e21*1.02 + flow_bull + adx_long_ok + trl_bull + score>=55)
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and price<e21*1.03 and
-                   dna_flow_bull and adx_long_ok and
+                   dna_flow_bull and adx>18 and pdi>mdi and
                    inst_score_long>=55 and safe_long and trendilo_long)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and price>e21*0.97 and
-                    dna_flow_bear and adx_short_ok and
+                    dna_flow_bear and adx>18 and mdi>pdi and
                     inst_score_short>=55 and safe_short and trendilo_short)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
@@ -723,9 +723,9 @@ def analyze(sym, candles):
     rsi_fresh_long  = rsi_prev < 65 <= rsi < 78   # cruzou 65 recentemente
     rsi_fresh_short = rsi_prev > 35 >= rsi > 18   # cruzou abaixo de 35 recentemente
     long_momentum  = (rsi_fresh_long  and ha_bull and dna_flow_bull and
-                      adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 70)
+                      adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 60)
     short_momentum = (rsi_fresh_short and ha_bear and dna_flow_bear and
-                      adx > 22 and v_strong and trendilo_short and inst_score_short >= 70)
+                      adx > 22 and v_strong and trendilo_short and inst_score_short >= 60)
 
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
@@ -1391,8 +1391,9 @@ async def run_cycle(session, last_sig, tf, coins):
                    r4["adx"] >= 13 and h4_rsi < 65 and h4_vol)
         h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
                    h4_vols and r4["score"] < -15 and h4_rsi > 25)
-        if sig_direction == "LONG"  and h4_bear: return False   # H4 bear bloqueia LONG H1
-        if sig_direction == "SHORT" and h4_bull: return False   # H4 bull bloqueia SHORT H1
+        # Só bloqueia se H4 for FORTEMENTE oposto (score < -30 para LONG, > 30 para SHORT)
+        if sig_direction == "LONG"  and h4_bear and r4["score"] < -30: return False
+        if sig_direction == "SHORT" and h4_bull and r4["score"] >  30: return False
         return True
 
     for (sym,label,short), candles, h4c in zip(
