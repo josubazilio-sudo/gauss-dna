@@ -903,6 +903,13 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     vol_ma = sum(vols[-20:]) / 20
     # Volume surge: spike claro no bounce (não só acima da média)
     vol_surge = vols[-1] > vol_ma * 1.2 and vols[-1] >= vols[-2]
+    # RVOL 1H — exibido no Telegram (mostra volume real da entrada, não do H4)
+    rvol_1h = vols[-1] / max(vol_ma, 1e-10)
+    rvol_tier_1h = (4 if rvol_1h >= 3.0 else 3 if rvol_1h >= 2.0 else
+                    2 if rvol_1h >= 1.5 else 1 if rvol_1h >= 1.2 else 0)
+    rvol_label_1h = ("INST" if rvol_tier_1h==4 else "VSTRONG" if rvol_tier_1h==3 else
+                     "STRONG" if rvol_tier_1h==2 else "GOOD" if rvol_tier_1h==1 else "LOW")
+    v_good_1h = rvol_tier_1h >= 1
 
     obv = obv_calc(closes, vols)
     obv_ema = ema_series(obv, 20)
@@ -1019,7 +1026,6 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
         quality_mtf += 1 if obv_bull else 0
         quality_mtf += 1 if trendilo_long_mtf else 0
         quality_mtf += 1 if trend_strong_mtf else 0
-        quality_mtf += 1 if kalman_accel_up_mtf else 0
     else:
         quality_mtf += 2 if kalman_accel_dn_mtf else (1 if kalman_down_mtf else 0)
         quality_mtf += 2 if vol_surge else (1 if vols[-1] > vol_ma else 0)
@@ -1028,9 +1034,10 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
         quality_mtf += 1 if obv_bear else 0
         quality_mtf += 1 if trendilo_short_mtf else 0
         quality_mtf += 1 if trend_strong_mtf else 0
-        quality_mtf += 1 if kalman_accel_dn_mtf else 0
-    grade_mtf = "S" if quality_mtf >= 5 else "A" if quality_mtf >= 3 else "B"
+    # max = 9pts: S≥6 (kalman_accel+vol+2extras), A≥4, B abaixo
+    grade_mtf = "S" if quality_mtf >= 6 else "A" if quality_mtf >= 4 else "B"
 
+    mid_body_1h = (highs[-1] + lows[-1]) / 2
     return {
         "sig": sig, "sig_source": f"MTF_PULLBACK [1h→30m] EMA{'21' if near21 else '50'}",
         "price": price, "atr": atr,
@@ -1038,6 +1045,11 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
         "rsi": rsi, "adx": adx, "score": 0,
         "kalman_up": kalman_up_mtf, "trend": "BULL" if is_long else "BEAR",
         "signal_grade": grade_mtf, "quality_score": quality_mtf,
+        # RVOL e DNA Flow do H1 (não do H4) para exibição correta no Telegram
+        "rvol": rvol_1h, "rvol_label": rvol_label_1h,
+        "dna_flow_bull": (ml > sl_v and price > mid_body_1h and v_good_1h),
+        "dna_flow_bear": (ml < sl_v and price < mid_body_1h and v_good_1h),
+        "trendilo_long": trendilo_long_mtf, "trendilo_short": trendilo_short_mtf,
     }
 
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
@@ -1575,12 +1587,13 @@ async def run_mtf_cycle(session, last_sig, coins):
             sent += 1
             _is_long_mtf = result["sig"] == "LONG"
             _extra_mtf = {
-                "rvol_label":   r4h.get("rvol_label", ""),
-                "rvol":         r4h.get("rvol", 0.0),
+                # RVOL, DNA Flow e Trendilo do H1 (entrada real), não do H4
+                "rvol_label":   result.get("rvol_label", ""),
+                "rvol":         result.get("rvol", 0.0),
                 "inst_score":   r4h.get("inst_score_long" if _is_long_mtf else "inst_score_short", 0),
                 "inst_cls":     r4h.get("inst_cls_long" if _is_long_mtf else "inst_cls_short", ""),
-                "dna_flow":     r4h.get("dna_flow_bull" if _is_long_mtf else "dna_flow_bear", False),
-                "trendilo_dir": r4h.get("trendilo_long" if _is_long_mtf else "trendilo_short", False),
+                "dna_flow":     result.get("dna_flow_bull" if _is_long_mtf else "dna_flow_bear", False),
+                "trendilo_dir": result.get("trendilo_long" if _is_long_mtf else "trendilo_short", False),
                 "liq_event":    ("LIQ BOT ↑" if r4h.get("liq_bot") else
                                  "LIQ TOP ↓" if r4h.get("liq_top") else ""),
             }
