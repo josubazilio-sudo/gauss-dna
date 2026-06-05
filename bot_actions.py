@@ -690,10 +690,10 @@ def analyze(sym, candles):
     ha_bear2 = ha_body_ok and closes[-1]<opens[-1] and closes[-2]<opens[-2]
 
     long_flex = (flex_score > 35 and ha_bull2 and macd_bull_r and adx >= 14 and
-                 not sideways and not_ext_long_tight and safe_long and
+                 not sideways and not_ext_long_tight and safe_long and v_good and
                  (trendilo_long or kalman_up))
     short_flex = (flex_score < -35 and ha_bear2 and macd_bear_r and adx >= 14 and
-                  not sideways and not_ext_short_tight and safe_short and
+                  not sideways and not_ext_short_tight and safe_short and v_good and
                   (trendilo_short or not kalman_up))
 
     # ── SETUP — acumulação OBV + MACD em recuperação antecipada (antes dos outros dispararem)
@@ -1263,7 +1263,10 @@ def save_state(state):
 # Stablecoins e tokens alavancados para excluir
 _EXCLUDE = {"USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH",
             "EUR","GBP","BRL","UST","USDD","FRAX","USD1","USDE","USDT0",
-            "AIXDROP"}
+            "AIXDROP",
+            # Moedas FRACO: backtest mostra avg_r negativo ou -1R em todos os trades
+            "PENDLE","GIGGLE","USELESS","EDEN","PLAY","MAGMA","CHIP",
+            "SLX","JGGL","MYX","SENTIS","XPL","TAO"}
 _EXCLUDE_SUB = ("UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S")
 
 async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
@@ -1443,29 +1446,34 @@ async def run_cycle(session, last_sig, tf, coins):
                 log.info(f"  🚫 {short} [{tf}] {result['sig']} bloqueado — H4 oposto à direção H1")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"H4 oposto"))
                 continue
-            key=f"{sym}_{tf}"
-            if now-last_sig.get(key,0)>=cooldown:
-                last_sig[key]=now; sent+=1
-                _is_long = result["sig"]=="LONG"
-                _extra = {
-                    "rvol_label":    result.get("rvol_label",""),
-                    "rvol":          result.get("rvol",0.0),
-                    "inst_score":    result.get("inst_score_long" if _is_long else "inst_score_short",0),
-                    "inst_cls":      result.get("inst_cls_long" if _is_long else "inst_cls_short",""),
-                    "dna_flow":      result.get("dna_flow_bull" if _is_long else "dna_flow_bear",False),
-                    "trendilo_dir":  result.get("trendilo_long" if _is_long else "trendilo_short",False),
-                    "liq_event":     ("LIQ BOT ↑" if result.get("liq_bot") else
-                                      "LIQ TOP ↓" if result.get("liq_top") else ""),
-                }
-                await send_telegram(session,sym,label,short,result["sig"],result["price"],
-                                    result["atr"],result["score"],result["rsi"],result["adx"],
-                                    result["trend"],result["kalman_up"],
-                                    result["swing_low"],result["swing_high"],result["sig_source"],tf,grade,
-                                    extra=_extra)
-            else:
-                mins=int((cooldown-(now-last_sig.get(key,0)))/60)
+            key_dir = f"{sym}_{tf}_{result['sig']}"
+            key_any = f"{sym}_{tf}"
+            same_dir_blocked = now - last_sig.get(key_dir, 0) < cooldown
+            flip_blocked     = now - last_sig.get(key_any, 0) < 7200
+            if same_dir_blocked or flip_blocked:
+                mins = int((cooldown - (now - last_sig.get(key_dir, 0))) / 60)
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"cooldown"))
+                continue
+            last_sig[key_dir] = now
+            last_sig[key_any] = now
+            sent += 1
+            _is_long = result["sig"]=="LONG"
+            _extra = {
+                "rvol_label":    result.get("rvol_label",""),
+                "rvol":          result.get("rvol",0.0),
+                "inst_score":    result.get("inst_score_long" if _is_long else "inst_score_short",0),
+                "inst_cls":      result.get("inst_cls_long" if _is_long else "inst_cls_short",""),
+                "dna_flow":      result.get("dna_flow_bull" if _is_long else "dna_flow_bear",False),
+                "trendilo_dir":  result.get("trendilo_long" if _is_long else "trendilo_short",False),
+                "liq_event":     ("LIQ BOT ↑" if result.get("liq_bot") else
+                                  "LIQ TOP ↓" if result.get("liq_top") else ""),
+            }
+            await send_telegram(session,sym,label,short,result["sig"],result["price"],
+                                result["atr"],result["score"],result["rsi"],result["adx"],
+                                result["trend"],result["kalman_up"],
+                                result["swing_low"],result["swing_high"],result["sig_source"],tf,grade,
+                                extra=_extra)
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
 
