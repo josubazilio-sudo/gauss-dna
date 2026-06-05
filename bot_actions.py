@@ -689,10 +689,10 @@ def analyze(sym, candles):
     ha_bull2 = ha_body_ok and closes[-1]>opens[-1] and closes[-2]>opens[-2]
     ha_bear2 = ha_body_ok and closes[-1]<opens[-1] and closes[-2]<opens[-2]
 
-    long_flex = (flex_score > 40 and ha_bull2 and macd_bull_r and adx >= 14 and
+    long_flex = (flex_score > 35 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and
                  (trendilo_long or kalman_up))
-    short_flex = (flex_score < -40 and ha_bear2 and macd_bear_r and adx >= 14 and
+    short_flex = (flex_score < -35 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and
                   (trendilo_short or not kalman_up))
 
@@ -700,11 +700,11 @@ def analyze(sym, candles):
     # Cenário: MACD ainda não cruzou positivo mas histograma JÁ está subindo (recuperação)
     # + OBV acumulando + acima do VWAP = dinheiro entrando antes da confirmação total
     long_setup  = (score > 50 and ha_bull2 and macd_recovering and adx > 18 and
-                   obv_bull and v_strong and above_vwap and
+                   obv_bull and v_good and above_vwap and
                    not sideways and not_ext_long_tight and safe_long and
                    price > e200 and inst_score_long >= 45)
     short_setup = (score < -50 and ha_bear2 and macd_exhausting and adx > 18 and
-                   obv_bear and v_strong and below_vwap and
+                   obv_bear and v_good and below_vwap and
                    not sideways and not_ext_short_tight and safe_short and
                    price < e200 and inst_score_short >= 45)
 
@@ -746,10 +746,10 @@ def analyze(sym, candles):
                 price < e200 and inst_score_short >= 60)
 
     # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
-    long_div  = (rsi_div_bull and ha_bull and v_strong and
+    long_div  = (rsi_div_bull and ha_bull and v_good and
                  rsi > 25 and rsi < 75 and price > e200 and not exhaustion_top and
                  inst_score_long >= 45)
-    short_div = (rsi_div_bear and ha_bear and v_strong and
+    short_div = (rsi_div_bear and ha_bear and v_good and
                  rsi > 25 and rsi < 70 and price < e200 and not exhaustion_bot and
                  inst_score_short >= 45)
 
