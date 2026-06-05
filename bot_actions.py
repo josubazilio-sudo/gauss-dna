@@ -1513,15 +1513,15 @@ async def run_cycle(session, last_sig, tf, coins):
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
-    """Ciclo MTF: 1h confirma direção → 30m encontra entrada no pullback EMA21/50."""
-    # Crypto opera 24/7 — sem filtro de horário
+    """Ciclo MTF paralelo: prefetch H4 em lote → filtra → prefetch 1H em lote → sinal."""
     now = time.time()
     sent = 0
-    cooldown_mtf = 14400  # 4h entre sinais MTF por moeda (ciclo 4H)
-    setup_coins = []  # (short, direction, score, rsi, motivo_bloqueio)
+    cooldown_mtf = 14400
+    setup_coins = []
 
-    # BTC trend — filtro em 4H para coerência com o timeframe de setup
+    # BTC trend — filtro em 4H
     btc_bull_filter = btc_bear_filter = False
+    btc_p = 0
     btc_candles = await fetch_candles(session, "BTCUSDT", "4h")
     if btc_candles and len(btc_candles) >= 50:
         btc_c = [c["c"] for c in btc_candles]
@@ -1533,91 +1533,95 @@ async def run_mtf_cycle(session, last_sig, coins):
         btc_bear_filter = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02
         log.info(f"[MTF] BTC 4H: {'BULL ↑' if btc_bull_filter else 'BEAR ↓' if btc_bear_filter else 'NEUTRO'} | ${btc_p:.0f}")
 
-    for sym, label, short in coins:
-        # 4H — direção e setup (confirma tendência maior)
-        candles_4h = await fetch_candles(session, sym, "4h")
-        if not candles_4h: await asyncio.sleep(0.15); continue
+    # ── PASS 1: prefetch H4 de todas as moedas em paralelo ──────────────────
+    log.info(f"[MTF] Prefetch H4 ({len(coins)} moedas)...")
+    all_h4 = await _prefetch_batch(session, coins, "4h")
 
+    # Analisa H4 e monta lista de moedas com setup válido
+    filtered = []  # (sym, label, short, r4h, h4_bull, h4_bear)
+    for (sym, label, short), candles_4h in zip(coins, all_h4):
+        if not candles_4h:
+            continue
         r4h = analyze(sym, candles_4h)
-        if not r4h: await asyncio.sleep(0.15); continue
-
-        h4_rsi  = r4h["rsi"]
-        h4_vol  = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
+        if not r4h:
+            continue
+        h4_rsi   = r4h["rsi"]
+        h4_vol   = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
         h4_vol_s = r4h.get("v_strong", False) or r4h.get("obv_bear", False)
-        h4_bull = r4h["score"] > 15 and r4h.get("tbull_r", False) and r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol
-        h4_bear = r4h.get("tbear_r", False) and r4h["adx"] >= 13 and h4_vol_s and r4h["score"] < -15 and h4_rsi > 25
-        direction = "BULL" if h4_bull else "BEAR"
-
+        h4_bull  = (r4h["score"] > 15 and r4h.get("tbull_r", False) and
+                    r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol)
+        h4_bear  = (r4h.get("tbear_r", False) and r4h["adx"] >= 13 and
+                    h4_vol_s and r4h["score"] < -15 and h4_rsi > 25)
         if not (h4_bull or h4_bear):
             log.info(f"[MTF] {short:7s} | 4H sem setup | Score {r4h['score']:+d} RSI4H {h4_rsi:.0f}")
-            await asyncio.sleep(0.15)
             continue
-
-        # BTC filter: não operar altcoin contra BTC
+        direction = "BULL" if h4_bull else "BEAR"
         grade_s_exempt = abs(r4h["score"]) >= 120
         if short not in ("BTC", "WBTC") and not grade_s_exempt:
             if h4_bull and btc_bear_filter:
                 setup_coins.append((short, direction, r4h["score"], h4_rsi, "BTC em queda"))
                 log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC 4H em queda")
-                await asyncio.sleep(0.1); continue
+                continue
             if h4_bear and btc_bull_filter:
                 setup_coins.append((short, direction, r4h["score"], h4_rsi, "BTC em alta"))
                 log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC 4H em alta")
-                await asyncio.sleep(0.1); continue
+                continue
         elif grade_s_exempt and short not in ("BTC", "WBTC"):
             log.info(f"[MTF] {short:7s} | Score {r4h['score']:+d} ≥ 120 — Grade S bypass BTC")
-
         log.info(f"[MTF] {short:7s} | 4H {direction} ✓BTC | Score {r4h['score']:+d} → buscando entrada 1H...")
+        filtered.append((sym, label, short, r4h, h4_bull, h4_bear))
 
-        # 1H — entrada no pullback EMA21/50
-        candles_1h = await fetch_candles(session, sym, "1h")
-        if not candles_1h: await asyncio.sleep(0.15); continue
+    if not filtered:
+        log.info("[MTF] Nenhuma moeda com setup H4 válido")
+    else:
+        # ── PASS 2: prefetch 1H apenas das moedas que passaram o H4 ────────
+        log.info(f"[MTF] Prefetch 1H ({len(filtered)} moedas com setup H4)...")
+        coins_1h = [(sym, label, short) for sym, label, short, _, _, _ in filtered]
+        all_1h = await _prefetch_batch(session, coins_1h, "1h")
 
-        result = analyze_mtf_entry(sym, candles_1h, h4_bull, h4_bear)
-        if not result:
-            setup_coins.append((short, direction, r4h["score"], h4_rsi, "pullback 1H pendente"))
-            log.info(f"[MTF] {short:7s} | 1H sem entrada (não está no pullback)")
-            await asyncio.sleep(0.15)
-            continue
-
-        mtf_grade = result.get("signal_grade", "A")
-        mtf_quality = result.get("quality_score", 0)
-        log.info(f"[MTF] {short:7s} | ✅ 1H {result['sig']} Grade:{mtf_grade} Q:{mtf_quality}/10 | {result['sig_source']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
-
-        if mtf_grade == "B":
-            setup_coins.append((short, direction, r4h["score"], h4_rsi, "Grade B"))
-            log.info(f"[MTF] {short:7s} | Grade B ignorado — setup insuficiente")
-            await asyncio.sleep(0.1); continue
-
-        key = f"{sym}_MTF"
-        if now - last_sig.get(key, 0) >= cooldown_mtf:
-            last_sig[key] = now
-            sent += 1
-            _is_long_mtf = result["sig"] == "LONG"
-            _extra_mtf = {
-                # RVOL, DNA Flow e Trendilo do H1 (entrada real), não do H4
-                "rvol_label":   result.get("rvol_label", ""),
-                "rvol":         result.get("rvol", 0.0),
-                "inst_score":   r4h.get("inst_score_long" if _is_long_mtf else "inst_score_short", 0),
-                "inst_cls":     r4h.get("inst_cls_long" if _is_long_mtf else "inst_cls_short", ""),
-                "dna_flow":     result.get("dna_flow_bull" if _is_long_mtf else "dna_flow_bear", False),
-                "trendilo_dir": result.get("trendilo_long" if _is_long_mtf else "trendilo_short", False),
-                "liq_event":    ("LIQ BOT ↑" if r4h.get("liq_bot") else
-                                 "LIQ TOP ↓" if r4h.get("liq_top") else ""),
-            }
-            await send_telegram(session, sym, label, short, result["sig"],
-                                result["price"], result["atr"], r4h["score"],
-                                result["rsi"], result["adx"], result["trend"],
-                                result["kalman_up"],
-                                result["swing_low"], result["swing_high"],
-                                result["sig_source"], "1h", mtf_grade,
-                                extra=_extra_mtf)
-        else:
-            mins = int((cooldown_mtf - (now - last_sig.get(key, 0))) / 60)
-            setup_coins.append((short, direction, r4h["score"], h4_rsi, f"cooldown {mins}min"))
-            log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
-
-        await asyncio.sleep(0.15)
+        for (sym, label, short, r4h, h4_bull, h4_bear), candles_1h in zip(filtered, all_1h):
+            h4_rsi    = r4h["rsi"]
+            direction = "BULL" if h4_bull else "BEAR"
+            if not candles_1h:
+                continue
+            result = analyze_mtf_entry(sym, candles_1h, h4_bull, h4_bear)
+            if not result:
+                setup_coins.append((short, direction, r4h["score"], h4_rsi, "pullback 1H pendente"))
+                log.info(f"[MTF] {short:7s} | 1H sem entrada (não está no pullback)")
+                continue
+            mtf_grade   = result.get("signal_grade", "A")
+            mtf_quality = result.get("quality_score", 0)
+            log.info(f"[MTF] {short:7s} | ✅ 1H {result['sig']} Grade:{mtf_grade} Q:{mtf_quality}/9 | {result['sig_source']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
+            if mtf_grade == "B":
+                setup_coins.append((short, direction, r4h["score"], h4_rsi, "Grade B"))
+                log.info(f"[MTF] {short:7s} | Grade B ignorado — setup insuficiente")
+                continue
+            key = f"{sym}_MTF"
+            if now - last_sig.get(key, 0) >= cooldown_mtf:
+                last_sig[key] = now
+                sent += 1
+                _is_long_mtf = result["sig"] == "LONG"
+                _extra_mtf = {
+                    "rvol_label":   result.get("rvol_label", ""),
+                    "rvol":         result.get("rvol", 0.0),
+                    "inst_score":   r4h.get("inst_score_long" if _is_long_mtf else "inst_score_short", 0),
+                    "inst_cls":     r4h.get("inst_cls_long" if _is_long_mtf else "inst_cls_short", ""),
+                    "dna_flow":     result.get("dna_flow_bull" if _is_long_mtf else "dna_flow_bear", False),
+                    "trendilo_dir": result.get("trendilo_long" if _is_long_mtf else "trendilo_short", False),
+                    "liq_event":    ("LIQ BOT ↑" if r4h.get("liq_bot") else
+                                     "LIQ TOP ↓" if r4h.get("liq_top") else ""),
+                }
+                await send_telegram(session, sym, label, short, result["sig"],
+                                    result["price"], result["atr"], r4h["score"],
+                                    result["rsi"], result["adx"], result["trend"],
+                                    result["kalman_up"],
+                                    result["swing_low"], result["swing_high"],
+                                    result["sig_source"], "1h", mtf_grade,
+                                    extra=_extra_mtf)
+            else:
+                mins = int((cooldown_mtf - (now - last_sig.get(key, 0))) / 60)
+                setup_coins.append((short, direction, r4h["score"], h4_rsi, f"cooldown {mins}min"))
+                log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
 
     # Informa no Telegram quando BTC está em queda bloqueando LONGs (máx 1x a cada 2h)
     if sent == 0 and btc_bear_filter:
