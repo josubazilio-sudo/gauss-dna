@@ -68,6 +68,8 @@ jobs:
         env:
           TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
+          WA_PHONE: ${{ secrets.WA_PHONE }}
+          WA_APIKEY: ${{ secrets.WA_APIKEY }}
           TIMEFRAMES: '1h,4h'
           CYCLE_INTERVAL: '300'
           SIGNAL_MODE: 'FLEX'

@@ -12,6 +12,8 @@ log = logging.getLogger("GAUSS+DNA")
 
 TG_TOKEN     = os.environ.get("TG_TOKEN", "")
 TG_CHATID    = os.environ.get("TG_CHATID", "")
+WA_PHONE     = os.environ.get("WA_PHONE", "")    # ex: 5511999999999 (sem +)
+WA_APIKEY    = os.environ.get("WA_APIKEY", "")   # API key do CallMeBot
 TIMEFRAME    = os.environ.get("TIMEFRAME", "15m")
 TIMEFRAMES   = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",")]
 SIGNAL_MODE  = os.environ.get("SIGNAL_MODE", "FLEX").upper()
@@ -1052,6 +1054,25 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
         "trendilo_long": trendilo_long_mtf, "trendilo_short": trendilo_short_mtf,
     }
 
+# ── WHATSAPP (CallMeBot) — só sinais reais, sem diagnósticos ─────────────────
+
+async def send_whatsapp(session, wa_text):
+    """Envia mensagem via CallMeBot. WA_PHONE e WA_APIKEY devem estar configurados."""
+    if not WA_PHONE or not WA_APIKEY:
+        return
+    import urllib.parse
+    url = (f"https://api.callmebot.com/whatsapp.php"
+           f"?phone={WA_PHONE}&text={urllib.parse.quote(wa_text)}&apikey={WA_APIKEY}")
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
+            if r.status == 200:
+                log.info("✅ WhatsApp enviado")
+            else:
+                body = await r.text()
+                log.warning(f"⚠️ WhatsApp status {r.status}: {body[:80]}")
+    except Exception as e:
+        log.warning(f"WhatsApp erro (não crítico): {e}")
+
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
 async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
@@ -1208,6 +1229,26 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
                 # ── Trade Journal ───────────────────────────────────────────────
                 append_journal(sym, tf, sig_type, price, _stop, _tp1, _final,
                                _r1, _r_final, signal_grade, score, rsi, adx, sig_source)
+                # ── WhatsApp — mensagem limpa só com o sinal ────────────────────
+                import re as _re
+                wa_tipo  = _re.sub(r'[^\w\s\-→/]', '', mode_tag).strip()
+                wa_flow  = "✅" if dna_flow_ok else "—"
+                wa_trl   = "✅" if trl_ok      else "—"
+                wa_rvol  = f"RVOL {rvol_val:.2f}x {rvol_lbl} | " if rvol_lbl else ""
+                wa_liq   = f"SM: {liq_event} | " if liq_event else ""
+                wa_text  = (
+                    f"SINAL {sig_type} — {label} [{_tf_label(tf)}] Grade {signal_grade}\n"
+                    f"Tipo: {wa_tipo}\n\n"
+                    f"Entrada: ${fmt_price(price)}\n"
+                    f"Stop: ${d(_stop)} ({stop_label})\n"
+                    f"TP1 ({_r1}R): ${d(_tp1)}\n"
+                    f"TP Final ({_r_final}R): ${d(_final)}\n\n"
+                    f"Risco ${risk_amount:.2f} | 5x ${pos_5x:.2f} collateral\n"
+                    f"RSI {rsi:.0f} | ADX {adx:.0f} | {wa_rvol}"
+                    f"DNA Flow {wa_flow} | Trendilo {wa_trl} | {wa_liq}"
+                    f"{now}"
+                )
+                await send_whatsapp(session, wa_text)
             else: log.warning(f"❌ {data.get('description')}")
     except Exception as e: log.error(f"Erro: {e}")
 
