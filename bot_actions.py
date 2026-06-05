@@ -1435,9 +1435,9 @@ async def run_cycle(session, last_sig, tf, coins):
     # Pré-busca paralela de candles (lotes de 15 simultâneos)
     all_candles = await _prefetch_batch(session, coins, tf)
 
-    # H4 direction filter: quando rodando em H1, pré-busca H4 para confirmar direção
+    # H4 direction filter: H1 e 30m usam H4 para confirmar direção
     all_h4_candles = None
-    if tf == "1h":
+    if tf in ("1h", "30m"):
         log.info(f"[{tf}] Buscando H4 de {len(coins)} moedas para filtro de direção...")
         all_h4_candles = await _prefetch_batch(session, coins, "4h")
 
