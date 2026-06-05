@@ -691,10 +691,10 @@ def analyze(sym, candles):
     ha_bull2 = ha_body_ok and closes[-1]>opens[-1] and closes[-2]>opens[-2]
     ha_bear2 = ha_body_ok and closes[-1]<opens[-1] and closes[-2]<opens[-2]
 
-    long_flex = (flex_score > 45 and ha_bull2 and macd_bull_r and adx >= 14 and
+    long_flex = (flex_score > 38 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and v_good and
                  (trendilo_long or kalman_up))
-    short_flex = (flex_score < -45 and ha_bear2 and macd_bear_r and adx >= 14 and
+    short_flex = (flex_score < -38 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and v_good and
                   (trendilo_short or not kalman_up))
 
@@ -735,10 +735,10 @@ def analyze(sym, candles):
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
     long_bb_break  = (bb_break_long  and bb_expand and kalman_up   and k_short_rising  and
-                      flex_score > 40 and adx >= 18  and not sideways    and
+                      flex_score > 40 and adx >= 15  and not sideways    and
                       not ext_above_ema21 and not vol_drying and rsi < 65)
     short_bb_break = (bb_break_short and bb_expand and kalman_down and k_short_falling  and
-                      flex_score < -40 and adx >= 18 and not sideways    and
+                      flex_score < -40 and adx >= 15 and not sideways    and
                       not ext_below_ema21 and not vol_drying and rsi > 38)
 
     # ── SMART MONEY REVERSAL (Pine: sm_bull + rsi>25 + not rsi_block + score>=60 — sem trendilo)
@@ -749,7 +749,7 @@ def analyze(sym, candles):
 
     # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
     long_div  = (rsi_div_bull and ha_bull and v_good and
-                 rsi > 25 and rsi < 62 and price > e200 and not exhaustion_top and
+                 rsi > 25 and rsi < 62 and not exhaustion_top and
                  inst_score_long >= 55)
     short_div = (rsi_div_bear and ha_bear and v_good and
                  rsi > 38 and rsi < 70 and price < e200 and not exhaustion_bot and
@@ -1477,8 +1477,8 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # Só Grade A/S — Grade B sem confirmação suficiente
-            if grade == "B":
+            # Grade A/S direto; Grade B só passa se score muito alto (≥60)
+            if grade == "B" and abs(result["score"]) < 60:
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 continue
