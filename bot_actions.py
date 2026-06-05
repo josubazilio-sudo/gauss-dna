@@ -694,6 +694,18 @@ def analyze(sym, candles):
                   not sideways and not_ext_short_tight and safe_short and
                   (trendilo_short or not kalman_up))
 
+    # ── SETUP — acumulação OBV + MACD em recuperação antecipada (antes dos outros dispararem)
+    # Cenário: MACD ainda não cruzou positivo mas histograma JÁ está subindo (recuperação)
+    # + OBV acumulando + acima do VWAP = dinheiro entrando antes da confirmação total
+    long_setup  = (score > 50 and ha_bull2 and macd_recovering and adx > 18 and
+                   obv_bull and v_good and above_vwap and
+                   not sideways and not_ext_long_tight and safe_long and
+                   price > e200)
+    short_setup = (score < -50 and ha_bear2 and macd_exhausting and adx > 18 and
+                   obv_bear and v_good and below_vwap and
+                   not sideways and not_ext_short_tight and safe_short and
+                   price < e200)
+
     # ── SURGE (pump/dump com volume explosivo — captura moves tipo HOME +16%) ────
     # ── SURGE (Pine: rvol_tier>=3 + 4%+ candle + break_h + not bb_break — sem trendilo)
     candle_bull_pct = (price - opens[-1]) / max(opens[-1], 1e-10)
@@ -758,6 +770,8 @@ def analyze(sym, candles):
         elif short_div: sig="SHORT"; sig_source="DIV"
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
+        elif long_setup: sig="LONG"; sig_source="SETUP"
+        elif short_setup: sig="SHORT"; sig_source="SETUP"
 
     # ── QUALIDADE DO SINAL (S / A / B) ───────────────────────────────────────
     # Conta quantos dos filtros premium estão alinhados
@@ -1106,6 +1120,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         mode_tag="🚀 DNA MOMENTUM"; cross_info=""
     elif sig_source=="DIV":
         mode_tag="📐 RSI DIVERGÊNCIA"; cross_info=""
+    elif sig_source=="SETUP":
+        mode_tag="🔭 DNA SETUP"; cross_info=""
     elif SIGNAL_MODE=="ELITE":
         mode_tag="🔬 DNA ELITE KALMAN"; cross_info=""
     else:
