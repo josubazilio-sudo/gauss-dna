@@ -749,6 +749,15 @@ def analyze(sym, candles):
     short_div = (rsi_div_bear and ha_bear and v_good and
                  rsi > 20 and rsi < 75 and price < e200 and not exhaustion_bot)
 
+    # ── REVERSAL — fundo/topo extremo com estrutura de inversão ──────────────────
+    # RSI < 25 → LONG: capitulação + primeiro sinal de reversão estrutural
+    # RSI > 75 → SHORT: euforia + rejeição estrutural
+    # Não exige score (extremo RSI já é filtro forte) mas exige wick + volume + HA virando
+    long_reversal  = (rsi < 25 and ha_bull and v_strong and
+                      (liq_bot or bull_absorb) and macd_recovering and not vol_drying)
+    short_reversal = (rsi > 75 and ha_bear and v_strong and
+                      (liq_top or bear_absorb) and macd_exhausting and not vol_drying)
+
     sig=None; sig_source=""
     if SIGNAL_MODE=="ELITE":
         if long_elite or early_long: sig="LONG"; sig_source="ELITE"
@@ -762,6 +771,8 @@ def analyze(sym, candles):
         elif short_bb_break: sig="SHORT"; sig_source="BB_BREAK"
         elif long_sm: sig="LONG"; sig_source="SM_SWEEP"
         elif short_sm: sig="SHORT"; sig_source="SM_SWEEP"
+        elif long_reversal: sig="LONG"; sig_source="REVERSAL"
+        elif short_reversal: sig="SHORT"; sig_source="REVERSAL"
         elif long_surge: sig="LONG"; sig_source="SURGE"
         elif short_surge: sig="SHORT"; sig_source="SURGE"
         elif long_momentum: sig="LONG"; sig_source="MOMENTUM"
@@ -1120,6 +1131,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         mode_tag="🚀 DNA MOMENTUM"; cross_info=""
     elif sig_source=="DIV":
         mode_tag="📐 RSI DIVERGÊNCIA"; cross_info=""
+    elif sig_source=="REVERSAL":
+        mode_tag="🔄 REVERSÃO EXTREMA"; cross_info=""
     elif sig_source=="SETUP":
         mode_tag="🔭 DNA SETUP"; cross_info=""
     elif SIGNAL_MODE=="ELITE":
