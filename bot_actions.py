@@ -677,9 +677,10 @@ def analyze(sym, candles):
                     inst_score_short>=50 and safe_short and trendilo_short)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
-    # MACD relaxado: MACD positivo OU histograma acelerando por 2 barras (= Pine Script)
-    macd_bull_r = macd_bull or (hist > hist_p and hist_p > hist_pp)
-    macd_bear_r = macd_bear or (hist < hist_p and hist_p < hist_pp)
+    # MACD relaxado: direção (linha acima/abaixo do sinal) OU histograma acelerando 2 barras
+    # Inclui consolidação em tendência (ml>sl com hist↓ = pullback válido em uptrend)
+    macd_bull_r = (ml > sl_v) or (hist > hist_p and hist_p > hist_pp)
+    macd_bear_r = (ml < sl_v) or (hist < hist_p and hist_p < hist_pp)
     # Volume: 2 velas consecutivas com bom volume (mais sólido)
     vol_avg=vols[-1]>vol_ma*1.1 and vols[-2]>vol_ma*0.9
     # Tendência relaxada: sem exigir e50>e200
@@ -915,8 +916,8 @@ def analyze(sym, candles):
             if not ha_bear:     b.append(f"ha=F({'+' if closes[-1]>opens[-1] else '-'}{'+' if closes[-2]>opens[-2] else '-'})")
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
-            if not safe_short:  b.append(f"safe_short=F")
-            if rsi <= 25: b.append(f"rsi={rsi:.1f} fundo extremo (≤25)")
+            if not safe_short:  b.append(f"safe_short=F(bbbot={near_bb_bot} ext={ext_below_ema21} dry={vol_drying} exh={exhaustion_bot} rsi={rsi:.0f}≤30={rsi<=30})")
+            if rsi <= 35: b.append(f"rsi={rsi:.1f} sobrevendido")
             bb_info = f"bb_break={'✓' if bb_break_short else f'F(p>={bb_lower:.4f})'} k={'↓' if kalman_down else '↑'} ks={'↓' if k_short_falling else '↑'}"
             b.append(bb_info)
             log.info(f"  SHORT-BLOCKED {sym}: score={score:+d} flex={flex_score:+d} | {'; '.join(b) if b else 'FLEX OK mas grade-B?'}")
@@ -960,10 +961,8 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     atr_arr = atr_series(candles_15m, 14); atr = max(atr_arr[-1], 1e-10)
 
     ml, sl_v, hist, hist_p, hist_pp_1h = macd_calc(closes)
-    macd_bull_1h = ml > sl_v and hist > hist_p and hist > 0
-    macd_bear_1h = ml < sl_v and hist < hist_p and hist < 0
-    macd_bull_r = macd_bull_1h or (hist > hist_p and hist_p > hist_pp_1h)
-    macd_bear_r = macd_bear_1h or (hist < hist_p and hist_p < hist_pp_1h)
+    macd_bull_r = (ml > sl_v) or (hist > hist_p and hist_p > hist_pp_1h)
+    macd_bear_r = (ml < sl_v) or (hist < hist_p and hist_p < hist_pp_1h)
 
     # HA bull/bear — closes e opens já são HA
     ha_body    = abs(closes[-1] - opens[-1])
