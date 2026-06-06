@@ -1209,13 +1209,13 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
 
     # ── TP POR GRADE + TIPO DE SINAL ─────────────────────────────────────────
     if sig_source == "SCOUT":
-        r1, r_final = 1.2, 2.0   # targets conservadores — sinal secundário
+        r1, r_final = 1.2, 2.0   # sinal fraco → alvo curto
     elif signal_grade == "S":
-        r1, r_final = 2.0, 4.0
+        r1, r_final = 2.2, 4.5   # sinal forte → alvo proporcional
     elif signal_grade == "A":
-        r1, r_final = 1.8, 3.5
+        r1, r_final = 1.8, 3.5   # sinal sólido → alvo médio-alto
     else:
-        r1, r_final = 1.5, 2.5
+        r1, r_final = 1.5, 2.5   # sinal básico → alvo médio
 
     # Ajuste fino por tipo de sinal
     if sig_source == "SURGE":
