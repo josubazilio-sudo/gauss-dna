@@ -515,9 +515,9 @@ def analyze(sym, candles):
     ext_above_ema21=(price-e21)/atr>3.0
     ext_below_ema21=(e21-price)/atr>3.0
 
-    # Volume secando: volume atual < 60% da média E < 70% das últimas 3 velas
+    # Volume secando: volume atual < 40% da média E < 50% das últimas 3 velas
     vol3=[vols[-4],vols[-3],vols[-2]]
-    vol_drying=vols[-1]<vol_ma*0.6 and vols[-1]<min(vol3)*0.7
+    vol_drying=vols[-1]<vol_ma*0.4 and vols[-1]<min(vol3)*0.5
 
     # Pullback: preço tocou EMA10 ou EMA21 nas últimas 5 velas e já voltou acima
     def _low_touched_ema(ema_arr, n=5):
@@ -708,8 +708,8 @@ def analyze(sym, candles):
     # RSI velocity: bloqueia se RSI correu >18pts em ~3 velas (chasing)
     rsi_not_chasing_long  = (rsi - rsi_prev) < 18
     rsi_not_chasing_short = (rsi_prev - rsi) < 18
-    # Volume não em fade: vela atual deve ser ≥60% da MA20 de volume
-    vol_not_fade = vols[-1] >= vol_ma * 0.60
+    # Volume não em fade: vela atual deve ser ≥50% da MA20 de volume
+    vol_not_fade = vols[-1] >= vol_ma * 0.50
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
