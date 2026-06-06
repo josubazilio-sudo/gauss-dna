@@ -61,8 +61,9 @@ macd_exhausting = macd_h < macd_h[1] and macd_h[1] < macd_h[2]
 
 // ── ADX / DMI ─────────────────────────────────────────────────────────────────
 [dip, dim, adx] = ta.dmi(14, 14)
-adx_long_ok  = adx > 22 and dip > dim
-adx_short_ok = adx > 22 and dim > dip
+// Bot: adx > 22 AND rising estrito (adx > adx[1]) para ambos os lados
+adx_long_ok  = adx > 22 and dip > dim and adx > adx[1]
+adx_short_ok = adx > 22 and dim > dip and adx > adx[1]
 
 // ── ATR ───────────────────────────────────────────────────────────────────────
 atr = ta.atr(14)
@@ -83,8 +84,9 @@ vol_ma       = ta.sma(volume[1], 20)
 rvol         = volume / math.max(vol_ma, 1e-10)
 v_good       = rvol >= 1.2
 v_strong     = rvol >= 1.5
-vol_not_fade = volume >= vol_ma * 0.60
-vol_drying   = volume < vol_ma * 0.50
+// Bot: vol_not_fade >= 50% MA | vol_drying: duas condições (0.40 MA + 0.50 min3)
+vol_not_fade = volume >= vol_ma * 0.50
+vol_drying   = volume < vol_ma * 0.40 and volume < ta.lowest(volume[1], 3) * 0.50
 rvol_ok      = rvol >= 0.5
 rvol_lbl     = rvol >= 3.0 ? "INST" : rvol >= 2.0 ? "VSTRONG" : v_strong ? "STRONG" : v_good ? "GOOD" : "LOW"
 
@@ -100,20 +102,30 @@ above_vwap = close > vwap_v
 below_vwap = close < vwap_v
 plot(show_vwap ? vwap_v : na, "VWAP", color=color.new(color.blue, 0), linewidth=1)
 
-// ── KALMAN FILTER ─────────────────────────────────────────────────────────────
-var float kf_v   = close
-var float kf_err = 1.0
-kf_gain  = kf_err / (kf_err + 0.1)
-kf_v    := kf_v   + kf_gain * (close - kf_v)
-kf_err  := (1.0 - kf_gain) * kf_err + 0.01
+// ── KALMAN FILTER — dois filtros (50 e 150) igual ao bot ─────────────────────
+kalman_filter(src, length) =>
+    var float est  = na
+    var float err  = 1.0
+    float meas_err = 0.01 * length
+    if na(est)
+        est := src[1]
+    float gain = err / (err + meas_err)
+    est  := est  + gain * (src - est)
+    err  := (1.0 - gain) * err + 0.1 / length
+    est
 
-kalman_up         = kf_v > kf_v[1]
-kalman_down       = kf_v < kf_v[1]
-kalman_accel_up   = kalman_up   and kf_v[1] > kf_v[2]
-kalman_accel_down = kalman_down and kf_v[1] < kf_v[2]
+float ks = kalman_filter(ha_c, 50)   // Kalman rápido
+float kl = kalman_filter(ha_c, 150)  // Kalman lento
+
+kalman_up         = ks > kl
+kalman_down       = ks < kl
+float ks_spread   = ks - kl
+kalman_accel_up   = ks_spread > ks_spread[1] and ks_spread[1] > 0
+kalman_accel_down = ks_spread < ks_spread[1] and ks_spread[1] < 0
 
 kf_col = kalman_up ? color.new(color.aqua, 20) : color.new(color.fuchsia, 20)
-plot(show_kalman ? kf_v : na, "Kalman", color=kf_col, linewidth=2)
+plot(show_kalman ? ks : na, "Kalman Rápido", color=kf_col, linewidth=1)
+plot(show_kalman ? kl : na, "Kalman Lento",  color=kf_col, linewidth=2)
 
 // ── TRENDILO (ALMA de % variação + RMS 20 barras) ────────────────────────────
 trl_pct  = (ha_c - ha_c[1]) / math.max(ha_c[1], 1e-10) * 100.0
@@ -189,7 +201,8 @@ not_ext_lt      = (close - e21) / math.max(atr, 1e-10) < 2.5 and rsi < 62
 not_ext_st      = (e21 - close) / math.max(atr, 1e-10) < 2.5 and rsi > 46
 exhaustion_top  = ha_bear and ha_bear[1] and rsi > 72
 exhaustion_bot  = ha_bull and ha_bull[1] and rsi < 28
-safe_long       = not near_bb_top and not ext_above_e21 and not vol_drying and not exhaustion_top and rsi < 62
+// Bot: rsi_not_top < 65 | rsi_not_bottom > 30
+safe_long       = not near_bb_top and not ext_above_e21 and not vol_drying and not exhaustion_top and rsi < 65
 safe_short      = not near_bb_bot and not ext_below_e21 and not vol_drying and not exhaustion_bot and rsi > 30
 low48           = ta.lowest(close,  48)
 high48          = ta.highest(close, 48)
