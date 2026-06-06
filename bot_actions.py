@@ -752,16 +752,14 @@ def analyze(sym, candles):
     # ── SCOUT — sinal secundário semi-agressivo: thresholds relaxados, risco 1% ──
     # Captura setups abaixo do FLEX mas com estrutura real. Posição pequena, R:R menor.
     # Condições: score>28 (vs 38 FLEX), ha_bull 1 candle (vs 2), adx≥11 (vs 14),
-    # volume relaxado, basta 1 indicador direcional (vs 2 gates no FLEX)
+    # volume relaxado: só vol_not_fade (rvol≥0.6) — sem exigir v_good/obv_bull
     long_scout = (flex_score > 28 and ha_bull and macd_bull_r and adx >= 11 and
                   not sideways and not_ext_long_tight and safe_long and
-                  (v_good or obv_bull) and vol_not_fade and rvol >= 0.5 and
-                  not_overextended_long and rsi_not_chasing_long and
+                  vol_not_fade and not_overextended_long and rsi_not_chasing_long and
                   (dna_flow_bull or trendilo_long or kalman_up))
     short_scout = (flex_score < -28 and ha_bear and macd_bear_r and adx >= 11 and
                    not sideways and not_ext_short_tight and safe_short and
-                   (v_good or obv_bear) and vol_not_fade and rvol >= 0.5 and
-                   not_overextended_short and rsi_not_chasing_short and
+                   vol_not_fade and not_overextended_short and rsi_not_chasing_short and
                    (dna_flow_bear or trendilo_short or not kalman_up))
 
     # ── SURGE (pump/dump com volume explosivo — captura moves tipo HOME +16%) ────
