@@ -26,7 +26,8 @@ CYCLE_INTERVAL = int(os.environ.get("CYCLE_INTERVAL", "0"))  # intervalo máximo
 STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
 CAPITAL      = float(os.environ.get("CAPITAL", "200"))   # capital total em USD ($200 → $1000 com 5x)
-RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%)
+RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%) — base para Grade A
+RISK_BY_GRADE = {"B": 0.02, "A": 0.03, "S": 0.05}       # B=2%, A=3%, S=5%
 
 _JOURNAL_FIELDS = ["datetime","symbol","timeframe","direction","entry","stop",
                    "tp_parcial","tp_total","r1","r_final","grade","score",
@@ -691,12 +692,16 @@ def analyze(sym, candles):
     ha_bull2 = ha_body_ok and closes[-1]>opens[-1] and closes[-2]>opens[-2]
     ha_bear2 = ha_body_ok and closes[-1]<opens[-1] and closes[-2]<opens[-2]
 
+    # Trendilo + OBV juntos = acumulação real confirmada — aceita RVOL levemente abaixo 1.2x
+    flex_vol_ok   = v_good or (obv_bull and trendilo_long)
+    flex_vol_ok_s = v_good or (obv_bear and trendilo_short)
+
     long_flex = (flex_score > 38 and ha_bull2 and macd_bull_r and adx >= 14 and
-                 not sideways and not_ext_long_tight and safe_long and v_good and
+                 not sideways and not_ext_long_tight and safe_long and flex_vol_ok and
                  (trendilo_long or kalman_up) and
                  (dna_flow_bull or trendilo_long))
     short_flex = (flex_score < -38 and ha_bear2 and macd_bear_r and adx >= 14 and
-                  not sideways and not_ext_short_tight and safe_short and v_good and
+                  not sideways and not_ext_short_tight and safe_short and flex_vol_ok_s and
                   (trendilo_short or not kalman_up) and
                   (dna_flow_bear or trendilo_short))
 
@@ -1135,11 +1140,12 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     tp1   = price + risk * r1      if is_long else price - risk * r1
     final = price + risk * r_final if is_long else price - risk * r_final
 
-    # Cálculo de posição baseado em capital e risco 3% ($200 → $1000 com 5x)
-    risk_amount = CAPITAL * RISK_PCT
-    contracts   = risk_amount / risk if risk > 0 else 0
-    pos_value   = contracts * price
-    pos_5x      = pos_value / 5
+    # Cálculo de posição: risk % varia por grade (B=2%, A=3%, S=5%)
+    risk_pct_grade = RISK_BY_GRADE.get(signal_grade, RISK_PCT)
+    risk_amount    = CAPITAL * risk_pct_grade
+    contracts      = risk_amount / risk if risk > 0 else 0
+    pos_value      = contracts * price
+    pos_5x         = pos_value / 5
 
     _stop=stop; _tp1=tp1; _final=final; _r1=r1; _r_final=r_final
 
@@ -1211,7 +1217,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         f"🛑 Stop: `${raw(d(stop))}` \\({esc(stop_label)}\\)\n"
         f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
         f"🏆 TP Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → fechar 50%\n\n"
-        f"📐 *Gestão de risco \\(3% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
+        f"📐 *Gestão de risco \\({esc(str(int(risk_pct_grade*100)))}% de ${raw(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${raw(f'{risk_amount:.2f}')}`\n"
         f"  Spot: `{raw(f'{contracts:.4f}')} {raw(short)}` \\(aprox `${raw(f'{pos_value:.2f}')} USDT`\\)\n"
         f"  5x Lev: `${raw(f'{pos_5x:.2f}')} collateral`\n\n"
