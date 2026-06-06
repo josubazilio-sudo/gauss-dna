@@ -1111,22 +1111,23 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     # Multiplicador ATR por tipo de sinal
     stop_atr_mult = (2.0 if sig_source == "SURGE"     else  # breakout: wicks grandes
                      1.0 if sig_source == "SM_SWEEP"  else  # stop no nível varrido
+                     1.8 if sig_source in ("FLEX","SETUP") else  # anti-sweep: mais espaço
                      1.5)                                    # padrão todos os outros
 
     atr_stop = price - stop_atr_mult * atr if is_long else price + stop_atr_mult * atr
 
-    # Stop estrutural: swing_low/swing_high + buffer 0.1 ATR
-    struct_stop = swing_low - atr * 0.1 if is_long else swing_high + atr * 0.1
+    # Stop estrutural: swing_low/swing_high + buffer 0.3 ATR (anti stop-hunt)
+    struct_stop = swing_low - atr * 0.3 if is_long else swing_high + atr * 0.3
     swing_dist  = abs(price - struct_stop)
 
-    # Usar estrutural quando: sinal de tendência/pullback + swing próximo (0.3–2.0 ATR)
+    # Usar estrutural quando: sinal de tendência/pullback + swing próximo (0.3–2.5 ATR)
     use_struct = (sig_source not in ("SURGE", "BB_BREAK", "MOMENTUM") and
-                  atr * 0.3 < swing_dist < atr * 2.0 and
+                  atr * 0.3 < swing_dist < atr * 2.5 and
                   (struct_stop < price if is_long else struct_stop > price))
 
     if use_struct:
-        # Prefere o stop mais próximo (menor risco $)
-        stop = max(atr_stop, struct_stop) if is_long else min(atr_stop, struct_stop)
+        # Anti-sweep: usa o stop MAIS LARGO para sobreviver varreduras de liquidez
+        stop = min(atr_stop, struct_stop) if is_long else max(atr_stop, struct_stop)
         stop_label = "Estrutura"
     else:
         stop = atr_stop
