@@ -1630,9 +1630,9 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # Grade A/S direto; Grade B só passa se score muito alto (≥60)
-            if grade == "B" and abs(result["score"]) < 65:
-                log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
+            # Apenas Grade A (médio) e S (alto) passam — Grade B (básico) é ignorado
+            if grade == "B":
+                log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} (apenas A/S passam)")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 continue
             # H4 direction filter (H1 apenas)
