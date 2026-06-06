@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>GAUSS+DNA — Gestão de Risco $180</title>
+<title>GAUSS+DNA — Gestão de Risco $200</title>
 <meta name="description" content="Calculadora de risco e diário de operações GAUSS+DNA MTF Pullback">
 <meta name="theme-color" content="#3b9eff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GAUSS+DNA">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="risco-manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -160,22 +160,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
 .diary-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1rem}
 @media(max-width:560px){.diary-summary{grid-template-columns:repeat(2,1fr)}}
 
-/* INSTALL BUTTON — sempre visível */
-#pwaInstallBtn{display:none;align-items:center;gap:.5rem;background:linear-gradient(135deg,rgba(59,158,255,.18),rgba(0,212,200,.1));border:1px solid rgba(59,158,255,.4);border-radius:10px;padding:.65rem 1.1rem;color:var(--blue);font-family:'DM Mono',monospace;font-size:.72rem;font-weight:500;cursor:pointer;width:100%;margin-bottom:1rem;transition:all .2s;letter-spacing:.03em}
-#pwaInstallBtn:hover{background:linear-gradient(135deg,rgba(59,158,255,.28),rgba(0,212,200,.18));border-color:var(--blue)}
-#pwaInstallBtn.visible{display:flex}
-#pwaInstallBtn .pwa-icon{font-size:1rem}
-#pwaInstallBtn .pwa-txt{flex:1;text-align:left}
-#pwaInstallBtn .pwa-arrow{opacity:.6}
-/* MODAL INSTALAR */
-#installModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center}
-#installModal.show{display:flex}
-.im-box{background:var(--s1);border:1px solid rgba(59,158,255,.3);border-radius:16px;padding:1.6rem 1.4rem;max-width:340px;width:90%;text-align:center}
-.im-box h3{font-family:'Unbounded',sans-serif;font-size:.85rem;font-weight:700;color:var(--blue);margin-bottom:.8rem}
-.im-step{background:var(--s2);border-radius:9px;padding:.8rem 1rem;margin:.5rem 0;font-size:.73rem;color:var(--text);line-height:1.6;text-align:left}
-.im-step strong{color:var(--cyan)}
-.im-close{margin-top:1rem;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted2);padding:.5rem 1.4rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.72rem;cursor:pointer}
-
+/* MODAL */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
 .modal-bg.show{display:flex}
 .modal{background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:1.5rem;max-width:340px;width:90%;text-align:center}
@@ -216,38 +201,14 @@ tr:hover td{background:rgba(255,255,255,.012)}
   <div class="hdr">
     <div class="hdr-badge"><i></i> GAUSS+DNA · MTF Pullback Strategy</div>
     <h1><span class="c1">Calculadora</span> + <span class="c2">Diário</span></h1>
-    <p>// Banca $180 → Meta $1.000 · Risco 3% · Grade A: 2R/3.5R/6R · Grade S: 2.5R/4.5R/8R</p>
+    <p>// Banca $200 → Meta $1.000 · Risco 3% · Grade A: TP1 2R (50%) + TP Final 4R (50%)</p>
   </div>
 
   <div class="tabs-bar">
     <button class="tab-btn t1 active" onclick="showTab(1)">📐 Calculadora</button>
     <button class="tab-btn t2" onclick="showTab(2)">📒 Diário</button>
     <button class="tab-btn t3" onclick="showTab(3)">📊 Simulador</button>
-  </div>
-
-  <!-- BOTÃO INSTALAR APP -->
-  <button id="pwaInstallBtn" onclick="doInstall()">
-    <span class="pwa-icon">📲</span>
-    <span class="pwa-txt">Instalar app na tela inicial</span>
-    <span class="pwa-arrow">→</span>
-  </button>
-
-  <!-- MODAL INSTALAR (fallback manual) -->
-  <div id="installModal">
-    <div class="im-box">
-      <h3>📲 Instalar GAUSS+DNA</h3>
-      <div id="im-android" style="display:none">
-        <div class="im-step">1. Toque nos <strong>3 pontos ⋮</strong> no canto superior direito do Chrome</div>
-        <div class="im-step">2. Selecione <strong>"Adicionar à tela inicial"</strong></div>
-        <div class="im-step">3. Confirme tocando em <strong>"Adicionar"</strong></div>
-      </div>
-      <div id="im-ios" style="display:none">
-        <div class="im-step">1. Toque no ícone de <strong>Compartilhar</strong> (□↑) na barra inferior do Safari</div>
-        <div class="im-step">2. Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong></div>
-        <div class="im-step">3. Toque em <strong>"Adicionar"</strong> no canto superior direito</div>
-      </div>
-      <button class="im-close" onclick="document.getElementById('installModal').classList.remove('show')">Fechar</button>
-    </div>
+    <button class="tab-btn" onclick="showTab(4)" id="tb4">🎯 Sinal</button>
   </div>
 
   <!-- PROGRESSO -->
@@ -257,7 +218,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
         <label>Banca Atual</label>
         <div class="prog-banca-row">
           <span class="sym">$</span>
-          <input type="number" id="bancaInput" value="180" min="1" oninput="onBancaChange()">
+          <input type="number" id="bancaInput" value="200" min="1" oninput="onBancaChange()">
         </div>
       </div>
       <div class="prog-pct-wrap">
@@ -277,18 +238,12 @@ tr:hover td{background:rgba(255,255,255,.012)}
     Drawdown máximo atingido. Pause, revise o setup e retome apenas com banca recuperada.
   </div>
 
-  <!-- GRADE SELECTOR -->
-  <div style="display:flex;gap:.5rem;margin-bottom:.8rem">
-    <button id="gradeABtn" onclick="setGrade('A')" style="flex:1;padding:.55rem;font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;border-radius:8px;border:1px solid var(--blue);background:rgba(59,158,255,.18);color:var(--blue);cursor:pointer">⭐ GRADE A</button>
-    <button id="gradeSBtn" onclick="setGrade('S')" style="flex:1;padding:.55rem;font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);cursor:pointer">🏆 GRADE S</button>
-  </div>
-
   <!-- MÉTRICAS -->
   <div class="mets">
-    <div class="met"><div class="met-l">Risco/Op.</div><div class="met-v cr" id="mR">$5.40</div><div class="met-s" id="mRs">3% · Stop swing</div></div>
-    <div class="met"><div class="met-l" id="mT1L">TP1 (2R)</div><div class="met-v cb" id="mT1">$10.80</div><div class="met-s">fechar 40%</div></div>
-    <div class="met"><div class="met-l" id="mT2L">TP2 (3.5R)</div><div class="met-v cc" id="mT2">$18.90</div><div class="met-s">fechar 35%</div></div>
-    <div class="met"><div class="met-l" id="mTFL">Final (6R)</div><div class="met-v cv" id="mTF">$32.40</div><div class="met-s">últimos 25%</div></div>
+    <div class="met"><div class="met-l">Risco/Op.</div><div class="met-v cr" id="mR">$6.00</div><div class="met-s" id="mRs">3% · Stop swing</div></div>
+    <div class="met"><div class="met-l">TP1 <span id="mR1lbl" style="font-size:.55rem">(2R)</span></div><div class="met-v cb" id="mT1">$12.00</div><div class="met-s">fechar 50% + BE</div></div>
+    <div class="met"><div class="met-l">TP Final <span id="mRFlbl" style="font-size:.55rem">(4R)</span></div><div class="met-v cv" id="mTF">$24.00</div><div class="met-s">fechar 50%</div></div>
+    <div class="met"><div class="met-l">Médio/Trade</div><div class="met-v cp" id="mMed">$18.00</div><div class="met-s">EV esperado</div></div>
   </div>
 
   <!-- TAB 1 — CALCULADORA -->
@@ -307,20 +262,22 @@ tr:hover td{background:rgba(255,255,255,.012)}
       </div>
       <div class="panel">
         <div class="panel-ttl">Estrutura MTF Pullback</div>
+        <div class="grade-sel" style="display:flex;gap:.5rem;margin-bottom:.8rem">
+          <button id="gB" class="grade-btn" onclick="setGrade('B')" style="flex:1;padding:.6rem;border-radius:7px;border:1px solid rgba(255,204,68,.3);background:rgba(255,204,68,.06);color:var(--yellow);font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">B</button>
+          <button id="gA" class="grade-btn grade-active-a" onclick="setGrade('A')" style="flex:1;padding:.6rem;border-radius:7px;border:1px solid rgba(59,158,255,.5);background:rgba(59,158,255,.12);color:var(--blue);font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">A ✓</button>
+          <button id="gS" class="grade-btn" onclick="setGrade('S')" style="flex:1;padding:.6rem;border-radius:7px;border:1px solid rgba(180,127,255,.3);background:rgba(180,127,255,.06);color:var(--purple);font-family:'Unbounded',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">S</button>
+        </div>
         <div class="fixed-targets">
-          <div class="ft-row b1"><span>TP1 — fechar 40%</span><span class="cb" id="ftTP1">2.0 R</span></div>
-          <div class="ft-row b2"><span>TP2 — fechar 35%</span><span class="cc" id="ftTP2">3.5 R</span></div>
-          <div class="ft-row b3"><span>Final — últimos 25%</span><span class="cv" id="ftTPF">6.0 R</span></div>
-          <div class="ft-row b4"><span>Break Even após TP1</span><span class="cy">✓ Obrigatório</span></div>
-          <div class="ft-row b5"><span>Score &gt; 50 · ADX &gt; 22 · Grade A+S</span><span class="cp">Institucional</span></div>
-          <div class="ft-row b5"><span>Stop: swing ± 0.5 ATR · max 3 ATR</span><span class="cp">Estrutural</span></div>
-          <div class="ft-row b5"><span>Sessão: 09-13h e 14-21h BRT</span><span class="cy">✓ Ativo</span></div>
+          <div class="ft-row b1"><span>TP1 → fechar 50%</span><span class="cb" id="ftR1">2.0 R</span></div>
+          <div class="ft-row b3"><span>TP Final → fechar 50%</span><span class="cv" id="ftRF">4.0 R</span></div>
+          <div class="ft-row b4"><span>Break Even após TP1</span><span class="cy">✓ Risco zero</span></div>
+          <div class="ft-row b5"><span>RSI 40–65 · ADX ≥ 14 · DNA Flow/Trendilo</span><span class="cp">Filtros</span></div>
         </div>
       </div>
     </div>
 
     <div class="rules-wrap">
-      <div class="rules-ttl">Regras da Estratégia $180 → $1.000</div>
+      <div class="rules-ttl">Regras da Estratégia $200 → $1.000</div>
       <div id="rulesEl"></div>
     </div>
   </div>
@@ -380,6 +337,25 @@ tr:hover td{background:rgba(255,255,255,.012)}
     </div>
   </div>
 
+  <!-- TAB 4 — CALCULADORA DE SINAL -->
+  <div class="tab-panel" id="tab4">
+    <div class="sim-card">
+      <div class="sim-ttl">Calculadora de Sinal</div>
+      <div class="sim-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="sim-field"><label>Entrada ($)</label><input type="number" id="scEntry" step="0.00001" placeholder="0.0000" oninput="calcSig()"></div>
+        <div class="sim-field"><label>Stop ($)</label><input type="number" id="scStop" step="0.00001" placeholder="0.0000" oninput="calcSig()"></div>
+        <div class="sim-field"><label>Grade</label>
+          <select id="scGrade" onchange="calcSig()" style="width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:.88rem;padding:.45rem .65rem;outline:none">
+            <option value="B">B — 1.8R / 3R</option>
+            <option value="A" selected>A — 2R / 4R</option>
+            <option value="S">S — 2.5R / 5R</option>
+          </select>
+        </div>
+      </div>
+      <div id="scResult" class="sim-result" style="display:none"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- INSTALL BANNER (Android/Desktop) -->
@@ -391,7 +367,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
   </div>
   <div class="ib-btns">
     <button class="ib-btn ib-install" onclick="doInstall()">Instalar</button>
-    <button class="ib-btn ib-dismiss" onclick="document.getElementById('installBanner').classList.remove('show')">✕</button>
+    <button class="ib-btn ib-dismiss" onclick="dismissBanner()">✕</button>
   </div>
 </div>
 
@@ -413,44 +389,44 @@ tr:hover td{background:rgba(255,255,255,.012)}
 </div>
 
 <script>
-const STATE={banca:180,riscoPct:0.03,ops:[],selectedTipo:null,delId:null};
+const STATE={banca:200,riscoPct:0.03,ops:[],selectedTipo:null,delId:null};
 const META=1000;
 let opCounter=0;
+const GRADES={B:{r1:1.8,rf:3.0},A:{r1:2.0,rf:4.0},S:{r1:2.5,rf:5.0}};
+let curGrade='A';
 const $=id=>document.getElementById(id);
 const fmt=v=>'$'+Math.abs(v).toFixed(2);
 const fmtS=v=>(v>=0?'+':'-')+'$'+Math.abs(v).toFixed(2);
 
-let _grade = 'A';
-const GRADE_R = {
-  A: {r1:2.0, r2:3.5, rf:6.0},
-  S: {r1:2.5, r2:4.5, rf:8.0}
-};
-
-function setGrade(g) {
-  _grade = g;
-  const isS = g === 'S';
-  document.getElementById('gradeABtn').style.borderColor    = isS ? 'var(--border)'  : 'var(--blue)';
-  document.getElementById('gradeABtn').style.background     = isS ? 'transparent'    : 'rgba(59,158,255,.18)';
-  document.getElementById('gradeABtn').style.color          = isS ? 'var(--muted2)'  : 'var(--blue)';
-  document.getElementById('gradeSBtn').style.borderColor    = isS ? 'var(--yellow)'  : 'var(--border)';
-  document.getElementById('gradeSBtn').style.background     = isS ? 'rgba(255,204,68,.12)' : 'transparent';
-  document.getElementById('gradeSBtn').style.color          = isS ? 'var(--yellow)'  : 'var(--muted2)';
-  calcAll();
-}
-
-
+function sv(rid,vid,suf){
   const v=parseFloat($(rid).value);
   $(vid).textContent=suf==='x'?v.toFixed(0)+'×':suf==='%'?v.toFixed(1)+'%':v.toFixed(1);
 }
 
 function showTab(n){
-  ['tab1','tab2','tab3'].forEach((t,i)=>$(t).classList.toggle('active',i===n-1));
+  ['tab1','tab2','tab3','tab4'].forEach((t,i)=>{const el=$(t);if(el)el.classList.toggle('active',i===n-1);});
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===n-1));
   if(n===3) simCalc();
 }
 
+function setGrade(g){
+  curGrade=g;
+  ['B','A','S'].forEach(x=>{
+    const btn=$('g'+x);
+    if(!btn) return;
+    const colors={B:'rgba(255,204,68,.06)',A:'rgba(59,158,255,.12)',S:'rgba(180,127,255,.06)'};
+    const bcolors={B:'rgba(255,204,68,.3)',A:'rgba(59,158,255,.5)',S:'rgba(180,127,255,.3)'};
+    const tcolors={B:'var(--yellow)',A:'var(--blue)',S:'var(--purple)'};
+    btn.style.background=g===x?colors[x]:'transparent';
+    btn.style.borderColor=g===x?bcolors[x]:'rgba(255,255,255,.06)';
+    btn.style.color=g===x?tcolors[x]:'var(--muted2)';
+    btn.textContent=x+(g===x?' ✓':'');
+  });
+  calcAll();
+}
+
 function onBancaChange(){
-  STATE.banca=parseFloat($('bancaInput').value)||180;
+  STATE.banca=parseFloat($('bancaInput').value)||200;
   calcAll();renderDiary();
 }
 
@@ -459,22 +435,13 @@ function calcAll(){
   STATE.riscoPct=parseFloat($('rr').value)/100;
   const lev=parseFloat($('lr').value)||5;
   const risco=b*STATE.riscoPct;
-  const {r1,r2,rf}=GRADE_R[_grade]||GRADE_R.A;
-  const tp1=risco*r1;
-  const tp2=risco*r2;
-  const tfin=risco*rf;
+  const g=GRADES[curGrade];
+  const tp1=risco*g.r1;
+  const tfin=risco*g.rf;
+  const ganhoMed=(tp1*0.5+tfin*0.5);
   const stopBanca=b*0.70;
-  const colateral=(risco/0.02);
+  const colateral=(risco/0.02); // posição ao arriscar 2% de distância de SL
   const pct=Math.min(100,Math.round((b/META)*100));
-  // Atualiza labels das métricas e painel de estrutura
-  const mT1L=$('mT1L'),mT2L=$('mT2L'),mTFL=$('mTFL');
-  if(mT1L) mT1L.textContent=`TP1 (${r1}R)`;
-  if(mT2L) mT2L.textContent=`TP2 (${r2}R)`;
-  if(mTFL) mTFL.textContent=`Final (${rf}R)`;
-  const ftTP1=$('ftTP1'),ftTP2=$('ftTP2'),ftTPF=$('ftTPF');
-  if(ftTP1) ftTP1.textContent=r1+' R';
-  if(ftTP2) ftTP2.textContent=r2+' R';
-  if(ftTPF) ftTPF.textContent=rf+' R';
 
   $('pctEl').textContent=pct+'%';
   $('barFill').style.width=pct+'%';
@@ -483,20 +450,21 @@ function calcAll(){
   $('mR').textContent=fmt(risco);
   $('mRs').textContent=(STATE.riscoPct*100).toFixed(1)+'% · '+lev+'x lev';
   $('mT1').textContent=fmt(tp1);
-  $('mT2').textContent=fmt(tp2);
   $('mTF').textContent=fmt(tfin);
+  $('mMed').textContent=fmt(ganhoMed);
+  if($('mR1lbl')) $('mR1lbl').textContent='('+g.r1+'R)';
+  if($('mRFlbl')) $('mRFlbl').textContent='('+g.rf+'R)';
+  if($('ftR1')) $('ftR1').textContent=g.r1+' R';
+  if($('ftRF')) $('ftRF').textContent=g.rf+' R';
 
-  const ganhoMed=(tp1*.4+tp2*.35+tfin*.25);
-  const stopD=(risco*2).toFixed(2);
   $('rulesEl').innerHTML=`
-    <div class="rule"><span>🔍</span><div><strong>Filtro: Score &gt; 50 · ADX &gt; 22 · ADX subindo</strong><span class="note">1h confirma tendência → 30m encontra pullback na EMA21/EMA50 · Grade A+S apenas</span></div></div>
+    <div class="rule"><span>🔬</span><div><strong>Filtro: DNA Flow/Trendilo + Score > 38 · ADX ≥ 14</strong><span class="note">FLEX exige ao menos DNA Flow OU Trendilo ativo · Grade A+S preferred</span></div></div>
     <div class="rule"><span>⏰</span><div><strong>Horário: 09h–13h e 14h–21h BRT</strong><span class="note">Sem operar na abertura dos EUA (13–14h) nem fora do horário de liquidez</span></div></div>
-    <div class="rule"><span>🚫</span><div><strong>Evitar mercado lateral · Não comprar no topo · Não vender no fundo</strong><span class="note">BB squeeze + ADX &lt; 25 = sem sinal · Preço &gt; 2.5 ATR da EMA21 = extensão, aguardar</span></div></div>
+    <div class="rule"><span>🚫</span><div><strong>RSI: LONG < 65 · SHORT > 40 — nunca no extremo</strong><span class="note">ADX squeeze + RSI no extremo = sem sinal · Preço > 2.5 ATR da EMA21 = aguardar</span></div></div>
     <div class="rule"><span>💰</span><div><strong>Risco fixo: ${(STATE.riscoPct*100).toFixed(1)}% por operação = ${fmt(risco)}</strong><span class="note">Stop no swing low/high da estrutura — nunca mova após entrar</span></div></div>
-    <div class="rule"><span>🎯</span><div><strong>TP1 em ${r1}R = ${fmt(tp1)} → fechar 40% da posição</strong><span class="note">Após TP1 ative Break Even — trade vira risco zero</span></div></div>
-    <div class="rule"><span>✨</span><div><strong>TP2 em ${r2}R = ${fmt(tp2)} → fechar 35% da posição</strong><span class="note">Move stop para TP1 e deixa última parte correr</span></div></div>
-    <div class="rule"><span>🏆</span><div><strong>Final em ${rf}R = ${fmt(tfin)} → últimos 25% · Ganho médio: ${fmt(ganhoMed)}</strong><span class="note">Em tendência forte (ADX &gt; 30) usar trailing stop sem limite</span></div></div>
-    <div class="rule"><span>🛑</span><div><strong>Stop diário: máx 2 losses = $${stopD} perdidos → encerre o dia</strong><span class="note">Grade A+S obrigatório · ADX subindo · Nunca contra tendência 1h</span></div></div>
+    <div class="rule"><span>🎯</span><div><strong>TP1 em ${g.r1}R = ${fmt(tp1)} → fechar 50% da posição</strong><span class="note">Após TP1 ative Break Even — trade vira risco zero</span></div></div>
+    <div class="rule"><span>🏆</span><div><strong>TP Final em ${g.rf}R = ${fmt(tfin)} → fechar 50% restante</strong><span class="note">Ganho médio esperado: ${fmt(ganhoMed)} | Em tendência forte use trailing stop</span></div></div>
+    <div class="rule"><span>🛑</span><div><strong>Stop diário: máx 2 losses = $${(risco*2).toFixed(2)} → encerre o dia</strong><span class="note">Grade A+S obrigatório · Nunca contra tendência 1h/30m</span></div></div>
     <div class="rule"><span>🔒</span><div><strong>Stop banca: 30% drawdown = ${fmt(stopBanca)} → pause e revise</strong><span class="note">Faltam ${fmt(META-b)} para a meta de $1.000</span></div></div>
   `;
   buildCVOptions();
@@ -506,12 +474,12 @@ function calcAll(){
 function buildCVOptions(){
   const b=STATE.banca;
   const risco=b*STATE.riscoPct;
-  const {r1,r2,rf}=GRADE_R[_grade]||GRADE_R.A;
-  const tp1=risco*r1, tp2=risco*r2, tfin=risco*rf;
-  const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
+  const g=GRADES[curGrade];
+  const tp1=risco*g.r1, tfin=risco*g.rf;
+  const ganhoMed=tp1*.5+tfin*.5;
   const t=STATE.selectedTipo;
   const opts=t==='win'
-    ?[{lbl:`TP1 (${r1}R)`,v:tp1},{lbl:`TP2 (${r2}R)`,v:tp2},{lbl:`Final (${rf}R)`,v:tfin},{lbl:'Médio',v:ganhoMed}]
+    ?[{lbl:'TP1 ('+g.r1+'R) + BE',v:tp1*.5},{lbl:'TP Final ('+g.rf+'R)',v:ganhoMed},{lbl:'Só TP1 parcial',v:tp1*.5}]
     :t==='loss'
     ?[{lbl:'Stop completo',v:-risco},{lbl:'Metade',v:-risco*.5}]
     :t==='be'
@@ -633,8 +601,7 @@ function simCalc(){
   const wr=parseFloat($('simWR').value)/100||0.62;
   const opsDay=parseFloat($('simOps').value)||2;
   const risco=banca*STATE.riscoPct;
-  const {r1:sr1,r2:sr2,rf:srf}=GRADE_R[_grade]||GRADE_R.A;
-  const tp1=risco*sr1, tp2=risco*sr2, tfin=risco*srf;
+  const tp1=risco*2.0, tp2=risco*3.5, tfin=risco*6.0;
   const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
   const perdaMed=risco;
   const ev=wr*ganhoMed-(1-wr)*perdaMed;
@@ -702,46 +669,61 @@ function showToast(msg){
 
 // ── PWA ──────────────────────────────────────────────
 let _deferredPrompt = null;
-const _isIOS    = /iphone|ipad|ipod/i.test(navigator.userAgent);
-const _isInApp  = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
 function initPWA() {
-  if ('serviceWorker' in navigator)
-    navigator.serviceWorker.register('/gauss-dna/sw.js', { scope: '/gauss-dna/' }).catch(() => {});
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/gauss-dna/sw.js', { scope: '/gauss-dna/' })
+      .catch(() => {});
+  }
 
-  if (_isInApp) return; // já instalado
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInApp = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
 
-  // Mostra botão instalar sempre (exceto se já instalado)
-  document.getElementById('pwaInstallBtn').classList.add('visible');
+  if (isInApp) return; // already installed
 
-  // Captura prompt nativo do Chrome/Android
+  if (isIOS) {
+    // Show iOS hint after 3s if not dismissed
+    if (!localStorage.getItem('pwa_ios_dismissed')) {
+      setTimeout(() => {
+        document.getElementById('iosHint').classList.add('show');
+      }, 3000);
+    }
+    return;
+  }
+
+  // Android / Chrome: capture install prompt
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     _deferredPrompt = e;
+    if (!localStorage.getItem('pwa_banner_dismissed')) {
+      setTimeout(() => {
+        document.getElementById('installBanner').classList.add('show');
+      }, 1500);
+    }
   });
 
   window.addEventListener('appinstalled', () => {
+    document.getElementById('installBanner').classList.remove('show');
     _deferredPrompt = null;
-    document.getElementById('pwaInstallBtn').classList.remove('visible');
     showToast('✅ App instalado na tela inicial!');
   });
 }
 
 function doInstall() {
-  if (_deferredPrompt) {
-    // Chrome nativo: usa prompt automático
-    _deferredPrompt.prompt();
-    _deferredPrompt.userChoice.then(r => {
-      if (r.outcome === 'accepted') showToast('✅ Instalando...');
-      _deferredPrompt = null;
-    });
-  } else {
-    // Fallback: mostra instruções manuais
-    const modal = document.getElementById('installModal');
-    document.getElementById('im-ios').style.display     = _isIOS ? 'block' : 'none';
-    document.getElementById('im-android').style.display = _isIOS ? 'none'  : 'block';
-    modal.classList.add('show');
-  }
+  if (!_deferredPrompt) return;
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(r => {
+    if (r.outcome === 'accepted') showToast('✅ Instalando...');
+    _deferredPrompt = null;
+    document.getElementById('installBanner').classList.remove('show');
+  });
+}
+
+function dismissBanner() {
+  document.getElementById('installBanner').classList.remove('show');
+  localStorage.setItem('pwa_banner_dismissed', '1');
 }
 </script>
 </body>
