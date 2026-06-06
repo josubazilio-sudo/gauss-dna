@@ -28,6 +28,7 @@ JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
 CAPITAL      = float(os.environ.get("CAPITAL", "200"))   # capital total em USD ($200 → $1000 com 5x)
 RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%) — base para Grade A
 RISK_BY_GRADE = {"B": 0.02, "A": 0.03, "S": 0.05}       # B=2%, A=3%, S=5%
+RISK_SCOUT    = 0.01                                      # SCOUT=1% — sinal secundário
 
 _JOURNAL_FIELDS = ["datetime","symbol","timeframe","direction","entry","stop",
                    "tp_parcial","tp_total","r1","r_final","grade","score",
@@ -730,6 +731,21 @@ def analyze(sym, candles):
                    not sideways and not_ext_short_tight and safe_short and
                    price < e200 and inst_score_short >= 50)
 
+    # ── SCOUT — sinal secundário semi-agressivo: thresholds relaxados, risco 1% ──
+    # Captura setups abaixo do FLEX mas com estrutura real. Posição pequena, R:R menor.
+    # Condições: score>28 (vs 38 FLEX), ha_bull 1 candle (vs 2), adx≥11 (vs 14),
+    # volume relaxado, basta 1 indicador direcional (vs 2 gates no FLEX)
+    long_scout = (flex_score > 28 and ha_bull and macd_bull_r and adx >= 11 and
+                  not sideways and not_ext_long_tight and safe_long and
+                  (v_good or obv_bull) and vol_not_fade and
+                  not_overextended_long and rsi_not_chasing_long and
+                  (dna_flow_bull or trendilo_long or kalman_up))
+    short_scout = (flex_score < -28 and ha_bear and macd_bear_r and adx >= 11 and
+                   not sideways and not_ext_short_tight and safe_short and
+                   (v_good or obv_bear) and vol_not_fade and
+                   not_overextended_short and rsi_not_chasing_short and
+                   (dna_flow_bear or trendilo_short or not kalman_up))
+
     # ── SURGE (pump/dump com volume explosivo — captura moves tipo HOME +16%) ────
     # ── SURGE (Pine: rvol_tier>=3 + 4%+ candle + break_h + not bb_break — sem trendilo)
     candle_bull_pct = (price - opens[-1]) / max(opens[-1], 1e-10)
@@ -809,8 +825,10 @@ def analyze(sym, candles):
         elif short_div: sig="SHORT"; sig_source="DIV"
         elif long_flex: sig="LONG"; sig_source="FLEX"
         elif short_flex: sig="SHORT"; sig_source="FLEX"
-        elif long_setup: sig="LONG"; sig_source="SETUP"
+        elif long_setup:  sig="LONG";  sig_source="SETUP"
         elif short_setup: sig="SHORT"; sig_source="SETUP"
+        elif long_scout:  sig="LONG";  sig_source="SCOUT"
+        elif short_scout: sig="SHORT"; sig_source="SCOUT"
 
     # ── QUALIDADE DO SINAL (S / A / B) ───────────────────────────────────────
     # Conta quantos dos filtros premium estão alinhados
@@ -1186,7 +1204,9 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     if risk <= 0: return
 
     # ── TP POR GRADE + TIPO DE SINAL ─────────────────────────────────────────
-    if signal_grade == "S":
+    if sig_source == "SCOUT":
+        r1, r_final = 1.5, 2.5   # targets conservadores — sinal secundário
+    elif signal_grade == "S":
         r1, r_final = 2.5, 5.0
     elif signal_grade == "A":
         r1, r_final = 2.0, 4.0
@@ -1203,8 +1223,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     tp1   = price + risk * r1      if is_long else price - risk * r1
     final = price + risk * r_final if is_long else price - risk * r_final
 
-    # Cálculo de posição: risk % varia por grade (B=2%, A=3%, S=5%)
-    risk_pct_grade = RISK_BY_GRADE.get(signal_grade, RISK_PCT)
+    # Cálculo de posição: SCOUT=1%, outros por grade (B=2%, A=3%, S=5%)
+    risk_pct_grade = RISK_SCOUT if sig_source == "SCOUT" else RISK_BY_GRADE.get(signal_grade, RISK_PCT)
     risk_amount    = CAPITAL * risk_pct_grade
     contracts      = risk_amount / risk if risk > 0 else 0
     pos_value      = contracts * price
@@ -1245,6 +1265,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         mode_tag="🔄 REVERSÃO EXTREMA"; cross_info=""
     elif sig_source=="SETUP":
         mode_tag="🔭 DNA SETUP"; cross_info=""
+    elif sig_source=="SCOUT":
+        mode_tag="🔵 DNA SCOUT"; cross_info=""
     elif SIGNAL_MODE=="ELITE":
         mode_tag="🔬 DNA ELITE KALMAN"; cross_info=""
     else:
@@ -1270,12 +1292,13 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     trl_line  = ("✅" if trl_ok else "—") + " Trendilo"
     inst_line = (f"\n🏛 Score Inst: *{esc(str(inst_sc))}/100* {esc(inst_cls_v)}" if inst_sc else "")
     liq_line  = (f"\n🔍 SM: {esc(liq_event)}" if liq_event else "")
+    scout_warn = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if sig_source == "SCOUT" else ""
 
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
         f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| 🕐 Gráfico: *{esc(tf_label)}*\n"
         f"{cross_line}"
-        f"{esc(grade_label)}{inst_line}{liq_line}\n\n"
+        f"{esc(grade_label)}{inst_line}{liq_line}{scout_warn}\n\n"
         f"💰 Entrada: `${raw(fmt_price(price))}`\n"
         f"🛑 Stop: `${raw(d(stop))}` \\({esc(stop_label)}\\)\n"
         f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
