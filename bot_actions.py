@@ -684,6 +684,17 @@ def analyze(sym, candles):
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
     not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 40
 
+    # ── ANTI-PUMP / ANTI-DUMP / RSI VELOCITY ──────────────────────────────────
+    # Evita entrar em ativo esticado >18% das últimas 48 velas (raw price, não HA)
+    raw_c48 = [c["c"] for c in candles[-50:-1]]
+    not_overextended_long  = (price - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.18
+    not_overextended_short = (max(raw_c48) - price) / max(max(raw_c48), 1e-10) < 0.18
+    # RSI velocity: bloqueia se RSI correu >18pts em ~3 velas (chasing)
+    rsi_not_chasing_long  = (rsi - rsi_prev) < 18
+    rsi_not_chasing_short = (rsi_prev - rsi) < 18
+    # Volume não em fade: vela atual deve ser ≥60% da MA20 de volume
+    vol_not_fade = vols[-1] >= vol_ma * 0.60
+
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
@@ -698,10 +709,12 @@ def analyze(sym, candles):
 
     long_flex = (flex_score > 38 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and flex_vol_ok and
+                 vol_not_fade and not_overextended_long and rsi_not_chasing_long and
                  (trendilo_long or kalman_up) and
                  (dna_flow_bull or trendilo_long))
     short_flex = (flex_score < -38 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and flex_vol_ok_s and
+                  vol_not_fade and not_overextended_short and rsi_not_chasing_short and
                   (trendilo_short or not kalman_up) and
                   (dna_flow_bear or trendilo_short))
 
