@@ -766,10 +766,10 @@ def analyze(sym, candles):
     surge_break_h   = price > max(highs[-11:-1])  # rompeu máxima das últimas 10 velas
     surge_break_l   = price < min(lows[-11:-1])   # rompeu mínima das últimas 10 velas
     long_surge  = (rvol_tier >= 3 and candle_bull_pct > 0.04 and surge_break_h and
-                   price > e200 and not bb_break_long and not exhaustion_top and
+                   not bb_break_long and not exhaustion_top and
                    not vol_drying and kalman_up and ha_bull)
     short_surge = (rvol_tier >= 3 and candle_bear_pct > 0.04 and surge_break_l and
-                   price < e200 and not bb_break_short and not exhaustion_bot and
+                   not bb_break_short and not exhaustion_bot and
                    not vol_drying and kalman_down and ha_bear)
 
     # ── MOMENTUM (Pine: rsi_fresh + ha_bull + flow_bull + adx>22 + v_strong + trl_bull + score>=70)
