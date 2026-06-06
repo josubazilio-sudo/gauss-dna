@@ -765,7 +765,7 @@ def analyze(sym, candles):
 
     # ── MOMENTUM (Pine: rsi_fresh + ha_bull + flow_bull + adx>22 + v_strong + trl_bull + score>=70)
     rsi_fresh_long  = rsi_prev < 65 <= rsi < 78   # cruzou 65 recentemente
-    rsi_fresh_short = rsi_prev > 35 >= rsi > 28   # cruzou abaixo de 35, piso 28 evita bounce extremo
+    rsi_fresh_short = rsi_prev > 35 >= rsi > 32   # cruzou abaixo de 35, piso 32 evita sobrevendido
     long_momentum  = (rsi_fresh_long  and ha_bull and dna_flow_bull and
                       adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 60)
     short_momentum = (rsi_fresh_short and ha_bear and dna_flow_bear and
