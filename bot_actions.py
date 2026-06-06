@@ -1549,14 +1549,7 @@ async def run_cycle(session, last_sig, tf, coins):
             lines += [f"  {sh}: {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f}" for _,sh,sc,rsi,adx,_ in top_short]
 
         if lines:
-            txt = (f"🔍 [{tf}] Sem sinais no ciclo\nTop candidatos:\n" + "\n".join(lines) +
-                   f"\n⏰ {datetime.now().strftime('%H:%M')}")
-            url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-            try:
-                async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
-                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
-                    await r.json()
-            except: pass
+            log.info(f"[{tf}] Sem sinais — " + " | ".join(lines[:3]))
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
@@ -1670,37 +1663,13 @@ async def run_mtf_cycle(session, last_sig, coins):
                 setup_coins.append((short, direction, r4h["score"], h4_rsi, f"cooldown {mins}min"))
                 log.info(f"  ⏳ {short} [MTF] cooldown {mins}min")
 
-    # Informa no Telegram quando BTC está em queda bloqueando LONGs (máx 1x a cada 2h)
+    # BTC bear filter ativo — log apenas
     if sent == 0 and btc_bear_filter:
-        btc_bear_key = "_btc_bear_msg"
-        if now - last_sig.get(btc_bear_key, 0) >= 7200:
-            last_sig[btc_bear_key] = now
-            txt = (f"🐻 BTC em queda — LONGs bloqueados\n"
-                   f"💰 BTC ${btc_p:,.0f} | preço < EMA21 < EMA50\n"
-                   f"⏳ Aguardando BTC virar BULL para liberar sinais\n"
-                   f"⏰ {datetime.now().strftime('%H:%M')}")
-            url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-            try:
-                async with session.post(url, json={"chat_id":TG_CHATID,"text":txt},
-                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
-                    await r.json()
-            except: pass
+        log.info("🐻 BTC bear — LONGs bloqueados")
 
-    # Diagnóstico MTF: mostra setups 1H em análise quando não há sinal
+    # MTF setups em análise — log apenas
     if sent == 0 and setup_coins:
-        lines = [f"🔍 [MTF 4H→1H] Sem sinal — {len(setup_coins)} setup(s) 4H ativos"]
-        for sh, d, sc, rsi, motivo in setup_coins[:4]:
-            arrow = "📈" if d == "BULL" else "📉"
-            lines.append(f"  {arrow} {sh}: {sc:+d} RSI {rsi:.0f} → {motivo}")
-        if len(setup_coins) > 4:
-            lines.append(f"  ... +{len(setup_coins)-4} outros")
-        lines.append(f"⏰ {datetime.now().strftime('%H:%M')}")
-        url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-        try:
-            async with session.post(url, json={"chat_id":TG_CHATID,"text":"\n".join(lines)},
-                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
-                await r.json()
-        except: pass
+        log.info(f"[MTF] {len(setup_coins)} setup(s) H4 ativos sem sinal 1H")
 
     return sent
 
@@ -1756,31 +1725,7 @@ async def main():
     scan_str="DINÂMICO" if DYNAMIC_SCAN else "LISTA FIXA"
     log.info(f"🚀 GAUSS+DNA v2 | {SIGNAL_MODE} | TFs: {','.join(TIMEFRAMES)} | Coins: {scan_str} | {mode_str}")
 
-    # Ping de inicialização — confirma que Telegram está funcionando
-    async with aiohttp.ClientSession() as _s:
-        try:
-            def _esc(v):
-                s=str(v)
-                for ch in r"_*[]()~`>#+=|{}.!\-": s=s.replace(ch,f"\\{ch}")
-                return s
-            ping_txt=(
-                f"🟢 *GAUSS\\+DNA INICIADO*\n\n"
-                f"🕐 Modo: {_esc(mode_str)}\n"
-                f"📊 Sinais: {_esc(SIGNAL_MODE)}\n"
-                f"⏱ Timeframes: {_esc(','.join(TIMEFRAMES))}\n"
-                f"🪙 Moedas: {_esc(scan_str)}\n"
-                f"⏰ {_esc(datetime.now().strftime('%H:%M — %d/%m/%Y'))}"
-            )
-            async with _s.post(
-                f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
-                json={"chat_id":TG_CHATID,"text":ping_txt,"parse_mode":"MarkdownV2"},
-                timeout=aiohttp.ClientTimeout(total=10)
-            ) as r:
-                d=await r.json()
-                if d.get("ok"): log.info("✅ Telegram ping OK — bot ativo e conectado")
-                else: log.warning(f"⚠️ Telegram ping falhou: {d.get('description')} — verifique TG_TOKEN e TG_CHATID")
-        except Exception as e:
-            log.error(f"Erro no ping Telegram: {e}")
+    log.info("✅ Bot pronto — enviando apenas sinais reais ao Telegram")
 
     last_sig=load_state()
     cycle=0
@@ -1788,27 +1733,17 @@ async def main():
     last_scan_cycle=0
 
     async with aiohttp.ClientSession() as session:
-        # ── Teste de conectividade antes de tudo ──────────────────────────────
-        try:
-            tg_url=f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-            diag_lines=[]
-            for test_url,label in [
-                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=250","MEXC 15m x250"),
-                ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=60m&limit=250","MEXC 60m x250"),
-            ]:
-                try:
-                    async with session.get(test_url,timeout=aiohttp.ClientTimeout(total=8)) as _r:
-                        _status=_r.status
-                        _body=await _r.json()
-                        _count=len(_body) if isinstance(_body,list) else -1
-                        diag_lines.append(f"{label}: HTTP {_status} | {_count} velas")
-                except Exception as _e:
-                    diag_lines.append(f"{label}: ERRO {str(_e)[:60]}")
-            diag_txt="🔬 Diagnóstico de conectividade:\n"+"\n".join(diag_lines)
-            async with session.post(tg_url,json={"chat_id":TG_CHATID,"text":diag_txt},
-                                    timeout=aiohttp.ClientTimeout(total=10)) as _r: await _r.json()
-        except Exception as e:
-            log.error(f"Diagnóstico falhou: {e}")
+        # ── Teste de conectividade — log apenas ──────────────────────────────
+        for test_url,label in [
+            ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=250","MEXC 15m"),
+            ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=60m&limit=250","MEXC 60m"),
+        ]:
+            try:
+                async with session.get(test_url,timeout=aiohttp.ClientTimeout(total=8)) as _r:
+                    _body=await _r.json()
+                    log.info(f"✅ {label}: {len(_body) if isinstance(_body,list) else '?'} velas")
+            except Exception as _e:
+                log.warning(f"⚠️ {label}: {str(_e)[:60]}")
 
         # Scanner inicial antes do primeiro ciclo (top 50 para não começar cego)
         if DYNAMIC_SCAN:
@@ -1857,20 +1792,8 @@ async def main():
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{cycle}: {e}")
 
-            # ── Heartbeat: a cada 5 ciclos, ping Telegram ────────────────────────
             if LOOP_MODE and cycle % 5 == 0:
-                try:
-                    hb_txt = (f"⚡ Bot ativo | Ciclo #{cycle} | "
-                              f"{datetime.now().strftime('%H:%M')} | "
-                              f"{len(active_coins)} moedas")
-                    hb_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-                    async with session.post(hb_url,
-                                            json={"chat_id": TG_CHATID, "text": hb_txt},
-                                            timeout=aiohttp.ClientTimeout(total=10)) as _r:
-                        await _r.json()
-                    log.info(f"💓 Heartbeat ciclo #{cycle} enviado")
-                except Exception as _e:
-                    log.warning(f"Heartbeat falhou (não crítico): {_e}")
+                log.info(f"💓 Ciclo #{cycle} | {len(active_coins)} moedas")
 
             if not LOOP_MODE:
                 break
