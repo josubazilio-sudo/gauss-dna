@@ -1,76 +1,74 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// GAUSS+DNA ELITE FLEX — Pine Script v5
-// Replica exata da estratégia do bot: FLEX, SURGE, MOMENTUM, REBOUND, SCOUT
-// Stop adaptativo (ATR + Estrutura) | TP proporcional ao grau (S/A/B)
+// GAUSS+DNA Elite FLEX — Pine Script v5
+// Sinais: FLEX · SURGE · MOMENTUM · REBOUND · SCOUT
+// Stop adaptativo (ATR + Estrutura anti-sweep) | TP proporcional ao Grau S/A/B
 // ══════════════════════════════════════════════════════════════════════════════
 //@version=5
-indicator("GAUSS+DNA Elite FLEX", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=100)
+indicator("GAUSS+DNA Elite FLEX", overlay=true,
+          max_lines_count=500, max_labels_count=500, max_boxes_count=100)
 
-// ── INPUTS ───────────────────────────────────────────────────────────────────
-grp_g = "💰 Gestão de Risco"
-capital     = input.float(200,  "Capital (USDT)",  group=grp_g)
-grp_s = "📡 Sinais Ativos"
-show_flex    = input.bool(true,  "FLEX",     group=grp_s, inline="sig1")
-show_surge   = input.bool(true,  "SURGE",    group=grp_s, inline="sig1")
-show_mom     = input.bool(true,  "MOMENTUM", group=grp_s, inline="sig2")
-show_rebound = input.bool(true,  "REBOUND",  group=grp_s, inline="sig2")
-show_scout   = input.bool(true,  "SCOUT",    group=grp_s, inline="sig3")
-grp_v = "🎨 Visual"
-show_emas    = input.bool(true,  "EMAs (10/21/50/200)", group=grp_v)
-show_kalman  = input.bool(true,  "Kalman Filter",       group=grp_v)
-show_vwap    = input.bool(true,  "VWAP",                group=grp_v)
-show_lines   = input.bool(true,  "Linhas Stop/TP",      group=grp_v)
+// ── INPUTS ────────────────────────────────────────────────────────────────────
+capital      = input.float(200,  "Capital (USDT)",        group="💰 Gestão")
+show_flex    = input.bool(true,  "FLEX",     inline="s1", group="📡 Sinais")
+show_surge   = input.bool(true,  "SURGE",    inline="s1", group="📡 Sinais")
+show_mom     = input.bool(true,  "MOMENTUM", inline="s2", group="📡 Sinais")
+show_rebound = input.bool(true,  "REBOUND",  inline="s2", group="📡 Sinais")
+show_scout   = input.bool(true,  "SCOUT",    inline="s3", group="📡 Sinais")
+show_emas    = input.bool(true,  "EMAs 10/21/50/200",     group="🎨 Visual")
+show_kalman  = input.bool(true,  "Kalman Filter",         group="🎨 Visual")
+show_vwap    = input.bool(true,  "VWAP",                  group="🎨 Visual")
+show_lines   = input.bool(true,  "Linhas Stop/TP",        group="🎨 Visual")
 
-// ── HEIKIN ASHI ──────────────────────────────────────────────────────────────
-ha_c  = (open + high + low + close) / 4
-ha_o  = na(ha_o[1]) ? (open + close) / 2 : (ha_o[1] + ha_c[1]) / 2
-ha_h  = math.max(high, math.max(ha_o, ha_c))
-ha_l  = math.min(low,  math.min(ha_o, ha_c))
+// ── HEIKIN ASHI ───────────────────────────────────────────────────────────────
+ha_c  = (open + high + low + close) / 4.0
+var float ha_o_v = (open + close) / 2.0
+ha_o_v := na(ha_o_v[1]) ? (open + close) / 2.0 : (ha_o_v[1] + ha_c[1]) / 2.0
+ha_h  = math.max(high, math.max(ha_o_v, ha_c))
+ha_l  = math.min(low,  math.min(ha_o_v, ha_c))
+ha_bull   = ha_c > ha_o_v
+ha_bear   = ha_c < ha_o_v
+ha_bull2  = ha_bull and ha_bull[1]
+ha_bear2  = ha_bear and ha_bear[1]
+ha_body   = math.abs(ha_c - ha_o_v)
+ha_range  = math.max(ha_h - ha_l, 1e-10)
+ha_body_ok = ha_body / ha_range > 0.3
 
-ha_bull  = ha_c > ha_o
-ha_bear  = ha_c < ha_o
-ha_bull2 = ha_bull  and ha_bull[1]
-ha_bear2 = ha_bear  and ha_bear[1]
-ha_body  = math.abs(ha_c - ha_o)
-ha_range = math.max(ha_h - ha_l, 1e-10)
-ha_body_ok = ha_body / ha_range > 0.3  // corpo ≥ 30% da vela
-
-// ── EMAs ─────────────────────────────────────────────────────────────────────
+// ── EMAs ──────────────────────────────────────────────────────────────────────
 e10  = ta.ema(ha_c, 10)
 e21  = ta.ema(ha_c, 21)
 e50  = ta.ema(ha_c, 50)
 e200 = ta.ema(ha_c, 200)
 
-plot(show_emas ? e10  : na, "EMA10",  color=color.new(color.yellow,  0), linewidth=1)
-plot(show_emas ? e21  : na, "EMA21",  color=color.new(color.orange,  0), linewidth=1)
-plot(show_emas ? e50  : na, "EMA50",  color=color.new(color.red,     0), linewidth=2)
-plot(show_emas ? e200 : na, "EMA200", color=color.new(color.white,   0), linewidth=2)
+plot(show_emas ? e10  : na, "EMA10",  color=color.new(color.yellow, 0), linewidth=1)
+plot(show_emas ? e21  : na, "EMA21",  color=color.new(color.orange, 0), linewidth=1)
+plot(show_emas ? e50  : na, "EMA50",  color=color.new(color.red,    0), linewidth=2)
+plot(show_emas ? e200 : na, "EMA200", color=color.new(color.white,  0), linewidth=2)
 
-// ── RSI ──────────────────────────────────────────────────────────────────────
+// ── RSI ───────────────────────────────────────────────────────────────────────
 rsi      = ta.rsi(ha_c, 14)
-rsi_prev = ta.rsi(ha_c, 14)[3]   // 3 velas atrás (como no bot Python)
+rsi_prev = ta.rsi(ha_c, 14)[3]
 rsi_6    = ta.rsi(ha_c, 14)[6]
 rsi_9    = ta.rsi(ha_c, 14)[9]
 
-// ── MACD ─────────────────────────────────────────────────────────────────────
-[macd_l, sig_l, hist] = ta.macd(ha_c, 12, 26, 9)
-macd_bull    = macd_l > sig_l
-macd_bear    = macd_l < sig_l
-macd_bull_r  = macd_bull or (hist > hist[1] and hist[1] > hist[2])   // recuperando
-macd_bear_r  = macd_bear or (hist < hist[1] and hist[1] < hist[2])
-macd_recovering = hist > hist[1] and hist[1] > hist[2]
-macd_exhausting = hist < hist[1] and hist[1] < hist[2]
+// ── MACD ──────────────────────────────────────────────────────────────────────
+[macd_l, macd_s, macd_h] = ta.macd(ha_c, 12, 26, 9)
+macd_bull       = macd_l > macd_s
+macd_bear       = macd_l < macd_s
+macd_bull_r     = macd_bull or (macd_h > macd_h[1] and macd_h[1] > macd_h[2])
+macd_bear_r     = macd_bear or (macd_h < macd_h[1] and macd_h[1] < macd_h[2])
+macd_recovering = macd_h > macd_h[1] and macd_h[1] > macd_h[2]
+macd_exhausting = macd_h < macd_h[1] and macd_h[1] < macd_h[2]
 
-// ── ADX / DMI ────────────────────────────────────────────────────────────────
+// ── ADX / DMI ─────────────────────────────────────────────────────────────────
 [dip, dim, adx] = ta.dmi(14, 14)
 adx_long_ok  = adx > 22 and dip > dim
 adx_short_ok = adx > 22 and dim > dip
 
-// ── ATR ──────────────────────────────────────────────────────────────────────
+// ── ATR ───────────────────────────────────────────────────────────────────────
 atr = ta.atr(14)
 
-// ── BOLLINGER BANDS ──────────────────────────────────────────────────────────
-[bb_up, bb_mid, bb_dn] = ta.bb(ha_c, 20, 2)
+// ── BOLLINGER BANDS ───────────────────────────────────────────────────────────
+[bb_up, bb_mid, bb_dn] = ta.bb(ha_c, 20, 2.0)
 bb_bw        = bb_up - bb_dn
 bb_squeeze   = bb_bw < bb_bw[1] * 0.95
 bb_expand    = bb_bw > bb_bw[1] * 1.02
@@ -79,64 +77,59 @@ bb_brk_short = close < bb_dn
 near_bb_top  = close > bb_up * 0.98
 near_bb_bot  = close < bb_dn * 1.02
 
-// ── VOLUME + RVOL ─────────────────────────────────────────────────────────────
-// vol_ma usa 20 velas COMPLETAS (exclui vela atual — pode ser parcial em 15m)
-vol_ma      = ta.sma(volume[1], 20)
-rvol        = volume / math.max(vol_ma, 1e-10)
-v_good      = rvol >= 1.2
-v_strong    = rvol >= 1.5
-v_inst      = rvol >= 3.0
+// ── VOLUME / RVOL ─────────────────────────────────────────────────────────────
+// vol_ma exclui vela atual (pode ser parcial em 15m)
+vol_ma       = ta.sma(volume[1], 20)
+rvol         = volume / math.max(vol_ma, 1e-10)
+v_good       = rvol >= 1.2
+v_strong     = rvol >= 1.5
 vol_not_fade = volume >= vol_ma * 0.60
 vol_drying   = volume < vol_ma * 0.50
-rvol_ok      = rvol >= 0.5   // piso absoluto anti-vela-parcial
+rvol_ok      = rvol >= 0.5
+rvol_lbl     = rvol >= 3.0 ? "INST" : rvol >= 2.0 ? "VSTRONG" : v_strong ? "STRONG" : v_good ? "GOOD" : "LOW"
 
-rvol_lbl = v_inst ? "INST" : rvol >= 2.0 ? "VSTRONG" : v_strong ? "STRONG" : v_good ? "GOOD" : "LOW"
-
-// ── OBV ──────────────────────────────────────────────────────────────────────
+// ── OBV ───────────────────────────────────────────────────────────────────────
 obv_val  = ta.obv
 obv_ema  = ta.ema(obv_val, 20)
 obv_bull = obv_val > obv_ema and obv_val > obv_val[5]
 obv_bear = obv_val < obv_ema and obv_val < obv_val[5]
 
-// ── VWAP ─────────────────────────────────────────────────────────────────────
-vwap_val   = ta.vwap(hl2)
-above_vwap = close > vwap_val
-below_vwap = close < vwap_val
-plot(show_vwap ? vwap_val : na, "VWAP", color=color.new(color.blue, 0), linewidth=1)
+// ── VWAP ──────────────────────────────────────────────────────────────────────
+vwap_v     = ta.vwap(hl2)
+above_vwap = close > vwap_v
+below_vwap = close < vwap_v
+plot(show_vwap ? vwap_v : na, "VWAP", color=color.new(color.blue, 0), linewidth=1)
 
-// ── KALMAN FILTER (Q=0.01, R=0.1) ───────────────────────────────────────────
-var float kf_val = na
+// ── KALMAN FILTER ─────────────────────────────────────────────────────────────
+var float kf_v   = close
 var float kf_err = 1.0
-kf_q = 0.01
-kf_r = 0.1
-if na(kf_val)
-    kf_val := close
-else
-    kf_g   = kf_err / (kf_err + kf_r)
-    kf_val := kf_val + kf_g * (close - kf_val)
-    kf_err := (1.0 - kf_g) * kf_err + kf_q
+kf_gain  = kf_err / (kf_err + 0.1)
+kf_v    := kf_v   + kf_gain * (close - kf_v)
+kf_err  := (1.0 - kf_gain) * kf_err + 0.01
 
-kalman_up         = kf_val > kf_val[1]
-kalman_down       = kf_val < kf_val[1]
-kalman_accel_up   = kalman_up   and kf_val[1] > kf_val[2]
-kalman_accel_down = kalman_down and kf_val[1] < kf_val[2]
+kalman_up         = kf_v > kf_v[1]
+kalman_down       = kf_v < kf_v[1]
+kalman_accel_up   = kalman_up   and kf_v[1] > kf_v[2]
+kalman_accel_down = kalman_down and kf_v[1] < kf_v[2]
 
-kf_color = kalman_up ? color.new(color.aqua, 20) : color.new(color.fuchsia, 20)
-plot(show_kalman ? kf_val : na, "Kalman", color=kf_color, linewidth=2)
+kf_col = kalman_up ? color.new(color.aqua, 20) : color.new(color.fuchsia, 20)
+plot(show_kalman ? kf_v : na, "Kalman", color=kf_col, linewidth=2)
 
-// ── TRENDILO (ALMA % variação + RMS) ─────────────────────────────────────────
+// ── TRENDILO (ALMA de % variação + RMS 20 barras) ────────────────────────────
 trl_pct  = (ha_c - ha_c[1]) / math.max(ha_c[1], 1e-10) * 100.0
 trl_alma = ta.alma(trl_pct, 50, 0.85, 6)
-// RMS das últimas 20 barras
-trl_sq_sum = 0.0
+
+var float trl_sq = 0.0
+trl_sq := 0.0
 for i = 0 to 19
-    trl_sq_sum += math.pow(trl_pct[i], 2)
-trl_rms       = math.sqrt(trl_sq_sum / 20.0)
+    trl_sq += math.pow(trl_pct[i], 2)
+trl_rms = math.sqrt(trl_sq / 20.0)
+
 trendilo_long  = not na(trl_alma) and trl_alma >  trl_rms
 trendilo_short = not na(trl_alma) and trl_alma < -trl_rms
 
-// ── DNA FLOW ─────────────────────────────────────────────────────────────────
-mid_body      = (ha_o + ha_c) / 2.0
+// ── DNA FLOW ──────────────────────────────────────────────────────────────────
+mid_body      = (ha_o_v + ha_c) / 2.0
 bull_press    = close > mid_body
 bear_press    = close < mid_body
 dna_flow_bull = macd_bull and bull_press and v_good
@@ -147,69 +140,71 @@ trend_bull  = close > e200 and e10 > e21 and e21 > e50 and e50 > e200
 trend_bear  = close < e200 and e10 < e21 and e21 < e50 and e50 < e200
 e200_rising = e200 > e200[1]
 e200_fall   = e200 < e200[1]
-tc_bull     = e10 > e21 and e21 > e50   // trend consistent bull
+tc_bull     = e10 > e21 and e21 > e50
 tc_bear     = e10 < e21 and e21 < e50
 f_bull      = kalman_up   and above_vwap and tc_bull
 f_bear      = kalman_down and below_vwap and tc_bear
 f_strong    = math.abs(e21 - e50) / math.max(atr, 1e-10) > 0.6
 
-// ── SCORE ─────────────────────────────────────────────────────────────────────
-rsi_bull  = rsi > 50 and rsi < 65
-rsi_bear  = rsi > 35 and rsi < 50
+// ── SCORE (máx ±145) ──────────────────────────────────────────────────────────
+rsi_bull = rsi > 50 and rsi < 65
+rsi_bear = rsi > 35 and rsi < 50
 
-score = (trend_bull ? 35 : trend_bear ? -35 : 0) +
-        (f_bull ? 15 : f_bear ? -15 : 0) +
-        (f_strong ? 10 : 0) +
-        (macd_bull ? 20 : macd_bear ? -20 : 0) +
-        (adx > 30 ? 20 : adx > 22 ? 10 : 0) +
-        (v_strong ? 10 : -5) +
-        (rsi_bull ? 10 : rsi_bear ? -10 : 0) +
-        (e200_rising ? 10 : e200_fall ? -10 : 0) +
-        (kalman_up ? 10 : kalman_down ? -10 : 0) +
-        (obv_bull ? 15 : obv_bear ? -15 : 0) +
-        (above_vwap ? 5 : -5) +
-        (ha_bull ? 10 : ha_bear ? -10 : 0) +
-        (kalman_accel_up ? 5 : kalman_accel_down ? -5 : 0) +
-        (tc_bull ? 5 : tc_bear ? -5 : 0) +
-        (trendilo_long ? 10 : trendilo_short ? -10 : 0)
-score := math.max(-145, math.min(145, int(score)))
+var float score = 0.0
+score := 0.0
+score += trend_bull ? 35 : trend_bear ? -35 : 0
+score += f_bull ? 15 : f_bear ? -15 : 0
+score += f_strong ? 10 : 0
+score += macd_bull ? 20 : macd_bear ? -20 : 0
+score += adx > 30 ? 20 : adx > 22 ? 10 : 0
+score += v_strong ? 10 : -5
+score += rsi_bull ? 10 : rsi_bear ? -10 : 0
+score += e200_rising ? 10 : e200_fall ? -10 : 0
+score += kalman_up ? 10 : kalman_down ? -10 : 0
+score += obv_bull ? 15 : obv_bear ? -15 : 0
+score += above_vwap ? 5 : -5
+score += ha_bull ? 10 : ha_bear ? -10 : 0
+score += kalman_accel_up ? 5 : kalman_accel_down ? -5 : 0
+score += tc_bull ? 5 : tc_bear ? -5 : 0
+score += trendilo_long ? 10 : trendilo_short ? -10 : 0
+score := math.max(-145.0, math.min(145.0, score))
 flex_score = score
 
-// ── GRADE (S / A / B) ─────────────────────────────────────────────────────────
-qs = (dna_flow_bull or dna_flow_bear ? 4 : 0) +
-     (trendilo_long  or trendilo_short ? 3 : 0) +
-     (v_strong ? 2 : v_good ? 1 : 0) +
-     (adx_long_ok or adx_short_ok ? 2 : 0) +
-     (trend_bull  or trend_bear  ? 3 : 0) +
-     (kalman_accel_up or kalman_accel_down ? 1 : 0)
+// ── GRADE S / A / B ───────────────────────────────────────────────────────────
+var float qs = 0.0
+qs := 0.0
+qs += (dna_flow_bull or dna_flow_bear) ? 4 : 0
+qs += (trendilo_long  or trendilo_short) ? 3 : 0
+qs += v_strong ? 2 : v_good ? 1 : 0
+qs += (adx_long_ok or adx_short_ok) ? 2 : 0
+qs += (trend_bull  or trend_bear)  ? 3 : 0
+qs += (kalman_accel_up or kalman_accel_down) ? 1 : 0
 grade = qs >= 14 ? "S" : qs >= 11 ? "A" : "B"
 
-// ── FILTROS DE SEGURANÇA ─────────────────────────────────────────────────────
-sideways         = bb_squeeze and adx < 18
-ext_above_ema21  = (close - e21) / math.max(atr, 1e-10) > 3.0
-ext_below_ema21  = (e21 - close) / math.max(atr, 1e-10) > 3.0
-not_ext_lt       = (close - e21) / math.max(atr, 1e-10) < 2.5 and rsi < 62  // LONG ceiling
-not_ext_st       = (e21 - close) / math.max(atr, 1e-10) < 2.5 and rsi > 46  // SHORT floor
-exhaustion_top   = ha_bear and ha_bear[1] and rsi > 72
-exhaustion_bot   = ha_bull and ha_bull[1] and rsi < 28
-safe_long        = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi < 62
-safe_short       = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi > 30
-
-low48            = ta.lowest(close, 48)
-high48           = ta.highest(close, 48)
-noe_long         = (close - low48)  / math.max(low48,  1e-10) < 0.18
-noe_short        = (high48 - close) / math.max(high48, 1e-10) < 0.18
-rsi_nc_long      = (rsi - rsi_prev) < 18
-rsi_nc_short     = (rsi_prev - rsi) < 18
-
-flex_vol_ok      = v_good or (obv_bull and trendilo_long)
-flex_vol_ok_s    = v_good or (obv_bear and trendilo_short)
+// ── FILTROS DE SEGURANÇA ──────────────────────────────────────────────────────
+sideways        = bb_squeeze and adx < 18
+ext_above_e21   = (close - e21) / math.max(atr, 1e-10) > 3.0
+ext_below_e21   = (e21 - close) / math.max(atr, 1e-10) > 3.0
+not_ext_lt      = (close - e21) / math.max(atr, 1e-10) < 2.5 and rsi < 62
+not_ext_st      = (e21 - close) / math.max(atr, 1e-10) < 2.5 and rsi > 46
+exhaustion_top  = ha_bear and ha_bear[1] and rsi > 72
+exhaustion_bot  = ha_bull and ha_bull[1] and rsi < 28
+safe_long       = not near_bb_top and not ext_above_e21 and not vol_drying and not exhaustion_top and rsi < 62
+safe_short      = not near_bb_bot and not ext_below_e21 and not vol_drying and not exhaustion_bot and rsi > 30
+low48           = ta.lowest(close,  48)
+high48          = ta.highest(close, 48)
+noe_long        = (close - low48)  / math.max(low48,  1e-10) < 0.18
+noe_short       = (high48 - close) / math.max(high48, 1e-10) < 0.18
+rsi_nc_long     = (rsi - rsi_prev) < 18
+rsi_nc_short    = (rsi_prev - rsi) < 18
+flex_vol_ok     = v_good or (obv_bull and trendilo_long)
+flex_vol_ok_s   = v_good or (obv_bear and trendilo_short)
 
 // ── CONDIÇÕES DOS SINAIS ──────────────────────────────────────────────────────
 
 // FLEX
-long_flex  = flex_score > 38  and ha_bull2 and ha_body_ok and macd_bull_r and adx >= 14 and
-             not sideways and not_ext_lt and safe_long  and flex_vol_ok   and
+long_flex  = flex_score > 38 and ha_bull2 and ha_body_ok and macd_bull_r and adx >= 14 and
+             not sideways and not_ext_lt  and safe_long  and flex_vol_ok   and
              vol_not_fade and rvol_ok and noe_long  and rsi_nc_long  and
              (trendilo_long  or kalman_up)   and (dna_flow_bull or trendilo_long)
 
@@ -218,35 +213,34 @@ short_flex = flex_score < -38 and ha_bear2 and ha_body_ok and macd_bear_r and ad
              vol_not_fade and rvol_ok and noe_short and rsi_nc_short and
              (trendilo_short or not kalman_up) and (dna_flow_bear or trendilo_short)
 
-// SURGE (move explosivo — RVOL ≥2x + vela +4%)
-cbull_pct    = (close - open) / math.max(open, 1e-10)
-cbear_pct    = (open - close) / math.max(open, 1e-10)
-surge_brk_h  = close > ta.highest(high[1], 10)
-surge_brk_l  = close < ta.lowest(low[1],  10)
-long_surge   = rvol >= 2.0 and cbull_pct > 0.04 and surge_brk_h and
-               not bb_brk_long and not exhaustion_top and not vol_drying and kalman_up and ha_bull
-short_surge  = rvol >= 2.0 and cbear_pct > 0.04 and surge_brk_l and
-               not bb_brk_short and not exhaustion_bot and not vol_drying and kalman_down and ha_bear
+// SURGE (RVOL ≥2x + vela +4% + rompimento de 10 barras)
+cbull = (close - open) / math.max(open, 1e-10)
+cbear = (open - close) / math.max(open, 1e-10)
+surge_h = close > ta.highest(high[1], 10)
+surge_l = close < ta.lowest(low[1],  10)
+long_surge  = rvol >= 2.0 and cbull > 0.04 and surge_h and
+              not bb_brk_long  and not exhaustion_top and not vol_drying and kalman_up   and ha_bull
+short_surge = rvol >= 2.0 and cbear > 0.04 and surge_l and
+              not bb_brk_short and not exhaustion_bot and not vol_drying and kalman_down and ha_bear
 
-// MOMENTUM (cruzamento RSI fresh)
-rsi_fresh_l  = rsi[1] < 65 and rsi >= 65 and rsi < 78
-rsi_fresh_s  = rsi[1] > 35 and rsi <= 35 and rsi > 32
-long_momentum  = rsi_fresh_l and ha_bull and dna_flow_bull and adx > 22 and v_strong and trendilo_long
-short_momentum = rsi_fresh_s and ha_bear and dna_flow_bear and adx > 22 and v_strong and trendilo_short
+// MOMENTUM (RSI cruzou 65 / 35 recentemente)
+rsi_cross_l = rsi[1] < 65 and rsi >= 65 and rsi < 78
+rsi_cross_s = rsi[1] > 35 and rsi <= 35 and rsi > 32
+long_momentum  = rsi_cross_l and ha_bull and dna_flow_bull and adx > 22 and v_strong and trendilo_long
+short_momentum = rsi_cross_s and ha_bear and dna_flow_bear and adx > 22 and v_strong and trendilo_short
 
-// REBOUND (entrada no bounce pós-sobrevendido/sobrecomprado)
-rsi_dipped_s   = rsi_prev < 35 or rsi_6 < 35 or rsi_9 < 35
-rsi_bounce_s   = rsi >= 38 and rsi <= 46 and rsi > rsi[1]
-rsi_spiked_l   = rsi_prev > 65 or rsi_6 > 65 or rsi_9 > 65
-rsi_bounce_l   = rsi >= 54 and rsi <= 62 and rsi < rsi[1]
+// REBOUND (bounce pós-sobrevendido/sobrecomprado)
+rsi_dip_s  = rsi_prev < 35 or rsi_6 < 35 or rsi_9 < 35
+rsi_bnc_s  = rsi >= 38 and rsi <= 46 and rsi > rsi[1]
+rsi_spk_l  = rsi_prev > 65 or rsi_6 > 65 or rsi_9 > 65
+rsi_bnc_l  = rsi >= 54 and rsi <= 62 and rsi < rsi[1]
+long_rebound  = rsi_spk_l and rsi_bnc_l and ha_bull and dna_flow_bull and trendilo_long  and
+                adx > 20 and v_good and kalman_up   and not sideways and safe_long  and not_ext_lt
+short_rebound = rsi_dip_s and rsi_bnc_s and ha_bear and dna_flow_bear and trendilo_short and
+                adx > 20 and v_good and not kalman_up and not sideways and safe_short and not_ext_st
 
-long_rebound   = rsi_spiked_l and rsi_bounce_l and ha_bull and dna_flow_bull and trendilo_long  and
-                 adx > 20 and v_good and kalman_up   and not sideways and safe_long  and not_ext_lt
-short_rebound  = rsi_dipped_s and rsi_bounce_s and ha_bear and dna_flow_bear and trendilo_short and
-                 adx > 20 and v_good and not kalman_up and not sideways and safe_short and not_ext_st
-
-// SCOUT (semi-agressivo — thresholds relaxados, risco 1%)
-long_scout  = flex_score > 28  and ha_bull and macd_bull_r and adx >= 11 and
+// SCOUT (semi-agressivo — risco 1%)
+long_scout  = flex_score > 28 and ha_bull and macd_bull_r and adx >= 11 and
               not sideways and not_ext_lt and safe_long  and
               (v_good or obv_bull) and vol_not_fade and rvol_ok and
               noe_long  and rsi_nc_long  and (dna_flow_bull or trendilo_long  or kalman_up)
@@ -255,155 +249,151 @@ short_scout = flex_score < -28 and ha_bear and macd_bear_r and adx >= 11 and
               (v_good or obv_bear) and vol_not_fade and rvol_ok and
               noe_short and rsi_nc_short and (dna_flow_bear or trendilo_short or not kalman_up)
 
-// ── HIERARQUIA (primeiro que bater vence) ─────────────────────────────────────
-sig_src_l = show_surge   and long_surge    ? "SURGE"    :
-            show_mom     and long_momentum  ? "MOMENTUM" :
-            show_rebound and long_rebound   ? "REBOUND"  :
-            show_flex    and long_flex      ? "FLEX"     :
-            show_scout   and long_scout     ? "SCOUT"    : ""
+// ── HIERARQUIA (primeiro sinal que disparar vence) ────────────────────────────
+sig_l = show_surge   and long_surge    ? "SURGE"    :
+        show_mom     and long_momentum  ? "MOMENTUM" :
+        show_rebound and long_rebound   ? "REBOUND"  :
+        show_flex    and long_flex      ? "FLEX"     :
+        show_scout   and long_scout     ? "SCOUT"    : ""
 
-sig_src_s = show_surge   and short_surge   ? "SURGE"    :
-            show_mom     and short_momentum ? "MOMENTUM" :
-            show_rebound and short_rebound  ? "REBOUND"  :
-            show_flex    and short_flex     ? "FLEX"     :
-            show_scout   and short_scout    ? "SCOUT"    : ""
+sig_s = show_surge   and short_surge   ? "SURGE"    :
+        show_mom     and short_momentum ? "MOMENTUM" :
+        show_rebound and short_rebound  ? "REBOUND"  :
+        show_flex    and short_flex     ? "FLEX"     :
+        show_scout   and short_scout    ? "SCOUT"    : ""
 
-is_long  = sig_src_l != "" and sig_src_s == ""  // não dispara ambos ao mesmo tempo
-is_short = sig_src_s != "" and sig_src_l == ""
-sig_src  = is_long ? sig_src_l : sig_src_s
+is_long  = sig_l != "" and sig_s == ""
+is_short = sig_s != "" and sig_l == ""
+sig_src  = is_long ? sig_l : sig_s
 
-// ── STOP ADAPTATIVO ──────────────────────────────────────────────────────────
-stop_mult = sig_src == "SURGE"    ? 2.0 :
-            sig_src == "FLEX"     ? 1.8 :
-            sig_src == "REBOUND"  ? 1.5 :
-            sig_src == "MOMENTUM" ? 1.5 : 1.5
+// ── STOP ADAPTATIVO ───────────────────────────────────────────────────────────
+stop_mult = sig_src == "SURGE" ? 2.0 : sig_src == "FLEX" ? 1.8 : 1.5
 
-atr_stop_l = close - stop_mult * atr
-atr_stop_s = close + stop_mult * atr
+atr_sl = close - stop_mult * atr
+atr_ss = close + stop_mult * atr
 
-// Stop estrutural: swing ± 0.3 ATR (últimas 12 barras)
-sw_low  = ta.lowest(low,  13)
+sw_low  = ta.lowest(low,   13)
 sw_high = ta.highest(high, 13)
 str_l   = sw_low  - atr * 0.3
 str_s   = sw_high + atr * 0.3
 
-sw_dist_l = math.abs(close - str_l)
-sw_dist_s = math.abs(close - str_s)
+sw_dl = math.abs(close - str_l)
+sw_ds = math.abs(close - str_s)
 
-use_str_l = sig_src != "SURGE" and sig_src != "MOMENTUM" and
-            sw_dist_l > atr * 0.3 and sw_dist_l < atr * 2.5 and str_l < close
-use_str_s = sig_src != "SURGE" and sig_src != "MOMENTUM" and
-            sw_dist_s > atr * 0.3 and sw_dist_s < atr * 2.5 and str_s > close
+no_struct = sig_src == "SURGE" or sig_src == "MOMENTUM"
+use_sl = not no_struct and sw_dl > atr * 0.3 and sw_dl < atr * 2.5 and str_l < close
+use_ss = not no_struct and sw_ds > atr * 0.3 and sw_ds < atr * 2.5 and str_s > close
 
-// Anti-sweep: usa o stop MAIS LARGO
-stop_l = use_str_l ? math.min(atr_stop_l, str_l) : atr_stop_l
-stop_s = use_str_s ? math.max(atr_stop_s, str_s) : atr_stop_s
+stop_l = use_sl ? math.min(atr_sl, str_l) : atr_sl
+stop_s = use_ss ? math.max(atr_ss, str_s) : atr_ss
 
 risk_l = math.max(math.abs(close - stop_l), 1e-10)
 risk_s = math.max(math.abs(close - stop_s), 1e-10)
 
-// ── TP PROPORCIONAL AO GRAU ──────────────────────────────────────────────────
-r1     = sig_src == "SCOUT" ? 1.2 : grade == "S" ? 2.2 : grade == "A" ? 1.8 : 1.5
-r_fin  = sig_src == "SCOUT" ? 2.0 : grade == "S" ? 4.5 : grade == "A" ? 3.5 : 2.5
-
-// SURGE: TP1 mais rápido (fade rápido)
-r1    := sig_src == "SURGE" ? math.max(1.5, r1 - 0.5) : r1
-r_fin := sig_src == "SURGE" ? math.max(3.0, r_fin - 1.0) : r_fin
+// ── TP PROPORCIONAL AO GRAU ───────────────────────────────────────────────────
+base_r1   = sig_src == "SCOUT" ? 1.2 : grade == "S" ? 2.2 : grade == "A" ? 1.8 : 1.5
+base_rfin = sig_src == "SCOUT" ? 2.0 : grade == "S" ? 4.5 : grade == "A" ? 3.5 : 2.5
+r1   = sig_src == "SURGE" ? math.max(1.5, base_r1   - 0.5) : base_r1
+r_fn = sig_src == "SURGE" ? math.max(3.0, base_rfin - 1.0) : base_rfin
 
 tp1_l = close + risk_l * r1
-tp2_l = close + risk_l * r_fin
+tp2_l = close + risk_l * r_fn
 tp1_s = close - risk_s * r1
-tp2_s = close - risk_s * r_fin
+tp2_s = close - risk_s * r_fn
 
-// ── RISCO ────────────────────────────────────────────────────────────────────
+// ── RISCO ─────────────────────────────────────────────────────────────────────
 risk_pct = sig_src == "SCOUT" ? 0.01 : grade == "S" ? 0.05 : grade == "A" ? 0.03 : 0.02
 risk_amt  = capital * risk_pct
-contracts_l = risk_amt / risk_l
-contracts_s = risk_amt / risk_s
 
-// ── PLOTAGEM DOS SINAIS ───────────────────────────────────────────────────────
-sig_color_l = sig_src == "SURGE"    ? color.lime   :
-              sig_src == "MOMENTUM" ? color.aqua   :
-              sig_src == "REBOUND"  ? color.teal   :
-              sig_src == "FLEX"     ? color.green  :
-              color.new(color.green, 40)  // SCOUT mais transparente
+// ── SINAIS NO GRÁFICO ─────────────────────────────────────────────────────────
+cl = is_long  ? (sig_src == "SURGE" ? color.lime   : sig_src == "MOMENTUM" ? color.aqua :
+                 sig_src == "REBOUND" ? color.teal : sig_src == "FLEX" ? color.green :
+                 color.new(color.green, 40)) : na
+cs = is_short ? (sig_src == "SURGE" ? color.red    : sig_src == "MOMENTUM" ? color.fuchsia :
+                 sig_src == "REBOUND" ? color.maroon : sig_src == "FLEX" ? color.red :
+                 color.new(color.red, 40)) : na
 
-sig_color_s = sig_src == "SURGE"    ? color.red    :
-              sig_src == "MOMENTUM" ? color.fuchsia:
-              sig_src == "REBOUND"  ? color.maroon :
-              sig_src == "FLEX"     ? color.red    :
-              color.new(color.red, 40)
-
-plotshape(is_long  and not is_long[1],  "LONG",  shape.triangleup,   location.belowbar, sig_color_l, size=size.normal)
-plotshape(is_short and not is_short[1], "SHORT", shape.triangledown, location.abovebar, sig_color_s, size=size.normal)
+plotshape(is_long  and not is_long[1],  "LONG",  shape.triangleup,   location.belowbar, cl, size=size.normal)
+plotshape(is_short and not is_short[1], "SHORT", shape.triangledown, location.abovebar, cs, size=size.normal)
 
 bgcolor(is_long  and not is_long[1]  ? color.new(color.lime, 90) : na)
 bgcolor(is_short and not is_short[1] ? color.new(color.red,  90) : na)
 
-// ── LINHAS STOP / TP ─────────────────────────────────────────────────────────
+// ── LINHAS STOP / TP / BOX ────────────────────────────────────────────────────
 var line ln_stop = na
 var line ln_tp1  = na
 var line ln_tp2  = na
 var box  bx_risk = na
+ext = 30
 
-ext = 25  // extensão da linha em barras
+if show_lines and is_long and not is_long[1]
+    line.delete(ln_stop)
+    line.delete(ln_tp1)
+    line.delete(ln_tp2)
+    box.delete(bx_risk)
+    ln_stop := line.new(bar_index, stop_l, bar_index + ext, stop_l,
+                        color=color.new(color.red,    0), width=2, style=line.style_dashed)
+    ln_tp1  := line.new(bar_index, tp1_l,  bar_index + ext, tp1_l,
+                        color=color.new(color.yellow, 0), width=1, style=line.style_dotted)
+    ln_tp2  := line.new(bar_index, tp2_l,  bar_index + ext, tp2_l,
+                        color=color.new(color.lime,   0), width=2)
+    bx_risk := box.new(bar_index, close, bar_index + ext, stop_l,
+                       border_color=color.new(color.red, 80),
+                       bgcolor=color.new(color.red, 93))
 
-if show_lines
-    if is_long and not is_long[1]
-        line.delete(ln_stop), line.delete(ln_tp1), line.delete(ln_tp2)
-        box.delete(bx_risk)
-        ln_stop := line.new(bar_index, stop_l, bar_index + ext, stop_l,
-                             color=color.new(color.red,    0), width=2, style=line.style_dashed)
-        ln_tp1  := line.new(bar_index, tp1_l,  bar_index + ext, tp1_l,
-                             color=color.new(color.yellow, 0), width=1, style=line.style_dotted)
-        ln_tp2  := line.new(bar_index, tp2_l,  bar_index + ext, tp2_l,
-                             color=color.new(color.lime,   0), width=2)
-        bx_risk := box.new(bar_index, close, bar_index + ext, stop_l,
-                            border_color=color.new(color.red, 80), bgcolor=color.new(color.red, 93))
+if show_lines and is_short and not is_short[1]
+    line.delete(ln_stop)
+    line.delete(ln_tp1)
+    line.delete(ln_tp2)
+    box.delete(bx_risk)
+    ln_stop := line.new(bar_index, stop_s, bar_index + ext, stop_s,
+                        color=color.new(color.red,    0), width=2, style=line.style_dashed)
+    ln_tp1  := line.new(bar_index, tp1_s,  bar_index + ext, tp1_s,
+                        color=color.new(color.yellow, 0), width=1, style=line.style_dotted)
+    ln_tp2  := line.new(bar_index, tp2_s,  bar_index + ext, tp2_s,
+                        color=color.new(color.lime,   0), width=2)
+    bx_risk := box.new(bar_index, stop_s, bar_index + ext, close,
+                       border_color=color.new(color.red, 80),
+                       bgcolor=color.new(color.red, 93))
 
-    if is_short and not is_short[1]
-        line.delete(ln_stop), line.delete(ln_tp1), line.delete(ln_tp2)
-        box.delete(bx_risk)
-        ln_stop := line.new(bar_index, stop_s, bar_index + ext, stop_s,
-                             color=color.new(color.red,    0), width=2, style=line.style_dashed)
-        ln_tp1  := line.new(bar_index, tp1_s,  bar_index + ext, tp1_s,
-                             color=color.new(color.yellow, 0), width=1, style=line.style_dotted)
-        ln_tp2  := line.new(bar_index, tp2_s,  bar_index + ext, tp2_s,
-                             color=color.new(color.lime,   0), width=2)
-        bx_risk := box.new(bar_index, stop_s, bar_index + ext, close,
-                            border_color=color.new(color.red, 80), bgcolor=color.new(color.red, 93))
-
-// ── LABELS COM DETALHES DO SINAL ─────────────────────────────────────────────
-f_price(v) => str.tostring(v, "#.######")
-f_pct(v)   => str.tostring(v * 100, "#.#")
+// ── LABELS DETALHADOS ─────────────────────────────────────────────────────────
+fp(v) => str.tostring(v, "#.######")
+fpct(v) => str.tostring(v * 100.0, "#.#")
 
 if is_long and not is_long[1]
-    lbl_txt = "🟢 LONG " + sig_src + " [Grade " + grade + "]\n" +
-              "Entrada : " + f_price(close) + "\n" +
-              "Stop    : " + f_price(stop_l) + "\n" +
-              "TP1 (" + str.tostring(r1,   "#.#") + "R): " + f_price(tp1_l) + "\n" +
-              "TP2 (" + str.tostring(r_fin,"#.#") + "R): " + f_price(tp2_l) + "\n" +
-              "Risco   : $" + str.tostring(risk_amt, "#.##") + " (" + f_pct(risk_pct) + "%)\n" +
-              "RSI: " + str.tostring(rsi,"#.#") + "  ADX: " + str.tostring(adx,"#.#") + "\n" +
-              "RVOL: " + str.tostring(rvol,"#.##") + "x " + rvol_lbl + "  Score: " + str.tostring(score)
-    label.new(bar_index, low,  lbl_txt,
+    txt = "🟢 LONG " + sig_src + " [Grade " + grade + "]\n" +
+          "Entrada : " + fp(close) + "\n" +
+          "Stop    : " + fp(stop_l) + "\n" +
+          "TP1 (" + str.tostring(r1,   "#.#") + "R): " + fp(tp1_l) + "\n" +
+          "TP2 (" + str.tostring(r_fn, "#.#") + "R): " + fp(tp2_l) + "\n" +
+          "Risco: $" + str.tostring(risk_amt, "#.##") + " (" + fpct(risk_pct) + "%)\n" +
+          "RSI: "  + str.tostring(rsi,  "#.#") +
+          "  ADX: " + str.tostring(adx,  "#.#") + "\n" +
+          "RVOL: " + str.tostring(rvol, "#.##") + "x " + rvol_lbl +
+          "  Score: " + str.tostring(score, "#")
+    label.new(bar_index, low, txt,
               style=label.style_label_up,
               color=color.new(color.lime, 10), textcolor=color.black, size=size.small)
 
 if is_short and not is_short[1]
-    lbl_txt = "🔴 SHORT " + sig_src + " [Grade " + grade + "]\n" +
-              "Entrada : " + f_price(close) + "\n" +
-              "Stop    : " + f_price(stop_s) + "\n" +
-              "TP1 (" + str.tostring(r1,   "#.#") + "R): " + f_price(tp1_s) + "\n" +
-              "TP2 (" + str.tostring(r_fin,"#.#") + "R): " + f_price(tp2_s) + "\n" +
-              "Risco   : $" + str.tostring(risk_amt, "#.##") + " (" + f_pct(risk_pct) + "%)\n" +
-              "RSI: " + str.tostring(rsi,"#.#") + "  ADX: " + str.tostring(adx,"#.#") + "\n" +
-              "RVOL: " + str.tostring(rvol,"#.##") + "x " + rvol_lbl + "  Score: " + str.tostring(score)
-    label.new(bar_index, high, lbl_txt,
+    txt = "🔴 SHORT " + sig_src + " [Grade " + grade + "]\n" +
+          "Entrada : " + fp(close) + "\n" +
+          "Stop    : " + fp(stop_s) + "\n" +
+          "TP1 (" + str.tostring(r1,   "#.#") + "R): " + fp(tp1_s) + "\n" +
+          "TP2 (" + str.tostring(r_fn, "#.#") + "R): " + fp(tp2_s) + "\n" +
+          "Risco: $" + str.tostring(risk_amt, "#.##") + " (" + fpct(risk_pct) + "%)\n" +
+          "RSI: "  + str.tostring(rsi,  "#.#") +
+          "  ADX: " + str.tostring(adx,  "#.#") + "\n" +
+          "RVOL: " + str.tostring(rvol, "#.##") + "x " + rvol_lbl +
+          "  Score: " + str.tostring(score, "#")
+    label.new(bar_index, high, txt,
               style=label.style_label_down,
               color=color.new(color.red, 10), textcolor=color.white, size=size.small)
 
-// ── ALERTAS ──────────────────────────────────────────────────────────────────
-alertcondition(is_long  and not is_long[1],  "GAUSS LONG",  "🟢 LONG "  + sig_src + " [" + grade + "] — Entrada: {{close}}")
-alertcondition(is_short and not is_short[1], "GAUSS SHORT", "🔴 SHORT " + sig_src + " [" + grade + "] — Entrada: {{close}}")
-alertcondition((is_long or is_short) and not (is_long[1] or is_short[1]), "GAUSS SINAL", "⚡ GAUSS DNA — Novo sinal detectado")
+// ── ALERTAS ───────────────────────────────────────────────────────────────────
+alertcondition(is_long  and not is_long[1],
+               "GAUSS LONG",  "🟢 LONG "  + sig_src + " [" + grade + "] {{ticker}} {{close}}")
+alertcondition(is_short and not is_short[1],
+               "GAUSS SHORT", "🔴 SHORT " + sig_src + " [" + grade + "] {{ticker}} {{close}}")
+alertcondition((is_long or is_short) and not (is_long[1] or is_short[1]),
+               "GAUSS SINAL", "⚡ GAUSS DNA — Sinal {{ticker}} {{close}}")
