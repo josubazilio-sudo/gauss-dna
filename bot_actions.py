@@ -677,9 +677,9 @@ def analyze(sym, candles):
                     inst_score_short>=50 and safe_short and trendilo_short)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
-    # MACD relaxado: só direção (acima/abaixo do sinal) — sem exigir histograma
-    macd_bull_r=ml>sl_v and hist>hist_p   # direção + histograma crescendo
-    macd_bear_r=ml<sl_v and hist<hist_p
+    # MACD relaxado: MACD positivo OU histograma acelerando por 2 barras (= Pine Script)
+    macd_bull_r = macd_bull or (hist > hist_p and hist_p > hist_pp)
+    macd_bear_r = macd_bear or (hist < hist_p and hist_p < hist_pp)
     # Volume: 2 velas consecutivas com bom volume (mais sólido)
     vol_avg=vols[-1]>vol_ma*1.1 and vols[-2]>vol_ma*0.9
     # Tendência relaxada: sem exigir e50>e200
@@ -959,9 +959,11 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     e200_arr = ema_series(closes, 200); e200 = e200_arr[-1]
     atr_arr = atr_series(candles_15m, 14); atr = max(atr_arr[-1], 1e-10)
 
-    ml, sl_v, hist, hist_p, _ = macd_calc(closes)
-    macd_bull_r = ml > sl_v and hist > hist_p
-    macd_bear_r = ml < sl_v and hist < hist_p
+    ml, sl_v, hist, hist_p, hist_pp_1h = macd_calc(closes)
+    macd_bull_1h = ml > sl_v and hist > hist_p and hist > 0
+    macd_bear_1h = ml < sl_v and hist < hist_p and hist < 0
+    macd_bull_r = macd_bull_1h or (hist > hist_p and hist_p > hist_pp_1h)
+    macd_bear_r = macd_bear_1h or (hist < hist_p and hist_p < hist_pp_1h)
 
     # HA bull/bear — closes e opens já são HA
     ha_body    = abs(closes[-1] - opens[-1])
