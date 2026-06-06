@@ -774,11 +774,12 @@ def analyze(sym, candles):
                    not vol_drying and kalman_down and ha_bear)
 
     # ── MOMENTUM (Pine: rsi_fresh + ha_bull + flow_bull + adx>22 + v_strong + trl_bull + score>=70)
-    rsi_fresh_long  = rsi_prev < 65 <= rsi < 78   # cruzou 65 recentemente
+    rsi_fresh_long  = rsi_prev < 65 <= rsi < 73   # cruzou 65; teto 73 evita entrada muito sobrecomprada
     rsi_fresh_short = rsi_prev > 35 >= rsi > 32   # cruzou abaixo de 35, piso 32 evita sobrevendido
-    long_momentum  = (rsi_fresh_long  and ha_bull and dna_flow_bull and
+    # liq_top/liq_bot: SM varreu liquidez no topo/fundo e fechou abaixo/acima — contradiz breakout
+    long_momentum  = (rsi_fresh_long  and ha_bull and dna_flow_bull and not liq_top and
                       adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 60)
-    short_momentum = (rsi_fresh_short and ha_bear and dna_flow_bear and
+    short_momentum = (rsi_fresh_short and ha_bear and dna_flow_bear and not liq_bot and
                       adx > 22 and v_strong and trendilo_short and inst_score_short >= 60)
 
     # ── REBOUND — entrada no pullback pós-sobrevendido/sobrecomprado ─────────────
