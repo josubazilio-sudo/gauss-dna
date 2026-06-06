@@ -21,7 +21,7 @@ LOOP_MODE    = os.environ.get("LOOP_MODE", "false").lower() == "true"
 TEST_MODE    = os.environ.get("TEST_MODE", "false").lower() == "true"
 DYNAMIC_SCAN = os.environ.get("DYNAMIC_SCAN", "true").lower() == "true"
 SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top 50 por volume
-SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "4"))     # rescan a cada N ciclos (~20min em 5min)
+SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "2"))     # rescan a cada N ciclos (~10min em 5min)
 CYCLE_INTERVAL = int(os.environ.get("CYCLE_INTERVAL", "0"))  # intervalo máximo em segundos (0=aguarda vela)
 STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
@@ -769,13 +769,14 @@ def analyze(sym, candles):
     surge_break_h   = price > max(highs[-11:-1])  # rompeu máxima das últimas 10 velas
     surge_break_l   = price < min(lows[-11:-1])   # rompeu mínima das últimas 10 velas
     # SURGE: RVOL 2x+ + vela 3%+ + nova máx/mín 10 bars
-    # Kalman: aceita k_short_rising — moves como BEAT+24% partem de Kalman ainda bearish
+    # bb_break_long permitido — breakout da BB É o sinal em moves de +50-100%
+    # Kalman: aceita k_short_rising — move começa com Kalman ainda bearish
     long_surge  = (rvol_tier >= 3 and candle_bull_pct > 0.03 and surge_break_h and
-                   not bb_break_long and not exhaustion_top and
-                   not vol_drying and (kalman_up or k_short_rising) and ha_bull)
+                   not exhaustion_top and not vol_drying and
+                   (kalman_up or k_short_rising) and ha_bull)
     short_surge = (rvol_tier >= 3 and candle_bear_pct > 0.03 and surge_break_l and
-                   not bb_break_short and not exhaustion_bot and
-                   not vol_drying and (kalman_down or k_short_falling) and ha_bear)
+                   not exhaustion_bot and not vol_drying and
+                   (kalman_down or k_short_falling) and ha_bear)
 
     # ── MOMENTUM (Pine: rsi_fresh + ha_bull + flow_bull + adx>22 + v_strong + trl_bull + score>=70)
     rsi_fresh_long  = rsi_prev < 65 <= rsi < 73   # cruzou 65; teto 73 evita entrada muito sobrecomprada
