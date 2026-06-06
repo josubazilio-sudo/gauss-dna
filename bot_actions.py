@@ -625,7 +625,7 @@ def analyze(sym, candles):
     inst_cls_long  = inst_class(inst_score_long)
     inst_cls_short = inst_class(inst_score_short)
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
-    rsi_not_top    = rsi < 65   # LONG: não entrar sobrecomprado
+    rsi_not_top    = rsi < 62   # LONG: não entrar sobrecomprado
     rsi_not_bottom = rsi > 25   # SHORT: bloquear apenas fundo extremo (≤25)
     safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_top
     safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_bottom
@@ -659,11 +659,11 @@ def analyze(sym, candles):
     # ── SINAL PULLBACK (Pine: close<e21*1.02 + flow_bull + adx_long_ok + trl_bull + score>=55)
     trend_bull_relaxed=price>e200 and e10>e21 and e21>e50
     long_pullback=(pullback_bull and trend_bull_relaxed and price<e21*1.03 and
-                   dna_flow_bull and adx>18 and pdi>mdi and rsi<65 and
+                   dna_flow_bull and adx>18 and pdi>mdi and rsi<62 and
                    inst_score_long>=50 and safe_long and trendilo_long)
     trend_bear_relaxed=price<e200 and e10<e21 and e21<e50
     short_pullback=(pullback_bear and trend_bear_relaxed and price>e21*0.97 and
-                    dna_flow_bear and adx>18 and mdi>pdi and rsi>38 and
+                    dna_flow_bear and adx>18 and mdi>pdi and rsi>43 and
                     inst_score_short>=50 and safe_short and trendilo_short)
 
     # ── SINAIS FLEX ── lógica idêntica à versão HTML que gera sinais ────────────
@@ -686,8 +686,8 @@ def analyze(sym, candles):
     # sideways: squeeze+ADX<18 = sem direção confirmada; FLEX exige ADX>17 sem squeeze
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
-    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 40
+    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 62   # teto 62: 8pts abaixo do sobrecomprado
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 43   # piso 43: 13pts acima do sobrevendido
 
     # ── ANTI-PUMP / ANTI-DUMP / RSI VELOCITY ──────────────────────────────────
     # Evita entrar em ativo esticado >18% das últimas 48 velas (raw price, não HA)
@@ -776,15 +776,15 @@ def analyze(sym, candles):
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
     long_bb_break  = (bb_break_long  and bb_expand and kalman_up   and k_short_rising  and
                       flex_score > 40 and adx >= 15  and not sideways    and
-                      not ext_above_ema21 and not vol_drying and rsi < 65)
+                      not ext_above_ema21 and not vol_drying and rsi < 62)
     short_bb_break = (bb_break_short and bb_expand and kalman_down and k_short_falling  and
                       flex_score < -40 and adx >= 15 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and rsi > 38)
+                      not ext_below_ema21 and not vol_drying and rsi > 43)
 
     # ── SMART MONEY REVERSAL (Pine: sm_bull + rsi>25 + not rsi_block + score>=60 — sem trendilo)
-    long_sm  = (sm_bull and rsi > 25 and rsi < 65 and
+    long_sm  = (sm_bull and rsi > 25 and rsi < 62 and
                 price > e200 and inst_score_long >= 60)
-    short_sm = (sm_bear and rsi > 38 and rsi < 75 and
+    short_sm = (sm_bear and rsi > 43 and rsi < 75 and
                 price < e200 and inst_score_short >= 60)
 
     # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
@@ -792,7 +792,7 @@ def analyze(sym, candles):
                  rsi > 25 and rsi < 62 and not exhaustion_top and
                  inst_score_long >= 55)
     short_div = (rsi_div_bear and ha_bear and v_good and
-                 rsi > 38 and rsi < 70 and price < e200 and not exhaustion_bot and
+                 rsi > 43 and rsi < 70 and price < e200 and not exhaustion_bot and
                  inst_score_short >= 55)
 
     # ── REVERSAL — fundo/topo extremo com estrutura de inversão ──────────────────
@@ -1040,8 +1040,8 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
     stop_short = swing_high + atr * 0.5
 
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
-    rsi_ok_long  = rsi < 65
-    rsi_ok_short = rsi > 40
+    rsi_ok_long  = rsi < 62
+    rsi_ok_short = rsi > 43
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1553,9 +1553,9 @@ async def run_cycle(session, last_sig, tf, coins):
         h4_vol  = r4.get("v_strong", False) or r4.get("obv_bull", False)
         h4_vols = r4.get("v_strong", False) or r4.get("obv_bear", False)
         h4_bull = (r4["score"] > 15 and r4.get("tbull_r", False) and
-                   r4["adx"] >= 13 and h4_rsi < 65 and h4_vol)
+                   r4["adx"] >= 13 and h4_rsi < 62 and h4_vol)
         h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
-                   h4_vols and r4["score"] < -15 and h4_rsi > 38)
+                   h4_vols and r4["score"] < -15 and h4_rsi > 43)
         # Só bloqueia se H4 for FORTEMENTE oposto (score < -30 para LONG, > 30 para SHORT)
         if sig_direction == "LONG"  and h4_bear and r4["score"] < -30: return False
         if sig_direction == "SHORT" and h4_bull and r4["score"] >  30: return False
@@ -1649,10 +1649,10 @@ async def run_cycle(session, last_sig, tf, coins):
             _df_l=result.get("dna_flow_bull",False); _df_s=result.get("dna_flow_bear",False)
             _trl_l=result.get("trendilo_long",False); _trl_s=result.get("trendilo_short",False)
             _kal=result.get("kalman_up",False)
-            if (25 < _sc <= 42 and _rsi < 67 and _adx >= 11 and result.get("tbull_r") and
+            if (25 < _sc <= 42 and _rsi < 64 and _adx >= 11 and result.get("tbull_r") and
                     (_df_l or _trl_l or _kal)):
                 watchlist.append(("LONG",  short, _sc, _rsi, _adx, _df_l, _trl_l))
-            elif (-42 <= _sc < -25 and _rsi > 37 and _adx >= 11 and result.get("tbear_r") and
+            elif (-42 <= _sc < -25 and _rsi > 42 and _adx >= 11 and result.get("tbear_r") and
                     (_df_s or _trl_s or not _kal)):
                 watchlist.append(("SHORT", short, _sc, _rsi, _adx, _df_s, _trl_s))
 
@@ -1737,9 +1737,9 @@ async def run_mtf_cycle(session, last_sig, coins):
         h4_vol   = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
         h4_vol_s = r4h.get("v_strong", False) or r4h.get("obv_bear", False)
         h4_bull  = (r4h["score"] > 15 and r4h.get("tbull_r", False) and
-                    r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol)
+                    r4h["adx"] >= 13 and h4_rsi < 62 and h4_vol)
         h4_bear  = (r4h.get("tbear_r", False) and r4h["adx"] >= 13 and
-                    h4_vol_s and r4h["score"] < -15 and h4_rsi > 38)
+                    h4_vol_s and r4h["score"] < -15 and h4_rsi > 43)
         if not (h4_bull or h4_bear):
             log.info(f"[MTF] {short:7s} | 4H sem setup | Score {r4h['score']:+d} RSI4H {h4_rsi:.0f}")
             continue
