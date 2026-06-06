@@ -1674,10 +1674,10 @@ async def run_cycle(session, last_sig, tf, coins):
             _df_l=result.get("dna_flow_bull",False); _df_s=result.get("dna_flow_bear",False)
             _trl_l=result.get("trendilo_long",False); _trl_s=result.get("trendilo_short",False)
             _kal=result.get("kalman_up",False)
-            if (25 < _sc <= 42 and _rsi < 64 and _adx >= 11 and result.get("tbull_r") and
+            if (25 < _sc <= 42 and _rsi < 62 and _adx >= 11 and result.get("tbull_r") and
                     (_df_l or _trl_l or _kal)):
                 watchlist.append(("LONG",  short, _sc, _rsi, _adx, _df_l, _trl_l))
-            elif (-42 <= _sc < -25 and _rsi > 42 and _adx >= 11 and result.get("tbear_r") and
+            elif (-42 <= _sc < -25 and _rsi > 46 and _adx >= 11 and result.get("tbear_r") and
                     (_df_s or _trl_s or not _kal)):
                 watchlist.append(("SHORT", short, _sc, _rsi, _adx, _df_s, _trl_s))
 
@@ -1715,7 +1715,7 @@ async def run_cycle(session, last_sig, tf, coins):
     # ── Watchlist: envia se houver moedas próximas e cooldown ≥3h vencido
     if watchlist:
         wl_key = f"_watchlist_{tf}"
-        if now - last_sig.get(wl_key, 0) >= 10800:
+        if now - last_sig.get(wl_key, 0) >= 3600:
             await send_watchlist(session, tf, watchlist)
             last_sig[wl_key] = now
 
