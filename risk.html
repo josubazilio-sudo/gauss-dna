@@ -324,7 +324,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
     <div class="sim-card">
       <div class="sim-ttl">Simulador de Crescimento</div>
       <div class="sim-grid">
-        <div class="sim-field"><label>Banca Inicial ($)</label><input type="number" id="simBanca" value="180" oninput="simCalc()"></div>
+        <div class="sim-field"><label>Banca Inicial ($)</label><input type="number" id="simBanca" value="200" oninput="simCalc()"></div>
         <div class="sim-field"><label>Win Rate (%)</label><input type="number" id="simWR" value="62" min="1" max="99" oninput="simCalc()"></div>
         <div class="sim-field"><label>Ops por dia</label><input type="number" id="simOps" value="2" min="1" max="20" oninput="simCalc()"></div>
       </div>
@@ -590,19 +590,20 @@ function updateDiarySummary(){
   const setText=(id,v)=>{const e=$(id);if(e)e.textContent=v;};
   setText('dOps',ops.length);
   setText('dGL',fmtS(total));
-  const gl=$(dGL);if(gl)gl.style.color=total>0?'var(--green)':total<0?'var(--red)':'var(--muted2)';
+  const gl=$('dGL');if(gl)gl.style.color=total>0?'var(--green)':total<0?'var(--red)':'var(--muted2)';
   setText('dWR',wr);
   setText('dFalta',fmt(Math.max(0,META-STATE.banca)));
 }
 
 // SIMULADOR
 function simCalc(){
-  const banca=parseFloat($('simBanca').value)||180;
+  const banca=parseFloat($('simBanca').value)||200;
   const wr=parseFloat($('simWR').value)/100||0.62;
   const opsDay=parseFloat($('simOps').value)||2;
   const risco=banca*STATE.riscoPct;
-  const tp1=risco*2.0, tp2=risco*3.5, tfin=risco*6.0;
-  const ganhoMed=tp1*.4+tp2*.35+tfin*.25;
+  const g=GRADES[curGrade];
+  const tp1=risco*g.r1, tfin=risco*g.rf;
+  const ganhoMed=tp1*.5+tfin*.5;
   const perdaMed=risco;
   const ev=wr*ganhoMed-(1-wr)*perdaMed;
   const evPct=ev/banca*100;
@@ -647,10 +648,10 @@ function loadState(){
 }
 
 function clearSave(){
-  if(!confirm('Apagar todo o histórico e resetar banca para $180?'))return;
+  if(!confirm('Apagar todo o histórico e resetar banca para $200?'))return;
   try{localStorage.removeItem('gauss_risk');}catch(e){}
-  STATE.banca=180;STATE.ops=[];opCounter=0;
-  $('bancaInput').value=180;calcAll();renderDiary();
+  STATE.banca=200;STATE.ops=[];opCounter=0;
+  $('bancaInput').value=200;calcAll();renderDiary();
   showToast('🗑️ Histórico apagado');
 }
 
@@ -673,7 +674,7 @@ let _deferredPrompt = null;
 function initPWA() {
   // Register service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/gauss-dna/sw.js', { scope: '/gauss-dna/' })
+    navigator.serviceWorker.register('/gauss-dna/risco-sw.js', { scope: '/gauss-dna/' })
       .catch(() => {});
   }
 
@@ -724,6 +725,42 @@ function doInstall() {
 function dismissBanner() {
   document.getElementById('installBanner').classList.remove('show');
   localStorage.setItem('pwa_banner_dismissed', '1');
+}
+
+function fmtP(v){
+  if(v>=100) return v.toFixed(2);
+  if(v>=1) return v.toFixed(4);
+  if(v>=0.01) return v.toFixed(5);
+  return v.toFixed(6);
+}
+
+function calcSig(){
+  const entry=parseFloat($('scEntry').value);
+  const stop=parseFloat($('scStop').value);
+  const grade=$('scGrade').value;
+  const res=$('scResult');
+  if(!entry||!stop||Math.abs(entry-stop)<1e-10){res.style.display='none';return;}
+  const isLong=entry>stop;
+  const risk=Math.abs(entry-stop);
+  const g=GRADES[grade];
+  const tp1=isLong?entry+risk*g.r1:entry-risk*g.r1;
+  const tpF=isLong?entry+risk*g.rf:entry-risk*g.rf;
+  const dir=isLong?'📈 LONG':'📉 SHORT';
+  const dirColor=isLong?'var(--green)':'var(--red)';
+  const riskAmt=STATE.banca*STATE.riscoPct;
+  const contracts=riskAmt/risk;
+  const posVal=contracts*entry;
+  const col5x=posVal/5;
+  res.style.display='block';
+  res.innerHTML=`
+    <div class="sim-row"><span style="color:${dirColor};font-family:'Unbounded',sans-serif;font-size:.7rem;font-weight:700">${dir} · Grade ${grade}</span><span style="color:var(--muted2);font-size:.65rem">Risco: $${riskAmt.toFixed(2)}</span></div>
+    <div class="sim-row"><span style="color:var(--muted2)">Entrada</span><span>$${fmtP(entry)}</span></div>
+    <div class="sim-row"><span style="color:var(--muted2)">Stop (${isLong?'↓':'↑'})</span><span class="cr">$${fmtP(stop)}</span></div>
+    <div class="sim-row" style="background:rgba(59,158,255,.04);margin:0 -.5rem;padding:.4rem .5rem;border-radius:4px"><span style="color:var(--blue)">TP1 (${g.r1}R) → 50%</span><span class="cb" style="font-weight:600">$${fmtP(tp1)}</span></div>
+    <div class="sim-row" style="background:rgba(0,224,144,.04);margin:0 -.5rem;padding:.4rem .5rem;border-radius:4px"><span style="color:var(--green)">TP Final (${g.rf}R) → 50%</span><span class="cv" style="font-weight:600">$${fmtP(tpF)}</span></div>
+    <div class="sim-row" style="margin-top:.4rem"><span style="color:var(--muted2)">Posição</span><span>${contracts.toFixed(4)} unid · $${posVal.toFixed(2)}</span></div>
+    <div class="sim-row"><span style="color:var(--muted2)">Collateral 5x</span><span class="cy">$${col5x.toFixed(2)}</span></div>
+  `;
 }
 </script>
 </body>
