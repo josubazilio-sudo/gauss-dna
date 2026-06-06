@@ -1442,13 +1442,14 @@ _EXCLUDE = {"USDC","BUSD","TUSD","FDUSD","DAI","USDP","PAXG","WBTC","WETH",
 _EXCLUDE_SUB = ("UP","DOWN","BULL","BEAR","3L","3S","2L","2S","5L","5S")
 
 async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
-    """Busca top pares USDT do MEXC ordenados por volume 24h (USD)."""
+    """Busca top pares USDT do MEXC — combina top por volume + top gainers do dia."""
     url="https://api.mexc.com/api/v3/ticker/24hr"
     try:
         async with session.get(url,timeout=aiohttp.ClientTimeout(total=15)) as r:
             data=await r.json()
         if not isinstance(data,list): return []
-        pairs=[]
+
+        all_pairs=[]
         for t in data:
             sym=t["symbol"]
             if not sym.endswith("USDT"): continue
@@ -1457,11 +1458,27 @@ async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
             if any(sub in base for sub in _EXCLUDE_SUB): continue
             try:
                 vol=float(t.get("quoteVolume","0"))
-                if vol < min_vol_m*1e6: continue
-                pairs.append((sym,base,vol))
+                pct=float(t.get("priceChangePercent","0"))
+                all_pairs.append((sym,base,vol,pct))
             except: continue
-        pairs.sort(key=lambda x:x[2],reverse=True)
-        return pairs[:max_pairs]
+
+        # Top N por volume (liquidez garantida)
+        by_vol=sorted(all_pairs,key=lambda x:x[2],reverse=True)
+        top_vol=[(s,b,v) for s,b,v,_ in by_vol if v>=min_vol_m*1e6][:max_pairs]
+
+        # Top gainers do dia (≥5% e volume mínimo $500k) — pega pumps em andamento
+        by_gain=sorted(all_pairs,key=lambda x:x[3],reverse=True)
+        top_gain=[(s,b,v) for s,b,v,p in by_gain if p>=5.0 and v>=500_000][:50]
+
+        # Combina e deduplica mantendo top_vol primeiro
+        seen={s for s,_,_ in top_vol}
+        combined=list(top_vol)
+        new_gainers=[(s,b,v) for s,b,v in top_gain if s not in seen]
+        combined+=new_gainers
+        if new_gainers:
+            names=[b for _,b,_ in new_gainers[:10]]
+            log.info(f"📈 Top gainers adicionados ao scan: {', '.join(names)}")
+        return combined
     except Exception as e:
         log.warning(f"Scanner: erro ao buscar pares — {e}"); return []
 
@@ -1478,7 +1495,7 @@ def quick_rank(candles):
     # ADX
     try: _,_,adx,_=dmi_adx(candles[-60:])
     except: return 0
-    if adx<18: return 0   # sem tendência clara
+    if adx<12: return 0   # sem tendência — 12 permite catches em início de pump
     # Trend
     e200=ema_series(closes,200)[-1]
     trend_ok=abs(price-e200)/e200>0.01  # preço pelo menos 1% afastado da EMA200
