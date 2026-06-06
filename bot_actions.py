@@ -1181,7 +1181,7 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     # ── STOP ADAPTATIVO ──────────────────────────────────────────────────────
     # Multiplicador ATR por tipo de sinal
     stop_atr_mult = (2.0 if sig_source == "SURGE"     else  # breakout: wicks grandes
-                     1.0 if sig_source == "SM_SWEEP"  else  # stop no nível varrido
+                     1.2 if sig_source == "SM_SWEEP"  else  # stop hunt: nível + buffer
                      1.8 if sig_source in ("FLEX","SETUP") else  # anti-sweep: mais espaço
                      1.5)                                    # padrão todos os outros
 
@@ -1209,13 +1209,13 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
 
     # ── TP POR GRADE + TIPO DE SINAL ─────────────────────────────────────────
     if sig_source == "SCOUT":
-        r1, r_final = 1.5, 2.5   # targets conservadores — sinal secundário
+        r1, r_final = 1.2, 2.0   # targets conservadores — sinal secundário
     elif signal_grade == "S":
-        r1, r_final = 2.5, 5.0
-    elif signal_grade == "A":
         r1, r_final = 2.0, 4.0
+    elif signal_grade == "A":
+        r1, r_final = 1.8, 3.5
     else:
-        r1, r_final = 1.8, 3.0
+        r1, r_final = 1.5, 2.5
 
     # Ajuste fino por tipo de sinal
     if sig_source == "SURGE":
