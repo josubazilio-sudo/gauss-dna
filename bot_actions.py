@@ -701,10 +701,10 @@ def analyze(sym, candles):
     not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 43   # piso 43: não shortar já fraco
 
     # ── ANTI-PUMP / ANTI-DUMP / RSI VELOCITY ──────────────────────────────────
-    # Evita entrar em ativo esticado >18% das últimas 48 velas (raw price, não HA)
+    # Evita entrar em ativo esticado >25% das últimas 48 velas (raw price, não HA)
     raw_c48 = [c["c"] for c in candles[-50:-1]]
-    not_overextended_long  = (price - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.18
-    not_overextended_short = (max(raw_c48) - price) / max(max(raw_c48), 1e-10) < 0.18
+    not_overextended_long  = (price - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.25
+    not_overextended_short = (max(raw_c48) - price) / max(max(raw_c48), 1e-10) < 0.25
     # RSI velocity: bloqueia se RSI correu >18pts em ~3 velas (chasing)
     rsi_not_chasing_long  = (rsi - rsi_prev) < 18
     rsi_not_chasing_short = (rsi_prev - rsi) < 18
@@ -715,24 +715,27 @@ def analyze(sym, candles):
     vol_ok = v_strong or obv_bull
     vol_ok_s = v_strong or obv_bear
 
-    # 2-candle HA confirmation for FLEX: current AND previous candle must be bull/bear
-    ha_bull2 = ha_body_ok and closes[-1]>opens[-1] and closes[-2]>opens[-2]
-    ha_bear2 = ha_body_ok and closes[-1]<opens[-1] and closes[-2]<opens[-2]
+    # Confirmação HA: vela HA atual (corpo ≥30% do range) — 1 candle é suficiente com todos os outros gates
+    ha_bull2 = ha_bull and ha_body_ok   # usa HA real (não raw), 1 vela
+    ha_bear2 = ha_bear and ha_body_ok
 
     # Trendilo + OBV juntos = acumulação real confirmada — aceita RVOL levemente abaixo 1.2x
     flex_vol_ok   = v_good or (obv_bull and trendilo_long)
     flex_vol_ok_s = v_good or (obv_bear and trendilo_short)
+    # DNA flow relaxado para FLEX: usa macd_bull_r (direção) em vez de macd_bull (estrito)
+    dna_flex_bull = (macd_bull_r and bull_press and v_good) or dna_flow_bull
+    dna_flex_bear = (macd_bear_r and bear_press and v_good) or dna_flow_bear
 
     long_flex = (flex_score > 38 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and flex_vol_ok and
                  vol_not_fade and rvol >= 0.5 and not_overextended_long and rsi_not_chasing_long and
                  (trendilo_long or kalman_up) and
-                 (dna_flow_bull or trendilo_long))
+                 (dna_flex_bull or trendilo_long))
     short_flex = (flex_score < -38 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and flex_vol_ok_s and
                   vol_not_fade and rvol >= 0.5 and not_overextended_short and rsi_not_chasing_short and
                   (trendilo_short or not kalman_up) and
-                  (dna_flow_bear or trendilo_short))
+                  (dna_flex_bear or trendilo_short))
 
     # ── SETUP — acumulação OBV + MACD em recuperação antecipada (antes dos outros dispararem)
     # Cenário: MACD ainda não cruzou positivo mas histograma JÁ está subindo (recuperação)
@@ -929,7 +932,7 @@ def analyze(sym, candles):
             "sig":sig,"sig_source":sig_source,"swing_low":swing_low,"swing_high":swing_high,
             "ha_bull":ha_bull,"obv_bull":obv_bull,"above_vwap":above_vwap,
             "signal_grade":signal_grade,"quality_score":quality_score,
-            "tbull_r":tbull_r,"tbear_r":tbear_r,
+            "tbull_r":tbull_r,"tbear_r":tbear_r,"tbull_loose":tbull_loose,"tbear_loose":tbear_loose,
             "bb_break_long":bb_break_long,"bb_break_short":bb_break_short,
             "v_strong":v_strong,"obv_bear":obv_bear,
             # Institucional
@@ -1678,10 +1681,12 @@ async def run_cycle(session, last_sig, tf, coins):
             _df_l=result.get("dna_flow_bull",False); _df_s=result.get("dna_flow_bear",False)
             _trl_l=result.get("trendilo_long",False); _trl_s=result.get("trendilo_short",False)
             _kal=result.get("kalman_up",False)
-            if (25 < _sc <= 42 and _rsi < 65 and _adx >= 11 and result.get("tbull_r") and
+            _tbull = result.get("tbull_r") or result.get("tbull_loose")
+            _tbear = result.get("tbear_r") or result.get("tbear_loose")
+            if (20 < _sc <= 45 and _rsi < 68 and _adx >= 10 and _tbull and
                     (_df_l or _trl_l or _kal)):
                 watchlist.append(("LONG",  short, _sc, _rsi, _adx, _df_l, _trl_l))
-            elif (-42 <= _sc < -25 and _rsi > 43 and _adx >= 11 and result.get("tbear_r") and
+            elif (-45 <= _sc < -20 and _rsi > 40 and _adx >= 10 and _tbear and
                     (_df_s or _trl_s or not _kal)):
                 watchlist.append(("SHORT", short, _sc, _rsi, _adx, _df_s, _trl_s))
 
