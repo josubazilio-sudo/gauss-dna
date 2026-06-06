@@ -1093,6 +1093,55 @@ async def send_whatsapp(session, wa_text):
     except Exception as e:
         log.warning(f"WhatsApp erro (não crítico): {e}")
 
+# ── WATCHLIST ────────────────────────────────────────────────────────────────
+
+async def send_watchlist(session, tf, watchlist):
+    """Mensagem consolidada: moedas próximas de sinal — aviso, não sinal."""
+    if not TG_TOKEN or not TG_CHATID or not watchlist: return
+
+    def _tf(t):
+        t = t.lower()
+        if t.endswith('h'): return f"H{t[:-1]}"
+        return t.upper()
+
+    def esc(v):
+        s = str(v).replace('\\', '\\\\')
+        for ch in r"_*[]()~`>#+=|{}.!-": s = s.replace(ch, f"\\{ch}")
+        return s
+
+    tf_lbl = _tf(tf)
+    now    = datetime.now().strftime("%H:%M — %d/%m/%Y")
+
+    def fmt(sh, sc, rsi, adx, df, trl):
+        sign = "\\+" if sc >= 0 else "\\-"
+        return (f"• `{sh}` {sign}{abs(sc)} \\| RSI {rsi:.0f} \\| ADX {adx:.0f}"
+                f" \\| DNA{'✅' if df else '—'} Trl{'✅' if trl else '—'}")
+
+    longs  = [(sh,sc,rsi,adx,df,trl) for d,sh,sc,rsi,adx,df,trl in watchlist if d=="LONG"]
+    shorts = [(sh,sc,rsi,adx,df,trl) for d,sh,sc,rsi,adx,df,trl in watchlist if d=="SHORT"]
+
+    lines = [f"📡 *SETUP EM FORMAÇÃO* \\| {esc(tf_lbl)}\n"]
+    if longs:
+        lines.append("🟢 *Aguardando LONG:*")
+        lines += [fmt(*e) for e in longs[:5]]
+    if shorts:
+        if longs: lines.append("")
+        lines.append("🔴 *Aguardando SHORT:*")
+        lines += [fmt(*e) for e in shorts[:5]]
+    lines += ["", f"⚠️ _Aguardar confirmação — ainda não é sinal_", f"⏰ {esc(now)}"]
+
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    try:
+        async with session.post(url, json={"chat_id": TG_CHATID, "text": "\n".join(lines),
+                                           "parse_mode": "MarkdownV2"},
+                                timeout=aiohttp.ClientTimeout(total=10)) as r:
+            data = await r.json()
+            if data.get("ok"):
+                names = ", ".join(sh for _,sh,*_ in watchlist[:6])
+                log.info(f"📡 Watchlist [{tf}]: {len(watchlist)} moedas — {names}")
+    except Exception as e:
+        log.warning(f"Watchlist erro: {e}")
+
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
 async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
@@ -1452,6 +1501,7 @@ async def run_cycle(session, last_sig, tf, coins):
     now=time.time(); sent=0
     cooldown=max(tf_to_minutes(tf)*60, 14400)  # mínimo 4h entre sinais por moeda
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
+    watchlist =[]  # (dir, short, score, rsi, adx, dna_flow, trendilo)
     MAX_SIGNALS_PER_CYCLE = 3  # máximo 3 sinais por ciclo
 
     # Pré-busca paralela de candles (lotes de 15 simultâneos)
@@ -1539,6 +1589,17 @@ async def run_cycle(session, last_sig, tf, coins):
                                 extra=_extra)
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
+            # ── Watchlist: moedas próximas de sinal (score 25–42, indicadores alinhando)
+            _sc=result["score"]; _rsi=result["rsi"]; _adx=result["adx"]
+            _df_l=result.get("dna_flow_bull",False); _df_s=result.get("dna_flow_bear",False)
+            _trl_l=result.get("trendilo_long",False); _trl_s=result.get("trendilo_short",False)
+            _kal=result.get("kalman_up",False)
+            if (25 < _sc <= 42 and _rsi < 67 and _adx >= 11 and result.get("tbull_r") and
+                    (_df_l or _trl_l or _kal)):
+                watchlist.append(("LONG",  short, _sc, _rsi, _adx, _df_l, _trl_l))
+            elif (-42 <= _sc < -25 and _rsi > 37 and _adx >= 11 and result.get("tbear_r") and
+                    (_df_s or _trl_s or not _kal)):
+                watchlist.append(("SHORT", short, _sc, _rsi, _adx, _df_s, _trl_s))
 
     if sent == 0 and candidates:
         # Top LONG: maior score positivo
@@ -1570,6 +1631,14 @@ async def run_cycle(session, last_sig, tf, coins):
 
         if lines:
             log.info(f"[{tf}] Sem sinais — " + " | ".join(lines[:3]))
+
+    # ── Watchlist: envia se houver moedas próximas e cooldown ≥3h vencido
+    if watchlist:
+        wl_key = f"_watchlist_{tf}"
+        if now - last_sig.get(wl_key, 0) >= 10800:
+            await send_watchlist(session, tf, watchlist)
+            last_sig[wl_key] = now
+
     return sent
 
 async def run_mtf_cycle(session, last_sig, coins):
