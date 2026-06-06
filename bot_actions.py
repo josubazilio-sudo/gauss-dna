@@ -626,7 +626,7 @@ def analyze(sym, candles):
     inst_cls_short = inst_class(inst_score_short)
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
     rsi_not_top    = rsi < 62   # LONG: não entrar sobrecomprado
-    rsi_not_bottom = rsi > 25   # SHORT: bloquear apenas fundo extremo (≤25)
+    rsi_not_bottom = rsi > 30   # SHORT: bloquear fundo extremo (sobrevendido clássico)
     safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_top
     safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_bottom
 
@@ -687,7 +687,7 @@ def analyze(sym, candles):
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 62   # teto 62: 8pts abaixo do sobrecomprado
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 43   # piso 43: 13pts acima do sobrevendido
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 46   # piso 46: 16pts acima do sobrevendido
 
     # ── ANTI-PUMP / ANTI-DUMP / RSI VELOCITY ──────────────────────────────────
     # Evita entrar em ativo esticado >18% das últimas 48 velas (raw price, não HA)
@@ -779,12 +779,12 @@ def analyze(sym, candles):
                       not ext_above_ema21 and not vol_drying and rsi < 62)
     short_bb_break = (bb_break_short and bb_expand and kalman_down and k_short_falling  and
                       flex_score < -40 and adx >= 15 and not sideways    and
-                      not ext_below_ema21 and not vol_drying and rsi > 43)
+                      not ext_below_ema21 and not vol_drying and rsi > 46)
 
     # ── SMART MONEY REVERSAL (Pine: sm_bull + rsi>25 + not rsi_block + score>=60 — sem trendilo)
     long_sm  = (sm_bull and rsi > 25 and rsi < 62 and
                 price > e200 and inst_score_long >= 60)
-    short_sm = (sm_bear and rsi > 43 and rsi < 75 and
+    short_sm = (sm_bear and rsi > 46 and rsi < 75 and
                 price < e200 and inst_score_short >= 60)
 
     # ── DIV (Pine: rsi_div + ha_bull + v_good + not rsi_block — sem trendilo)
@@ -792,7 +792,7 @@ def analyze(sym, candles):
                  rsi > 25 and rsi < 62 and not exhaustion_top and
                  inst_score_long >= 55)
     short_div = (rsi_div_bear and ha_bear and v_good and
-                 rsi > 43 and rsi < 70 and price < e200 and not exhaustion_bot and
+                 rsi > 46 and rsi < 70 and price < e200 and not exhaustion_bot and
                  inst_score_short >= 55)
 
     # ── REVERSAL — fundo/topo extremo com estrutura de inversão ──────────────────
@@ -1041,7 +1041,7 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
 
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
     rsi_ok_long  = rsi < 62
-    rsi_ok_short = rsi > 43
+    rsi_ok_short = rsi > 46
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1555,7 +1555,7 @@ async def run_cycle(session, last_sig, tf, coins):
         h4_bull = (r4["score"] > 15 and r4.get("tbull_r", False) and
                    r4["adx"] >= 13 and h4_rsi < 62 and h4_vol)
         h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
-                   h4_vols and r4["score"] < -15 and h4_rsi > 43)
+                   h4_vols and r4["score"] < -15 and h4_rsi > 46)
         # Só bloqueia se H4 for FORTEMENTE oposto (score < -30 para LONG, > 30 para SHORT)
         if sig_direction == "LONG"  and h4_bear and r4["score"] < -30: return False
         if sig_direction == "SHORT" and h4_bull and r4["score"] >  30: return False
@@ -1739,7 +1739,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         h4_bull  = (r4h["score"] > 15 and r4h.get("tbull_r", False) and
                     r4h["adx"] >= 13 and h4_rsi < 62 and h4_vol)
         h4_bear  = (r4h.get("tbear_r", False) and r4h["adx"] >= 13 and
-                    h4_vol_s and r4h["score"] < -15 and h4_rsi > 43)
+                    h4_vol_s and r4h["score"] < -15 and h4_rsi > 46)
         if not (h4_bull or h4_bear):
             log.info(f"[MTF] {short:7s} | 4H sem setup | Score {r4h['score']:+d} RSI4H {h4_rsi:.0f}")
             continue
