@@ -1155,41 +1155,38 @@ async def send_watchlist(session, tf, watchlist):
         if t.endswith('h'): return f"H{t[:-1]}"
         return t.upper()
 
-    def esc(v):
-        s = str(v).replace('\\', '\\\\')
-        for ch in r"_*[]()~`>#+=|{}.!-": s = s.replace(ch, f"\\{ch}")
-        return s
-
     tf_lbl = _tf(tf)
-    now    = datetime.now().strftime("%H:%M — %d/%m/%Y")
+    now    = datetime.now().strftime("%H:%M - %d/%m/%Y")
 
     def fmt(sh, sc, rsi, adx, df, trl):
-        sign = "\\+" if sc >= 0 else "\\-"
-        return (f"• `{sh}` {sign}{abs(sc)} \\| RSI {rsi:.0f} \\| ADX {adx:.0f}"
-                f" \\| DNA{'✅' if df else '—'} Trl{'✅' if trl else '—'}")
+        sign = "+" if sc >= 0 else "-"
+        dna  = "DNA✅" if df else "DNA-"
+        trl2 = "Trl✅" if trl else "Trl-"
+        return f"• {sh} {sign}{abs(sc)} | RSI {rsi:.0f} | ADX {adx:.0f} | {dna} {trl2}"
 
     longs  = [(sh,sc,rsi,adx,df,trl) for d,sh,sc,rsi,adx,df,trl in watchlist if d=="LONG"]
     shorts = [(sh,sc,rsi,adx,df,trl) for d,sh,sc,rsi,adx,df,trl in watchlist if d=="SHORT"]
 
-    lines = [f"📡 *SETUP EM FORMAÇÃO* \\| {esc(tf_lbl)}\n"]
+    lines = [f"📡 SETUP EM FORMACAO | {tf_lbl}\n"]
     if longs:
-        lines.append("🟢 *Aguardando LONG:*")
+        lines.append("🟢 Aguardando LONG:")
         lines += [fmt(*e) for e in longs[:5]]
     if shorts:
         if longs: lines.append("")
-        lines.append("🔴 *Aguardando SHORT:*")
+        lines.append("🔴 Aguardando SHORT:")
         lines += [fmt(*e) for e in shorts[:5]]
-    lines += ["", f"⚠️ _Aguardar confirmação — ainda não é sinal_", f"⏰ {esc(now)}"]
+    lines += ["", f"⚠️ Aguardar confirmacao - ainda nao e sinal", f"⏰ {now}"]
 
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
     try:
-        async with session.post(url, json={"chat_id": TG_CHATID, "text": "\n".join(lines),
-                                           "parse_mode": "MarkdownV2"},
+        async with session.post(url, json={"chat_id": TG_CHATID, "text": "\n".join(lines)},
                                 timeout=aiohttp.ClientTimeout(total=10)) as r:
             data = await r.json()
             if data.get("ok"):
                 names = ", ".join(sh for _,sh,*_ in watchlist[:6])
                 log.info(f"📡 Watchlist [{tf}]: {len(watchlist)} moedas — {names}")
+            else:
+                log.warning(f"Watchlist API erro: {data.get('description','?')} — code {data.get('error_code','?')}")
     except Exception as e:
         log.warning(f"Watchlist erro: {e}")
 
