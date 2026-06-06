@@ -681,7 +681,7 @@ def analyze(sym, candles):
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
     not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65
-    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 38
+    not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 40
 
     # volume OK: spike claro OU OBV confirmando acumulação/distribuição
     vol_ok = v_strong or obv_bull
@@ -693,10 +693,12 @@ def analyze(sym, candles):
 
     long_flex = (flex_score > 38 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and v_good and
-                 (trendilo_long or kalman_up))
+                 (trendilo_long or kalman_up) and
+                 (dna_flow_bull or trendilo_long))
     short_flex = (flex_score < -38 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and v_good and
-                  (trendilo_short or not kalman_up))
+                  (trendilo_short or not kalman_up) and
+                  (dna_flow_bear or trendilo_short))
 
     # ── SETUP — acumulação OBV + MACD em recuperação antecipada (antes dos outros dispararem)
     # Cenário: MACD ainda não cruzou positivo mas histograma JÁ está subindo (recuperação)
@@ -999,7 +1001,7 @@ def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
 
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
     rsi_ok_long  = rsi < 65
-    rsi_ok_short = rsi > 38
+    rsi_ok_short = rsi > 40
 
     sig = None
     if (h1_bull and in_pullback_long and bounce_long and
@@ -1539,7 +1541,7 @@ async def run_cycle(session, last_sig, tf, coins):
             best_adx_s = max(adx for _,_,_,_,adx,_ in top_short)
             best_sc_s  = top_short[0][2]
             best_rsi_s = top_short[0][3]
-            motivo_s   = ("🔴 RSI sobrevendido" if best_rsi_s <= 38
+            motivo_s   = ("🔴 RSI sobrevendido" if best_rsi_s <= 40
                           else "📉 ADX baixo"    if best_adx_s < 17
                           else "📊 Score baixo"  if best_sc_s > -50
                           else "⏳ MACD/HA pendente")
