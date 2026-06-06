@@ -29,6 +29,10 @@ CAPITAL      = float(os.environ.get("CAPITAL", "200"))   # capital total em USD 
 RISK_PCT     = float(os.environ.get("RISK_PCT", "0.03")) # risco por trade (3%) — base para Grade A
 RISK_BY_GRADE = {"B": 0.02, "A": 0.03, "S": 0.05}       # B=2%, A=3%, S=5%
 RISK_SCOUT    = 0.01                                      # SCOUT=1% — sinal secundário
+MAX_CYCLE_RISK      = 0.10   # teto 10% de capital por ciclo — evita overexposição
+MAX_SCOUT_PER_CYCLE = 2      # máximo 2 SCOUT por ciclo
+MAX_LONG_PER_CYCLE  = 2      # máximo 2 LONGs por ciclo (anti-correlação)
+MAX_SHORT_PER_CYCLE = 2      # máximo 2 SHORTs por ciclo
 
 _JOURNAL_FIELDS = ["datetime","symbol","timeframe","direction","entry","stop",
                    "tp_parcial","tp_total","r1","r_final","grade","score",
@@ -570,8 +574,8 @@ def analyze(sym, candles):
     elif cross_10_21_bear: cross_label="EMA10 < EMA21"
     else: cross_label=""
 
-    # Swing levels para stop baseado em estrutura de mercado (8 velas = mais representativo)
-    swing_low=min(lows[-9:-1]); swing_high=max(highs[-9:-1])
+    # Swing levels — 12 velas = estrutura mais sólida, stop abaixo de wicks reais
+    swing_low=min(lows[-13:-1]); swing_high=max(highs[-13:-1])
 
     # ── TRENDILO (ALMA do % de variação + bandas RMS) ─────────────────────────
     pch = [0.0] + [(closes[i]-closes[i-1])/closes[i]*100 for i in range(1,n)]
@@ -1525,6 +1529,10 @@ async def run_cycle(session, last_sig, tf, coins):
     cooldown=max(tf_to_minutes(tf)*60, 14400)  # mínimo 4h entre sinais por moeda
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
     watchlist =[]  # (dir, short, score, rsi, adx, dna_flow, trendilo)
+    cycle_risk  = 0.0   # risco acumulado no ciclo (teto MAX_CYCLE_RISK)
+    scout_sent  = 0     # SCOUTs enviados no ciclo
+    longs_sent  = 0     # LONGs enviados (anti-correlação)
+    shorts_sent = 0     # SHORTs enviados
     MAX_SIGNALS_PER_CYCLE = 3  # máximo 3 sinais por ciclo
 
     # Pré-busca paralela de candles (lotes de 15 simultâneos)
@@ -1573,7 +1581,7 @@ async def run_cycle(session, last_sig, tf, coins):
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
             # Grade A/S direto; Grade B só passa se score muito alto (≥60)
-            if grade == "B" and abs(result["score"]) < 60:
+            if grade == "B" and abs(result["score"]) < 65:
                 log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} insuficiente")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 continue
@@ -1591,10 +1599,34 @@ async def run_cycle(session, last_sig, tf, coins):
                 log.info(f"  ⏳ {short} [{tf}] cooldown {mins}min")
                 candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"cooldown"))
                 continue
+            # ── Tetos de segurança ─────────────────────────────────────────────
+            _is_long = result["sig"] == "LONG"
+            _src     = result.get("sig_source", "")
+            _risk_pct = RISK_SCOUT if _src == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
+
+            # 1. Teto de risco por ciclo (10%)
+            if cycle_risk + _risk_pct > MAX_CYCLE_RISK:
+                log.info(f"  🛑 {short} bloqueado — risco ciclo {cycle_risk*100:.0f}%+{_risk_pct*100:.0f}% > {MAX_CYCLE_RISK*100:.0f}%")
+                continue
+            # 2. SCOUT: máximo 2 por ciclo
+            if _src == "SCOUT" and scout_sent >= MAX_SCOUT_PER_CYCLE:
+                log.info(f"  🔵 {short} SCOUT bloqueado — limite {MAX_SCOUT_PER_CYCLE}/ciclo atingido")
+                continue
+            # 3. Correlação: máximo 2 LONGs e 2 SHORTs por ciclo
+            if _is_long and longs_sent >= MAX_LONG_PER_CYCLE:
+                log.info(f"  📊 {short} LONG bloqueado — {MAX_LONG_PER_CYCLE} LONGs/ciclo atingido (correlação)")
+                continue
+            if not _is_long and shorts_sent >= MAX_SHORT_PER_CYCLE:
+                log.info(f"  📊 {short} SHORT bloqueado — {MAX_SHORT_PER_CYCLE} SHORTs/ciclo atingido (correlação)")
+                continue
+
             last_sig[key_dir] = now
             last_sig[key_any] = now
+            cycle_risk  += _risk_pct
+            scout_sent  += 1 if _src == "SCOUT" else 0
+            longs_sent  += 1 if _is_long else 0
+            shorts_sent += 0 if _is_long else 1
             sent += 1
-            _is_long = result["sig"]=="LONG"
             _extra = {
                 "rvol_label":    result.get("rvol_label",""),
                 "rvol":          result.get("rvol",0.0),
@@ -1671,8 +1703,9 @@ async def run_mtf_cycle(session, last_sig, coins):
     cooldown_mtf = 14400
     setup_coins = []
 
-    # BTC trend — filtro em 4H
+    # BTC trend + RSI macro — filtro em 4H
     btc_bull_filter = btc_bear_filter = False
+    btc_rsi_heat = btc_rsi_panic = False
     btc_p = 0
     btc_candles = await fetch_candles(session, "BTCUSDT", "4h")
     if btc_candles and len(btc_candles) >= 50:
@@ -1681,9 +1714,12 @@ async def run_mtf_cycle(session, last_sig, coins):
         btc_e50  = ema_series(btc_c, 50)[-1]
         btc_e200 = ema_series(btc_c, 200)[-1]
         btc_p    = btc_c[-1]
+        btc_rsi  = rsi_calc(btc_c[-50:])
         btc_bull_filter = btc_p > btc_e21 > btc_e50 and btc_p > btc_e200 * 0.98
         btc_bear_filter = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02
-        log.info(f"[MTF] BTC 4H: {'BULL ↑' if btc_bull_filter else 'BEAR ↓' if btc_bear_filter else 'NEUTRO'} | ${btc_p:.0f}")
+        btc_rsi_heat  = btc_rsi > 72   # BTC sobrecomprado — risco LONG elevado
+        btc_rsi_panic = btc_rsi < 28   # BTC sobrevendido  — risco SHORT elevado
+        log.info(f"[MTF] BTC 4H: {'BULL ↑' if btc_bull_filter else 'BEAR ↓' if btc_bear_filter else 'NEUTRO'} | RSI {btc_rsi:.0f}{'🔥' if btc_rsi_heat else '🧊' if btc_rsi_panic else ''} | ${btc_p:.0f}")
 
     # ── PASS 1: prefetch H4 de todas as moedas em paralelo ──────────────────
     log.info(f"[MTF] Prefetch H4 ({len(coins)} moedas)...")
@@ -1708,8 +1744,8 @@ async def run_mtf_cycle(session, last_sig, coins):
             log.info(f"[MTF] {short:7s} | 4H sem setup | Score {r4h['score']:+d} RSI4H {h4_rsi:.0f}")
             continue
         direction = "BULL" if h4_bull else "BEAR"
-        grade_s_exempt = abs(r4h["score"]) >= 120
-        if short not in ("BTC", "WBTC") and not grade_s_exempt:
+        if short not in ("BTC", "WBTC"):
+            # BTC trend filter — aplica a TODOS os grades sem exceção
             if h4_bull and btc_bear_filter:
                 setup_coins.append((short, direction, r4h["score"], h4_rsi, "BTC em queda"))
                 log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC 4H em queda")
@@ -1718,8 +1754,13 @@ async def run_mtf_cycle(session, last_sig, coins):
                 setup_coins.append((short, direction, r4h["score"], h4_rsi, "BTC em alta"))
                 log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC 4H em alta")
                 continue
-        elif grade_s_exempt and short not in ("BTC", "WBTC"):
-            log.info(f"[MTF] {short:7s} | Score {r4h['score']:+d} ≥ 120 — Grade S bypass BTC")
+            # BTC RSI macro filter — mercado superaquecido/em pânico
+            if h4_bull and btc_rsi_heat:
+                log.info(f"[MTF] {short:7s} | LONG bloqueado — BTC RSI {btc_rsi:.0f} > 72 (sobrecomprado)")
+                continue
+            if h4_bear and btc_rsi_panic:
+                log.info(f"[MTF] {short:7s} | SHORT bloqueado — BTC RSI {btc_rsi:.0f} < 28 (sobrevendido)")
+                continue
         log.info(f"[MTF] {short:7s} | 4H {direction} ✓BTC | Score {r4h['score']:+d} → buscando entrada 1H...")
         filtered.append((sym, label, short, r4h, h4_bull, h4_bear))
 
