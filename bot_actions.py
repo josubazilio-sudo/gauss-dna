@@ -941,6 +941,7 @@ def analyze(sym, candles):
             "inst_cls_long":inst_cls_long,"inst_cls_short":inst_cls_short,
             "liq_bot":liq_bot,"liq_top":liq_top,
             "dna_flow_bull":dna_flow_bull,"dna_flow_bear":dna_flow_bear,
+            "dna_flex_bull":dna_flex_bull,"dna_flex_bear":dna_flex_bear,
             "trendilo_long":trendilo_long,"trendilo_short":trendilo_short}
 
 def analyze_mtf_entry(sym, candles_15m, h1_bull, h1_bear):
@@ -1678,7 +1679,7 @@ async def run_cycle(session, last_sig, tf, coins):
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
             # ── Watchlist: moedas próximas de sinal (score 10–52, indicadores alinhando)
             _sc=result["score"]; _rsi=result["rsi"]; _adx=result["adx"]
-            _df_l=result.get("dna_flow_bull",False); _df_s=result.get("dna_flow_bear",False)
+            _df_l=result.get("dna_flex_bull",False); _df_s=result.get("dna_flex_bear",False)
             _trl_l=result.get("trendilo_long",False); _trl_s=result.get("trendilo_short",False)
             _kal=result.get("kalman_up",False)
             # Aceita qualquer indicador direcional — não exige alinhamento EMA completo
