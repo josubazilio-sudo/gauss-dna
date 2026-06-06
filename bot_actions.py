@@ -307,6 +307,19 @@ def rsi_calc(closes, p=14):
         ag=(ag*(p-1)+gains[i])/p; al=(al*(p-1)+losses[i])/p
     return 100.0 if al==0 else 100-(100/(1+ag/al))
 
+def rsi_series_calc(closes, p=14):
+    if len(closes) < p+2: return []
+    gains=[0.0]; losses=[0.0]
+    for i in range(1,len(closes)):
+        d=closes[i]-closes[i-1]
+        gains.append(max(d,0)); losses.append(max(-d,0))
+    ag=sum(gains[1:p+1])/p; al=sum(losses[1:p+1])/p
+    out=[]
+    for i in range(p+1,len(closes)):
+        ag=(ag*(p-1)+gains[i])/p; al=(al*(p-1)+losses[i])/p
+        out.append(100.0 if al==0 else 100-(100/(1+ag/al)))
+    return out
+
 def macd_calc(closes, f=12, s=26, sig=9):
     ea=ema_series(closes,f); eb=ema_series(closes,s)
     ml=[a-b for a,b in zip(ea,eb)]
@@ -444,6 +457,17 @@ def analyze(sym, candles):
     rsi_bull=50<rsi<65; rsi_bear=35<rsi<50              # score: zona saudável bull/bear
     rsi_bull_elite=48<rsi<65 and rsi_rising              # ELITE: abaixo de overbought + subindo
     rsi_bear_elite=35<rsi<52 and rsi_falling             # ELITE: acima de oversold + caindo
+
+    # Stoch RSI (momentum de curtíssimo prazo) — evita entrar quando já esticado
+    # tipo BLUAI: RSI(14)=57 normal, mas Stoch RSI ~90 já apontava exaustão iminente
+    _rsi_ser = rsi_series_calc(closes[-45:])
+    if len(_rsi_ser) >= 14:
+        _r14 = _rsi_ser[-14:]; _rmin = min(_r14); _rmax = max(_r14)
+        stoch_rsi = (_r14[-1]-_rmin)/(_rmax-_rmin) if _rmax > _rmin else 0.5
+    else:
+        stoch_rsi = 0.5
+    stoch_stretched_up   = stoch_rsi > 0.85   # momentum curto-prazo já esticado pra cima — risco de reversão
+    stoch_stretched_down = stoch_rsi < 0.15   # momentum curto-prazo já esticado pra baixo — risco de reversão
 
     # DMI/ADX (strictly rising: ADX deve estar subindo, não apenas estável)
     pdi,mdi,adx,adx_p=dmi_adx(candles[-60:])
@@ -637,8 +661,10 @@ def analyze(sym, candles):
     # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
     rsi_not_top    = rsi < 65   # LONG: não entrar sobrecomprado (65 = início de breakout)
     rsi_not_bottom = rsi > 30   # SHORT: bloquear fundo extremo (sobrevendido clássico)
-    safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_top
-    safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_bottom
+    safe_long  = (not near_bb_top and not ext_above_ema21 and not vol_drying and
+                  not exhaustion_top and rsi_not_top and not stoch_stretched_up)
+    safe_short = (not near_bb_bot and not ext_below_ema21 and not vol_drying and
+                  not exhaustion_bot and rsi_not_bottom and not stoch_stretched_down)
 
     # ── SINAIS ELITE ── (máxima assertividade: todos os filtros de qualidade)
     long_elite=(strong_trend and trend_bull and align_bull and e200_rising and
@@ -908,7 +934,7 @@ def analyze(sym, candles):
             if not ha_bull:     b.append(f"ha=F({'+' if closes[-1]>opens[-1] else '-'}{'+' if closes[-2]>opens[-2] else '-'})")
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
-            if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top})")
+            if not safe_long:   b.append(f"safe_long=F(bbtop={near_bb_top} ext={ext_above_ema21} dry={vol_drying} exh={exhaustion_top} stoch={stoch_rsi:.2f})")
             if rsi >= 70: b.append(f"rsi={rsi:.1f} sobrecomprado (≥65)")
             if not not_ext_long_tight: b.append(f"ext={(price-e21)/atr:.1f}ATR rsi={rsi:.0f}")
             bb_info = f"bb_break={'✓' if bb_break_long else f'F(p<={bb_upper:.4f})'} k={'↑' if kalman_up else '↓'} ks={'↑' if k_short_rising else '↓'}"
@@ -920,7 +946,7 @@ def analyze(sym, candles):
             if not ha_bear:     b.append(f"ha=F({'+' if closes[-1]>opens[-1] else '-'}{'+' if closes[-2]>opens[-2] else '-'})")
             if adx<17:          b.append(f"adx={adx:.1f}<17")
             if sideways:        b.append(f"sideways(bbsq={bb_squeeze} adx={adx:.1f})")
-            if not safe_short:  b.append(f"safe_short=F(bbbot={near_bb_bot} ext={ext_below_ema21} dry={vol_drying} exh={exhaustion_bot} rsi={rsi:.0f}≤30={rsi<=30})")
+            if not safe_short:  b.append(f"safe_short=F(bbbot={near_bb_bot} ext={ext_below_ema21} dry={vol_drying} exh={exhaustion_bot} rsi={rsi:.0f}≤30={rsi<=30} stoch={stoch_rsi:.2f})")
             if rsi <= 35: b.append(f"rsi={rsi:.1f} sobrevendido")
             bb_info = f"bb_break={'✓' if bb_break_short else f'F(p>={bb_lower:.4f})'} k={'↓' if kalman_down else '↑'} ks={'↓' if k_short_falling else '↑'}"
             b.append(bb_info)
