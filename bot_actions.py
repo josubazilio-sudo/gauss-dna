@@ -1675,19 +1675,17 @@ async def run_cycle(session, last_sig, tf, coins):
                                 extra=_extra)
         else:
             candidates.append((result["score"],short,result["score"],result["rsi"],result["adx"],result.get("sig_source","no-sig")))
-            # ── Watchlist: moedas próximas de sinal (score 10–52, indicadores alinhando)
+            # ── Watchlist: moedas próximas de sinal (sem limite sup — sig=None já filtra)
             _sc=result["score"]; _rsi=result["rsi"]; _adx=result["adx"]
             _df_l=result.get("dna_flex_bull",False); _df_s=result.get("dna_flex_bear",False)
             _trl_l=result.get("trendilo_long",False); _trl_s=result.get("trendilo_short",False)
             _kal=result.get("kalman_up",False)
-            # Aceita qualquer indicador direcional — não exige alinhamento EMA completo
-            _tbull = result.get("tbull_r") or result.get("tbull_loose") or _kal or _trl_l
-            _tbear = result.get("tbear_r") or result.get("tbear_loose") or _trl_s or (not _kal)
-            if (10 < _sc <= 52 and _rsi < 70 and _adx >= 8 and _tbull and
-                    (_df_l or _trl_l or _kal)):
+            # Qualquer coin sem sinal com score e RSI saudáveis + ao menos 1 indicador
+            if (_sc > 12 and _rsi < 72 and _adx >= 8 and
+                    (_kal or _trl_l or _df_l or _sc > 40)):
                 watchlist.append(("LONG",  short, _sc, _rsi, _adx, _df_l, _trl_l))
-            elif (-52 <= _sc < -10 and _rsi > 33 and _adx >= 8 and _tbear and
-                    (_df_s or _trl_s or not _kal)):
+            elif (_sc < -12 and _rsi > 35 and _adx >= 8 and
+                    (not _kal or _trl_s or _df_s or _sc < -40)):
                 watchlist.append(("SHORT", short, _sc, _rsi, _adx, _df_s, _trl_s))
 
     if sent == 0 and candidates:
