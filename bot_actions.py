@@ -429,6 +429,15 @@ def analyze(sym, candles):
     rsi=rsi_calc(closes[-50:])
     rsi_prev=rsi_calc(closes[-53:-3]) if n>=53 else rsi
     rsi_rising=rsi>rsi_prev; rsi_falling=rsi<rsi_prev
+    # RSI histórico para detecção de rebound (6 e 9 candles atrás)
+    rsi_6 = rsi_calc(closes[-56:-6]) if n >= 56 else rsi
+    rsi_9 = rsi_calc(closes[-59:-9]) if n >= 59 else rsi
+    # REBOUND SHORT: RSI deu dip abaixo de 35 recentemente + voltou para 38-46
+    rsi_dipped_short   = rsi_prev < 35 or rsi_6 < 35 or rsi_9 < 35
+    rsi_rebounded_short = 38 <= rsi <= 46 and rsi > rsi_prev
+    # REBOUND LONG: RSI subiu acima de 65 recentemente + recuou para 54-62
+    rsi_spiked_long    = rsi_prev > 65 or rsi_6 > 65 or rsi_9 > 65
+    rsi_rebounded_long  = 54 <= rsi <= 62 and rsi < rsi_prev
     # Divergências RSI
     rsi_div_bull = closes[-1]<closes[-4] and rsi>rsi_prev and rsi<45   # fundo mais baixo no preço, mais alto no RSI
     rsi_div_bear = closes[-1]>closes[-4] and rsi<rsi_prev and rsi>55   # topo mais alto no preço, mais baixo no RSI
@@ -771,6 +780,18 @@ def analyze(sym, candles):
     short_momentum = (rsi_fresh_short and ha_bear and dna_flow_bear and
                       adx > 22 and v_strong and trendilo_short and inst_score_short >= 60)
 
+    # ── REBOUND — entrada no pullback pós-sobrevendido/sobrecomprado ─────────────
+    # SHORT: RSI deu dip abaixo de 35 nos últimos 9 candles + voltou para 38-46
+    # LONG:  RSI subiu acima de 65 nos últimos 9 candles + recuou para 54-62
+    long_rebound  = (rsi_spiked_long  and rsi_rebounded_long  and
+                     ha_bull and dna_flow_bull and trendilo_long  and
+                     adx > 20 and v_good and kalman_up   and
+                     not sideways and safe_long  and not_ext_long_tight)
+    short_rebound = (rsi_dipped_short and rsi_rebounded_short and
+                     ha_bear and dna_flow_bear and trendilo_short and
+                     adx > 20 and v_good and not kalman_up and
+                     not sideways and safe_short and not_ext_short_tight)
+
     # ── BB BREAKOUT (Pine Script: Kalman trend + direção + quebra da banda) ──────
     # Entra no breakout acima/abaixo da BB quando Kalman confirma tendência e direção
     # Não exige safe_long/safe_short (estratégia de breakout, não de pullback)
@@ -823,8 +844,10 @@ def analyze(sym, candles):
         elif short_reversal: sig="SHORT"; sig_source="REVERSAL"
         elif long_surge: sig="LONG"; sig_source="SURGE"
         elif short_surge: sig="SHORT"; sig_source="SURGE"
-        elif long_momentum: sig="LONG"; sig_source="MOMENTUM"
+        elif long_momentum:  sig="LONG";  sig_source="MOMENTUM"
         elif short_momentum: sig="SHORT"; sig_source="MOMENTUM"
+        elif long_rebound:   sig="LONG";  sig_source="REBOUND"
+        elif short_rebound:  sig="SHORT"; sig_source="REBOUND"
         elif long_div: sig="LONG"; sig_source="DIV"
         elif short_div: sig="SHORT"; sig_source="DIV"
         elif long_flex: sig="LONG"; sig_source="FLEX"
@@ -1263,6 +1286,8 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
         mode_tag="⚡ DNA SURGE"; cross_info=""
     elif sig_source=="MOMENTUM":
         mode_tag="🚀 DNA MOMENTUM"; cross_info=""
+    elif sig_source=="REBOUND":
+        mode_tag="↩️ RSI REBOUND"; cross_info=""
     elif sig_source=="DIV":
         mode_tag="📐 RSI DIVERGÊNCIA"; cross_info=""
     elif sig_source=="REVERSAL":
