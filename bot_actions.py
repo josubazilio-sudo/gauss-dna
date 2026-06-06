@@ -445,23 +445,21 @@ def analyze(sym, candles):
     rsi_bull_elite=48<rsi<65 and rsi_rising              # ELITE: abaixo de overbought + subindo
     rsi_bear_elite=35<rsi<52 and rsi_falling             # ELITE: acima de oversold + caindo
 
-    # DMI/ADX — tolerância 5% na subida (Pine: adx >= adx[1]*0.95)
-    # Long: adxMin=22 | Short: adxMinShort=28 (Pine Script)
+    # DMI/ADX (strictly rising: ADX deve estar subindo, não apenas estável)
     pdi,mdi,adx,adx_p=dmi_adx(candles[-60:])
-    adx_long_ok  = adx > 22 and pdi > mdi and adx >= adx_p * 0.95
-    adx_short_ok = adx > 28 and mdi > pdi and adx >= adx_p * 0.95
+    adx_long_ok=adx>22 and pdi>mdi and adx>adx_p
+    adx_short_ok=adx>22 and mdi>pdi and adx>adx_p
 
-    # Volume — RVOL tiers alinhados com Pine Script
-    # Pine: volStrong = vol > volMa*1.1 | tiers: 1.1/1.2/1.5/2.0/3.0
+    # Volume — RVOL 4 tiers institucionais (1.2/1.5/2.0/3.0)
+    # vol_ma exclui a vela atual (pode ser parcial em 15m) — usa 20 velas completas
     vol_ma=sum(vols[-21:-1])/20 if len(vols)>=21 else sum(vols[:-1])/max(len(vols)-1,1)
     rvol       = vols[-1] / max(vol_ma, 1e-10)
     rvol_tier  = (4 if rvol >= 3.0 else 3 if rvol >= 2.0 else
                   2 if rvol >= 1.5 else 1 if rvol >= 1.2 else 0)
     rvol_label = ("INST" if rvol_tier==4 else "VSTRONG" if rvol_tier==3 else
                   "STRONG" if rvol_tier==2 else "GOOD" if rvol_tier==1 else "LOW")
-    v_normal = rvol >= 1.1   # 1.1x+ — Pine: volStrong (volMult=1.1)
     v_good   = rvol_tier >= 1   # 1.2x+
-    v_strong = rvol_tier >= 2   # 1.5x+
+    v_strong = rvol_tier >= 2   # 1.5x+  (Strong)
     v_inst   = rvol_tier >= 4   # 3.0x+  (institucional)
     v_strong2= v_strong and vols[-2] > vol_ma * 0.9
 
@@ -513,9 +511,9 @@ def analyze(sym, candles):
     near_bb_top=price_bb_pos>0.97   # acima da banda superior — sobrecomprado na BB
     near_bb_bot=price_bb_pos<0.03   # abaixo da banda inferior — sobrevendido na BB
 
-    # Preço muito esticado (>2.5 ATR da EMA21) — Pine: maxDistATR=2.5
-    ext_above_ema21=(price-e21)/atr>2.5
-    ext_below_ema21=(e21-price)/atr>2.5
+    # Preço muito esticado (>3 ATR da EMA21) — movimento já foi feito
+    ext_above_ema21=(price-e21)/atr>3.0
+    ext_below_ema21=(e21-price)/atr>3.0
 
     # Volume secando: volume atual < 40% da média E < 50% das últimas 3 velas
     vol3=[vols[-4],vols[-3],vols[-2]]
@@ -642,18 +640,17 @@ def analyze(sym, candles):
     safe_long  = not near_bb_top and not ext_above_ema21 and not vol_drying and not exhaustion_top and rsi_not_top
     safe_short = not near_bb_bot and not ext_below_ema21 and not vol_drying and not exhaustion_bot and rsi_not_bottom
 
-    # ── SINAIS ELITE ── alinhado com Pine Script DNA INSTITUCIONAL ELITE
-    # Pine: 2 HA bars, volStrong=1.1x, adxLongOk=22, adxShortOk=28, dist<2.5ATR
+    # ── SINAIS ELITE ── (máxima assertividade: todos os filtros de qualidade)
     long_elite=(strong_trend and trend_bull and align_bull and e200_rising and
-                macd_bull and ha_bull and f_bull and f_strong and adx_long_ok and
-                rsi_bull_elite and v_normal and not_ext_long and
-                kalman_up and above_vwap and trend_consistent_bull and
-                (bull_impulse or liq_long) and score>50 and safe_long)
+                macd_bull3 and ha_bull3 and f_bull and f_strong and adx_long_ok and
+                rsi_bull_elite and (v_strong2 or obv_bull) and not_ext_long and
+                kalman_accel_up and above_vwap and trend_consistent_bull and
+                (bull_impulse or liq_long) and score>65 and safe_long)
     short_elite=(strong_trend and trend_bear and align_bear and e200_falling and
-                 macd_bear and ha_bear and f_bear and f_strong and adx_short_ok and
-                 rsi_bear_elite and v_normal and not_ext_short and
-                 kalman_down and below_vwap and trend_consistent_bear and
-                 (bear_impulse or liq_short) and score<-50 and safe_short)
+                 macd_bear3 and ha_bear3 and f_bear and f_strong and adx_short_ok and
+                 rsi_bear_elite and (v_strong2 or obv_bear) and not_ext_short and
+                 kalman_accel_down and below_vwap and trend_consistent_bear and
+                 (bear_impulse or liq_short) and score<-65 and safe_short)
     early_long=(adx_long_ok and (v_strong or obv_bull) and sell_exhaust and liq_long and
                 bull_absorb and f_bull and trend_bull and e200_rising and
                 kalman_up and above_vwap and macd_recovering and safe_long)
