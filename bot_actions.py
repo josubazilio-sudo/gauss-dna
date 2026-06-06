@@ -1861,6 +1861,17 @@ async def run_test(session):
         await asyncio.sleep(1)
     log.info("✅ Teste concluído — verifique o Telegram!")
 
+async def _tg_notify(session, text):
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    try:
+        async with session.post(url, json={"chat_id": TG_CHATID, "text": text},
+                                timeout=aiohttp.ClientTimeout(total=10)) as r:
+            data = await r.json()
+            if not data.get("ok"):
+                log.warning(f"⚠️ Notificação TG: {data.get('description')}")
+    except Exception as e:
+        log.warning(f"⚠️ Notificação TG falhou: {e}")
+
 async def main():
     if not TG_TOKEN or not TG_CHATID:
         log.error("❌ Configure TG_TOKEN e TG_CHATID!"); return
@@ -1886,6 +1897,16 @@ async def main():
     last_scan_cycle=0
 
     async with aiohttp.ClientSession() as session:
+        # ── Notificação de início ──────────────────────────────────────────────
+        now_str = datetime.now().strftime("%H:%M — %d/%m/%Y")
+        coins_count = len(COINS)
+        await _tg_notify(session,
+            f"🤖 GAUSS+DNA iniciado\n"
+            f"⏰ {now_str}\n"
+            f"📊 TFs: {', '.join(TIMEFRAMES)} | Moedas: {coins_count}\n"
+            f"🔄 Modo: {mode_str} | Ciclo: {CYCLE_INTERVAL}s"
+        )
+
         # ── Teste de conectividade — log apenas ──────────────────────────────
         for test_url,label in [
             ("https://api.mexc.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=250","MEXC 15m"),
