@@ -1148,7 +1148,7 @@ async def send_whatsapp(session, wa_text):
 
 async def send_watchlist(session, tf, watchlist):
     """Mensagem consolidada: moedas próximas de sinal — aviso, não sinal."""
-    if not TG_TOKEN or not TG_CHATID or not watchlist: return
+    if not TG_TOKEN or not TG_CHATID or not watchlist: return False
 
     def _tf(t):
         t = t.lower()
@@ -1185,10 +1185,12 @@ async def send_watchlist(session, tf, watchlist):
             if data.get("ok"):
                 names = ", ".join(sh for _,sh,*_ in watchlist[:6])
                 log.info(f"📡 Watchlist [{tf}]: {len(watchlist)} moedas — {names}")
+                return True
             else:
                 log.warning(f"Watchlist API erro: {data.get('description','?')} — code {data.get('error_code','?')}")
     except Exception as e:
         log.warning(f"Watchlist erro: {e}")
+    return False
 
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
@@ -1716,13 +1718,14 @@ async def run_cycle(session, last_sig, tf, coins):
         if lines:
             log.info(f"[{tf}] Sem sinais — " + " | ".join(lines[:3]))
 
-    # ── Watchlist: envia se houver moedas próximas e cooldown ≥1h vencido
+    # ── Watchlist: envia se houver moedas próximas e cooldown ≥30min vencido
     log.info(f"[{tf}] Watchlist: {len(watchlist)} moedas encontradas")
     if watchlist:
         wl_key = f"_watchlist_{tf}"
-        if now - last_sig.get(wl_key, 0) >= 3600:
-            await send_watchlist(session, tf, watchlist)
-            last_sig[wl_key] = now
+        if now - last_sig.get(wl_key, 0) >= 1800:
+            ok = await send_watchlist(session, tf, watchlist)
+            if ok:
+                last_sig[wl_key] = now
 
     return sent
 
