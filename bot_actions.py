@@ -768,12 +768,14 @@ def analyze(sym, candles):
     candle_bear_pct = (opens[-1] - price) / max(opens[-1], 1e-10)
     surge_break_h   = price > max(highs[-11:-1])  # rompeu máxima das últimas 10 velas
     surge_break_l   = price < min(lows[-11:-1])   # rompeu mínima das últimas 10 velas
-    long_surge  = (rvol_tier >= 3 and candle_bull_pct > 0.04 and surge_break_h and
+    # SURGE: RVOL 2x+ + vela 3%+ + nova máx/mín 10 bars
+    # Kalman: aceita k_short_rising — moves como BEAT+24% partem de Kalman ainda bearish
+    long_surge  = (rvol_tier >= 3 and candle_bull_pct > 0.03 and surge_break_h and
                    not bb_break_long and not exhaustion_top and
-                   not vol_drying and kalman_up and ha_bull)
-    short_surge = (rvol_tier >= 3 and candle_bear_pct > 0.04 and surge_break_l and
+                   not vol_drying and (kalman_up or k_short_rising) and ha_bull)
+    short_surge = (rvol_tier >= 3 and candle_bear_pct > 0.03 and surge_break_l and
                    not bb_break_short and not exhaustion_bot and
-                   not vol_drying and kalman_down and ha_bear)
+                   not vol_drying and (kalman_down or k_short_falling) and ha_bear)
 
     # ── MOMENTUM (Pine: rsi_fresh + ha_bull + flow_bull + adx>22 + v_strong + trl_bull + score>=70)
     rsi_fresh_long  = rsi_prev < 65 <= rsi < 73   # cruzou 65; teto 73 evita entrada muito sobrecomprada
