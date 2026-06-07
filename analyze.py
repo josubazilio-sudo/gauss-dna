@@ -259,12 +259,12 @@ def calcular_indicadores(candles):
     vol_nao_fade  = volumes[-1] >= vol_ma * 0.50
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
-    flex_vol_ok   = v_bom or (obv_bull and trendilo_long)
-    flex_vol_ok_s = v_bom or (obv_bear and trendilo_short)
+    flex_vol_ok   = v_bom or vol_nao_fade or (obv_bull and trendilo_long)
+    flex_vol_ok_s = v_bom or vol_nao_fade or (obv_bear and trendilo_short)
 
     # DNA Flow relaxado (FLEX)
-    macd_bull_r  = (ml > sl_v) or (hist > hist_p and hist_p > hist_pp)
-    macd_bear_r  = (ml < sl_v) or (hist < hist_p and hist_p < hist_pp)
+    macd_bull_r  = (ml > sl_v) or (hist > hist_p)
+    macd_bear_r  = (ml < sl_v) or (hist < hist_p)
     dna_flex_bull = (macd_bull_r and pressao_bull and v_bom) or dna_flow_bull
     dna_flex_bear = (macd_bear_r and pressao_bear and v_bom) or dna_flow_bear
 
@@ -275,8 +275,8 @@ def calcular_indicadores(candles):
 
     # Anti-pump / anti-dump
     raw_c48 = [c["c"] for c in candles[-50:-1]]
-    nao_overext_long  = (preco - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.25
-    nao_overext_short = (max(raw_c48) - preco) / max(max(raw_c48), 1e-10) < 0.25
+    nao_overext_long  = (preco - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.35
+    nao_overext_short = (max(raw_c48) - preco) / max(max(raw_c48), 1e-10) < 0.35
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
@@ -525,14 +525,12 @@ def detectar_sinais(ind):
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["vol_nao_fade"] and i["rvol"] >= 0.5 and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
-                  (i["trendilo_long"] or i["kalman_subindo"]) and
-                  (i["dna_flex_bull"] or i["trendilo_long"]))
+                  (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] < -38 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["vol_nao_fade"] and i["rvol"] >= 0.5 and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
-                  (i["trendilo_short"] or not i["kalman_subindo"]) and
-                  (i["dna_flex_bear"] or i["trendilo_short"]))
+                  (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
     long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > 18 and
