@@ -399,6 +399,9 @@ def calcular_indicadores(candles):
         "trendilo_long": trendilo_long, "trendilo_short": trendilo_short,
         # Filtros compostos
         "seguro_long": seguro_long, "seguro_short": seguro_short,
+        "perto_bb_topo": perto_bb_topo, "perto_bb_fund": perto_bb_fund,
+        "ext_acima_e21": ext_acima_e21, "ext_abaixo_e21": ext_abaixo_e21,
+        "vol_secando": vol_secando,
         "lateralizado": lateralizado,
         # Surge
         "candle_bull_pct": candle_bull_pct, "candle_bear_pct": candle_bear_pct,
@@ -497,10 +500,18 @@ def detectar_sinais(ind):
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
     rsi_fresh_short = i["rsi_ant"] > 35 >= i["rsi"] > 32
+    # Exaustão de curtíssimo prazo (sem checagem de teto de RSI — o MOMENTUM entra
+    # propositalmente na faixa 65-73, então só barra se já estiver esticado/exausto)
+    mom_seguro_long  = (not i["perto_bb_topo"] and not i["ext_acima_e21"] and not i["vol_secando"] and
+                        not i["exaustao_topo"] and not i["stoch_esticado_up"])
+    mom_seguro_short = (not i["perto_bb_fund"] and not i["ext_abaixo_e21"] and not i["vol_secando"] and
+                        not i["exaustao_fund"] and not i["stoch_esticado_down"])
     long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
-                      i["adx"] > 22 and i["v_forte"] and i["trendilo_long"]  and i["score_inst_long"]  >= 60)
+                      i["adx"] > 22 and i["v_forte"] and i["trendilo_long"]  and i["score_inst_long"]  >= 60 and
+                      mom_seguro_long)
     short_momentum = (rsi_fresh_short and i["ha_bear"] and i["dna_flow_bear"] and not i["liq_fundo"] and
-                      i["adx"] > 22 and i["v_forte"] and i["trendilo_short"] and i["score_inst_short"] >= 60)
+                      i["adx"] > 22 and i["v_forte"] and i["trendilo_short"] and i["score_inst_short"] >= 60 and
+                      mom_seguro_short)
 
     # ── Rebound RSI ───────────────────────────────────────────────────────────
     long_rebound  = (i["rsi_spike_long"]  and i["rsi_rebound_long"]  and i["ha_bull"] and
@@ -524,12 +535,12 @@ def detectar_sinais(ind):
     long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["vol_nao_fade"] and i["rvol"] >= 0.5 and
-                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
+                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["vol_nao_fade"] and i["rvol"] >= 0.5 and
-                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
+                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
