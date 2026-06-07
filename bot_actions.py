@@ -1492,9 +1492,10 @@ async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
         by_vol=sorted(all_pairs,key=lambda x:x[2],reverse=True)
         top_vol=[(s,b,v) for s,b,v,_ in by_vol if v>=min_vol_m*1e6][:max_pairs]
 
-        # Top gainers do dia (≥5% e volume mínimo $500k) — pega pumps em andamento
+        # Top gainers do dia (≥4% e volume mínimo $200k) — pega pumps em andamento,
+        # incluindo moedas de baixa liquidez recém-impulsionadas (ex: ALLO, SKYAI, GWEI, HOME)
         by_gain=sorted(all_pairs,key=lambda x:x[3],reverse=True)
-        top_gain=[(s,b,v) for s,b,v,p in by_gain if p>=5.0 and v>=500_000][:50]
+        top_gain=[(s,b,v) for s,b,v,p in by_gain if p>=4.0 and v>=200_000][:80]
 
         # Combina e deduplica mantendo top_vol primeiro
         seen={s for s,_,_ in top_vol}
