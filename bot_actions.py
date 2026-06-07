@@ -755,12 +755,12 @@ def analyze(sym, candles):
     long_flex = (flex_score > 38 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and flex_vol_ok and
                  vol_not_fade and rvol >= 0.5 and not_overextended_long and rsi_not_chasing_long and
-                 (trendilo_long or kalman_up) and
+                 (trendilo_long or kalman_up) and inst_score_long >= 50 and
                  (dna_flex_bull or trendilo_long))
     short_flex = (flex_score < -38 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and flex_vol_ok_s and
                   vol_not_fade and rvol >= 0.5 and not_overextended_short and rsi_not_chasing_short and
-                  (trendilo_short or not kalman_up) and
+                  (trendilo_short or not kalman_up) and inst_score_short >= 50 and
                   (dna_flex_bear or trendilo_short))
 
     # ── SETUP — acumulação OBV + MACD em recuperação antecipada (antes dos outros dispararem)
