@@ -98,10 +98,10 @@ async def executar_ciclo(session, estado, tf, moedas):
 
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
-            if grade == "B" and abs(result["score"]) < 40 and fonte != "SCOUT":
-                log.info(f"  ⚠️ {abrev} Grade B ignorado — score {result['score']:+d} < 40")
+            if abs(result["score"]) < 50:
+                log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < 50")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "grade-B"))
+                                   result["rsi"], result["adx"], "score<50"))
                 continue
 
             if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"]):
@@ -289,9 +289,9 @@ async def executar_ciclo_mtf(session, estado, moedas):
             pts     = result.get("pts_grade", 0)
             log.info(f"[MTF] {abrev:7s} | ✅ H1 {result['sinal']} Grade:{grade} Q:{pts} | "
                      f"{result['fonte_sinal']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
-            if grade == "B":
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "Grade B"))
-                log.info(f"[MTF] {abrev:7s} | Grade B ignorado — setup insuficiente")
+            if grade == "B" or abs(result["score"]) < 50:
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"score {result['score']:+d}<50" if abs(result["score"]) < 50 else "Grade B"))
+                log.info(f"[MTF] {abrev:7s} | bloqueado — score {result['score']:+d} ou Grade B")
                 continue
 
             chave = f"{sym}_MTF"
