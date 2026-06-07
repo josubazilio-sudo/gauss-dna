@@ -64,8 +64,10 @@ def calcular_indicadores(candles):
     macd_bear  = ml < sl_v and hist < hist_p and hist < 0
     macd_bull3 = macd_bull and hist_p > hist_pp
     macd_bear3 = macd_bear and hist_p < hist_pp
-    macd_recuperando = hist > hist_p
-    macd_esgotando   = hist < hist_p
+    # Exige 2 barras seguidas de melhora/piora — uma única barra é ruído e
+    # deixa entradas antecipadas (SETUP/EARLY/REVERSAL) vulneráveis a reversões falsas
+    macd_recuperando = hist > hist_p and hist_p > hist_pp
+    macd_esgotando   = hist < hist_p and hist_p < hist_pp
 
     # Heikin-Ashi: corpo mínimo (0.2 ATR) filtra dojis
     ha_corpo_ok = abs(fechamentos[-1] - aberturas[-1]) > atr * 0.2
