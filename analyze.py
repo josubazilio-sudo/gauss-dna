@@ -521,12 +521,12 @@ def detectar_sinais(ind):
                  not i["exaustao_fund"] and i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    long_flex  = (i["score"] > 38 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
+    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["vol_nao_fade"] and i["rvol"] >= 0.5 and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
-    short_flex = (i["score"] < -38 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
+    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["vol_nao_fade"] and i["rvol"] >= 0.5 and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and

@@ -97,8 +97,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                  f"Grade:{grade} | {result['fonte_sinal'] or result['sinal'] or '—'}")
 
         if result["sinal"]:
-            if grade == "B" and abs(result["score"]) < 60 and fonte != "SCOUT":
-                log.info(f"  ⚠️ {abrev} Grade B ignorado — score {result['score']:+d} < 60")
+            if grade == "B" and abs(result["score"]) < 40 and fonte != "SCOUT":
+                log.info(f"  ⚠️ {abrev} Grade B ignorado — score {result['score']:+d} < 40")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "grade-B"))
                 continue
