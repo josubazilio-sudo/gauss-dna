@@ -1385,12 +1385,17 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     liq_line  = (f"\n🔍 SM: {esc(liq_event)}" if liq_event else "")
     scout_warn = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if sig_source == "SCOUT" else ""
 
+    # Zona de entrada (não preço fixo) — absorve a variação natural entre o sinal
+    # ser gerado e o usuário executar manualmente (ex: já viu cair um pouco na entrada)
+    _entry_buf = atr * 0.25
+    entry_lo, entry_hi = (price - _entry_buf, price) if is_long else (price, price + _entry_buf)
+
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
         f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| 🕐 Gráfico: *{esc(tf_label)}*\n"
         f"{cross_line}"
         f"{esc(grade_label)}{inst_line}{liq_line}{scout_warn}\n\n"
-        f"💰 Entrada: `${raw(fmt_price(price))}`\n"
+        f"💰 Entrada: `${raw(fmt_price(entry_lo))} – ${raw(fmt_price(entry_hi))}` _\\(zona, não preço fixo\\)_\n"
         f"🛑 Stop: `${raw(d(stop))}` \\({esc(stop_label)}\\)\n"
         f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
         f"🏆 TP Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → fechar 50%\n\n"
