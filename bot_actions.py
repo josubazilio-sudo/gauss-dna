@@ -1602,7 +1602,7 @@ async def _prefetch_batch(session, coins, tf, batch_size=15):
 async def run_cycle(session, last_sig, tf, coins):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     now=time.time(); sent=0
-    cooldown=max(tf_to_minutes(tf)*60, 14400)  # mínimo 4h entre sinais por moeda
+    cooldown=max(tf_to_minutes(tf)*60, 7200)   # mínimo 2h entre sinais por moeda
     candidates=[]  # (abs_score, short, score, rsi, adx, reason)
     watchlist =[]  # (dir, short, score, rsi, adx, dna_flow, trendilo)
     cycle_risk  = 0.0   # risco acumulado no ciclo (teto MAX_CYCLE_RISK)
