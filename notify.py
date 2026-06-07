@@ -1,0 +1,282 @@
+"""
+GAUSS+DNA — Notificações
+Envio de sinais e alertas via Telegram e WhatsApp.
+"""
+import logging
+import aiohttp
+from datetime import datetime
+from config import (TG_TOKEN, TG_CHATID, WA_PHONE, WA_APIKEY,
+                    CAPITAL, RISK_PCT, RISK_BY_GRADE, RISK_SCOUT, SIGNAL_MODE)
+from indicators import formatar_preco
+from state import registrar_trade
+
+log = logging.getLogger("GAUSS+DNA")
+
+
+# ── Helpers de formatação ─────────────────────────────────────────────────────
+
+def _fmt(v):
+    return f"{v:.6f}" if v < 0.01 else f"{v:.4f}" if v < 1 else f"{v:.2f}"
+
+def _escapar(v):
+    """Escape para texto fora de backticks (MarkdownV2)."""
+    s = str(v).replace('\\', '\\\\')
+    for ch in r"_*[]()~`>#+=|{}.!-":
+        s = s.replace(ch, f"\\{ch}")
+    return s
+
+def _bruto(v):
+    """Dentro de backticks só backslash precisa ser escapado."""
+    return str(v).replace('\\', '\\\\')
+
+def _label_tf(tf):
+    tf = tf.lower()
+    if tf.endswith('d'): return f"D{tf[:-1]}"
+    if tf.endswith('h'): return f"H{tf[:-1]}"
+    return tf.upper()
+
+
+# ── WhatsApp ──────────────────────────────────────────────────────────────────
+
+async def enviar_whatsapp(session, texto):
+    """Envia mensagem via CallMeBot. Requer WA_PHONE e WA_APIKEY configurados."""
+    if not WA_PHONE or not WA_APIKEY:
+        return
+    import urllib.parse
+    url = (f"https://api.callmebot.com/whatsapp.php"
+           f"?phone={WA_PHONE}&text={urllib.parse.quote(texto)}&apikey={WA_APIKEY}")
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
+            if r.status == 200:
+                log.info("✅ WhatsApp enviado")
+            else:
+                corpo = await r.text()
+                log.warning(f"⚠️ WhatsApp status {r.status}: {corpo[:80]}")
+    except Exception as e:
+        log.warning(f"WhatsApp erro (não crítico): {e}")
+
+
+# ── Watchlist ─────────────────────────────────────────────────────────────────
+
+async def enviar_watchlist(session, tf, watchlist):
+    """Mensagem consolidada com moedas próximas de sinal — aviso, não sinal."""
+    if not TG_TOKEN or not TG_CHATID or not watchlist:
+        return False
+
+    tf_lbl = _label_tf(tf)
+    agora  = datetime.now().strftime("%H:%M - %d/%m/%Y")
+
+    def fmt_item(simbolo, score, rsi, adx, dna_flow, trendilo):
+        sinal = "+" if score >= 0 else "-"
+        dna   = "DNA✅" if dna_flow else "DNA-"
+        trl   = "Trl✅" if trendilo else "Trl-"
+        return f"• {simbolo} {sinal}{abs(score)} | RSI {rsi:.0f} | ADX {adx:.0f} | {dna} {trl}"
+
+    longs  = [(s,sc,rsi,adx,df,trl) for d,s,sc,rsi,adx,df,trl in watchlist if d == "LONG"]
+    shorts = [(s,sc,rsi,adx,df,trl) for d,s,sc,rsi,adx,df,trl in watchlist if d == "SHORT"]
+
+    linhas = [f"📡 SETUP EM FORMAÇÃO | {tf_lbl}\n"]
+    if longs:
+        linhas.append("🟢 Aguardando LONG:")
+        linhas += [fmt_item(*e) for e in longs[:5]]
+    if shorts:
+        if longs: linhas.append("")
+        linhas.append("🔴 Aguardando SHORT:")
+        linhas += [fmt_item(*e) for e in shorts[:5]]
+    linhas += ["", "⚠️ Aguardar confirmação — ainda não é sinal", f"⏰ {agora}"]
+
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    try:
+        async with session.post(url, json={"chat_id": TG_CHATID, "text": "\n".join(linhas)},
+                                timeout=aiohttp.ClientTimeout(total=10)) as r:
+            data = await r.json()
+            if data.get("ok"):
+                nomes = ", ".join(s for _,s,*_ in watchlist[:6])
+                log.info(f"📡 Watchlist [{tf}]: {len(watchlist)} moedas — {nomes}")
+                return True
+            else:
+                log.warning(f"Watchlist erro API: {data.get('description','?')} — código {data.get('error_code','?')}")
+    except Exception as e:
+        log.warning(f"Watchlist erro: {e}")
+    return False
+
+
+# ── Telegram — sinal principal ────────────────────────────────────────────────
+
+async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, score,
+                       rsi, adx, tendencia, kalman_subindo, swing_low, swing_high,
+                       fonte, tf, grade, extra=None):
+    """Monta e envia o sinal completo para o Telegram."""
+    eh_long = direcao == "LONG"
+    if extra is None:
+        extra = {}
+
+    rvol_lbl    = extra.get("rvol_label", "")
+    rvol_val    = extra.get("rvol", 0.0)
+    score_inst  = extra.get("inst_score", 0)
+    cls_inst    = extra.get("inst_cls", "")
+    dna_flow_ok = extra.get("dna_flow", False)
+    trendilo_ok = extra.get("trendilo_dir", False)
+    evento_liq  = extra.get("liq_event", "")
+
+    # ── Stop adaptativo ───────────────────────────────────────────────────────
+    mult_atr = (2.0 if fonte == "SURGE"    else
+                1.2 if fonte == "SM_SWEEP" else
+                1.8 if fonte in ("FLEX", "SETUP") else 1.5)
+
+    stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
+    stop_estrutural = swing_low - atr * 0.3 if eh_long else swing_high + atr * 0.3
+    dist_swing = abs(preco - stop_estrutural)
+
+    usar_estrutural = (fonte not in ("SURGE", "BB_BREAK", "MOMENTUM") and
+                       atr * 0.3 < dist_swing < atr * 2.5 and
+                       (stop_estrutural < preco if eh_long else stop_estrutural > preco))
+
+    if usar_estrutural:
+        stop = min(stop_atr, stop_estrutural) if eh_long else max(stop_atr, stop_estrutural)
+        label_stop = "Estrutura"
+    else:
+        stop = stop_atr
+        label_stop = f"{mult_atr:.1f} ATR"
+
+    risco = abs(preco - stop)
+    if risco <= 0:
+        return
+
+    # ── Alvos por grade e tipo de sinal ──────────────────────────────────────
+    if fonte == "SCOUT":
+        r1, r_final = 1.2, 2.0
+    elif grade == "S":
+        r1, r_final = 2.2, 4.5
+    elif grade == "A":
+        r1, r_final = 1.8, 3.5
+    else:
+        r1, r_final = 1.5, 2.5
+
+    if fonte == "SURGE":
+        r1      = max(1.5, r1 - 0.5)
+        r_final = max(3.0, r_final - 1.0)
+    elif fonte == "DIV":
+        r_final = max(2.5, r_final - 0.5)
+
+    tp1   = preco + risco * r1      if eh_long else preco - risco * r1
+    final = preco + risco * r_final if eh_long else preco - risco * r_final
+
+    # ── Tamanho da posição ────────────────────────────────────────────────────
+    pct_risco    = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
+    valor_risco  = CAPITAL * pct_risco
+    contratos    = valor_risco / risco if risco > 0 else 0
+    valor_pos    = contratos * preco
+    pos_5x       = valor_pos / 5
+
+    # ── Labels de modo ────────────────────────────────────────────────────────
+    tf_lbl = _label_tf(tf)
+    modos = {
+        "PULLBACK":  "🎯 DNA PULLBACK",
+        "SM_SWEEP":  "🏦 SMART MONEY SWEEP",
+        "SURGE":     "⚡ DNA SURGE",
+        "MOMENTUM":  "🚀 DNA MOMENTUM",
+        "REBOUND":   "↩️ RSI REBOUND",
+        "DIV":       "📐 RSI DIVERGÊNCIA",
+        "REVERSAL":  "🔄 REVERSÃO EXTREMA",
+        "SETUP":     "🔭 DNA SETUP",
+        "SCOUT":     "🔵 DNA SCOUT",
+        "BB_BREAK":  "💥 BB BREAKOUT",
+    }
+    if fonte.startswith("MTF"):
+        tag_modo = f"📡 MTF PULLBACK H4→{tf_lbl}"; info_cross = ""
+    elif fonte.startswith("CROSS"):
+        tag_modo = "🔀 DNA CROSS"; info_cross = fonte.split(":", 1)[1]
+    elif SIGNAL_MODE == "ELITE":
+        tag_modo = "🔬 DNA ELITE KALMAN"; info_cross = ""
+    else:
+        tag_modo = modos.get(fonte, "⚡ DNA FLEX"); info_cross = ""
+
+    labels_grade = {
+        "S": "🏆 GRADE S — Setup perfeito",
+        "A": "⭐ GRADE A — Setup sólido",
+        "B": "📊 GRADE B — Setup básico",
+    }
+    label_grade = labels_grade[grade]
+
+    # ── Montagem da mensagem ──────────────────────────────────────────────────
+    agora    = datetime.now().strftime("%H:%M — %d/%m/%Y")
+    k_str    = "↑" if kalman_subindo else "↓"
+    linha_cross = f"📉 Cruzamento: {_escapar(info_cross)}\n" if info_cross else ""
+    linha_rvol  = f"📊 RVOL: `{_bruto(f'{rvol_val:.2f}')}x` {_escapar(rvol_lbl)}" if rvol_lbl else ""
+    linha_flow  = ("✅" if dna_flow_ok else "—") + " DNA Flow"
+    linha_trl   = ("✅" if trendilo_ok else "—") + " Trendilo"
+    linha_inst  = f"\n🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar(cls_inst)}" if score_inst else ""
+    linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
+    aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
+
+    texto = (
+        f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
+        f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 Gráfico: *{_escapar(tf_lbl)}*\n"
+        f"{linha_cross}"
+        f"{_escapar(label_grade)}{linha_inst}{linha_liq}{aviso_scout}\n\n"
+        f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
+        f"🛑 Stop: `${_bruto(_fmt(stop))}` \\({_escapar(label_stop)}\\)\n"
+        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
+        f"🏆 TP Final \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n\n"
+        f"📐 *Gestão de risco \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
+        f"  Risco: `${_bruto(f'{valor_risco:.2f}')}`\n"
+        f"  Spot: `{_bruto(f'{contratos:.4f}')} {_bruto(abrev)}` \\(aprox `${_bruto(f'{valor_pos:.2f}')} USDT`\\)\n"
+        f"  Alavancagem 5x: `${_bruto(f'{pos_5x:.2f}')} colateral`\n\n"
+        f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
+        + (f"{_escapar(linha_rvol)}\n" if linha_rvol else "")
+        + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
+        + f"📈 Tendência: {_escapar(tendencia)} \\| Kalman: {_escapar(k_str)}\n"
+        f"⏰ {_escapar(agora)}"
+    )
+
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    try:
+        async with session.post(
+            url,
+            json={"chat_id": TG_CHATID, "text": texto, "parse_mode": "MarkdownV2"},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as r:
+            data = await r.json()
+            if data.get("ok"):
+                log.info(f"✅ {direcao} {abrev} Grade:{grade} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{fonte}]")
+                registrar_trade(simbolo, tf, direcao, preco, stop, tp1, final,
+                                r1, r_final, grade, score, rsi, adx, fonte)
+                # WhatsApp — mensagem simplificada
+                import re as _re
+                wa_tipo = _re.sub(r'[^\w\s\-→/]', '', tag_modo).strip()
+                wa_text = (
+                    f"SINAL {direcao} — {label} [{tf_lbl}] Grade {grade}\n"
+                    f"Tipo: {wa_tipo}\n\n"
+                    f"Entrada: ${formatar_preco(preco)}\n"
+                    f"Stop: ${_fmt(stop)} ({label_stop})\n"
+                    f"TP1 ({r1}R): ${_fmt(tp1)}\n"
+                    f"TP Final ({r_final}R): ${_fmt(final)}\n\n"
+                    f"Risco ${valor_risco:.2f} | 5x ${pos_5x:.2f} colateral\n"
+                    f"RSI {rsi:.0f} | ADX {adx:.0f} | "
+                    + (f"RVOL {rvol_val:.2f}x {rvol_lbl} | " if rvol_lbl else "")
+                    + f"DNA Flow {'✅' if dna_flow_ok else '—'} | "
+                    + f"Trendilo {'✅' if trendilo_ok else '—'} | "
+                    + (f"SM: {evento_liq} | " if evento_liq else "")
+                    + agora
+                )
+                await enviar_whatsapp(session, wa_text)
+            else:
+                log.warning(f"❌ {data.get('description')}")
+    except Exception as e:
+        log.error(f"Erro ao enviar sinal: {e}")
+
+
+# ── Notificação simples ───────────────────────────────────────────────────────
+
+async def notificar(session, texto):
+    """Envia mensagem de texto simples (sem MarkdownV2) ao Telegram."""
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    try:
+        async with session.post(url, json={"chat_id": TG_CHATID, "text": texto},
+                                timeout=aiohttp.ClientTimeout(total=10)) as r:
+            data = await r.json()
+            if not data.get("ok"):
+                log.warning(f"⚠️ Notificação TG: {data.get('description')}")
+    except Exception as e:
+        log.warning(f"⚠️ Notificação TG falhou: {e}")
