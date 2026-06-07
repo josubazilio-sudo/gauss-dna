@@ -252,6 +252,15 @@ input[type=number]:focus,input[type=text]:focus{border-color:var(--green)}
           <button class="gb" id="btn-b" onclick="setGrade('B')">B</button>
         </div>
       </div>
+      <div class="fg" style="grid-column:1/-1">
+        <label>Gráfico</label>
+        <div class="dir-row">
+          <button class="gb" id="btn-tf-15m" onclick="setTf('15m')">15M</button>
+          <button class="gb" id="btn-tf-30m" onclick="setTf('30m')">30M</button>
+          <button class="gb" id="btn-tf-1h"  onclick="setTf('1h')">1H</button>
+          <button class="gb" id="btn-tf-4h"  onclick="setTf('4h')">4H</button>
+        </div>
+      </div>
       <div class="fg">
         <label>Entrada ($)</label>
         <input type="number" id="inp-entry" placeholder="0.00" step="any" oninput="recalc()">
@@ -324,7 +333,8 @@ input[type=number]:focus,input[type=text]:focus{border-color:var(--green)}
 
 <script>
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let S = {capital:180, riskPct:3, dir:'LONG', grade:'S', trades:[]};
+let S = {capital:180, riskPct:3, dir:'LONG', grade:'S', tf:'15m', trades:[]};
+const TF_LABELS = {'15m':'15M', '30m':'30M', '1h':'1H', '4h':'4H'};
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function init() {
@@ -334,11 +344,13 @@ function init() {
   if (!['S','A','B'].includes(S.grade)) S.grade = 'S';
   if (!['LONG','SHORT'].includes(S.dir)) S.dir = 'LONG';
   if (![1,2,3,5].includes(S.riskPct)) S.riskPct = 3;
+  if (!['15m','30m','1h','4h'].includes(S.tf)) S.tf = '15m';
   document.getElementById('cap-slider').value = S.capital;
   document.getElementById('cap-input').value  = S.capital;
   setRisk(S.riskPct, true);
   setDir(S.dir);
   setGrade(S.grade);
+  setTf(S.tf);
   updateCap();
   recalc();
 }
@@ -385,6 +397,14 @@ function setGrade(g) {
   document.getElementById('btn-b').className = 'gb' + (g==='B'?' gb2':'');
   recalc(); persist();
 }
+function setTf(tf) {
+  S.tf = tf;
+  for (const k of ['15m','30m','1h','4h']) {
+    document.getElementById('btn-tf-'+k).className = 'gb' + (k===tf?' ga':'');
+  }
+  recalc(); persist();
+}
+
 function toggleExtras() {
   const el = document.getElementById('extras-row');
   el.style.display = el.style.display==='none' ? 'grid' : 'none';
@@ -444,6 +464,7 @@ function recalc() {
 
     const sig = calcSig(entry, atr, S.dir, S.grade, S.capital, S.riskPct);
     sig.sym   = sym;
+    sig.tf    = S.tf;
     sig.score = document.getElementById('inp-score').value||'';
     sig.rsi   = document.getElementById('inp-rsi').value||'';
     sig.adx   = document.getElementById('inp-adx').value||'';
@@ -505,7 +526,7 @@ function buildDnaCard(sig, forHistory, status, closedData) {
   <div class="dna-card ${isL?'long-card':'short-card'}">
     ${statusBar}
     <div class="dna-header">🚨 ${tipo} — ${sig.dir}</div>
-    <div class="dna-sub">${isL?'🟢':'🔴'} <b>${base}/USDT</b> &nbsp;|&nbsp; ⏱ 1H</div>
+    <div class="dna-sub">${isL?'🟢':'🔴'} <b>${base}/USDT</b> &nbsp;|&nbsp; 🕐 Gráfico: ${TF_LABELS[sig.tf]||sig.tf||'15M'}</div>
     <div class="dna-grade" style="color:${gradeColor}">${gradeLabel}</div>
     <div class="dna-line"><span class="lk">💰 Entrada</span><span class="lv">${fmt(sig.entry)}</span></div>
     <div class="dna-line"><span class="lk">🛑 Stop${autoNote}</span><span class="lv" style="color:var(--red)">${fmt(sig.stop)}</span></div>
