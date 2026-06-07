@@ -203,14 +203,19 @@ def calcular_indicadores(candles):
                 fechamentos[-1] < sm_swing_h and (maximas[-1] - fechamentos[-1]) > atr * 0.2)
     liq_fundo = ((minimas[-2] <= sm_swing_l or minimas[-1] <= sm_swing_l) and
                  fechamentos[-1] > sm_swing_l and (fechamentos[-1] - minimas[-1]) > atr * 0.2)
-    sm_bull = liq_fundo and ha_bull and (dna_flow_bull or f_bull)
-    sm_bear = liq_topo  and ha_bear and (dna_flow_bear or f_bear)
 
     crange = maximas[-1] - minimas[-1]
     lwick  = min(aberturas[-1], preco) - minimas[-1]
     uwick  = maximas[-1] - max(aberturas[-1], preco)
     absorb_bull = crange > 0 and lwick > crange*0.45 and preco > (minimas[-1]+crange*0.6) and volumes[-1] > vol_ma
     absorb_bear = crange > 0 and uwick > crange*0.45 and preco < (maximas[-1]-crange*0.6) and volumes[-1] > vol_ma
+
+    # Armadilha de liquidez (trap): preço varre o topo/fundo recente para "caçar"
+    # stops (liq_topo/fundo), é absorvido por volume forte com pavio de rejeição
+    # (absorb) e fecha revertido (ha) — assinatura cirúrgica de smart money,
+    # não apenas um cruzamento de cor de vela após o rompimento falso
+    sm_bull = liq_fundo and absorb_bull and v_forte and ha_bull and (dna_flow_bull or f_bull)
+    sm_bear = liq_topo  and absorb_bear and v_forte and ha_bear and (dna_flow_bear or f_bear)
 
     exaustao_venda  = hist < hist_p and hist_p < hist_pp and preco < e21 and preco < e50 and preco < e200
     exaustao_compra = hist > hist_p and hist_p > hist_pp and preco > e21 and preco > e50 and preco > e200
