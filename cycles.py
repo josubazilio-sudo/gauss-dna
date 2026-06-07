@@ -97,6 +97,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                  f"Grade:{grade} | {result['fonte_sinal'] or result['sinal'] or '—'}")
 
         if result["sinal"]:
+            fonte    = result.get("fonte_sinal", "")
             if grade == "B" and abs(result["score"]) < 40 and fonte != "SCOUT":
                 log.info(f"  ⚠️ {abrev} Grade B ignorado — score {result['score']:+d} < 40")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -121,7 +122,6 @@ async def executar_ciclo(session, estado, tf, moedas):
                 continue
 
             eh_long  = result["sinal"] == "LONG"
-            fonte    = result.get("fonte_sinal", "")
             pct_risco = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
 
             if risco_ciclo + pct_risco > MAX_CYCLE_RISK:
