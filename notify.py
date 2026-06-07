@@ -193,9 +193,10 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         tag_modo = modos.get(fonte, "⚡ DNA FLEX"); info_cross = ""
 
     labels_grade = {
-        "S": "🏆 GRADE S — Setup perfeito",
-        "A": "⭐ GRADE A — Setup sólido",
-        "B": "📊 GRADE B — Setup básico",
+        "S+": "💎 GRADE S+ — Setup institucional",
+        "S":  "🏆 GRADE S — Setup perfeito",
+        "A":  "⭐ GRADE A — Setup sólido",
+        "B":  "📊 GRADE B — Setup básico",
     }
     label_grade = labels_grade[grade]
 

@@ -70,7 +70,7 @@ async def executar_ciclo(session, estado, tf, moedas):
 
     todos_candles = await _prefetch_lote(session, moedas, tf)
     todos_h4      = None
-    if tf in ("1h", "30m"):
+    if tf in ("1h", "30m", "15m"):
         log.info(f"[{tf}] Buscando H4 de {len(moedas)} moedas para filtro de direção...")
         todos_h4 = await _prefetch_lote(session, moedas, "4h")
 
@@ -104,7 +104,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], "grade-B"))
                 continue
 
-            if tf == "1h" and not _h4_confirma(h4c, result["sinal"]):
+            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"]):
                 log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "H4 oposto"))

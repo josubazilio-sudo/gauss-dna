@@ -247,7 +247,7 @@ def calcular_indicadores(candles):
     tbear_loose = e10 < e21 and e21 < e50
 
     # Filtros de segurança compostos
-    rsi_nao_topo   = rsi < 65 or (adx > 32 and rsi < 75 and not stoch_esticado_up)
+    rsi_nao_topo   = rsi < 70
     rsi_nao_fundo  = rsi > 30
     seguro_long  = (not perto_bb_topo and not ext_acima_e21 and not vol_secando and
                     not exaustao_topo and rsi_nao_topo and not stoch_esticado_up)
@@ -259,8 +259,8 @@ def calcular_indicadores(candles):
     vol_nao_fade  = volumes[-1] >= vol_ma * 0.50
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
-    flex_vol_ok   = v_bom or vol_nao_fade or (obv_bull and trendilo_long)
-    flex_vol_ok_s = v_bom or vol_nao_fade or (obv_bear and trendilo_short)
+    flex_vol_ok   = v_bom or (obv_bull and trendilo_long)
+    flex_vol_ok_s = v_bom or (obv_bear and trendilo_short)
 
     # DNA Flow relaxado (FLEX)
     macd_bull_r  = (ml > sl_v) or (hist > hist_p)
@@ -523,31 +523,33 @@ def detectar_sinais(ind):
     # ── FLEX geral ────────────────────────────────────────────────────────────
     long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
-                  i["flex_vol_ok"] and i["vol_nao_fade"] and i["rvol"] >= 0.5 and
+                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
+                  (i["liq_long"] or i["liq_fundo"]) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
-                  i["flex_vol_ok_s"] and i["vol_nao_fade"] and i["rvol"] >= 0.5 and
+                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
+                  (i["liq_short"] or i["liq_topo"]) and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
     long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > 18 and
                    i["obv_bull"] and i["v_bom"] and i["acima_vwap"] and not i["lateralizado"] and
-                   i["nao_ext_long_tight"] and i["seguro_long"] and
+                   i["nao_ext_long_tight"] and i["seguro_long"] and (i["liq_long"] or i["liq_fundo"]) and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50)
     short_setup = (i["score"] < -50 and i["ha_bear2"] and i["macd_esgotando"] and i["adx"] > 18 and
                    i["obv_bear"] and i["v_bom"] and i["abaixo_vwap"] and not i["lateralizado"] and
-                   i["nao_ext_short_tight"] and i["seguro_short"] and
+                   i["nao_ext_short_tight"] and i["seguro_short"] and (i["liq_short"] or i["liq_topo"]) and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50)
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
-    long_scout  = (i["score"] > 28 and i["ha_bull"] and i["macd_bull_r"] and i["adx"] >= 11 and
+    long_scout  = (i["score"] >= 40 and i["ha_bull"] and i["macd_bull_r"] and i["adx"] >= 11 and
                    not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                    i["vol_nao_fade"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
                    (i["dna_flow_bull"] or i["trendilo_long"] or i["kalman_subindo"]))
-    short_scout = (i["score"] < -28 and i["ha_bear"] and i["macd_bear_r"] and i["adx"] >= 11 and
+    short_scout = (i["score"] <= -40 and i["ha_bear"] and i["macd_bear_r"] and i["adx"] >= 11 and
                    not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                    i["vol_nao_fade"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
                    (i["dna_flow_bear"] or i["trendilo_short"] or not i["kalman_subindo"]))
@@ -628,7 +630,8 @@ def graduar_sinal(ind, sinal):
         pts += 1 if i["f_forte"]               else 0
         pts += 1 if i["tend_consistente_bear"] else 0
 
-    if pts >= 14:   grade = "S"
+    if pts >= 17:   grade = "S+"
+    elif pts >= 14: grade = "S"
     elif pts >= 11: grade = "A"
     else:           grade = "B"
     return grade, pts
