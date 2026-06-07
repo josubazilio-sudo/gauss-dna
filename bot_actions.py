@@ -808,10 +808,15 @@ def analyze(sym, candles):
     rsi_fresh_long  = rsi_prev < 65 <= rsi < 73   # cruzou 65; teto 73 evita entrada muito sobrecomprada
     rsi_fresh_short = rsi_prev > 35 >= rsi > 32   # cruzou abaixo de 35, piso 32 evita sobrevendido
     # liq_top/liq_bot: SM varreu liquidez no topo/fundo e fechou abaixo/acima — contradiz breakout
+    # Exaustão de curtíssimo prazo (sem rsi_not_top — o MOMENTUM entra justamente na faixa 65-73)
+    mom_safe_long  = (not near_bb_top and not ext_above_ema21 and not vol_drying and
+                      not exhaustion_top and not stoch_stretched_up)
+    mom_safe_short = (not near_bb_bot and not ext_below_ema21 and not vol_drying and
+                      not exhaustion_bot and not stoch_stretched_down)
     long_momentum  = (rsi_fresh_long  and ha_bull and dna_flow_bull and not liq_top and
-                      adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 60)
+                      adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 60 and mom_safe_long)
     short_momentum = (rsi_fresh_short and ha_bear and dna_flow_bear and not liq_bot and
-                      adx > 22 and v_strong and trendilo_short and inst_score_short >= 60)
+                      adx > 22 and v_strong and trendilo_short and inst_score_short >= 60 and mom_safe_short)
 
     # ── REBOUND — entrada no pullback pós-sobrevendido/sobrecomprado ─────────────
     # SHORT: RSI deu dip abaixo de 35 nos últimos 9 candles + voltou para 38-46
