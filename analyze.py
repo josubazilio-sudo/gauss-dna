@@ -469,11 +469,12 @@ def detectar_sinais(ind):
     # ── BB Breakout ───────────────────────────────────────────────────────────
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
-                      not i["lateralizado"] and not i["ext_acima_e21"] if "ext_acima_e21" in i else True and
-                      not i["vol_secando"] if "vol_secando" in i else True and i["rsi"] < 65)
+                      not i["lateralizado"] and not i["ext_acima_e21"] and
+                      not i["vol_secando"] and i["rsi"] < 65 and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
-                      not i["lateralizado"] and i["rsi"] > 46)
+                      not i["lateralizado"] and not i["ext_abaixo_e21"] and
+                      not i["vol_secando"] and i["rsi"] > 46 and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
     long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi"] < 65 and
