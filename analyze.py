@@ -495,7 +495,7 @@ def detectar_sinais(ind):
     # ── Surge ─────────────────────────────────────────────────────────────────
     long_surge  = (i["rvol_tier"] >= 3 and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
                    not i["exaustao_topo"] and (i["kalman_subindo"] or i["k_short_subindo"]) and i["ha_bull"] and
-                   not i["liq_topo"] and i["rsi"] < 70 and i["score_inst_long"] >= 50)
+                   not i["liq_topo"] and i["rsi"] < 60 and i["score_inst_long"] >= 50)
     short_surge = (i["rvol_tier"] >= 3 and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
                    not i["liq_fundo"] and i["rsi"] > 30 and i["score_inst_short"] >= 50)
