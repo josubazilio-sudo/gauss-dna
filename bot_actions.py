@@ -1221,6 +1221,34 @@ async def send_watchlist(session, tf, watchlist):
         log.warning(f"Watchlist erro: {e}")
     return False
 
+async def send_pump_alert(session, movers):
+    """Alerta informativo de moedas disparando forte no dia — SEM sugestão de
+    entrada/gestão de risco (essas costumam ter ATR% alto demais pra banca de $200,
+    então o bot não opera, mas avisa pra você acompanhar manualmente)."""
+    if not TG_TOKEN or not TG_CHATID or not movers: return False
+
+    now = datetime.now().strftime("%H:%M - %d/%m/%Y")
+    lines = ["🚀 *RADAR DE PUMPS — Maiores altas das últimas 24h*",
+             "_Apenas informativo: volatilidade alta demais para o bot operar com $200 — acompanhe manualmente_", ""]
+    for base, pct, price, vol in movers[:10]:
+        lines.append(f"• {base}/USDT  +{pct:.1f}%  | ${price:.6g} | Vol ${vol/1e6:.1f}M")
+    lines += ["", f"⏰ {now}"]
+
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    try:
+        async with session.post(url, json={"chat_id": TG_CHATID, "text": "\n".join(lines)},
+                                timeout=aiohttp.ClientTimeout(total=10)) as r:
+            data = await r.json()
+            if data.get("ok"):
+                names = ", ".join(b for b,*_ in movers[:6])
+                log.info(f"🚀 Pump alert: {len(movers)} moedas — {names}")
+                return True
+            else:
+                log.warning(f"Pump alert API erro: {data.get('description','?')} — code {data.get('error_code','?')}")
+    except Exception as e:
+        log.warning(f"Pump alert erro: {e}")
+    return False
+
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
 async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
@@ -1508,6 +1536,33 @@ async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
         return combined
     except Exception as e:
         log.warning(f"Scanner: erro ao buscar pares — {e}"); return []
+
+async def fetch_pump_movers(session, min_pct=10.0, min_vol=300_000, max_n=10):
+    """Maiores altas das últimas 24h no MEXC — pra alertar mesmo quando o ATR%
+    é alto demais pro bot operar (essas moedas não entram no scan de sinais)."""
+    url="https://api.mexc.com/api/v3/ticker/24hr"
+    try:
+        async with session.get(url,timeout=aiohttp.ClientTimeout(total=15)) as r:
+            data=await r.json()
+        if not isinstance(data,list): return []
+        movers=[]
+        for t in data:
+            sym=t.get("symbol","")
+            if not sym.endswith("USDT"): continue
+            base=sym[:-4]
+            if base in _EXCLUDE: continue
+            if any(sub in base for sub in _EXCLUDE_SUB): continue
+            try:
+                pct  = float(t.get("priceChangePercent","0"))
+                vol  = float(t.get("quoteVolume","0"))
+                price= float(t.get("lastPrice","0"))
+            except: continue
+            if pct >= min_pct and vol >= min_vol and price > 0:
+                movers.append((base,pct,price,vol))
+        movers.sort(key=lambda x:x[1],reverse=True)
+        return movers[:max_n]
+    except Exception as e:
+        log.warning(f"Pump radar: erro ao buscar — {e}"); return []
 
 def quick_rank(candles):
     """Score rápido para ranquear moedas candidatas. Retorna 0 se não serve."""
@@ -2045,6 +2100,19 @@ async def main():
                 log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total}")
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{cycle}: {e}")
+
+            # Radar de pumps — moedas disparando >10% que o bot não opera (ATR% alto p/ banca)
+            try:
+                pa_key = "_pump_alert"
+                if time.time() - last_sig.get(pa_key, 0) >= 7200:
+                    movers = await fetch_pump_movers(session)
+                    if movers:
+                        ok = await send_pump_alert(session, movers)
+                        if ok:
+                            last_sig[pa_key] = time.time()
+                            save_state(last_sig)
+            except Exception as e:
+                log.warning(f"Pump alert ciclo #{cycle}: {e}")
 
             if LOOP_MODE and cycle % 5 == 0:
                 log.info(f"💓 Ciclo #{cycle} | {len(active_coins)} moedas")
