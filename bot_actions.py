@@ -658,8 +658,9 @@ def analyze(sym, candles):
     def inst_class(s): return "ELITE" if s>=85 else "FORTE" if s>=70 else "MÉDIO" if s>=55 else "FRACO"
     inst_cls_long  = inst_class(inst_score_long)
     inst_cls_short = inst_class(inst_score_short)
-    # Evitar compra no topo (RSI≥65) e venda no fundo extremo (RSI≤25)
-    rsi_not_top    = rsi < 65   # LONG: não entrar sobrecomprado (65 = início de breakout)
+    # Evitar compra no topo e venda no fundo extremo
+    # Em tendência forte (ADX>32), RSI 65-75 é continuação normal, não topo
+    rsi_not_top    = rsi < 65 or (adx > 32 and rsi < 75 and not stoch_stretched_up)
     rsi_not_bottom = rsi > 30   # SHORT: bloquear fundo extremo (sobrevendido clássico)
     safe_long  = (not near_bb_top and not ext_above_ema21 and not vol_drying and
                   not exhaustion_top and rsi_not_top and not stoch_stretched_up)
@@ -723,7 +724,8 @@ def analyze(sym, candles):
     # sideways: squeeze+ADX<18 = sem direção confirmada; FLEX exige ADX>17 sem squeeze
     # com ADX 20-24 onde bb_squeeze acidental bloqueava scores +140
     sideways = bb_squeeze and adx < 18
-    not_ext_long_tight  = (price - e21) / atr < 2.5 and rsi < 65   # teto 65: início de breakout
+    # Em tendência forte (ADX>32), extensão com RSI 65-75 ainda é válida
+    not_ext_long_tight  = (price - e21) / atr < 2.5 and (rsi < 65 or (adx > 32 and rsi < 75))
     not_ext_short_tight = (e21 - price) / atr < 2.5 and rsi > 43   # piso 43: não shortar já fraco
 
     # ── ANTI-PUMP / ANTI-DUMP / RSI VELOCITY ──────────────────────────────────
@@ -755,12 +757,12 @@ def analyze(sym, candles):
     long_flex = (flex_score > 38 and ha_bull2 and macd_bull_r and adx >= 14 and
                  not sideways and not_ext_long_tight and safe_long and flex_vol_ok and
                  vol_not_fade and rvol >= 0.5 and not_overextended_long and rsi_not_chasing_long and
-                 (trendilo_long or kalman_up) and inst_score_long >= 50 and
+                 (trendilo_long or kalman_up) and
                  (dna_flex_bull or trendilo_long))
     short_flex = (flex_score < -38 and ha_bear2 and macd_bear_r and adx >= 14 and
                   not sideways and not_ext_short_tight and safe_short and flex_vol_ok_s and
                   vol_not_fade and rvol >= 0.5 and not_overextended_short and rsi_not_chasing_short and
-                  (trendilo_short or not kalman_up) and inst_score_short >= 50 and
+                  (trendilo_short or not kalman_up) and
                   (dna_flex_bear or trendilo_short))
 
     # ── SETUP — acumulação OBV + MACD em recuperação antecipada (antes dos outros dispararem)
@@ -808,15 +810,10 @@ def analyze(sym, candles):
     rsi_fresh_long  = rsi_prev < 65 <= rsi < 73   # cruzou 65; teto 73 evita entrada muito sobrecomprada
     rsi_fresh_short = rsi_prev > 35 >= rsi > 32   # cruzou abaixo de 35, piso 32 evita sobrevendido
     # liq_top/liq_bot: SM varreu liquidez no topo/fundo e fechou abaixo/acima — contradiz breakout
-    # Exaustão de curtíssimo prazo (sem rsi_not_top — o MOMENTUM entra justamente na faixa 65-73)
-    mom_safe_long  = (not near_bb_top and not ext_above_ema21 and not vol_drying and
-                      not exhaustion_top and not stoch_stretched_up)
-    mom_safe_short = (not near_bb_bot and not ext_below_ema21 and not vol_drying and
-                      not exhaustion_bot and not stoch_stretched_down)
     long_momentum  = (rsi_fresh_long  and ha_bull and dna_flow_bull and not liq_top and
-                      adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 60 and mom_safe_long)
+                      adx > 22 and v_strong and trendilo_long  and inst_score_long  >= 60)
     short_momentum = (rsi_fresh_short and ha_bear and dna_flow_bear and not liq_bot and
-                      adx > 22 and v_strong and trendilo_short and inst_score_short >= 60 and mom_safe_short)
+                      adx > 22 and v_strong and trendilo_short and inst_score_short >= 60)
 
     # ── REBOUND — entrada no pullback pós-sobrevendido/sobrecomprado ─────────────
     # SHORT: RSI deu dip abaixo de 35 nos últimos 9 candles + voltou para 38-46
@@ -1226,34 +1223,6 @@ async def send_watchlist(session, tf, watchlist):
         log.warning(f"Watchlist erro: {e}")
     return False
 
-async def send_pump_alert(session, movers):
-    """Alerta informativo de moedas disparando forte no dia — SEM sugestão de
-    entrada/gestão de risco (essas costumam ter ATR% alto demais pra banca de $200,
-    então o bot não opera, mas avisa pra você acompanhar manualmente)."""
-    if not TG_TOKEN or not TG_CHATID or not movers: return False
-
-    now = datetime.now().strftime("%H:%M - %d/%m/%Y")
-    lines = ["🚀 *RADAR DE PUMPS — Maiores altas das últimas 24h*",
-             "_Apenas informativo: volatilidade alta demais para o bot operar com $200 — acompanhe manualmente_", ""]
-    for base, pct, price, vol in movers[:10]:
-        lines.append(f"• {base}/USDT  +{pct:.1f}%  | ${price:.6g} | Vol ${vol/1e6:.1f}M")
-    lines += ["", f"⏰ {now}"]
-
-    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-    try:
-        async with session.post(url, json={"chat_id": TG_CHATID, "text": "\n".join(lines)},
-                                timeout=aiohttp.ClientTimeout(total=10)) as r:
-            data = await r.json()
-            if data.get("ok"):
-                names = ", ".join(b for b,*_ in movers[:6])
-                log.info(f"🚀 Pump alert: {len(movers)} moedas — {names}")
-                return True
-            else:
-                log.warning(f"Pump alert API erro: {data.get('description','?')} — code {data.get('error_code','?')}")
-    except Exception as e:
-        log.warning(f"Pump alert erro: {e}")
-    return False
-
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
 async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
@@ -1390,17 +1359,12 @@ async def send_telegram(session, sym, label, short, sig_type, price, atr, score,
     liq_line  = (f"\n🔍 SM: {esc(liq_event)}" if liq_event else "")
     scout_warn = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if sig_source == "SCOUT" else ""
 
-    # Zona de entrada (não preço fixo) — absorve a variação natural entre o sinal
-    # ser gerado e o usuário executar manualmente (ex: já viu cair um pouco na entrada)
-    _entry_buf = atr * 0.25
-    entry_lo, entry_hi = (price - _entry_buf, price) if is_long else (price, price + _entry_buf)
-
     text=(
         f"🚨 *{esc(mode_tag)} — {sig_type}*\n\n"
         f"{'🟢' if is_long else '🔴'} *{esc(label)}* \\| 🕐 Gráfico: *{esc(tf_label)}*\n"
         f"{cross_line}"
         f"{esc(grade_label)}{inst_line}{liq_line}{scout_warn}\n\n"
-        f"💰 Entrada: `${raw(fmt_price(entry_lo))} – ${raw(fmt_price(entry_hi))}` _\\(zona, não preço fixo\\)_\n"
+        f"💰 Entrada: `${raw(fmt_price(price))}`\n"
         f"🛑 Stop: `${raw(d(stop))}` \\({esc(stop_label)}\\)\n"
         f"🎯 TP1 \\({esc(str(r1))}R\\): `${raw(d(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
         f"🏆 TP Final \\({esc(str(r_final))}R\\): `${raw(d(final))}` → fechar 50%\n\n"
@@ -1530,10 +1494,9 @@ async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
         by_vol=sorted(all_pairs,key=lambda x:x[2],reverse=True)
         top_vol=[(s,b,v) for s,b,v,_ in by_vol if v>=min_vol_m*1e6][:max_pairs]
 
-        # Top gainers do dia (≥4% e volume mínimo $200k) — pega pumps em andamento,
-        # incluindo moedas de baixa liquidez recém-impulsionadas (ex: ALLO, SKYAI, GWEI, HOME)
+        # Top gainers do dia (≥5% e volume mínimo $500k) — pega pumps em andamento
         by_gain=sorted(all_pairs,key=lambda x:x[3],reverse=True)
-        top_gain=[(s,b,v) for s,b,v,p in by_gain if p>=4.0 and v>=200_000][:80]
+        top_gain=[(s,b,v) for s,b,v,p in by_gain if p>=5.0 and v>=500_000][:50]
 
         # Combina e deduplica mantendo top_vol primeiro
         seen={s for s,_,_ in top_vol}
@@ -1546,33 +1509,6 @@ async def fetch_top_usdt_pairs(session, min_vol_m=1.0, max_pairs=400):
         return combined
     except Exception as e:
         log.warning(f"Scanner: erro ao buscar pares — {e}"); return []
-
-async def fetch_pump_movers(session, min_pct=10.0, min_vol=300_000, max_n=10):
-    """Maiores altas das últimas 24h no MEXC — pra alertar mesmo quando o ATR%
-    é alto demais pro bot operar (essas moedas não entram no scan de sinais)."""
-    url="https://api.mexc.com/api/v3/ticker/24hr"
-    try:
-        async with session.get(url,timeout=aiohttp.ClientTimeout(total=15)) as r:
-            data=await r.json()
-        if not isinstance(data,list): return []
-        movers=[]
-        for t in data:
-            sym=t.get("symbol","")
-            if not sym.endswith("USDT"): continue
-            base=sym[:-4]
-            if base in _EXCLUDE: continue
-            if any(sub in base for sub in _EXCLUDE_SUB): continue
-            try:
-                pct  = float(t.get("priceChangePercent","0"))
-                vol  = float(t.get("quoteVolume","0"))
-                price= float(t.get("lastPrice","0"))
-            except: continue
-            if pct >= min_pct and vol >= min_vol and price > 0:
-                movers.append((base,pct,price,vol))
-        movers.sort(key=lambda x:x[1],reverse=True)
-        return movers[:max_n]
-    except Exception as e:
-        log.warning(f"Pump radar: erro ao buscar — {e}"); return []
 
 def quick_rank(candles):
     """Score rápido para ranquear moedas candidatas. Retorna 0 se não serve."""
@@ -1695,7 +1631,7 @@ async def run_cycle(session, last_sig, tf, coins):
         h4_vol  = r4.get("v_strong", False) or r4.get("obv_bull", False)
         h4_vols = r4.get("v_strong", False) or r4.get("obv_bear", False)
         h4_bull = (r4["score"] > 15 and r4.get("tbull_r", False) and
-                   r4["adx"] >= 13 and h4_rsi < 65 and h4_vol)
+                   r4["adx"] >= 13 and h4_rsi < (75 if r4["adx"] > 30 else 65) and h4_vol)
         h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
                    h4_vols and r4["score"] < -15 and h4_rsi > 43)
         # Só bloqueia se H4 for FORTEMENTE oposto (score < -30 para LONG, > 30 para SHORT)
@@ -1722,10 +1658,10 @@ async def run_cycle(session, last_sig, tf, coins):
 
         log.info(f"[{tf}] {short:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_up'] else 'DN'} | Grade:{grade} | {result['sig_source'] or result['sig'] or '—'}")
         if result["sig"]:
-            # Piso único: qualquer grade passa desde que o score seja >= 40
-            if abs(result["score"]) < 40:
-                log.info(f"  ⚠️ {short} ignorado — score {result['score']:+d} < 40")
-                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"score-baixo"))
+            # Grade A/S sempre passam; Grade B só se o score for muito alto (≥90 — meio-termo)
+            if grade == "B" and abs(result["score"]) < 90:
+                log.info(f"  ⚠️ {short} Grade B ignorado — score {result['score']:+d} < 90 (meio-termo)")
+                candidates.append((abs(result["score"]),short,result["score"],result["rsi"],result["adx"],"grade-B"))
                 continue
             # H4 direction filter (H1 apenas)
             if tf == "1h" and not _h4_ok(h4c, result["sig"]):
@@ -1861,7 +1797,8 @@ async def run_mtf_cycle(session, last_sig, coins):
         btc_p    = btc_c[-1]
         btc_rsi  = rsi_calc(btc_c[-50:])
         btc_bull_filter = btc_p > btc_e21 > btc_e50 and btc_p > btc_e200 * 0.98
-        btc_bear_filter = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02
+        # Só bloqueia LONGs se BTC estiver em queda ativa (RSI < 45) — não apenas abaixo das EMAs
+        btc_bear_filter = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02 and btc_rsi < 45
         btc_rsi_heat  = btc_rsi > 72   # BTC sobrecomprado — risco LONG elevado
         btc_rsi_panic = btc_rsi < 28   # BTC sobrevendido  — risco SHORT elevado
         log.info(f"[MTF] BTC 4H: {'BULL ↑' if btc_bull_filter else 'BEAR ↓' if btc_bear_filter else 'NEUTRO'} | RSI {btc_rsi:.0f}{'🔥' if btc_rsi_heat else '🧊' if btc_rsi_panic else ''} | ${btc_p:.0f}")
@@ -1882,7 +1819,7 @@ async def run_mtf_cycle(session, last_sig, coins):
         h4_vol   = r4h.get("v_strong", False) or r4h.get("obv_bull", False)
         h4_vol_s = r4h.get("v_strong", False) or r4h.get("obv_bear", False)
         h4_bull  = (r4h["score"] > 15 and r4h.get("tbull_r", False) and
-                    r4h["adx"] >= 13 and h4_rsi < 65 and h4_vol)
+                    r4h["adx"] >= 13 and h4_rsi < (75 if r4h["adx"] > 30 else 65) and h4_vol)
         h4_bear  = (r4h.get("tbear_r", False) and r4h["adx"] >= 13 and
                     h4_vol_s and r4h["score"] < -15 and h4_rsi > 43)
         if not (h4_bull or h4_bear):
@@ -2110,19 +2047,6 @@ async def main():
                 log.info(f"✅ Ciclo #{cycle} concluído. Sinais: {total}")
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{cycle}: {e}")
-
-            # Radar de pumps — moedas disparando >10% que o bot não opera (ATR% alto p/ banca)
-            try:
-                pa_key = "_pump_alert"
-                if time.time() - last_sig.get(pa_key, 0) >= 7200:
-                    movers = await fetch_pump_movers(session)
-                    if movers:
-                        ok = await send_pump_alert(session, movers)
-                        if ok:
-                            last_sig[pa_key] = time.time()
-                            save_state(last_sig)
-            except Exception as e:
-                log.warning(f"Pump alert ciclo #{cycle}: {e}")
 
             if LOOP_MODE and cycle % 5 == 0:
                 log.info(f"💓 Ciclo #{cycle} | {len(active_coins)} moedas")
