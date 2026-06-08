@@ -138,17 +138,18 @@ def _pontuar_rapido(candles):
         _, _, adx, _ = calcular_adx(candles[-60:])
     except Exception:
         return 0
-    if adx < 12:
+    if adx < 15:
         return 0
 
     e200 = serie_ema(fechamentos, 200)[-1]
-    tendencia_ok = abs(preco - e200) / e200 > 0.01
+    dist_e200 = abs(preco - e200) / max(e200, 1e-10)
+    tendencia_score = min(25, dist_e200 * 400)  # 0% → 0pts, 2.5% → 10pts, 6.25%+ → 25pts
 
     vol_ma = sum(volumes[-20:]) / 20
     vol_ok = volumes[-1] > vol_ma * 1.2
 
     atr_ideal = max(0, 25 - abs(atr_pct - 1.5) * 8)
-    score = adx * 0.40 + (20 if tendencia_ok else 0) + (15 if vol_ok else 0) + atr_ideal
+    score = adx * 0.40 + tendencia_score + (15 if vol_ok else 0) + atr_ideal
     return score
 
 
@@ -163,10 +164,13 @@ def _bonus_institucional(candles):
     except Exception:
         return 0, "FRACO"
     score_inst = max(ind["score_inst_long"], ind["score_inst_short"])
-    if score_inst >= 85: return 25, "ELITE"
-    if score_inst >= 70: return 15, "FORTE"
-    if score_inst >= 55: return 5,  "MÉDIO"
-    return 0, "FRACO"
+    direcional  = ind["tbull_r"] or ind["tbear_r"]
+    tend_forte  = ind["tendencia_bull"] or ind["tendencia_bear"]
+    bonus_dir   = 8 if tend_forte else (4 if direcional else 0)
+    if score_inst >= 85: return 25 + bonus_dir, "ELITE"
+    if score_inst >= 70: return 15 + bonus_dir, "FORTE"
+    if score_inst >= 55: return  5 + bonus_dir, "MÉDIO"
+    return bonus_dir, "FRACO"
 
 
 async def escanear_melhores_moedas(session, tf="15m", top_n=20):

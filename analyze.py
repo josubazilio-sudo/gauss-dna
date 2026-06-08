@@ -483,15 +483,15 @@ def detectar_sinais(ind):
     # ── FLEX — pullback ───────────────────────────────────────────────────────
     tbull_r = i["tbull_r"]; tbear_r = i["tbear_r"]
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
-                      i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
-                      i["rsi"] < 65 and i["score_inst_long"] >= 65 and
-                      i["seguro_long"] and i["trendilo_long"] and
+                      i["dna_flex_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
+                      i["rsi"] < 65 and i["score_inst_long"] >= 60 and
+                      i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
                       i["e200_inclinada_up"] and
                       (i["reteste_mm50_bull"] or i["correcao_bull"] or i["liq_fundo"]))
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
-                      i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
-                      i["rsi"] > 43 and i["score_inst_short"] >= 65 and
-                      i["seguro_short"] and i["trendilo_short"] and
+                      i["dna_flex_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
+                      i["rsi"] > 43 and i["score_inst_short"] >= 60 and
+                      i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]) and
                       i["e200_inclinada_down"] and
                       (i["reteste_mm50_bear"] or i["correcao_bear"] or i["liq_topo"]))
 
@@ -555,11 +555,11 @@ def detectar_sinais(ind):
 
     # ── Rebound RSI ───────────────────────────────────────────────────────────
     long_rebound  = (i["rsi_spike_long"]  and i["rsi_rebound_long"]  and i["ha_bull"] and
-                     i["dna_flow_bull"] and i["trendilo_long"]  and i["adx"] > 20 and
+                     i["dna_flex_bull"] and i["trendilo_long"]  and i["adx"] > 20 and
                      i["v_bom"] and i["kalman_subindo"]  and not i["lateralizado"] and
                      i["seguro_long"]  and i["nao_ext_long_tight"])
     short_rebound = (i["rsi_dip_short"]   and i["rsi_rebound_short"] and i["ha_bear"] and
-                     i["dna_flow_bear"] and i["trendilo_short"] and i["adx"] > 20 and
+                     i["dna_flex_bear"] and i["trendilo_short"] and i["adx"] > 20 and
                      i["v_bom"] and not i["kalman_subindo"] and not i["lateralizado"] and
                      i["seguro_short"] and (i["e21"] - i["preco"]) / i["atr"] < 2.5)
 
@@ -580,13 +580,13 @@ def detectar_sinais(ind):
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 0.5 and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  (i["liq_long"] or i["liq_fundo"]) and
+                  (i["liq_long"] or i["liq_fundo"] or (i["obv_bull"] and i["score"] >= 55)) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  (i["liq_short"] or i["liq_topo"]) and
+                  (i["liq_short"] or i["liq_topo"] or (i["obv_bear"] and i["score"] <= -55)) and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
