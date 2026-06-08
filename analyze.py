@@ -459,11 +459,11 @@ def detectar_sinais(ind):
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
                       i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
                       i["rsi"] < 65 and i["score_inst_long"] >= 50 and
-                      i["seguro_long"] and i["trendilo_long"])
+                      i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"])
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
                       i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
                       i["rsi"] > 43 and i["score_inst_short"] >= 50 and
-                      i["seguro_short"] and i["trendilo_short"])
+                      i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"])
 
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
