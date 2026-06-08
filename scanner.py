@@ -7,6 +7,7 @@ import logging
 import aiohttp
 from coins import _EXCLUIR, _EXCLUIR_SUFIXO
 from indicators import serie_ema, serie_atr, calcular_adx
+from analyze import calcular_indicadores
 
 log = logging.getLogger("GAUSS+DNA")
 
@@ -151,6 +152,23 @@ def _pontuar_rapido(candles):
     return score
 
 
+def _bonus_institucional(candles):
+    """Calcula o Score Inst real (mesmo critério usado na graduação dos sinais) e
+    devolve um bônus de ranking — moedas com forte convicção institucional sobem
+    na lista de monitoramento mesmo perdendo em volume bruto para outras."""
+    try:
+        ind = calcular_indicadores(candles)
+        if ind is None:
+            return 0, "FRACO"
+    except Exception:
+        return 0, "FRACO"
+    score_inst = max(ind["score_inst_long"], ind["score_inst_short"])
+    if score_inst >= 85: return 25, "ELITE"
+    if score_inst >= 70: return 15, "FORTE"
+    if score_inst >= 55: return 5,  "MÉDIO"
+    return 0, "FRACO"
+
+
 async def escanear_melhores_moedas(session, tf="15m", top_n=20):
     """Varre o mercado e retorna as top_n moedas com melhores condições agora."""
     log.info(f"🔍 Rastreador iniciado — buscando melhores moedas [{tf}]...")
@@ -165,7 +183,8 @@ async def escanear_melhores_moedas(session, tf="15m", top_n=20):
             if candles:
                 s = _pontuar_rapido(candles)
                 if s > 0:
-                    return (sym, f"{base}/USDT", base, s, vol_usd)
+                    bonus, cls_inst = _bonus_institucional(candles)
+                    return (sym, f"{base}/USDT", base, s + bonus, vol_usd, cls_inst)
         except Exception:
             pass
         return None
@@ -178,12 +197,12 @@ async def escanear_melhores_moedas(session, tf="15m", top_n=20):
         for r in resultados:
             if r:
                 pontuados.append(r)
-                log.info(f"  ✓ {r[2]:8s} | Score {r[3]:.0f} | Vol ${r[4]/1e6:.0f}M")
+                log.info(f"  ✓ {r[2]:8s} | Score {r[3]:.0f} | Inst {r[5]:6s} | Vol ${r[4]/1e6:.0f}M")
         if i + tamanho_lote < len(pares):
             await asyncio.sleep(0.05)
 
     pontuados.sort(key=lambda x: x[3], reverse=True)
-    top = [(s, l, b) for s, l, b, _, _ in pontuados[:top_n]]
+    top = [(s, l, b) for s, l, b, _, _, _ in pontuados[:top_n]]
     if not top:
         return None
 
