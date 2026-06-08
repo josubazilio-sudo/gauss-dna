@@ -559,12 +559,16 @@ def detectar_sinais(ind):
                      i["seguro_short"] and (i["e21"] - i["preco"]) / i["atr"] < 2.5)
 
     # ── Divergência RSI ───────────────────────────────────────────────────────
+    # Sem piso de ADX nem checagem de lateralização, "divergência" é só ruído de
+    # RSI oscilando num range — por isso exige tendência mínima e mercado fora de squeeze
     long_div  = (i["rsi_div_bull"] and i["ha_bull"] and i["v_bom"] and
                  i["rsi"] > 25 and i["rsi"] < 65 and not i["exaustao_topo"] and
+                 i["adx"] > 15 and not i["lateralizado"] and i["preco"] > i["e200"] and
                  i["score_inst_long"] >= 55)
     short_div = (i["rsi_div_bear"] and i["ha_bear"] and i["v_bom"] and
                  i["rsi"] > 46 and i["rsi"] < 70 and i["preco"] < i["e200"] and
-                 not i["exaustao_fund"] and i["score_inst_short"] >= 55)
+                 not i["exaustao_fund"] and i["adx"] > 15 and not i["lateralizado"] and
+                 i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
     long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
@@ -591,11 +595,12 @@ def detectar_sinais(ind):
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50)
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
-    long_scout  = (i["score"] >= 40 and i["ha_bull"] and i["macd_bull_r"] and i["adx"] >= 11 and
+    # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
+    long_scout  = (i["score"] >= 40 and i["ha_bull"] and i["macd_bull_r"] and i["adx"] >= 15 and
                    not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                    i["vol_nao_fade"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
                    (i["dna_flow_bull"] or i["trendilo_long"] or i["kalman_subindo"]))
-    short_scout = (i["score"] <= -40 and i["ha_bear"] and i["macd_bear_r"] and i["adx"] >= 11 and
+    short_scout = (i["score"] <= -40 and i["ha_bear"] and i["macd_bear_r"] and i["adx"] >= 15 and
                    not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                    i["vol_nao_fade"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
                    (i["dna_flow_bear"] or i["trendilo_short"] or not i["kalman_subindo"]))
@@ -664,6 +669,17 @@ def graduar_sinal(ind, sinal):
     elif pts >= 14: grade = "S"
     elif pts >= 11: grade = "A"
     else:           grade = "B"
+
+    # Trava de coerência: "Setup perfeito" não pode conviver com Score Inst
+    # MÉDIO/FRACO nem com RSI já esticado na direção da entrada — sinais assim
+    # têm convicção real menor e não merecem o selo S/S+ (caso do SOL: Grade S
+    # com Score Inst 65 MÉDIO e RSI 69 que reverteu na entrada)
+    if grade in ("S", "S+"):
+        score_inst = i["score_inst_long"] if sinal == "LONG" else i["score_inst_short"]
+        rsi_esticado = (sinal == "LONG" and i["rsi"] > 65) or (sinal == "SHORT" and i["rsi"] < 35)
+        if score_inst < 70 or rsi_esticado:
+            grade = "A"
+
     return grade, pts
 
 
