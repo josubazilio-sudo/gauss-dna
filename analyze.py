@@ -534,12 +534,16 @@ def detectar_sinais(ind):
                      i["seguro_short"] and (i["e21"] - i["preco"]) / i["atr"] < 2.5)
 
     # ── Divergência RSI ───────────────────────────────────────────────────────
+    # Sem piso de ADX nem checagem de lateralização, "divergência" é só ruído de
+    # RSI oscilando num range — por isso exige tendência mínima e mercado fora de squeeze
     long_div  = (i["rsi_div_bull"] and i["ha_bull"] and i["v_bom"] and
                  i["rsi"] > 25 and i["rsi"] < 65 and not i["exaustao_topo"] and
+                 i["adx"] > 15 and not i["lateralizado"] and i["preco"] > i["e200"] and
                  i["score_inst_long"] >= 55)
     short_div = (i["rsi_div_bear"] and i["ha_bear"] and i["v_bom"] and
                  i["rsi"] > 46 and i["rsi"] < 70 and i["preco"] < i["e200"] and
-                 not i["exaustao_fund"] and i["score_inst_short"] >= 55)
+                 not i["exaustao_fund"] and i["adx"] > 15 and not i["lateralizado"] and
+                 i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
     long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
