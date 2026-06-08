@@ -1,0 +1,251 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// GAUSS+DNA — MA50 Pullback Strategy  |  Pine Script v5
+// Estratégia: continuação de tendência após correção/reteste na MM50
+// ═══════════════════════════════════════════════════════════════════════════
+//@version=5
+strategy("GAUSS+DNA — MA50 Pullback",
+     shorttitle        = "GAUSS MA50",
+     overlay           = true,
+     default_qty_type  = strategy.percent_of_equity,
+     default_qty_value = 2,
+     commission_type   = strategy.commission.percent,
+     commission_value  = 0.1,
+     initial_capital   = 400,
+     calc_on_every_tick = false)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+var string G1 = "── Médias Móveis"
+var string G2 = "── Filtros de Entrada"
+var string G3 = "── Gestão de Risco"
+var string G4 = "── Filtros de Proteção"
+
+mm50_len   = input.int(50,  "MM50 Período",  minval=1,  group=G1)
+mm200_len  = input.int(200, "MM200 Período", minval=50, group=G1)
+slope_bars = input.int(5,   "MM200 — barras para medir inclinação", minval=1, group=G1)
+
+rsi_len  = input.int(14, "RSI Período",    minval=2,  group=G2)
+vol_len  = input.int(20, "Volume MA",      minval=1,  group=G2)
+corr_min = input.float(2.0, "Correção mín (%)", minval=0.5, step=0.5, group=G2)
+corr_max = input.float(6.0, "Correção máx (%)", minval=1.0, step=0.5, group=G2)
+
+atr_len     = input.int(14,  "ATR Período",    minval=1,   group=G3)
+atr_mult_sl = input.float(1.5, "Stop — ATR ×", minval=0.5, step=0.1, group=G3)
+tp1_rr      = input.float(2.0, "TP1 — R:R",    minval=1.0, step=0.1, group=G3)
+
+max_dist_mm50  = input.float(8.0, "Distância máx preço→MM50 (%)",        minval=1.0, step=0.5, group=G4)
+min_dist_mms   = input.float(2.0, "Distância mín MM50↔MM200 (% lateral)", minval=0.5, step=0.5, group=G4)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INDICADORES BASE
+// ─────────────────────────────────────────────────────────────────────────────
+mm50   = ta.ema(close, mm50_len)
+mm200  = ta.ema(close, mm200_len)
+rsi    = ta.rsi(close, rsi_len)
+atr    = ta.atr(atr_len)
+vol_ma = ta.sma(volume, vol_len)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTRO DE TENDÊNCIA
+// ─────────────────────────────────────────────────────────────────────────────
+mm200_subindo  = mm200 > mm200[slope_bars]
+mm200_descendo = mm200 < mm200[slope_bars]
+
+tend_bull = close > mm50 and mm50 > mm200 and mm200_subindo
+tend_bear = close < mm50 and mm50 < mm200 and mm200_descendo
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTRO DE MERCADO LATERAL
+// ─────────────────────────────────────────────────────────────────────────────
+dist_mms    = math.abs(mm50 - mm200) / mm200 * 100
+rsi_neutro  = rsi > 45 and rsi < 55
+nao_lateral = dist_mms >= min_dist_mms and not (rsi_neutro and volume < vol_ma)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PULLBACK — pelo menos 1 condição obrigatória
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. Reteste da MM50 (mínima/máxima tocou ±1.5% da MM50 nas últimas 6 velas)
+low6  = ta.lowest(low,  6)
+high6 = ta.highest(high, 6)
+reteste_bull = low6  <= mm50 * 1.015 and low6  >= mm50 * 0.980
+reteste_bear = high6 >= mm50 * 0.985 and high6 <= mm50 * 1.020
+
+// 2. Sweep de liquidez (varredura da mínima/máxima anterior com recuperação)
+sweep_low  = low[1]  < low[2]  and close > low[2]
+sweep_high = high[1] > high[2] and close < high[2]
+
+// 3. Correção percentual entre corr_min% e corr_max%
+max7          = ta.highest(high, 7)[1]
+min7          = ta.lowest(low,  7)[1]
+corr_bull_pct = (max7 - close) / max7 * 100
+corr_bear_pct = (close - min7) / close * 100
+corr_bull     = corr_bull_pct >= corr_min and corr_bull_pct <= corr_max
+corr_bear     = corr_bear_pct >= corr_min and corr_bear_pct <= corr_max
+
+// 4. RSI abaixo/acima de 50
+rsi_pullback_bull = rsi < 50
+rsi_pullback_bear = rsi > 50
+
+pullback_bull = reteste_bull or sweep_low  or corr_bull or rsi_pullback_bull
+pullback_bear = reteste_bear or sweep_high or corr_bear or rsi_pullback_bear
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIRMAÇÃO DE ENTRADA — todas obrigatórias
+// ─────────────────────────────────────────────────────────────────────────────
+rsi_vira_up   = rsi > rsi[1]
+rsi_vira_down = rsi < rsi[1]
+vol_ok        = volume > vol_ma
+fechou_acima  = close > high[1] and close > mm50   // candle fechou acima do anterior
+fechou_abaixo = close < low[1]  and close < mm50
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTROS DE PROTEÇÃO — todos obrigatórios
+// ─────────────────────────────────────────────────────────────────────────────
+vol_diminuindo = volume < volume[1] and volume[1] < volume[2]
+
+corpo       = math.abs(close - open)
+forte_bull  = close > open and corpo > atr * 0.5
+forte_bear  = close < open and corpo > atr * 0.5
+consec_bull = forte_bull  and forte_bull[1]  and forte_bull[2]   // 3+ candles fortes de alta
+consec_bear = forte_bear  and forte_bear[1]  and forte_bear[2]   // 3+ candles fortes de baixa
+
+dist_p_mm50_l = (close - mm50) / mm50 * 100                     // % acima da MM50
+dist_p_mm50_s = (mm50 - close) / mm50 * 100                     // % abaixo da MM50
+perto_mm50_l  = dist_p_mm50_l < max_dist_mm50
+perto_mm50_s  = dist_p_mm50_s < max_dist_mm50
+
+prot_long  = rsi < 70 and perto_mm50_l and not consec_bull and not vol_diminuindo
+prot_short = rsi > 30 and perto_mm50_s and not consec_bear and not vol_diminuindo
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SINAIS FINAIS
+// ─────────────────────────────────────────────────────────────────────────────
+sinal_long  = tend_bull and pullback_bull and rsi_vira_up   and vol_ok and fechou_acima  and prot_long  and nao_lateral
+sinal_short = tend_bear and pullback_bear and rsi_vira_down and vol_ok and fechou_abaixo and prot_short and nao_lateral
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GESTÃO DE POSIÇÃO
+// ─────────────────────────────────────────────────────────────────────────────
+var float entry_price  = na
+var float stop_price   = na
+var float tp1_price    = na
+var bool  tp1_atingido = false
+
+// LONG — entrada
+if sinal_long and strategy.position_size == 0
+    strategy.entry("LONG", strategy.long, comment="▲ LONG")
+    entry_price  := close
+    stop_price   := math.min(ta.lowest(low, 5)[1], close - atr * atr_mult_sl)
+    tp1_price    := close + (close - stop_price) * tp1_rr
+    tp1_atingido := false
+
+// SHORT — entrada
+if sinal_short and strategy.position_size == 0
+    strategy.entry("SHORT", strategy.short, comment="▼ SHORT")
+    entry_price  := close
+    stop_price   := math.max(ta.highest(high, 5)[1], close + atr * atr_mult_sl)
+    tp1_price    := close - (stop_price - close) * tp1_rr
+    tp1_atingido := false
+
+// LONG — TP1 (50%) e depois mover stop para entrada
+if strategy.position_size > 0
+    if not tp1_atingido and high >= tp1_price
+        strategy.close("LONG", qty_percent=50, comment="✅ TP1")
+        stop_price   := entry_price    // breakeven
+        tp1_atingido := true
+
+    // Saída TP2 dinâmica: perdeu MM50 ou RSI cruzou para baixo de 50
+    if tp1_atingido and (close < mm50 or (rsi < 50 and rsi < rsi[1]))
+        strategy.close("LONG", comment="🎯 TP2 — MM50")
+
+    // Stop loss
+    if low <= stop_price
+        strategy.close("LONG", comment="🛑 Stop")
+
+// SHORT — TP1 (50%) e depois mover stop para entrada
+if strategy.position_size < 0
+    if not tp1_atingido and low <= tp1_price
+        strategy.close("SHORT", qty_percent=50, comment="✅ TP1")
+        stop_price   := entry_price
+        tp1_atingido := true
+
+    // Saída TP2 dinâmica: recuperou MM50 ou RSI cruzou para cima de 50
+    if tp1_atingido and (close > mm50 or (rsi > 50 and rsi > rsi[1]))
+        strategy.close("SHORT", comment="🎯 TP2 — MM50")
+
+    // Stop loss
+    if high >= stop_price
+        strategy.close("SHORT", comment="🛑 Stop")
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLOTS — Médias Móveis
+// ─────────────────────────────────────────────────────────────────────────────
+plot(mm50,  "MM50",  color=color.new(color.orange, 0), linewidth=2)
+plot(mm200, "MM200", color=color.new(color.white,  0), linewidth=3)
+
+// Fundo de tendência
+bgcolor(tend_bull  ? color.new(color.green, 92) :
+        tend_bear  ? color.new(color.red,   92) : na,
+        title="Fundo — Tendência")
+
+// Zona lateral
+bgcolor(not nao_lateral ? color.new(color.gray, 88) : na, title="Fundo — Lateral")
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLOTS — Sinais
+// ─────────────────────────────────────────────────────────────────────────────
+plotshape(sinal_long,
+     title    = "Sinal LONG",
+     style    = shape.triangleup,
+     location = location.belowbar,
+     color    = color.new(color.lime, 0),
+     size     = size.normal,
+     text     = "L")
+
+plotshape(sinal_short,
+     title    = "Sinal SHORT",
+     style    = shape.triangledown,
+     location = location.abovebar,
+     color    = color.new(color.red, 0),
+     size     = size.normal,
+     text     = "S")
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLOTS — Níveis de Stop, TP1 e TP2 da posição aberta
+// ─────────────────────────────────────────────────────────────────────────────
+em_posicao = strategy.position_size != 0
+
+plot(em_posicao ? stop_price : na, "Stop Loss",
+     color=color.new(color.red,    0), style=plot.style_linebr, linewidth=1)
+plot(em_posicao and not tp1_atingido ? tp1_price : na, "TP1",
+     color=color.new(color.yellow, 0), style=plot.style_linebr, linewidth=1)
+plot(em_posicao and tp1_atingido ? mm50 : na, "TP2 — MM50",
+     color=color.new(color.teal,   0), style=plot.style_linebr, linewidth=1)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LABELS — informações do sinal
+// ─────────────────────────────────────────────────────────────────────────────
+if sinal_long
+    risco_txt = str.tostring(math.round((close - math.min(ta.lowest(low, 5)[1], close - atr * atr_mult_sl)) / close * 100, 2))
+    label.new(bar_index, low * 0.998,
+         text  = "LONG\nRisco " + risco_txt + "%\nStop: " + str.tostring(math.round(math.min(ta.lowest(low, 5)[1], close - atr * atr_mult_sl), 4)),
+         style = label.style_label_up,
+         color = color.new(color.lime, 20),
+         textcolor = color.black,
+         size  = size.small)
+
+if sinal_short
+    risco_txt = str.tostring(math.round((math.max(ta.highest(high, 5)[1], close + atr * atr_mult_sl) - close) / close * 100, 2))
+    label.new(bar_index, high * 1.002,
+         text  = "SHORT\nRisco " + risco_txt + "%\nStop: " + str.tostring(math.round(math.max(ta.highest(high, 5)[1], close + atr * atr_mult_sl), 4)),
+         style = label.style_label_down,
+         color = color.new(color.red, 20),
+         textcolor = color.white,
+         size  = size.small)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ALERTAS
+// ─────────────────────────────────────────────────────────────────────────────
+alertcondition(sinal_long,  "GAUSS — LONG",  "🟢 LONG confirmado — MA50 Pullback")
+alertcondition(sinal_short, "GAUSS — SHORT", "🔴 SHORT confirmado — MA50 Repique")
