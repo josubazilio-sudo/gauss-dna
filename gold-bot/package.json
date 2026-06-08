@@ -1,11 +1,10 @@
 {
-  "name": "gauss-dna-bots",
+  "name": "gold-h4-bot",
   "version": "1.0.0",
-  "description": "Bots de sinais H4 — Cripto e Ouro",
-  "main": "gold_h4_bot.js",
+  "description": "Bot de sinais H4 para Ouro (XAUUSDT) — Trend Master Flow",
+  "main": "bot.js",
   "scripts": {
-    "ouro": "node gold_h4_bot.js",
-    "cripto": "node h4_bot.js"
+    "start": "node bot.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
