@@ -183,6 +183,24 @@ def calcular_indicadores(candles):
     pullback_bull = (_minima_tocou_ema(e10_arr) or _minima_tocou_ema(e21_arr)) and preco > e10 and preco > aberturas[-1] and ha_bull
     pullback_bear = (_maxima_tocou_ema(e10_arr) or _maxima_tocou_ema(e21_arr)) and preco < e10 and preco < aberturas[-1] and ha_bear
 
+    # ── MA50 strategy indicators ──────────────────────────────────────────────
+    e200_inclinada_up   = e200_arr[-1] > e200_arr[-6] if len(e200_arr) >= 6 else False
+    e200_inclinada_down = e200_arr[-1] < e200_arr[-6] if len(e200_arr) >= 6 else False
+
+    reteste_mm50_bull = any(
+        minimas[i] <= e50_arr[i] * 1.015 and minimas[i] >= e50_arr[i] * 0.980
+        for i in range(-7, -1)
+    )
+    reteste_mm50_bear = any(
+        maximas[i] >= e50_arr[i] * 0.985 and maximas[i] <= e50_arr[i] * 1.020
+        for i in range(-7, -1)
+    )
+
+    max_recente6 = max(maximas[-7:-1])
+    min_recente6 = min(minimas[-7:-1])
+    correcao_bull = 0.02 <= (max_recente6 - preco) / max(max_recente6, 1e-10) <= 0.06
+    correcao_bear = 0.02 <= (preco - min_recente6) / max(preco, 1e-10) <= 0.06
+
     range_vela = maximas[-1] - minimas[-1]
     sombra_sup = (maximas[-1] - max(aberturas[-1], preco)) / max(range_vela, 1e-10)
     sombra_inf = (min(aberturas[-1], preco) - minimas[-1]) / max(range_vela, 1e-10)
@@ -389,6 +407,9 @@ def calcular_indicadores(candles):
         "bb_squeeze": bb_squeeze, "bb_expand": bb_expand,
         "bb_break_long": bb_break_long, "bb_break_short": bb_break_short,
         # Padrões
+        "e200_inclinada_up": e200_inclinada_up, "e200_inclinada_down": e200_inclinada_down,
+        "reteste_mm50_bull": reteste_mm50_bull, "reteste_mm50_bear": reteste_mm50_bear,
+        "correcao_bull": correcao_bull, "correcao_bear": correcao_bear,
         "pullback_bull": pullback_bull, "pullback_bear": pullback_bear,
         "impulso_bull": impulso_bull, "impulso_bear": impulso_bear,
         "liq_long": liq_long, "liq_short": liq_short,
@@ -458,12 +479,16 @@ def detectar_sinais(ind):
     tbull_r = i["tbull_r"]; tbear_r = i["tbear_r"]
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
                       i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
-                      i["rsi"] < 65 and i["score_inst_long"] >= 50 and
-                      i["seguro_long"] and i["trendilo_long"])
+                      i["rsi"] < 65 and i["score_inst_long"] >= 65 and
+                      i["seguro_long"] and i["trendilo_long"] and
+                      i["e200_inclinada_up"] and
+                      (i["reteste_mm50_bull"] or i["correcao_bull"] or i["liq_fundo"]))
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
                       i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
-                      i["rsi"] > 43 and i["score_inst_short"] >= 50 and
-                      i["seguro_short"] and i["trendilo_short"])
+                      i["rsi"] > 43 and i["score_inst_short"] >= 65 and
+                      i["seguro_short"] and i["trendilo_short"] and
+                      i["e200_inclinada_down"] and
+                      (i["reteste_mm50_bear"] or i["correcao_bear"] or i["liq_topo"]))
 
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
@@ -586,26 +611,10 @@ def detectar_sinais(ind):
             (short_pullback, "SHORT", "PULLBACK"),
             (long_cross,     "LONG",  f"CROSS:{i['label_cross']}"),
             (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
-            (long_bb_break,  "LONG",  "BB_BREAK"),
-            (short_bb_break, "SHORT", "BB_BREAK"),
             (long_sm,        "LONG",  "SM_SWEEP"),
             (short_sm,       "SHORT", "SM_SWEEP"),
             (long_reversal,  "LONG",  "REVERSAL"),
             (short_reversal, "SHORT", "REVERSAL"),
-            (long_surge,     "LONG",  "SURGE"),
-            (short_surge,    "SHORT", "SURGE"),
-            (long_momentum,  "LONG",  "MOMENTUM"),
-            (short_momentum, "SHORT", "MOMENTUM"),
-            (long_rebound,   "LONG",  "REBOUND"),
-            (short_rebound,  "SHORT", "REBOUND"),
-            (long_div,       "LONG",  "DIV"),
-            (short_div,      "SHORT", "DIV"),
-            (long_flex,      "LONG",  "FLEX"),
-            (short_flex,     "SHORT", "FLEX"),
-            (long_setup,     "LONG",  "SETUP"),
-            (short_setup,    "SHORT", "SETUP"),
-            (long_scout,     "LONG",  "SCOUT"),
-            (short_scout,    "SHORT", "SCOUT"),
         ]
         for condição, dir_, src in ordem:
             if condição:

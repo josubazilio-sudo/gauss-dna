@@ -195,6 +195,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     labels_grade = {
         "S+": "💎 GRADE S+ — Setup institucional",
         "S":  "🏆 GRADE S — Setup perfeito",
+        "A+": "🔥 GRADE A+ — Setup excelente",
         "A":  "⭐ GRADE A — Setup sólido",
         "B":  "📊 GRADE B — Setup básico",
     }

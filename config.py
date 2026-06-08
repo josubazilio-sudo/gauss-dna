@@ -29,10 +29,10 @@ SCANNER_TOP  = int(os.environ.get("SCANNER_TOP", "50"))   # top N moedas por vol
 SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "2"))     # rescan a cada N ciclos
 
 # ── Gestão de risco ───────────────────────────────────────────────────────────
-CAPITAL   = float(os.environ.get("CAPITAL",  "200"))    # capital total em USD
+CAPITAL   = float(os.environ.get("CAPITAL",  "400"))    # capital total em USD
 RISK_PCT  = float(os.environ.get("RISK_PCT", "0.03"))   # risco base por trade (3%)
 
-RISK_BY_GRADE = {"B": 0.02, "A": 0.03, "S": 0.05, "S+": 0.07}      # B=2%, A=3%, S=5%
+RISK_BY_GRADE = {"B": 0.02, "A": 0.03, "A+": 0.04, "S": 0.05, "S+": 0.07}
 RISK_SCOUT    = 0.01                                     # SCOUT = 1% (sinal secundário)
 
 MAX_CYCLE_RISK      = 0.10   # teto 10% de capital por ciclo
