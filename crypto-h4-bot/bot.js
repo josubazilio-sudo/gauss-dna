@@ -562,6 +562,33 @@ app.get("/saidas",    async (req, res) => { res.json({ ok: true }); await verifi
 app.get("/posicoes",  (req, res) => {
   res.json({ total: posicoesAbertas.size, posicoes: [...posicoesAbertas.entries()].map(([sym, lado]) => ({ sym, lado })) });
 });
+app.get("/teste", async (req, res) => {
+  const sinalTeste = {
+    symbol: "BTCUSDT", tipo: "COMPRA",
+    price: 105000, stop: 103425, tp1: 106575, tp_final: 109725,
+    e21: 104200, e50: 102800, rsi: 58.4, atr: 1050, adx: 28.6, score: 80,
+  };
+  const pos = calcPosicao(sinalTeste.price, sinalTeste.stop);
+  const agora = new Date().toLocaleString("pt-BR");
+  const msg =
+    `🧪 *[TESTE] COMPRA — BTCUSDT*\n\n` +
+    `🟢 *BTC/USDT* | 🕐 Gráfico: *H4*\n` +
+    `📈 Trend Master Flow — cruzamento EMA21/50\n\n` +
+    `💰 Entrada: \`$${fmtP(sinalTeste.price)}\`\n` +
+    `🛑 Stop: \`$${fmtP(sinalTeste.stop)}\` (1.5 ATR)\n` +
+    `🎯 TP1 (1.5R): \`$${fmtP(sinalTeste.tp1)}\` → fechar 50%\n` +
+    `🏆 TP Final (3.0R): \`$${fmtP(sinalTeste.tp_final)}\` → fechar 50%\n\n` +
+    `📐 *Gestão de risco (3% de R$${CAPITAL_BRL})*\n` +
+    `  Risco: \`$${pos.risco_usd}\` (R$${pos.risco_brl})\n` +
+    `  Spot: \`${pos.qty} BTC\` (~\`$${pos.valor_pos} USDT\`)\n` +
+    `  Alavancagem 5x: \`$${pos.margem_5x} colateral\`\n\n` +
+    `📊 Score: *${sinalTeste.score}/100* | RSI: ${sinalTeste.rsi} | ADX: ${sinalTeste.adx}\n` +
+    `⚠️ _Saída apenas na reversão H4_\n` +
+    `⏰ ${agora}`;
+  await enviarTelegram(msg);
+  log("INFO", "Mensagem de teste enviada");
+  res.json({ ok: true, msg });
+});
 app.get("/", (req, res) => {
   const pos = [...posicoesAbertas.entries()];
   res.send(`<h2>✅ Bot H4 Cripto — Trend Master Flow</h2>
