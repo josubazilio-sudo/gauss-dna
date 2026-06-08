@@ -185,9 +185,8 @@ plot(mm50,  "MM50",  color=color.new(color.orange, 0), linewidth=2)
 plot(mm200, "MM200", color=color.new(color.white,  0), linewidth=3)
 
 // Fundo de tendência
-bgcolor(tend_bull  ? color.new(color.green, 92) :
-        tend_bear  ? color.new(color.red,   92) : na,
-        title="Fundo — Tendência")
+cor_fundo = tend_bull ? color.new(color.green, 92) : tend_bear ? color.new(color.red, 92) : na
+bgcolor(cor_fundo, title="Fundo — Tendência")
 
 // Zona lateral
 bgcolor(not nao_lateral ? color.new(color.gray, 88) : na, title="Fundo — Lateral")
