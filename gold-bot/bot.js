@@ -8,6 +8,13 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const PORT   = process.env.PORT_GOLD || 3002;
 app.use(express.json());
 
+// ─── Gestão de risco ──────────────────────────────────────────────
+// R$500 ÷ 5.60 ≈ $89 USD  (ajuste BRL_RATE se necessário)
+const BRL_RATE    = parseFloat(process.env.BRL_RATE   || "5.60");
+const CAPITAL_BRL = parseFloat(process.env.CAPITAL_BRL || "500");
+const CAPITAL_USD = CAPITAL_BRL / BRL_RATE;
+const RISK_PCT    = parseFloat(process.env.RISK_PCT   || "0.03");  // 3% por trade
+
 // ─── Telegram ─────────────────────────────────────────────────────
 const bot = process.env.TELEGRAM_BOT_TOKEN
   ? new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false })
@@ -228,6 +235,22 @@ Responda em português:
 Máximo 5 linhas.`;
 }
 
+// ─── Cálculo de posição ───────────────────────────────────────────
+function calcPosicao(preco, stop) {
+  const risco_usd  = CAPITAL_USD * RISK_PCT;
+  const dist_stop  = Math.abs(preco - stop);
+  const qty_oz     = dist_stop > 0 ? risco_usd / dist_stop : 0;
+  const valor_pos  = qty_oz * preco;
+  const margem_5x  = valor_pos / 5;
+  return {
+    risco_usd:  +risco_usd.toFixed(2),
+    risco_brl:  +(risco_usd * BRL_RATE).toFixed(2),
+    qty_oz:     +qty_oz.toFixed(4),
+    valor_pos:  +valor_pos.toFixed(2),
+    margem_5x:  +margem_5x.toFixed(2),
+  };
+}
+
 // ─── Formatação de mensagens ──────────────────────────────────────
 function e(v) { return String(v ?? "N/A").replace(/[_*`[\]]/g, "\\$&"); }
 function fmtP(p) { return p != null ? p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "N/A"; }
@@ -235,6 +258,7 @@ function fmtP(p) { return p != null ? p.toLocaleString("en-US", { minimumFractio
 function msgEntrada(s, analise, lote) {
   const emoji     = s.tipo === "COMPRA" ? "🟡" : "🔴";
   const loteLabel = lote === 1 ? "Manhã" : lote === 2 ? "Tarde 13h" : "Tarde 17h";
+  const pos       = calcPosicao(s.price, s.stop);
   return `${emoji} *${e(s.tipo)} OURO — XAUUSDT*
 
 💰 Preço: \`$${fmtP(s.price)}\`
@@ -242,6 +266,12 @@ function msgEntrada(s, analise, lote) {
 🛑 Stop: \`$${fmtP(s.stop)}\`
 🎯 TP1: \`$${fmtP(s.tp1)}\` \\| TP Final: \`$${fmtP(s.tp_final)}\`
 📊 ADX: ${e(String(s.adx))} \\| Score: ${e(String(s.score))}
+
+📐 *Gestão de risco (3% de R\\$${CAPITAL_BRL})*
+  Risco: \`$${pos.risco_usd}\` \\(R\\$${pos.risco_brl}\\)
+  Quantidade: \`${pos.qty_oz} oz\` \\(~\`$${pos.valor_pos} USDT\`\\)
+  Alavancagem 5x: \`$${pos.margem_5x} colateral\`
+⚠️ _Saída apenas na reversão H4_
 
 🤖 *Análise Claude:*
 ${analise}`;
@@ -251,6 +281,7 @@ function msgConfirmacao(s, precoAtual, analise) {
   const var_   = precoAtual ? ((precoAtual - s.price) / s.price * 100).toFixed(2) : null;
   const varTxt = var_ !== null ? (parseFloat(var_) >= 0 ? `\\+${var_}%` : `${var_}%`) : "";
   const emoji  = s.tipo === "COMPRA" ? "🟡" : "🔴";
+  const pos    = calcPosicao(s.price, s.stop);
   return `${emoji} *${e(s.tipo)} OURO — XAUUSDT*
 
 💰 Preço: \`$${fmtP(s.price)}\` → \`$${fmtP(precoAtual)}\` _(${varTxt})_
@@ -258,6 +289,12 @@ function msgConfirmacao(s, precoAtual, analise) {
 🛑 Stop: \`$${fmtP(s.stop)}\`
 🎯 TP1: \`$${fmtP(s.tp1)}\` \\| TP Final: \`$${fmtP(s.tp_final)}\`
 📊 ADX: ${e(String(s.adx))} \\| Score: ${e(String(s.score))}
+
+📐 *Gestão de risco (3% de R\\$${CAPITAL_BRL})*
+  Risco: \`$${pos.risco_usd}\` \\(R\\$${pos.risco_brl}\\)
+  Quantidade: \`${pos.qty_oz} oz\` \\(~\`$${pos.valor_pos} USDT\`\\)
+  Alavancagem 5x: \`$${pos.margem_5x} colateral\`
+⚠️ _Saída apenas na reversão H4_
 
 🤖 *Análise Claude:*
 ${analise}`;
