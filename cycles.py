@@ -123,7 +123,10 @@ async def executar_ciclo(session, estado, tf, moedas):
             bloq_dir  = agora - estado.get(chave_dir, 0) < cooldown
             bloq_flip = agora - estado.get(chave_any, 0) < 7200
             if bloq_dir or bloq_flip:
-                mins = int((cooldown - (agora - estado.get(chave_dir, 0))) / 60)
+                if bloq_dir:
+                    mins = int((cooldown - (agora - estado.get(chave_dir, 0))) / 60)
+                else:
+                    mins = int((7200 - (agora - estado.get(chave_any, 0))) / 60)
                 log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "cooldown"))
@@ -145,13 +148,6 @@ async def executar_ciclo(session, estado, tf, moedas):
                 log.info(f"  📊 {abrev} SHORT bloqueado — correlação ({MAX_SHORT_PER_CYCLE}/ciclo)")
                 continue
 
-            estado[chave_dir] = agora; estado[chave_any] = agora
-            risco_ciclo   += pct_risco
-            scouts_enviados += 1 if fonte == "SCOUT" else 0
-            longs_enviados  += 1 if eh_long else 0
-            shorts_enviados += 0 if eh_long else 1
-            enviados += 1
-
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
                 "rvol":         result.get("rvol", 0.0),
@@ -162,11 +158,18 @@ async def executar_ciclo(session, estado, tf, moedas):
                 "liq_event":    ("LIQ FUNDO ↑" if result.get("liq_fundo") else
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
             }
-            await enviar_sinal(session, sym, label, abrev, result["sinal"],
-                               result["preco"], result["atr"], result["score"],
-                               result["rsi"], result["adx"], result["tendencia"],
-                               result["kalman_subindo"], result["swing_low"],
-                               result["swing_high"], result["fonte_sinal"], tf, grade, extra=extra)
+            ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
+                                    result["preco"], result["atr"], result["score"],
+                                    result["rsi"], result["adx"], result["tendencia"],
+                                    result["kalman_subindo"], result["swing_low"],
+                                    result["swing_high"], result["fonte_sinal"], tf, grade, extra=extra)
+            if ok:
+                estado[chave_dir] = agora; estado[chave_any] = agora
+                risco_ciclo   += pct_risco
+                scouts_enviados += 1 if fonte == "SCOUT" else 0
+                longs_enviados  += 1 if eh_long else 0
+                shorts_enviados += 0 if eh_long else 1
+                enviados += 1
         else:
             candidatos.append((result["score"], abrev, result["score"],
                                result["rsi"], result["adx"], result.get("fonte_sinal", "sem-sinal")))
@@ -308,7 +311,6 @@ async def executar_ciclo_mtf(session, estado, moedas):
 
             chave = f"{sym}_MTF"
             if agora - estado.get(chave, 0) >= cooldown_mtf:
-                estado[chave] = agora; enviados += 1
                 eh_long = result["sinal"] == "LONG"
                 extra = {
                     "rvol_label":   result.get("rvol_label", ""),
@@ -320,11 +322,13 @@ async def executar_ciclo_mtf(session, estado, moedas):
                     "liq_event":    ("LIQ FUNDO ↑" if r4h.get("liq_fundo") else
                                      "LIQ TOPO ↓"  if r4h.get("liq_topo")  else ""),
                 }
-                await enviar_sinal(session, sym, label, abrev, result["sinal"],
-                                   result["preco"], result["atr"], r4h["score"],
-                                   result["rsi"], result["adx"], result["tendencia"],
-                                   result["kalman_subindo"], result["swing_low"],
-                                   result["swing_high"], result["fonte_sinal"], "1h", grade, extra=extra)
+                ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
+                                        result["preco"], result["atr"], r4h["score"],
+                                        result["rsi"], result["adx"], result["tendencia"],
+                                        result["kalman_subindo"], result["swing_low"],
+                                        result["swing_high"], result["fonte_sinal"], "1h", grade, extra=extra)
+                if ok:
+                    estado[chave] = agora; enviados += 1
             else:
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"cooldown {mins}min"))
@@ -460,10 +464,11 @@ async def main():
                     tf_base = next((t for t in TIMEFRAMES if t != "1h"), TIMEFRAMES[0])
                 enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas)
                 total   += enviados
-                salvar_estado(estado)
                 log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{ciclo}: {e}")
+            finally:
+                salvar_estado(estado)
 
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")

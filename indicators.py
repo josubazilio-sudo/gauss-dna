@@ -52,7 +52,7 @@ def serie_atr(candles, periodo=14):
         h, l, fc = candles[i]["h"], candles[i]["l"], candles[i-1]["c"]
         trs.append(max(h - l, abs(h - fc), abs(l - fc)))
     rma = serie_rma(trs, periodo)
-    return [trs[0]] * periodo + rma[1:]
+    return [rma[0]] * periodo + rma[1:]
 
 
 # ── RSI ───────────────────────────────────────────────────────────────────────

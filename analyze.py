@@ -33,8 +33,10 @@ def calcular_indicadores(candles):
     maximas     = [c["h"] for c in ha]
     minimas     = [c["l"] for c in ha]
     aberturas   = [c["o"] for c in ha]
-    volumes     = [c["v"] for c in candles]   # volume real
-    preco       = candles[-1]["c"]             # preço real para stops e entradas
+    volumes          = [c["v"] for c in candles]   # volume real
+    fechamentos_reais = [c["c"] for c in candles]  # closes reais (para OBV)
+    preco            = candles[-1]["c"]             # preço real para stops e entradas
+    meio_corpo       = (candles[-1]["h"] + candles[-1]["l"]) / 2  # midpoint real
 
     # EMAs com valores anteriores para detectar cruzamentos
     e10_arr = serie_ema(fechamentos, 10);  e10 = e10_arr[-1]; e10_p = e10_arr[-2]
@@ -131,7 +133,6 @@ def calcular_indicadores(candles):
     flow      = flow_ema[-1]
     flow_sma  = sum(abs(f) for f in flow_ema[-20:]) / 20
     f_bull    = flow > 0; f_bear = flow < 0; f_forte = abs(flow) > flow_sma * 1.2
-    meio_corpo  = (maximas[-1] + minimas[-1]) / 2
     pressao_bull = preco > meio_corpo
     pressao_bear = preco < meio_corpo
     dna_flow_bull = macd_bull and pressao_bull and v_bom
@@ -144,8 +145,8 @@ def calcular_indicadores(candles):
     bb_break_long  = preco > bb_sup
     bb_break_short = preco < bb_inf
 
-    # OBV
-    obv       = calcular_obv(fechamentos, volumes)
+    # OBV — usa closes reais para não inverter direção em candles HA suavizados
+    obv       = calcular_obv(fechamentos_reais, volumes)
     obv_ema   = serie_ema(obv, 20)
     obv_bull  = obv[-1] > obv_ema[-1] and obv[-1] > obv[-6]
     obv_bear  = obv[-1] < obv_ema[-1] and obv[-1] < obv[-6]
@@ -216,7 +217,7 @@ def calcular_indicadores(candles):
     liq_long  = minimas[-1] < minimas[-2] and preco > minimas[-2] and preco > aberturas[-1]
     liq_short = maximas[-1] > maximas[-2] and preco < maximas[-2] and preco < aberturas[-1]
 
-    sm_swing_h = max(maximas[-21:-1]); sm_swing_l = min(minimas[-21:-1])
+    sm_swing_h = max(maximas[-22:-1]); sm_swing_l = min(minimas[-22:-1])
     liq_topo = ((maximas[-2] >= sm_swing_h or maximas[-1] >= sm_swing_h) and
                 fechamentos[-1] < sm_swing_h and (maximas[-1] - fechamentos[-1]) > atr * 0.2)
     liq_fundo = ((minimas[-2] <= sm_swing_l or minimas[-1] <= sm_swing_l) and
@@ -255,15 +256,19 @@ def calcular_indicadores(candles):
     elif cross_10_21_bear: label_cross = "EMA10 < EMA21"
     else:                  label_cross = ""
 
-    swing_low  = min(minimas[-13:-1])
-    swing_high = max(maximas[-13:-1])
+    swing_low  = min(minimas[-14:-1])
+    swing_high = max(maximas[-14:-1])
 
     # Trendilo (ALMA do % de variação + bandas RMS)
-    pch    = [0.0] + [(fechamentos[i]-fechamentos[i-1])/fechamentos[i]*100 for i in range(1, n)]
-    avpch  = serie_alma(pch, 50, 0.85, 6)
-    rms_v  = [math.sqrt(sum(v*v for v in avpch[max(0,i-49):i+1]) / min(i+1,50)) for i in range(len(avpch))]
-    trendilo_long  = not math.isnan(avpch[-1]) and avpch[-1] >  rms_v[-1]
-    trendilo_short = not math.isnan(avpch[-1]) and avpch[-1] < -rms_v[-1]
+    pch   = [0.0] + [(fechamentos[i]-fechamentos[i-1])/fechamentos[i]*100 for i in range(1, n)]
+    avpch = serie_alma(pch, 50, 0.85, 6)
+    _av_validos = [v for v in avpch if not math.isnan(v)]
+    _rms_last   = (math.sqrt(sum(v*v for v in _av_validos[-50:]) / min(len(_av_validos), 50))
+                   if _av_validos else float('nan'))
+    trendilo_long  = (not math.isnan(avpch[-1]) and not math.isnan(_rms_last)
+                      and avpch[-1] >  _rms_last)
+    trendilo_short = (not math.isnan(avpch[-1]) and not math.isnan(_rms_last)
+                      and avpch[-1] < -_rms_last)
 
     # Tendência relaxada (FLEX)
     tbull_r     = preco > e200 and e10 > e21 and e21 > e50
@@ -308,8 +313,8 @@ def calcular_indicadores(candles):
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
     candle_bear_pct = (aberturas[-1] - preco) / max(aberturas[-1], 1e-10)
-    surge_break_h   = preco > max(maximas[-11:-1])
-    surge_break_l   = preco < min(minimas[-11:-1])
+    surge_break_h   = preco > max(maximas[-12:-1])
+    surge_break_l   = preco < min(minimas[-12:-1])
 
     # Score de mercado (-145 a +145)
     score = (

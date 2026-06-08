@@ -141,12 +141,13 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
 
     risco = abs(preco - stop)
     if risco <= 0:
-        return
+        log.warning(f"⚠️ {abrev} risco=0 (stop={stop:.8f} == preco={preco:.8f}) — sinal ignorado")
+        return False
 
     # ── Alvos por grade e tipo de sinal ──────────────────────────────────────
     if fonte == "SCOUT":
         r1, r_final = 1.2, 2.0
-    elif grade == "S":
+    elif grade in ("S+", "S"):
         r1, r_final = 2.2, 4.5
     elif grade == "A":
         r1, r_final = 1.8, 3.5
@@ -199,7 +200,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         "A":  "⭐ GRADE A — Setup sólido",
         "B":  "📊 GRADE B — Setup básico",
     }
-    label_grade = labels_grade[grade]
+    label_grade = labels_grade.get(grade, f"📊 GRADE {grade}")
 
     # ── Montagem da mensagem ──────────────────────────────────────────────────
     agora    = datetime.now().strftime("%H:%M — %d/%m/%Y")
@@ -263,10 +264,13 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     + agora
                 )
                 await enviar_whatsapp(session, wa_text)
+                return True
             else:
                 log.warning(f"❌ {data.get('description')}")
+                return False
     except Exception as e:
         log.error(f"Erro ao enviar sinal: {e}")
+        return False
 
 
 # ── Notificação simples ───────────────────────────────────────────────────────
