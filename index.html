@@ -383,6 +383,10 @@ let currentTF='30m';
 const TF_LABELS={'5m':'5m','15m':'15m','30m':'30m ✓','1h':'1h','4h':'4h'};
 const TF_INTERVALS={'5m':10000,'15m':20000,'30m':30000,'1h':60000,'4h':120000};
 
+// MEXC usa nomenclatura própria de intervalo (igual ao bot, pra manter os dados consistentes)
+const TF_MEXC={'1h':'60m','4h':'4h'};
+const TF_MEXC_WS={'5m':'Min5','15m':'Min15','30m':'Min30','1h':'Min60','4h':'Hour4'};
+
 function setTF(tf){
   currentTF=tf;
   document.querySelectorAll('.tf-btn').forEach(b=>{
@@ -540,20 +544,49 @@ function stopMonitor(){
   $('liveLabel').textContent='Parado';
 }
 
-// ── WEBSOCKET (batch stream) ──
+// ── WEBSOCKET MEXC (candles ao vivo — mesma exchange usada pelo bot) ──
+let _wsJsonWarned=false;
 function connectAllWS(){
   wsList.forEach(w=>{try{w.close();}catch(e){}});
   wsList=[];
-  const streams=COINS.map(c=>c.sym.toLowerCase()+'@miniTicker').join('/');
-  const ws=new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
+  const itv=TF_MEXC_WS[currentTF]||'Min15';
+  const ws=new WebSocket('wss://wbs-api.mexc.com/ws');
+  ws.onopen=()=>{
+    // MEXC aceita até ~30 subscrições por mensagem — fatia em lotes
+    const syms=COINS.map(c=>c.sym);
+    for(let i=0;i<syms.length;i+=25){
+      const params=syms.slice(i,i+25).map(s=>`spot@public.kline.v3.api@${s}@${itv}`);
+      ws.send(JSON.stringify({method:'SUBSCRIPTION',params}));
+    }
+  };
   ws.onmessage=e=>{
-    const d=JSON.parse(e.data).data;
-    if(!d||!d.s) return;
-    const sym=d.s;
-    if(!state[sym]) return;
+    let msg;
+    try{ msg=JSON.parse(e.data); }
+    catch(err){
+      // MEXC pode enviar dados de mercado em Protobuf binário — sem decoder, ignora
+      // e deixa o polling REST (fetchAllCandles, já apontando pra MEXC) manter os dados atualizados
+      if(!_wsJsonWarned){ _wsJsonWarned=true; console.warn('WS MEXC: mensagem não-JSON (provável Protobuf), usando apenas polling REST para candles'); }
+      return;
+    }
+    const d=msg && msg.d;
+    const sym=msg && (msg.s || msg.symbol);
+    if(!d||!sym||!state[sym]) return;
+    const k=d.k||d;
+    const close=parseFloat(k.c ?? k.closingPrice ?? k.close);
+    const open =parseFloat(k.o ?? k.openingPrice ?? k.open);
+    if(!isFinite(close)) return;
     state[sym].prevPrice=state[sym].price;
-    state[sym].price=parseFloat(d.c);
-    state[sym].change=parseFloat(d.P);
+    state[sym].price=close;
+    if(state[sym].candles && state[sym].candles.length){
+      const last=state[sym].candles[state[sym].candles.length-1];
+      last.c=close;
+      const hi=parseFloat(k.h ?? k.highestPrice ?? k.high);
+      const lo=parseFloat(k.l ?? k.lowestPrice ?? k.low);
+      if(isFinite(hi)) last.h=Math.max(last.h,hi);
+      if(isFinite(lo)) last.l=Math.min(last.l,lo);
+    }
+    // Variação da vela em formação (a 24h não vem no stream de kline)
+    if(isFinite(open) && open>0) state[sym].change=((close-open)/open)*100;
     updateCard(sym);
     updateSummary();
   };
@@ -576,7 +609,8 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 async function fetchCandles(sym){
   try{
-    const url=`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${currentTF}&limit=250`;
+    const itv=TF_MEXC[currentTF]||currentTF;
+    const url=`https://api.mexc.com/api/v3/klines?symbol=${sym}&interval=${itv}&limit=250`;
     const res=await fetch(url);
     const data=await res.json();
     if(!Array.isArray(data)||data.length<50){state[sym].loading=false;return;}
@@ -585,7 +619,8 @@ async function fetchCandles(sym){
     if(currentTF!=='1h'&&currentTF!=='4h'){
       try{
         const htf=currentTF==='30m'?'4h':'1h';
-        const url1h=`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${htf}&limit=150`;
+        const itvH=TF_MEXC[htf]||htf;
+        const url1h=`https://api.mexc.com/api/v3/klines?symbol=${sym}&interval=${itvH}&limit=150`;
         const res1h=await fetch(url1h);
         const data1h=await res1h.json();
         if(Array.isArray(data1h)&&data1h.length>=50){
@@ -980,7 +1015,7 @@ function loadTGConfig(){
 (async()=>{
   $('portGrid').innerHTML='<div style="padding:2rem;text-align:center;color:var(--muted2);font-size:.8rem">🔍 Carregando top 20 moedas do dia...</div>';
   try{
-    const r=await fetch('https://api.binance.com/api/v3/ticker/24hr');
+    const r=await fetch('https://api.mexc.com/api/v3/ticker/24hr');
     if(r.ok){
       const data=await r.json();
       const excl=new Set(['USDC','BUSD','TUSD','FDUSD','DAI','USDP','PAXG','WBTC','WETH','EUR','GBP','BRL','UST','USDD','FRAX']);
@@ -1051,10 +1086,10 @@ const SCAN_POOL_EXTRA=[
 const _EXCLUDE_STABLE=new Set(['USDC','BUSD','TUSD','FDUSD','DAI','USDP','PAXG','WBTC','WETH','EUR','GBP','BRL','UST','USDD','FRAX']);
 const _EXCLUDE_SUB=['UP','DOWN','BULL','BEAR','3L','3S','2L','2S','5L','5S'];
 
-async function fetchTop50Binance(){
-  // Busca top 50 pares USDT por volume 24h diretamente da Binance
+async function fetchTop50Mexc(){
+  // Busca top 50 pares USDT por volume 24h na MEXC — mesma fonte de dados do bot
   try{
-    const r=await fetch('https://api.binance.com/api/v3/ticker/24hr');
+    const r=await fetch('https://api.mexc.com/api/v3/ticker/24hr');
     if(!r.ok) throw new Error('ticker falhou');
     const data=await r.json();
     const pairs=data
@@ -1070,7 +1105,7 @@ async function fetchTop50Binance(){
       .map(t=>t.symbol);
     return pairs;
   }catch(e){
-    console.warn('fetchTop50Binance falhou, usando lista fixa:',e.message);
+    console.warn('fetchTop50Mexc falhou, usando lista fixa:',e.message);
     return null;
   }
 }
@@ -1131,7 +1166,7 @@ async function fetchKlScan(sym){
   try{
     const ctrl=new AbortController();
     setTimeout(()=>ctrl.abort(),9000);
-    const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=15m&limit=250`,{signal:ctrl.signal});
+    const r=await fetch(`https://api.mexc.com/api/v3/klines?symbol=${sym}&interval=15m&limit=250`,{signal:ctrl.signal});
     const data=await r.json();
     if(!Array.isArray(data)||data.length<50) return null;
     return data.map(k=>({o:parseFloat(k[1]),h:parseFloat(k[2]),l:parseFloat(k[3]),c:parseFloat(k[4]),v:parseFloat(k[5])}));
@@ -1148,8 +1183,8 @@ async function startScan(){
   list.innerHTML='<div style="padding:1.2rem;text-align:center;color:var(--muted2);font-size:.7rem">⏳ Iniciando varredura...</div>';
 
   try{
-    if(status) status.textContent='🔍 Buscando top 50 por volume na Binance...';
-    const top50=await fetchTop50Binance();
+    if(status) status.textContent='🔍 Buscando top 50 por volume na MEXC...';
+    const top50=await fetchTop50Mexc();
     const coinSyms=COINS.map(c=>c.sym);
     let allSyms;
     if(top50 && top50.length>=10){
@@ -1187,8 +1222,8 @@ async function startScan(){
     partial.sort((a,b)=>b.score-a.score);
     const top=partial.filter(r=>r.score>0);
     if(fetchFailed===allSyms.length){
-      if(status) status.textContent='❌ API Binance inacessível';
-      list.innerHTML='<div style="padding:1.2rem;text-align:center;color:var(--red);font-size:.7rem">Erro: não foi possível conectar à API da Binance.<br>Verifique sua conexão ou tente novamente.</div>';
+      if(status) status.textContent='❌ API MEXC inacessível';
+      list.innerHTML='<div style="padding:1.2rem;text-align:center;color:var(--red);font-size:.7rem">Erro: não foi possível conectar à API da MEXC.<br>Verifique sua conexão ou tente novamente.</div>';
     }else{
       if(status) status.textContent=top.length?`${top.length} oportunidades encontradas`:'Sem oportunidades claras agora';
       list.innerHTML=top.length
@@ -1207,7 +1242,7 @@ function renderScanRows(rows){
   return rows.slice(0,20).map((r,i)=>{
     const label=r.sym.replace('USDT','');
     const scoreColor=r.score>60?'var(--green)':r.score>40?'var(--yellow)':'var(--muted2)';
-    return `<a class="scan-row" href="https://www.binance.com/trade/${r.sym}" target="_blank" rel="noopener">
+    return `<a class="scan-row" href="https://www.mexc.com/exchange/${r.sym.replace('USDT','_USDT')}" target="_blank" rel="noopener">
       <span class="scan-rank">#${i+1}</span>
       <span class="scan-coin">${label}<span class="scan-badge ${r.bull?'bull':'bear'}">${r.bull?'BULL':'BEAR'}</span></span>
       <span style="font-size:.6rem;color:var(--muted2);font-family:'DM Mono',monospace">ADX ${r.adx.toFixed(0)} · ATR ${r.atrPct.toFixed(2)}% · Vol $${r.vol.toFixed(1)}M</span>
