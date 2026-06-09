@@ -173,6 +173,30 @@ def _bonus_institucional(candles):
     return bonus_dir, "FRACO"
 
 
+async def buscar_funding_rates(session):
+    """Busca funding rates de todos os contratos MEXC numa única chamada. Retorna {BTCUSDT: 0.0001}."""
+    url = "https://contract.mexc.com/api/v1/contract/ticker"
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            data = await r.json()
+        if not data.get("success"):
+            return {}
+        rates = {}
+        for item in data.get("data", []):
+            sym = item.get("symbol", "").replace("_", "")  # BTC_USDT → BTCUSDT
+            fr  = item.get("fundingRate")
+            if fr is not None:
+                try:
+                    rates[sym] = float(fr)
+                except (ValueError, TypeError):
+                    pass
+        log.info(f"💹 Funding rates: {len(rates)} contratos carregados")
+        return rates
+    except Exception as e:
+        log.warning(f"💹 Funding rates indisponível — {e}")
+        return {}
+
+
 async def escanear_melhores_moedas(session, tf="15m", top_n=20):
     """Varre o mercado e retorna as top_n moedas com melhores condições agora."""
     log.info(f"🔍 Rastreador iniciado — buscando melhores moedas [{tf}]...")

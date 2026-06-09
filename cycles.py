@@ -19,7 +19,7 @@ from coins import COINS
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
 from analyze import analisar, calcular_indicadores
 from notify import enviar_sinal, enviar_watchlist, notificar
-from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote
+from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_funding_rates
 from state import carregar_estado, salvar_estado
 
 log = logging.getLogger("GAUSS+DNA")
@@ -74,6 +74,8 @@ async def executar_ciclo(session, estado, tf, moedas):
         log.info(f"[{tf}] Buscando H4 de {len(moedas)} moedas para filtro de direção...")
         todos_h4 = await _prefetch_lote(session, moedas, "4h")
 
+    funding_rates = await buscar_funding_rates(session)
+
     for (sym, label, abrev), candles, h4c in zip(
             moedas, todos_candles,
             todos_h4 if todos_h4 else [None]*len(moedas)):
@@ -83,7 +85,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             break
         if not candles: continue
 
-        result = analisar(sym, candles)
+        result = analisar(sym, candles, funding_rate=funding_rates.get(sym))
         if not result: continue
         grade = result.get("grade", "B")
 
@@ -160,6 +162,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                 "trendilo_dir": result.get("trendilo_long"   if eh_long else "trendilo_short", False),
                 "liq_event":    ("LIQ FUNDO ↑" if result.get("liq_fundo") else
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
+                "funding_rate": result.get("funding_rate"),
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],

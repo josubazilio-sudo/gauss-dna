@@ -118,6 +118,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     dna_flow_ok = extra.get("dna_flow", False)
     trendilo_ok = extra.get("trendilo_dir", False)
     evento_liq  = extra.get("liq_event", "")
+    funding_rate = extra.get("funding_rate")
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
     mult_atr = (2.0 if fonte == "SURGE"    else
@@ -215,6 +216,15 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     linha_rvol  = f"📊 RVOL: `{_bruto(f'{rvol_val:.2f}')}x` {_escapar(rvol_lbl)}" if rvol_lbl else ""
     linha_flow  = ("✅" if dna_flow_ok else "—") + " DNA Flow"
     linha_trl   = ("✅" if trendilo_ok else "—") + " Trendilo"
+    if funding_rate is not None:
+        fr_pct = funding_rate * 100
+        if eh_long:
+            fr_ico = "✅" if funding_rate < -0.0001 else ("⚠️" if funding_rate > 0.0001 else "—")
+        else:
+            fr_ico = "✅" if funding_rate > 0.0001 else ("⚠️" if funding_rate < -0.0001 else "—")
+        linha_funding = f"💹 Funding: `{_bruto(f'{fr_pct:.4f}')}%` {fr_ico}"
+    else:
+        linha_funding = ""
     linha_inst  = f"\n🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar(cls_inst)}" if score_inst else ""
     linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
     aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
@@ -235,6 +245,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"💸 Ganho: TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| Total \\+`${_bruto(f'{ganho_total:.2f}')}`\n\n"
         f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
         + (f"{linha_rvol}\n" if linha_rvol else "")
+        + (f"{linha_funding}\n" if linha_funding else "")
         + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
         + f"📈 Tendência: {_escapar(tendencia)} \\| Kalman: {_escapar(k_str)}\n"
         f"⏰ {_escapar(agora)}"
