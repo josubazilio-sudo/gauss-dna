@@ -294,7 +294,7 @@ def calcular_indicadores(candles):
     dna_flex_bear = (macd_bear_r and pressao_bear and v_bom) or dna_flow_bear
 
     # Filtros anti-overextension (FLEX)
-    lateralizado       = bb_squeeze and adx < 18
+    lateralizado       = bb_squeeze and adx < 15
     nao_ext_long_tight = (preco - e21) / atr < 2.5 and (rsi < 65 or (adx > 32 and rsi < 75))
     nao_ext_short_tight = (e21 - preco) / atr < 3.5 and rsi > 27
 

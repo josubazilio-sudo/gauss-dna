@@ -119,7 +119,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             eh_long_ = result["sinal"] == "LONG"
             score_inst = result.get("score_inst_long" if eh_long_ else "score_inst_short", 0)
             _inst_min = (35 if fonte == "SCOUT" else
-                         40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 50)
+                         40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
             if score_inst < _inst_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
