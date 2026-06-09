@@ -230,7 +230,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"  Risco: `${_bruto(f'{valor_risco:.2f}')}`\n"
         f"  💵 Entrada na operação: `${_bruto(f'{valor_pos:.2f}')} USDT` \\({_escapar(f'{contratos:.4f}')} {_escapar(abrev)}\\)\n"
         f"  Alavancagem {_escapar(str(alavancagem))}x: `${_bruto(f'{pos_alav:.2f}')}` colateral\n"
-        f"💸 *Ganho estimado: TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| Total \\+`${_bruto(f'{ganho_total:.2f}')}`*\n\n"
+        f"💸 Ganho estimado: TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| Total \\+`${_bruto(f'{ganho_total:.2f}')}`\n\n"
         f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
         + (f"{linha_rvol}\n" if linha_rvol else "")
         + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
