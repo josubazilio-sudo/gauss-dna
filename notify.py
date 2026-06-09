@@ -188,7 +188,9 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         "SCOUT":     "🔵 DNA SCOUT",
         "BB_BREAK":  "💥 BB BREAKOUT",
     }
-    if fonte.startswith("MTF"):
+    if fonte.startswith("TESTE"):
+        tag_modo = "🧪 TESTE — NÃO OPERAR"; info_cross = ""
+    elif fonte.startswith("MTF"):
         tag_modo = f"📡 MTF PULLBACK H4→{tf_lbl}"; info_cross = ""
     elif fonte.startswith("CROSS"):
         tag_modo = "🔀 DNA CROSS"; info_cross = fonte.split(":", 1)[1]
