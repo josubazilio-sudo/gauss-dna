@@ -19,7 +19,7 @@ from coins import COINS
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
 from analyze import analisar, calcular_indicadores
 from notify import enviar_sinal, enviar_watchlist, notificar
-from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_funding_rates
+from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_contract_data
 from state import carregar_estado, salvar_estado
 
 log = logging.getLogger("GAUSS+DNA")
@@ -74,7 +74,15 @@ async def executar_ciclo(session, estado, tf, moedas):
         log.info(f"[{tf}] Buscando H4 de {len(moedas)} moedas para filtro de direção...")
         todos_h4 = await _prefetch_lote(session, moedas, "4h")
 
-    funding_rates = await buscar_funding_rates(session)
+    funding_rates, oi_atual = await buscar_contract_data(session)
+
+    # Calcula variação % do OI em relação ao ciclo anterior (persiste no estado)
+    oi_change = {}
+    for sym_oi, oi in oi_atual.items():
+        prev = estado.get(f"oi_{sym_oi}")
+        if prev and prev > 0:
+            oi_change[sym_oi] = (oi - prev) / prev * 100
+        estado[f"oi_{sym_oi}"] = oi
 
     for (sym, label, abrev), candles, h4c in zip(
             moedas, todos_candles,
@@ -163,6 +171,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                 "liq_event":    ("LIQ FUNDO ↑" if result.get("liq_fundo") else
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
                 "funding_rate": result.get("funding_rate"),
+                "oi_change":    oi_change.get(sym),
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],

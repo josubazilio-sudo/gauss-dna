@@ -173,28 +173,38 @@ def _bonus_institucional(candles):
     return bonus_dir, "FRACO"
 
 
-async def buscar_funding_rates(session):
-    """Busca funding rates de todos os contratos MEXC numa única chamada. Retorna {BTCUSDT: 0.0001}."""
+async def buscar_contract_data(session):
+    """Busca funding rates e open interest de todos os contratos MEXC numa única chamada.
+    Retorna ({BTCUSDT: 0.0001}, {BTCUSDT: 12345.6})."""
     url = "https://contract.mexc.com/api/v1/contract/ticker"
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
             data = await r.json()
         if not data.get("success"):
-            return {}
+            return {}, {}
         rates = {}
+        oi_data = {}
         for item in data.get("data", []):
             sym = item.get("symbol", "").replace("_", "")  # BTC_USDT → BTCUSDT
             fr  = item.get("fundingRate")
+            oi  = item.get("openInterest")
             if fr is not None:
-                try:
-                    rates[sym] = float(fr)
-                except (ValueError, TypeError):
-                    pass
-        log.info(f"💹 Funding rates: {len(rates)} contratos carregados")
-        return rates
+                try: rates[sym] = float(fr)
+                except (ValueError, TypeError): pass
+            if oi is not None:
+                try: oi_data[sym] = float(oi)
+                except (ValueError, TypeError): pass
+        log.info(f"💹 Contract data: {len(rates)} funding rates | {len(oi_data)} OI carregados")
+        return rates, oi_data
     except Exception as e:
-        log.warning(f"💹 Funding rates indisponível — {e}")
-        return {}
+        log.warning(f"💹 Contract data indisponível — {e}")
+        return {}, {}
+
+
+async def buscar_funding_rates(session):
+    """Compatibilidade — usa buscar_contract_data internamente."""
+    rates, _ = await buscar_contract_data(session)
+    return rates
 
 
 async def escanear_melhores_moedas(session, tf="15m", top_n=20):

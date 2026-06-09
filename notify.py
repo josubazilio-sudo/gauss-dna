@@ -119,6 +119,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     trendilo_ok = extra.get("trendilo_dir", False)
     evento_liq  = extra.get("liq_event", "")
     funding_rate = extra.get("funding_rate")
+    oi_change    = extra.get("oi_change")
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
     mult_atr = (2.0 if fonte == "SURGE"    else
@@ -225,6 +226,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         linha_funding = f"💹 Funding: `{_bruto(f'{fr_pct:.4f}')}%` {fr_ico}"
     else:
         linha_funding = ""
+
+    if oi_change is not None:
+        oi_ico = ("📈" if oi_change > 3 else "📉" if oi_change < -3 else "—")
+        linha_oi = f"📊 OI: {oi_ico} `{_bruto(f'{oi_change:+.1f}')}%`"
+    else:
+        linha_oi = ""
     linha_inst  = f"\n🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar(cls_inst)}" if score_inst else ""
     linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
     aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
@@ -246,6 +253,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
         + (f"{linha_rvol}\n" if linha_rvol else "")
         + (f"{linha_funding}\n" if linha_funding else "")
+        + (f"{linha_oi}\n" if linha_oi else "")
         + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
         + f"📈 Tendência: {_escapar(tendencia)} \\| Kalman: {_escapar(k_str)}\n"
         f"⏰ {_escapar(agora)}"
