@@ -78,6 +78,9 @@ def calcular_indicadores(candles):
     ha_bear3 = ha_bear and fechamentos[-3] < aberturas[-3]
     ha_bull2 = ha_bull and ha_corpo_ok
     ha_bear2 = ha_bear and ha_corpo_ok
+    # Versão mais permissiva: apenas a última vela HA precisa ser bullish/bearish
+    ha_bull_1 = fechamentos[-1] > aberturas[-1] and ha_corpo_ok
+    ha_bear_1 = fechamentos[-1] < aberturas[-1] and ha_corpo_ok
 
     # RSI
     rsi       = calcular_rsi(fechamentos[-50:])
@@ -405,6 +408,7 @@ def calcular_indicadores(candles):
         # HA
         "ha_bull": ha_bull, "ha_bear": ha_bear, "ha_bull3": ha_bull3, "ha_bear3": ha_bear3,
         "ha_bull2": ha_bull2, "ha_bear2": ha_bear2, "ha_corpo_ok": ha_corpo_ok,
+        "ha_bull_1": ha_bull_1, "ha_bear_1": ha_bear_1,
         # OBV / VWAP
         "obv_bull": obv_bull, "obv_bear": obv_bear,
         "acima_vwap": acima_vwap, "abaixo_vwap": abaixo_vwap,
@@ -598,12 +602,12 @@ def detectar_sinais(ind):
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
-    long_scout  = (i["score"] >= 40 and i["ha_bull"] and i["macd_bull_r"] and i["adx"] >= 15 and
+    long_scout  = (i["score"] >= 40 and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= 15 and
                    not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                    i["vol_nao_fade"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
                    i["rsi_zona_long"] and
                    (i["dna_flow_bull"] or i["f_bull"] or i["trendilo_long"] or i["kalman_subindo"]))
-    short_scout = (i["score"] <= -40 and i["ha_bear"] and i["macd_bear_r"] and i["adx"] >= 15 and
+    short_scout = (i["score"] <= -40 and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 15 and
                    not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                    i["vol_nao_fade"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
                    i["rsi_zona_short"] and
