@@ -339,21 +339,14 @@ def calcular_indicadores(candles):
             (10 if v_s else 0) + (5 if div else 0) + (5 if sm else 0)
         ))
 
-    if funding_rate is not None:
-        funding_long_ok  = funding_rate < -0.0001   # funding negativo = bom para long
-        funding_short_ok = funding_rate >  0.0001   # funding positivo = bom para short
-    else:
-        funding_long_ok  = v_forte
-        funding_short_ok = v_forte
-
     score_inst_long  = _score_inst(tendencia_bull, adx_long_ok,
                                    dna_flow_bull or (f_bull and pressao_bull),
                                    ha_bull, trendilo_long, rsi_subindo,
-                                   funding_long_ok, rsi_div_bull, sm_bull)
+                                   v_forte, rsi_div_bull, sm_bull)
     score_inst_short = _score_inst(tendencia_bear, adx_short_ok,
                                    dna_flow_bear or (f_bear and pressao_bear),
                                    ha_bear, trendilo_short, rsi_caindo,
-                                   funding_short_ok, rsi_div_bear, sm_bear)
+                                   v_forte, rsi_div_bear, sm_bear)
 
     def _cls_inst(s):
         return "ELITE" if s >= 85 else "FORTE" if s >= 70 else "MÉDIO" if s >= 55 else "FRACO"
