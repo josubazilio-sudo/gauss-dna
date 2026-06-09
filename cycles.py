@@ -98,18 +98,21 @@ async def executar_ciclo(session, estado, tf, moedas):
 
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
-            if abs(result["score"]) < 50:
-                log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < 50")
+            # Sinais de reversão extrema têm piso de score menor (mercado em pânico/euforia)
+            _score_min = 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 40
+            if abs(result["score"]) < _score_min:
+                log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {_score_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "score<50"))
+                                   result["rsi"], result["adx"], f"score<{_score_min}"))
                 continue
 
             eh_long_ = result["sinal"] == "LONG"
             score_inst = result.get("score_inst_long" if eh_long_ else "score_inst_short", 0)
-            if score_inst < 50:
-                log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < 50")
+            _inst_min = 40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 50
+            if score_inst < _inst_min:
+                log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "inst<50"))
+                                   result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue
 
             if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"]):
