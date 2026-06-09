@@ -224,8 +224,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"🏆 TP Final \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n\n"
         f"📐 *Gestão de risco \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${_bruto(f'{valor_risco:.2f}')}`\n"
-        f"  Spot: `{_bruto(f'{contratos:.4f}')} {_bruto(abrev)}` \\(aprox `${_bruto(f'{valor_pos:.2f}')} USDT`\\)\n"
-        f"  Alavancagem 5x: `${_bruto(f'{pos_5x:.2f}')} colateral`\n\n"
+        f"  💵 Entrada na operação: `${_bruto(f'{valor_pos:.2f}')} USDT` \\({_bruto(f'{contratos:.4f}')} {_bruto(abrev)}\\)\n"
+        f"  Alavancagem 5x: `${_bruto(f'{pos_5x:.2f}')}` colateral\n\n"
         f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
         + (f"{_escapar(linha_rvol)}\n" if linha_rvol else "")
         + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
