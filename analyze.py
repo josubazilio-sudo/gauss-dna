@@ -274,11 +274,10 @@ def calcular_indicadores(candles):
 
     # Filtros de segurança compostos
     rsi_nao_topo   = rsi < 70
-    rsi_nao_fundo  = rsi > 30
+    rsi_nao_fundo  = rsi > 27
     seguro_long  = (not perto_bb_topo and not ext_acima_e21 and not vol_secando and
                     not exaustao_topo and rsi_nao_topo and not stoch_esticado_up)
-    seguro_short = (not perto_bb_fund and not ext_abaixo_e21 and not vol_secando and
-                    not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
+    seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
@@ -297,7 +296,7 @@ def calcular_indicadores(candles):
     # Filtros anti-overextension (FLEX)
     lateralizado       = bb_squeeze and adx < 18
     nao_ext_long_tight = (preco - e21) / atr < 2.5 and (rsi < 65 or (adx > 32 and rsi < 75))
-    nao_ext_short_tight = (e21 - preco) / atr < 2.5 and rsi > 43
+    nao_ext_short_tight = (e21 - preco) / atr < 3.5 and rsi > 27
 
     # Anti-pump / anti-dump
     raw_c48 = [c["c"] for c in candles[-50:-1]]
