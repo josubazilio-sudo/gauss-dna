@@ -363,11 +363,12 @@ async def executar_teste(session):
     """Modo teste: analisa BTC e SOL em 15m com dados reais e envia sinal forçado."""
     log.info("🧪 MODO TESTE — Analisando BTC e SOL em 15m com dados reais...")
     moedas_teste = [("BTCUSDT","BTC/USDT","BTC"), ("SOLUSDT","SOL/USDT","SOL")]
+    funding_rates, oi_atual = await buscar_contract_data(session)
     for sym, label, abrev in moedas_teste:
         candles = await buscar_candles(session, sym, "15m")
         if not candles:
             log.warning(f"❌ Sem dados para {abrev}"); continue
-        result = analisar(sym, candles)
+        result = analisar(sym, candles, funding_rate=funding_rates.get(sym))
         if not result:
             log.warning(f"❌ Análise falhou para {abrev}"); continue
         grade  = result.get("grade", "B")
@@ -384,6 +385,8 @@ async def executar_teste(session):
             "trendilo_dir": result.get("trendilo_long"   if eh_long else "trendilo_short", False),
             "liq_event":    ("LIQ FUNDO ↑" if result.get("liq_fundo") else
                              "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
+            "funding_rate": result.get("funding_rate"),
+            "oi_change":    None,
         }
         await enviar_sinal(session, sym, label, abrev, sinal_forcado,
                            result["preco"], result["atr"], result["score"],
