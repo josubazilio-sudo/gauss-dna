@@ -353,7 +353,7 @@ def calcular_indicadores(candles):
 
     return {
         # Preço e estrutura
-        "preco": preco, "atr": atr, "score": score, "rsi": rsi, "adx": adx, "funding_rate": funding_rate,
+        "preco": preco, "atr": atr, "score": score, "rsi": rsi, "adx": adx,
         "swing_low": swing_low, "swing_high": swing_high,
         # Tendência
         "tendencia_bull": tendencia_bull, "tendencia_bear": tendencia_bear,
@@ -774,4 +774,5 @@ def analisar(simbolo, candles, funding_rate=None):
         "dna_flex_bear": ind["dna_flex_bear"],
         "trendilo_long":  ind["trendilo_long"],
         "trendilo_short": ind["trendilo_short"],
+        "funding_rate":   funding_rate,
     }
