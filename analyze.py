@@ -33,8 +33,9 @@ def calcular_indicadores(candles):
     maximas     = [c["h"] for c in ha]
     minimas     = [c["l"] for c in ha]
     aberturas   = [c["o"] for c in ha]
-    volumes     = [c["v"] for c in candles]   # volume real
-    preco       = candles[-1]["c"]             # preço real para stops e entradas
+    volumes          = [c["v"] for c in candles]   # volume real
+    fechamentos_reais = [c["c"] for c in candles]  # closes reais (para OBV)
+    preco            = candles[-1]["c"]             # preço real para stops e entradas
 
     # EMAs com valores anteriores para detectar cruzamentos
     e10_arr = serie_ema(fechamentos, 10);  e10 = e10_arr[-1]; e10_p = e10_arr[-2]
@@ -145,7 +146,7 @@ def calcular_indicadores(candles):
     bb_break_short = preco < bb_inf
 
     # OBV
-    obv       = calcular_obv(fechamentos, volumes)
+    obv       = calcular_obv(fechamentos_reais, volumes)
     obv_ema   = serie_ema(obv, 20)
     obv_bull  = obv[-1] > obv_ema[-1] and obv[-1] > obv[-6]
     obv_bear  = obv[-1] < obv_ema[-1] and obv[-1] < obv[-6]
@@ -479,16 +480,12 @@ def detectar_sinais(ind):
     tbull_r = i["tbull_r"]; tbear_r = i["tbear_r"]
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
                       i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
-                      i["rsi"] < 65 and i["score_inst_long"] >= 65 and
-                      i["seguro_long"] and i["trendilo_long"] and
-                      i["e200_inclinada_up"] and
-                      (i["reteste_mm50_bull"] or i["correcao_bull"] or i["liq_fundo"]))
+                      i["rsi"] < 65 and i["score_inst_long"] >= 50 and
+                      i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"])
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
                       i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
-                      i["rsi"] > 43 and i["score_inst_short"] >= 65 and
-                      i["seguro_short"] and i["trendilo_short"] and
-                      i["e200_inclinada_down"] and
-                      (i["reteste_mm50_bear"] or i["correcao_bear"] or i["liq_topo"]))
+                      i["rsi"] > 43 and i["score_inst_short"] >= 50 and
+                      i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"])
 
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
