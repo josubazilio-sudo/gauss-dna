@@ -606,12 +606,12 @@ def detectar_sinais(ind):
                    not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                    i["vol_nao_fade"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
                    i["rsi_zona_long"] and
-                   (i["dna_flow_bull"] or i["f_bull"] or i["trendilo_long"] or i["kalman_subindo"]))
+                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= 2)
     short_scout = (i["score"] <= -40 and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 15 and
                    not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                    i["vol_nao_fade"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
                    i["rsi_zona_short"] and
-                   (i["dna_flow_bear"] or i["f_bear"] or i["trendilo_short"] or not i["kalman_subindo"]))
+                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= 2)
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
