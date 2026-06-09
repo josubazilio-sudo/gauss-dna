@@ -168,11 +168,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     valor_risco  = CAPITAL * pct_risco
     contratos    = valor_risco / risco if risco > 0 else 0
     valor_pos    = contratos * preco
-    alavancagem  = (5 if fonte == "SCOUT" else
-                    {"S+": 10, "S": 10, "A+": 8, "A": 7}.get(grade, 5))
-    pos_alav     = valor_pos / alavancagem
-    ganho_tp1    = valor_risco * r1 * 0.5
-    ganho_total  = valor_risco * (r1 + r_final) * 0.5
+    pos_5x       = valor_pos / 5
 
     # ── Labels de modo ────────────────────────────────────────────────────────
     tf_lbl = _label_tf(tf)
@@ -229,8 +225,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"📐 *Gestão de risco \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
         f"  Risco: `${_bruto(f'{valor_risco:.2f}')}`\n"
         f"  💵 Entrada na operação: `${_bruto(f'{valor_pos:.2f}')} USDT` \\({_escapar(f'{contratos:.4f}')} {_escapar(abrev)}\\)\n"
-        f"  Alavancagem {_escapar(str(alavancagem))}x: `${_bruto(f'{pos_alav:.2f}')}` colateral\n"
-        f"💸 Ganho estimado: TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| Total \\+`${_bruto(f'{ganho_total:.2f}')}`\n\n"
+        f"  Alavancagem 5x: `${_bruto(f'{pos_5x:.2f}')}` colateral\n\n"
         f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
         + (f"{linha_rvol}\n" if linha_rvol else "")
         + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
@@ -260,8 +255,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     f"Stop: ${_fmt(stop)} ({label_stop})\n"
                     f"TP1 ({r1}R): ${_fmt(tp1)}\n"
                     f"TP Final ({r_final}R): ${_fmt(final)}\n\n"
-                    f"Risco ${valor_risco:.2f} | {alavancagem}x ${pos_alav:.2f} colateral\n"
-                    f"Ganho: TP1 +${ganho_tp1:.2f} | Total +${ganho_total:.2f}\n"
+                    f"Risco ${valor_risco:.2f} | 5x ${pos_5x:.2f} colateral\n"
                     f"RSI {rsi:.0f} | ADX {adx:.0f} | "
                     + (f"RVOL {rvol_val:.2f}x {rvol_lbl} | " if rvol_lbl else "")
                     + f"DNA Flow {'✅' if dna_flow_ok else '—'} | "
