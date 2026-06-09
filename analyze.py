@@ -305,6 +305,11 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
+    # RSI em zona de entrada: LONG abaixo de 63, ou subindo de zona baixa (rsi_ant < 55)
+    # Evita entrar LONG com RSI já esticado (65-70) prestes a reverter
+    rsi_zona_long  = rsi < 63 or (rsi < 67 and rsi_subindo and rsi_ant < 55)
+    rsi_zona_short = rsi > 37 or (rsi > 33 and rsi_caindo and rsi_ant > 45)
+
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
     candle_bear_pct = (aberturas[-1] - preco) / max(aberturas[-1], 1e-10)
@@ -385,6 +390,7 @@ def calcular_indicadores(candles):
         "rsi_spike_long": rsi_spike_long, "rsi_rebound_long": rsi_rebound_long,
         "stoch_rsi": stoch_rsi, "stoch_esticado_up": stoch_esticado_up, "stoch_esticado_down": stoch_esticado_down,
         "rsi_nao_chasing_long": rsi_nao_chasing_long, "rsi_nao_chasing_short": rsi_nao_chasing_short,
+        "rsi_zona_long": rsi_zona_long, "rsi_zona_short": rsi_zona_short,
         # ADX
         "pdi": pdi, "mdi": mdi, "adx_long_ok": adx_long_ok, "adx_short_ok": adx_short_ok,
         # Volume
@@ -569,13 +575,13 @@ def detectar_sinais(ind):
     # ── FLEX geral ────────────────────────────────────────────────────────────
     long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
-                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and
+                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
                   (i["liq_long"] or i["liq_fundo"]) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
-                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and
+                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
                   (i["liq_short"] or i["liq_topo"]) and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
@@ -595,10 +601,12 @@ def detectar_sinais(ind):
     long_scout  = (i["score"] >= 40 and i["ha_bull"] and i["macd_bull_r"] and i["adx"] >= 15 and
                    not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                    i["vol_nao_fade"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
+                   i["rsi_zona_long"] and
                    (i["dna_flow_bull"] or i["trendilo_long"] or i["kalman_subindo"]))
     short_scout = (i["score"] <= -40 and i["ha_bear"] and i["macd_bear_r"] and i["adx"] >= 15 and
                    not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                    i["vol_nao_fade"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
+                   i["rsi_zona_short"] and
                    (i["dna_flow_bear"] or i["trendilo_short"] or not i["kalman_subindo"]))
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
