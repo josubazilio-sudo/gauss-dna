@@ -117,11 +117,15 @@ def calcular_indicadores(candles):
     adx_long_ok  = adx > 22 and pdi > mdi and adx > adx_p
     adx_short_ok = adx > 22 and mdi > pdi and adx > adx_p
 
-    # Volume — RVOL 4 tiers
+    # Volume — RVOL 4 tiers (atual e anterior — pega sinal que ocorreu na vela passada)
     vol_ma = sum(volumes[-21:-1]) / 20 if len(volumes) >= 21 else sum(volumes[:-1]) / max(len(volumes)-1, 1)
     rvol       = volumes[-1] / max(vol_ma, 1e-10)
+    rvol_prev  = volumes[-2] / max(vol_ma, 1e-10) if len(volumes) >= 2 else rvol
+    rvol_max2  = max(rvol, rvol_prev)   # melhor das últimas 2 velas
     rvol_tier  = (4 if rvol >= 3.0 else 3 if rvol >= 2.0 else
                   2 if rvol >= 1.5 else 1 if rvol >= 1.2 else 0)
+    rvol_tier_max2 = (4 if rvol_max2 >= 3.0 else 3 if rvol_max2 >= 2.0 else
+                      2 if rvol_max2 >= 1.5 else 1 if rvol_max2 >= 1.2 else 0)
     rvol_label = ("INST" if rvol_tier==4 else "VSTRONG" if rvol_tier==3 else
                   "STRONG" if rvol_tier==2 else "BOM"    if rvol_tier==1 else "BAIXO")
     v_bom    = rvol_tier >= 1
@@ -285,7 +289,7 @@ def calcular_indicadores(candles):
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
     _vol_thr      = 0.20 if _FLV <= 0 else (0.50 if _FLV == 1 else (0.65 if _FLV == 2 else 0.80))
-    vol_nao_fade  = volumes[-1] >= vol_ma * _vol_thr
+    vol_nao_fade  = max(volumes[-1], volumes[-2]) >= vol_ma * _vol_thr  # usa melhor das 2 últimas velas
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
     flex_vol_ok   = v_bom or (obv_bull and trendilo_long)
@@ -400,7 +404,7 @@ def calcular_indicadores(candles):
         "pdi": pdi, "mdi": mdi, "adx_long_ok": adx_long_ok, "adx_short_ok": adx_short_ok,
         "adx_p": adx_p, "adx_subindo": adx > adx_p,
         # Volume
-        "rvol": rvol, "rvol_tier": rvol_tier, "rvol_label": rvol_label,
+        "rvol": rvol, "rvol_tier": rvol_tier, "rvol_tier_max2": rvol_tier_max2, "rvol_label": rvol_label,
         "v_bom": v_bom, "v_forte": v_forte, "v_inst": v_inst, "v_forte2": v_forte2,
         "vol_ma": vol_ma, "volumes": volumes, "vol_nao_fade": vol_nao_fade,
         "flex_vol_ok": flex_vol_ok, "flex_vol_ok_s": flex_vol_ok_s,
@@ -544,14 +548,17 @@ def detectar_sinais(ind):
                       (i["dna_flow_bear"] or i["obv_bear"]))
 
     # ── Surge ─────────────────────────────────────────────────────────────────
-    # SURGE entra no breakout explosivo — RSI sobe/cai JUNTO com o movimento,
-    # então rsi_zona bloquearia o sinal. Usa cap amplo (22/78) em vez disso.
-    long_surge  = (i["rvol_tier"] >= 3 and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
+    # SURGE — breakout/breakdown explosivo com volume VSTRONG (3x+)
+    # surge_break_h/l JÁ implica liq_topo/fundo (rompe máxima/mínima recente),
+    # por isso não usar not liq_topo/fundo aqui — seria contradição direta.
+    # Usa melhor das 2 últimas velas p/ RVOL (pega sinal da vela anterior).
+    _surge_vol_ok  = i["rvol_tier_max2"] >= 3
+    long_surge  = (_surge_vol_ok and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
                    not i["exaustao_topo"] and (i["kalman_subindo"] or i["k_short_subindo"]) and i["ha_bull"] and
-                   not i["liq_topo"] and i["rsi"] < 78 and i["score_inst_long"] >= 50)
-    short_surge = (i["rvol_tier"] >= 3 and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
+                   i["rsi"] < 78 and i["score_inst_long"] >= 50)
+    short_surge = (_surge_vol_ok and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
-                   not i["liq_fundo"] and i["rsi"] > 22 and i["score_inst_short"] >= 50)
+                   i["rsi"] > 22 and i["score_inst_short"] >= 50)
 
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
