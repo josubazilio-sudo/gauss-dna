@@ -80,8 +80,13 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("ADX nao subindo")
     if lat:
         motivos.append("mercado lateral")
-    if rvol < _vol_thr:
-        motivos.append(f"RVOL < {_vol_thr*100:.0f}%")
+    _obv_b = result.get("obv_bull", False)
+    _obv_s = result.get("obv_bear", False)
+    if eh_long_cand:
+        if rvol < _vol_thr and not (_obv_b and trl_l):
+            motivos.append(f"RVOL < {_vol_thr*100:.0f}% (sem OBV+Trl alt)")
+    elif rvol < _vol_thr and not (_obv_s and trl_s):
+        motivos.append(f"RVOL < {_vol_thr*100:.0f}% (sem OBV+Trl alt)")
     if eh_long_cand and not ha1_b:
         motivos.append("HA nao bull")
     elif not eh_long_cand and not ha1_s:

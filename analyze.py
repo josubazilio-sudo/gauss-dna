@@ -93,7 +93,7 @@ def calcular_indicadores(candles):
     rsi_dip_short      = rsi_ant < 35 or rsi_6 < 35 or rsi_9 < 35
     rsi_rebound_short  = 38 <= rsi <= 46 and rsi > rsi_ant
     rsi_spike_long     = rsi_ant > 65 or rsi_6 > 65 or rsi_9 > 65
-    rsi_rebound_long   = 54 <= rsi <= 62 and rsi < rsi_ant
+    rsi_rebound_long   = 46 <= rsi <= 62 and rsi < rsi_ant
 
     rsi_div_bull = fechamentos[-1] < fechamentos[-4] and rsi > rsi_ant and rsi < 45
     rsi_div_bear = fechamentos[-1] > fechamentos[-4] and rsi < rsi_ant and rsi > 55
@@ -628,14 +628,17 @@ def detectar_sinais(ind):
     _adx_min = 10 if _FLV <= 0 else 15
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
+    # vol alternativa: OBV acumulando + Trendilo confirmando = mesmo gate do FLEX
+    _vol_scout_l = i["vol_nao_fade"] or (i["obv_bull"] and i["trendilo_long"])
+    _vol_scout_s = i["vol_nao_fade"] or (i["obv_bear"] and i["trendilo_short"])
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
-                   _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
+                   _seg_l and _vol_scout_l and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
     short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
-                   _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
+                   _seg_s and _vol_scout_s and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 
