@@ -74,10 +74,10 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     eh_long_cand = sc_dir > 0
 
     # RSI zona — bloqueador mais frequente, checar primeiro
-    if eh_long_cand and rsi >= 65:
-        motivos.append("RSI zona LONG bloq (>= 65)")
-    elif not eh_long_cand and rsi <= 35:
-        motivos.append("RSI zona SHORT bloq (<= 35)")
+    if eh_long_cand and rsi >= 55:
+        motivos.append("RSI zona LONG bloq (>= 55)")
+    elif not eh_long_cand and rsi <= 45:
+        motivos.append("RSI zona SHORT bloq (<= 45)")
 
     if adx < (10 if FILTER_LEVEL <= 0 else 15):
         motivos.append("ADX baixo")
