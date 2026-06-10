@@ -728,20 +728,26 @@ def analisar(simbolo, candles, funding_rate=None):
         sc = ind["score"]
         if sc > 25:
             b = []
-            if not ind["macd_bull_r"]: b.append(f"macd_r=F")
-            if not ind["ha_bull"]:     b.append(f"ha=F")
-            if ind["adx"] < 17:        b.append(f"adx={ind['adx']:.1f}<17")
-            if ind["lateralizado"]:    b.append(f"lateralizado")
-            if not ind["seguro_long"]: b.append(f"seguro_long=F(stoch={ind['stoch_rsi']:.2f})")
-            log.info(f"  LONG-BLOQUEADO {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
+            if not ind["macd_bull_r"]:  b.append("macd_r=F")
+            if not ind["ha_bull_1"]:    b.append("ha1=F")
+            if ind["adx"] < 15:         b.append(f"adx={ind['adx']:.1f}<15")
+            if ind["lateralizado"]:     b.append("lateral")
+            if not ind["seguro_long"]:  b.append(f"seguro=F(stoch={ind['stoch_rsi']:.2f})")
+            if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
+            fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
+            if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
+            log.info(f"  LONG-BLOQ {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
         elif sc < -25:
             b = []
-            if not ind["macd_bear_r"]: b.append(f"macd_r=F")
-            if not ind["ha_bear"]:     b.append(f"ha=F")
-            if ind["adx"] < 17:        b.append(f"adx={ind['adx']:.1f}<17")
-            if ind["lateralizado"]:    b.append(f"lateralizado")
-            if not ind["seguro_short"]:b.append(f"seguro_short=F(stoch={ind['stoch_rsi']:.2f})")
-            log.info(f"  SHORT-BLOQUEADO {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
+            if not ind["macd_bear_r"]:   b.append("macd_r=F")
+            if not ind["ha_bear_1"]:     b.append("ha1=F")
+            if ind["adx"] < 15:          b.append(f"adx={ind['adx']:.1f}<15")
+            if ind["lateralizado"]:      b.append("lateral")
+            if not ind["seguro_short"]:  b.append(f"seguro=F(stoch={ind['stoch_rsi']:.2f})")
+            if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
+            fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
+            if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
+            log.info(f"  SHORT-BLOQ {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
         else:
             log.info(f"  sem-sinal {simbolo}: score={sc:+d} insuficiente")
 
