@@ -309,11 +309,11 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI zona de entrada — corte rígido sem exceção, aplicado a todos os tipos de sinal
-    # LONG: RSI < 55 (espaço para subir, longe de sobrecomprado)
-    # SHORT: RSI > 45 (espaço para cair, longe de sobrevendido)
-    rsi_zona_long  = rsi < 55
-    rsi_zona_short = rsi > 45
+    # RSI zona de entrada — relaxado por autorização explícita do usuário
+    # LONG: RSI < 65 (era < 55 — dá folga para capturar início de alta)
+    # SHORT: RSI > 35 (era > 45 — dá folga para capturar sell-offs coordenados)
+    rsi_zona_long  = rsi < 65
+    rsi_zona_short = rsi > 35
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)

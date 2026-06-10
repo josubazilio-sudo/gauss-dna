@@ -5,14 +5,12 @@
 **Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.**
 
 ### LONG (compra):
-- RSI deve ser **< 55** no momento do sinal
-- Objetivo: entrar quando RSI tem espaço para subir, longe de sobrecomprado
-- Sinalização de compra próximo a sobrevenda ou zona neutra baixa (≤ 54)
+- RSI deve ser **< 65** no momento do sinal (relaxado de 55 por autorização em 10/06/2026)
+- Objetivo: entrar antes de sobrecompra, com espaço para subir
 
 ### SHORT (venda):
-- RSI deve ser **> 45** no momento do sinal
-- Objetivo: entrar quando RSI tem espaço para cair, longe de sobrevendido
-- Sinalização de venda próximo a sobrecompra ou zona neutra alta (≥ 46)
+- RSI deve ser **> 35** no momento do sinal (relaxado de 45 por autorização em 10/06/2026)
+- Objetivo: entrar antes de sobrevenda extrema, com espaço para cair
 
 ### Aplicação:
 - Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP, SURGE, MOMENTUM, REVERSAL, REBOUND
@@ -21,8 +19,8 @@
 
 ```python
 # analyze.py — NÃO ALTERAR sem autorização
-rsi_zona_long  = rsi < 55
-rsi_zona_short = rsi > 45
+rsi_zona_long  = rsi < 65
+rsi_zona_short = rsi > 35
 ```
 
 ---
