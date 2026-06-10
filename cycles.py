@@ -103,9 +103,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("sem fluxo LONG")
     elif not eh_long_cand and not dna_s and not trl_s and not f_s:
         motivos.append("sem fluxo SHORT")
-    if FILTER_LEVEL >= 3 and eh_long_cand and liq_t:
+    if FILTER_LEVEL >= 4 and eh_long_cand and liq_t:
         motivos.append("liq topo SMC")
-    elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
+    elif FILTER_LEVEL >= 4 and not eh_long_cand and liq_f:
         motivos.append("liq fundo SMC")
     if not motivos:
         motivos.append("HA/MACD pendente")
