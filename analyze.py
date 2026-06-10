@@ -109,8 +109,8 @@ def calcular_indicadores(candles):
         stoch_rsi = (_r14[-1] - _rmin) / (_rmax - _rmin) if _rmax > _rmin else 0.5
     else:
         stoch_rsi = 0.5
-    stoch_esticado_up   = stoch_rsi > 0.85
-    stoch_esticado_down = stoch_rsi < 0.05
+    stoch_esticado_up   = stoch_rsi > 0.80
+    stoch_esticado_down = stoch_rsi < 0.20
 
     # DMI / ADX
     pdi, mdi, adx, adx_p = calcular_adx(candles[-60:])
@@ -308,11 +308,11 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI em zona de entrada:
-    # LONG: < 55 (sobrevenda/neutro, espaço para subir) | 55-61 só se saltou de sobrevenda (rsi_ant < 42)
-    # SHORT: > 45 (sobrecompra/neutro, espaço para cair) | 38-45 só se caiu de sobrecompra (rsi_ant > 58)
-    rsi_zona_long  = (rsi < 55) or (rsi < 62 and rsi_subindo and rsi_ant < 42)
-    rsi_zona_short = (rsi > 45) or (rsi > 38 and rsi_caindo and rsi_ant > 58)
+    # RSI zona de entrada — corte rígido sem exceção, aplicado a todos os tipos de sinal
+    # LONG: RSI < 55 (espaço para subir, longe de sobrecomprado)
+    # SHORT: RSI > 45 (espaço para cair, longe de sobrevendido)
+    rsi_zona_long  = rsi < 55
+    rsi_zona_short = rsi > 45
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -490,35 +490,35 @@ def detectar_sinais(ind):
     tbull_r = i["tbull_r"]; tbear_r = i["tbear_r"]
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
                       i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
-                      i["rsi"] < 65 and i["score_inst_long"] >= 50 and
+                      i["rsi_zona_long"] and i["score_inst_long"] >= 50 and
                       i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"])
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
                       i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
-                      i["rsi"] > 43 and i["score_inst_short"] >= 50 and
+                      i["rsi_zona_short"] and i["score_inst_short"] >= 50 and
                       i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"])
 
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
-                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and
+                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]))
     short_cross = (i["algum_cross_bear"] and i["dna_flow_bear"] and i["adx_short_ok"] and
-                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and
+                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
     # ── BB Breakout ───────────────────────────────────────────────────────────
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
                       not i["lateralizado"] and not i["ext_acima_e21"] and
-                      i["rvol"] >= 0.80 and i["rsi"] < 65 and i["score_inst_long"] >= 50)
+                      i["rvol"] >= 0.80 and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
                       not i["lateralizado"] and not i["ext_abaixo_e21"] and
-                      i["rvol"] >= 0.80 and i["rsi"] > 46 and i["score_inst_short"] >= 50)
+                      i["rvol"] >= 0.80 and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
-    long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi"] < 65 and
+    long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi_zona_long"] and
                 i["preco"] > i["e200"] and i["score_inst_long"] >= 60)
-    short_sm = (i["sm_bear"] and i["rsi"] > 46 and i["rsi"] < 75 and
+    short_sm = (i["sm_bear"] and i["rsi_zona_short"] and i["rsi"] < 75 and
                 i["preco"] < i["e200"] and i["score_inst_short"] >= 60)
 
     # ── Reversão extrema ──────────────────────────────────────────────────────
@@ -569,11 +569,11 @@ def detectar_sinais(ind):
     # Sem piso de ADX nem checagem de lateralização, "divergência" é só ruído de
     # RSI oscilando num range — por isso exige tendência mínima e mercado fora de squeeze
     long_div  = (i["rsi_div_bull"] and i["ha_bull"] and i["v_bom"] and
-                 i["rsi"] > 25 and i["rsi"] < 65 and not i["exaustao_topo"] and
+                 i["rsi"] > 25 and i["rsi_zona_long"] and not i["exaustao_topo"] and
                  i["adx"] > 15 and not i["lateralizado"] and i["preco"] > i["e200"] and
                  i["score_inst_long"] >= 55)
     short_div = (i["rsi_div_bear"] and i["ha_bear"] and i["v_bom"] and
-                 i["rsi"] > 46 and i["rsi"] < 70 and i["preco"] < i["e200"] and
+                 i["rsi_zona_short"] and i["rsi"] < 70 and i["preco"] < i["e200"] and
                  not i["exaustao_fund"] and i["adx"] > 15 and not i["lateralizado"] and
                  i["score_inst_short"] >= 55)
 
@@ -595,11 +595,11 @@ def detectar_sinais(ind):
     long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > 18 and
                    i["obv_bull"] and i["v_bom"] and i["acima_vwap"] and not i["lateralizado"] and
                    i["nao_ext_long_tight"] and i["seguro_long"] and (i["liq_long"] or i["liq_fundo"]) and
-                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50)
+                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"])
     short_setup = (i["score"] < -50 and i["ha_bear2"] and i["macd_esgotando"] and i["adx"] > 18 and
                    i["obv_bear"] and i["v_bom"] and i["abaixo_vwap"] and not i["lateralizado"] and
                    i["nao_ext_short_tight"] and i["seguro_short"] and (i["liq_short"] or i["liq_topo"]) and
-                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50)
+                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"])
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
