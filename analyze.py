@@ -544,16 +544,18 @@ def detectar_sinais(ind):
                       (i["dna_flow_bear"] or i["obv_bear"]))
 
     # ── Surge ─────────────────────────────────────────────────────────────────
+    # SURGE entra no breakout explosivo — RSI sobe/cai JUNTO com o movimento,
+    # então rsi_zona bloquearia o sinal. Usa cap amplo (22/78) em vez disso.
     long_surge  = (i["rvol_tier"] >= 3 and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
                    not i["exaustao_topo"] and (i["kalman_subindo"] or i["k_short_subindo"]) and i["ha_bull"] and
-                   not i["liq_topo"] and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
+                   not i["liq_topo"] and i["rsi"] < 78 and i["score_inst_long"] >= 50)
     short_surge = (i["rvol_tier"] >= 3 and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
-                   not i["liq_fundo"] and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
+                   not i["liq_fundo"] and i["rsi"] > 22 and i["score_inst_short"] >= 50)
 
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
-    rsi_fresh_short = i["rsi_ant"] > 35 >= i["rsi"] > 32
+    rsi_fresh_short = i["rsi_ant"] > 42 >= i["rsi"] > 30
     # Exaustão de curtíssimo prazo (sem checagem de teto de RSI — o MOMENTUM entra
     # propositalmente na faixa 65-73, então só barra se já estiver esticado/exausto)
     mom_seguro_long  = (not i["perto_bb_topo"] and not i["ext_acima_e21"] and not i["vol_secando"] and

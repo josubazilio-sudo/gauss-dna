@@ -42,11 +42,12 @@ _diag_buffer: dict = {
 
 def _detectar_bloqueadores_diag(result: dict) -> list:
     motivos = []
-    sc    = abs(result.get("score", 0))
+    sc_raw = result.get("score", 0)
+    sc    = abs(sc_raw)
+    eh_long_cand = sc_raw > 0   # usa score como proxy de direção (não kalman)
     rsi   = result.get("rsi", 50)
     adx   = result.get("adx", 0)
     rvol  = result.get("rvol", 1.0)
-    kal   = result.get("kalman_subindo", True)
     adx_s = result.get("adx_subindo", True)
     lat   = result.get("tendencia", "NEUTRO") == "NEUTRO"
     dna_b = result.get("dna_flow_bull", False)
@@ -67,10 +68,10 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("score baixo")
         return motivos
 
-    # RSI zona — bloqueador mais frequente, checar primeiro
-    if kal and rsi >= 55:
+    # RSI zona — usa direção do score (não kalman)
+    if eh_long_cand and rsi >= 55:
         motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
-    elif not kal and rsi <= 45:
+    elif not eh_long_cand and rsi <= 45:
         motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
 
     if adx < (10 if FILTER_LEVEL <= 0 else 15):
@@ -81,17 +82,17 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("mercado lateral")
     if rvol < _vol_thr:
         motivos.append(f"RVOL < {_vol_thr*100:.0f}%")
-    if kal and not ha1_b:
+    if eh_long_cand and not ha1_b:
         motivos.append("HA nao bull")
-    elif not kal and not ha1_s:
+    elif not eh_long_cand and not ha1_s:
         motivos.append("HA nao bear")
-    if kal and not dna_b and not trl_l and not f_b:
+    if eh_long_cand and not dna_b and not trl_l and not f_b:
         motivos.append("sem fluxo LONG")
-    elif not kal and not dna_s and not trl_s and not f_s:
+    elif not eh_long_cand and not dna_s and not trl_s and not f_s:
         motivos.append("sem fluxo SHORT")
-    if FILTER_LEVEL >= 3 and kal and liq_t:
+    if FILTER_LEVEL >= 3 and eh_long_cand and liq_t:
         motivos.append("liq topo SMC")
-    elif FILTER_LEVEL >= 3 and not kal and liq_f:
+    elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
         motivos.append("liq fundo SMC")
     if not motivos:
         motivos.append("HA/MACD pendente")
@@ -132,14 +133,20 @@ async def _enviar_diagnostico(session) -> None:
     else:
         linhas.append("Nenhum bloqueador detectado neste periodo")
 
-    top_long  = sorted([c for c in cand if c[2] > 0],  key=lambda x: x[0], reverse=True)[:2]
-    top_short = sorted([c for c in cand if c[2] < 0],  key=lambda x: x[0], reverse=True)[:2]
+    top_long  = sorted([c for c in cand if c[2] > 0],  key=lambda x: x[0], reverse=True)[:4]
+    top_short = sorted([c for c in cand if c[2] < 0],  key=lambda x: x[0], reverse=True)[:4]
     if top_long or top_short:
-        linhas.append("\nMais proximos de disparar:")
-        for _, sym, sc, rsi, adx, tf in top_long:
-            linhas.append(f"  LONG  {sym} | {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f} [{tf}]")
-        for _, sym, sc, rsi, adx, tf in top_short:
-            linhas.append(f"  SHORT {sym} | {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f} [{tf}]")
+        linhas.append("\nCandidatos (por que nao disparou):")
+        for entry in top_long:
+            _, sym, sc, rsi, adx, tf = entry[:6]
+            bloqs = entry[6] if len(entry) > 6 else []
+            bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
+            linhas.append(f"  LONG  {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
+        for entry in top_short:
+            _, sym, sc, rsi, adx, tf = entry[:6]
+            bloqs = entry[6] if len(entry) > 6 else []
+            bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
+            linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
 
     linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
     await notificar(session, "\n".join(linhas))
@@ -229,10 +236,11 @@ async def executar_ciclo(session, estado, tf, moedas):
         # Diagnóstico: acumula bloqueadores quando não há sinal
         _diag_buffer["total_analisados"] += 1
         if not result["sinal"] and abs(result.get("score", 0)) >= 30:
-            for _b in _detectar_bloqueadores_diag(result):
+            _bloqs = _detectar_bloqueadores_diag(result)
+            for _b in _bloqs:
                 _diag_buffer["bloqueadores"][_b] = _diag_buffer["bloqueadores"].get(_b, 0) + 1
             _diag_buffer["candidatos"].append(
-                (abs(result["score"]), abrev, result["score"], result["rsi"], result["adx"], tf)
+                (abs(result["score"]), abrev, result["score"], result["rsi"], result["adx"], tf, _bloqs)
             )
 
         if result["sinal"]:
