@@ -284,7 +284,7 @@ def calcular_indicadores(candles):
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
-    _vol_thr      = 0.20 if _FLV <= 0 else (0.50 if _FLV == 1 else (0.65 if _FLV == 2 else 0.70))
+    _vol_thr      = 0.20 if _FLV <= 0 else (0.50 if _FLV == 1 else (0.60 if _FLV == 2 else 0.60))
     vol_nao_fade  = volumes[-1] >= vol_ma * _vol_thr
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
@@ -512,8 +512,8 @@ def detectar_sinais(ind):
     _fluxo_min      = 0 if _FLV <= 0 else 1
     _adx_sub_ok_bb  = i["adx_subindo"] if _FLV >= 2 else True   # BB_BREAK: exige ADX subindo
     _adx_sub_ok     = True                                        # SCOUT: ADX presente basta (>= 15)
-    _no_liq_topo    = (not i["liq_topo"])  if _FLV >= 3 else True
-    _no_liq_fund    = (not i["liq_fundo"]) if _FLV >= 3 else True
+    _no_liq_topo    = (not i["liq_topo"])  if _FLV >= 4 else True
+    _no_liq_fund    = (not i["liq_fundo"]) if _FLV >= 4 else True
 
     # ── BB Breakout ───────────────────────────────────────────────────────────
     _rvol_bb      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)

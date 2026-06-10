@@ -64,7 +64,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     sc_is = result.get("score_inst_short", 100)
 
     _sc_min  = 25 if FILTER_LEVEL <= 0 else 40
-    _vol_thr = 0.20 if FILTER_LEVEL <= 0 else (0.50 if FILTER_LEVEL == 1 else (0.65 if FILTER_LEVEL == 2 else 0.70))
+    _vol_thr = 0.20 if FILTER_LEVEL <= 0 else (0.50 if FILTER_LEVEL == 1 else 0.60)
 
     if sc < _sc_min:
         motivos.append("score baixo")
