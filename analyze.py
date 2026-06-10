@@ -284,12 +284,12 @@ def calcular_indicadores(candles):
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
-    _vol_thr      = 0.20 if _FLV <= 0 else (0.50 if _FLV == 1 else (0.65 if _FLV == 2 else 0.80))
+    _vol_thr      = 0.20 if _FLV <= 0 else (0.50 if _FLV == 1 else (0.65 if _FLV == 2 else 0.70))
     vol_nao_fade  = volumes[-1] >= vol_ma * _vol_thr
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
-    flex_vol_ok   = v_bom or (obv_bull and trendilo_long)
-    flex_vol_ok_s = v_bom or (obv_bear and trendilo_short)
+    flex_vol_ok   = v_bom or obv_bull or rvol >= 0.7
+    flex_vol_ok_s = v_bom or obv_bear or rvol >= 0.7
 
     # DNA Flow relaxado (FLEX)
     macd_bull_r  = (ml > sl_v) or (hist > hist_p)
@@ -509,7 +509,7 @@ def detectar_sinais(ind):
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
     # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
-    _fluxo_min   = 0 if _FLV <= 0 else (1 if _FLV == 1 else 2)
+    _fluxo_min   = 0 if _FLV <= 0 else 1
     _adx_sub_ok  = i["adx_subindo"] if _FLV >= 2 else True
     _no_liq_topo = (not i["liq_topo"])  if _FLV >= 3 else True
     _no_liq_fund = (not i["liq_fundo"]) if _FLV >= 3 else True
@@ -590,13 +590,13 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
+    long_flex  = (i["score"] >= 40 and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
-    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
+    short_flex = (i["score"] <= -40 and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
