@@ -162,17 +162,37 @@ async def executar_ciclo(session, estado, tf, moedas):
                 log.info(f"  📊 {abrev} SHORT bloqueado — correlação ({MAX_SHORT_PER_CYCLE}/ciclo)")
                 continue
 
+            _rvol      = result.get("rvol", 1.0)
+            _rsi       = result.get("rsi", 50)
+            _dna       = result.get("dna_flow_bull" if eh_long else "dna_flow_bear", False)
+            _trl       = result.get("trendilo_long" if eh_long else "trendilo_short", False)
+            _tend      = result.get("tendencia", "NEUTRO")
+            _armadilha = []
+            if _rvol < 0.80:
+                _armadilha.append("volume fraco")
+            if fonte == "BB_BREAK" and _rvol < 1.0:
+                _armadilha.append("BB break sem volume")
+            if eh_long and _rsi >= 50:
+                _armadilha.append(f"RSI {_rsi:.0f} elevado para LONG")
+            if not eh_long and _rsi <= 50:
+                _armadilha.append(f"RSI {_rsi:.0f} baixo para SHORT")
+            if not _dna and not _trl:
+                _armadilha.append("fluxo não confirmado")
+            if _tend == "NEUTRO":
+                _armadilha.append("tendência lateral")
+
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
-                "rvol":         result.get("rvol", 0.0),
+                "rvol":         _rvol,
                 "inst_score":   result.get("score_inst_long" if eh_long else "score_inst_short", 0),
                 "inst_cls":     result.get("cls_inst_long"   if eh_long else "cls_inst_short",   ""),
-                "dna_flow":     result.get("dna_flow_bull"   if eh_long else "dna_flow_bear",  False),
-                "trendilo_dir": result.get("trendilo_long"   if eh_long else "trendilo_short", False),
+                "dna_flow":     _dna,
+                "trendilo_dir": _trl,
                 "liq_event":    ("LIQ FUNDO ↑" if result.get("liq_fundo") else
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
                 "funding_rate": result.get("funding_rate"),
                 "oi_change":    oi_change.get(sym),
+                "armadilha":    _armadilha,
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],

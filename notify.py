@@ -120,6 +120,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     evento_liq  = extra.get("liq_event", "")
     funding_rate = extra.get("funding_rate")
     oi_change    = extra.get("oi_change")
+    armadilha    = extra.get("armadilha", [])
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
     mult_atr = (2.0 if fonte == "SURGE"    else
@@ -235,12 +236,17 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     linha_inst  = f"\n🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar(cls_inst)}" if score_inst else ""
     linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
     aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
+    if armadilha:
+        motivos = "; ".join(armadilha)
+        aviso_armadilha = f"\n🪤 *POSSÍVEL ARMADILHA:* _{_escapar(motivos)}_"
+    else:
+        aviso_armadilha = ""
 
     texto = (
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
         f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 Gráfico: *{_escapar(tf_lbl)}*\n"
         f"{linha_cross}"
-        f"{_escapar(label_grade)}{linha_inst}{linha_liq}{aviso_scout}\n\n"
+        f"{_escapar(label_grade)}{linha_inst}{linha_liq}{aviso_scout}{aviso_armadilha}\n\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
         f"🛑 Stop: `${_bruto(_fmt(stop))}` \\({_escapar(label_stop)}\\)\n"
         f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
