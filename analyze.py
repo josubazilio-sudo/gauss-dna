@@ -284,7 +284,7 @@ def calcular_indicadores(candles):
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
-    vol_nao_fade  = volumes[-1] >= vol_ma * 0.65
+    vol_nao_fade  = volumes[-1] >= vol_ma * 0.80
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
     flex_vol_ok   = v_bom or (obv_bull and trendilo_long)
@@ -508,11 +508,11 @@ def detectar_sinais(ind):
     # ── BB Breakout ───────────────────────────────────────────────────────────
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
-                      not i["lateralizado"] and not i["ext_acima_e21"] and
+                      not i["lateralizado"] and not i["ext_acima_e21"] and i["obv_bull"] and
                       i["rvol"] >= 0.80 and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
-                      not i["lateralizado"] and not i["ext_abaixo_e21"] and
+                      not i["lateralizado"] and not i["ext_abaixo_e21"] and i["obv_bear"] and
                       i["rvol"] >= 0.80 and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────

@@ -167,6 +167,8 @@ async def executar_ciclo(session, estado, tf, moedas):
             _dna       = result.get("dna_flow_bull" if eh_long else "dna_flow_bear", False)
             _trl       = result.get("trendilo_long" if eh_long else "trendilo_short", False)
             _tend      = result.get("tendencia", "NEUTRO")
+            _hora_utc  = datetime.now(timezone.utc).hour
+            _baixa_liq = 22 <= _hora_utc or _hora_utc < 6   # 22h–06h UTC = baixa liquidez
             _armadilha = []
             if _rvol < 0.80:
                 _armadilha.append("volume fraco")
@@ -180,6 +182,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _armadilha.append("fluxo não confirmado")
             if _tend == "NEUTRO":
                 _armadilha.append("tendência lateral")
+            if _baixa_liq:
+                _armadilha.append(f"sessão baixa liquidez ({_hora_utc:02d}h UTC)")
 
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
