@@ -308,10 +308,11 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI em zona de entrada: LONG abaixo de 63, ou subindo de zona baixa (rsi_ant < 55)
-    # Evita entrar LONG com RSI já esticado (65-70) prestes a reverter
-    rsi_zona_long  = rsi < 63 or (rsi < 67 and rsi_subindo and rsi_ant < 55)
-    rsi_zona_short = rsi > 37 or (rsi > 33 and rsi_caindo and rsi_ant > 45)
+    # RSI em zona de entrada:
+    # LONG: < 50 ok sempre | 50-59 só subindo | 60-62 subindo de zona baixa (rsi_ant < 48)
+    # SHORT: > 50 ok sempre | 41-50 só caindo | 37-40 caindo de zona alta (rsi_ant > 52)
+    rsi_zona_long  = (rsi < 50) or (rsi < 60 and rsi_subindo) or (rsi < 63 and rsi_subindo and rsi_ant < 48)
+    rsi_zona_short = (rsi > 50) or (rsi > 40 and rsi_caindo) or (rsi > 37 and rsi_caindo and rsi_ant > 52)
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
