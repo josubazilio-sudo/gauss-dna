@@ -55,30 +55,43 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     trl_s = result.get("trendilo_short", False)
     liq_t = result.get("liq_topo", False)
     liq_f = result.get("liq_fundo", False)
+    f_b   = result.get("f_bull", False)
+    f_s   = result.get("f_bear", False)
+    ha1_b = result.get("ha_bull_1", False)
+    ha1_s = result.get("ha_bear_1", False)
 
-    if sc < 40:
+    _sc_min  = 25 if FILTER_LEVEL <= 0 else 40
+    _vol_thr = 0.20 if FILTER_LEVEL <= 0 else (0.50 if FILTER_LEVEL == 1 else (0.65 if FILTER_LEVEL == 2 else 0.80))
+
+    if sc < _sc_min:
         motivos.append("score baixo")
         return motivos
 
-    if adx < 15:
-        motivos.append("ADX < 15")
-    if not adx_s:
+    # RSI zona — bloqueador mais frequente, checar primeiro
+    if kal and rsi >= 55:
+        motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
+    elif not kal and rsi <= 45:
+        motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
+
+    if adx < (10 if FILTER_LEVEL <= 0 else 15):
+        motivos.append("ADX baixo")
+    if FILTER_LEVEL >= 2 and not adx_s:
         motivos.append("ADX nao subindo")
     if lat:
         motivos.append("mercado lateral")
-    if rvol < 0.80:
-        motivos.append("RVOL < 80%")
-    if kal and rsi >= 55:
-        motivos.append(f"RSI {rsi:.0f} zona LONG")
-    elif not kal and rsi <= 45:
-        motivos.append(f"RSI {rsi:.0f} zona SHORT")
-    if kal and not dna_b and not trl_l:
+    if rvol < _vol_thr:
+        motivos.append(f"RVOL < {_vol_thr*100:.0f}%")
+    if kal and not ha1_b:
+        motivos.append("HA nao bull")
+    elif not kal and not ha1_s:
+        motivos.append("HA nao bear")
+    if kal and not dna_b and not trl_l and not f_b:
         motivos.append("sem fluxo LONG")
-    elif not kal and not dna_s and not trl_s:
+    elif not kal and not dna_s and not trl_s and not f_s:
         motivos.append("sem fluxo SHORT")
-    if kal and liq_t:
+    if FILTER_LEVEL >= 3 and kal and liq_t:
         motivos.append("liq topo SMC")
-    elif not kal and liq_f:
+    elif FILTER_LEVEL >= 3 and not kal and liq_f:
         motivos.append("liq fundo SMC")
     if not motivos:
         motivos.append("HA/MACD pendente")
