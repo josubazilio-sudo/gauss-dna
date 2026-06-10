@@ -2,7 +2,7 @@ name: GAUSS+DNA Bot de Sinais
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch:
     inputs:
       tg_token:
@@ -78,7 +78,7 @@ jobs:
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
           WA_PHONE: ${{ secrets.WA_PHONE }}
           WA_APIKEY: ${{ secrets.WA_APIKEY }}
-          TIMEFRAMES: ${{ github.event.inputs.timeframes || '30m,1h,4h' }}
+          TIMEFRAMES: ${{ github.event.inputs.timeframes || '15m,1h,4h' }}
           FILTER_LEVEL: ${{ github.event.inputs.filter_level || '3' }}
           CYCLE_INTERVAL: '300'
           SIGNAL_MODE: 'FLEX'
