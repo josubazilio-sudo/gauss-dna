@@ -27,6 +27,96 @@ log = logging.getLogger("GAUSS+DNA")
 MAX_SINAIS_POR_CICLO = 3
 
 
+# ── Buffer de diagnóstico (30 min) ────────────────────────────────────────────
+
+_diag_buffer: dict = {
+    "bloqueadores":     {},   # motivo -> count
+    "candidatos":       [],   # (score_abs, abrev, score, rsi, adx, tf)
+    "total_analisados": 0,
+    "ciclos":           0,
+    "ultimo_sinal":     0.0,
+    "ultimo_envio":     0.0,
+}
+
+
+def _detectar_bloqueadores_diag(result: dict) -> list:
+    motivos = []
+    sc    = abs(result.get("score", 0))
+    rsi   = result.get("rsi", 50)
+    adx   = result.get("adx", 0)
+    rvol  = result.get("rvol", 1.0)
+    kal   = result.get("kalman_subindo", True)
+    adx_s = result.get("adx_subindo", True)
+    lat   = result.get("tendencia", "NEUTRO") == "NEUTRO"
+    dna_b = result.get("dna_flow_bull", False)
+    dna_s = result.get("dna_flow_bear", False)
+    trl_l = result.get("trendilo_long", False)
+    trl_s = result.get("trendilo_short", False)
+    liq_t = result.get("liq_topo", False)
+    liq_f = result.get("liq_fundo", False)
+
+    if sc < 40:
+        motivos.append("score baixo")
+        return motivos
+
+    if adx < 15:
+        motivos.append("ADX < 15")
+    if not adx_s:
+        motivos.append("ADX nao subindo")
+    if lat:
+        motivos.append("mercado lateral")
+    if rvol < 0.80:
+        motivos.append("RVOL < 80%")
+    if kal and rsi >= 55:
+        motivos.append(f"RSI {rsi:.0f} zona LONG")
+    elif not kal and rsi <= 45:
+        motivos.append(f"RSI {rsi:.0f} zona SHORT")
+    if kal and not dna_b and not trl_l:
+        motivos.append("sem fluxo LONG")
+    elif not kal and not dna_s and not trl_s:
+        motivos.append("sem fluxo SHORT")
+    if kal and liq_t:
+        motivos.append("liq topo SMC")
+    elif not kal and liq_f:
+        motivos.append("liq fundo SMC")
+    if not motivos:
+        motivos.append("HA/MACD pendente")
+    return motivos
+
+
+async def _enviar_diagnostico(session) -> None:
+    """Envia relatório de diagnóstico de bloqueadores ao Telegram."""
+    blq    = _diag_buffer["bloqueadores"]
+    cand   = _diag_buffer["candidatos"]
+    tot    = _diag_buffer["total_analisados"]
+    ciclos = _diag_buffer["ciclos"]
+    ult_sin = _diag_buffer["ultimo_sinal"]
+    sem_min = int((time.time() - ult_sin) / 60) if ult_sin > 0 else 0
+
+    linhas = [f"DIAGNOSTICO GAUSS+DNA — sem sinais ha {sem_min}min\n"]
+
+    if blq:
+        top_blq = sorted(blq.items(), key=lambda x: x[1], reverse=True)[:6]
+        linhas.append("Bloqueadores mais frequentes:")
+        for i, (motivo, cnt) in enumerate(top_blq, 1):
+            linhas.append(f"  {i}. {motivo} — {cnt}x")
+    else:
+        linhas.append("Nenhum bloqueador detectado neste periodo")
+
+    top_long  = sorted([c for c in cand if c[2] > 0],  key=lambda x: x[0], reverse=True)[:2]
+    top_short = sorted([c for c in cand if c[2] < 0],  key=lambda x: x[0], reverse=True)[:2]
+    if top_long or top_short:
+        linhas.append("\nMais proximos de disparar:")
+        for _, sym, sc, rsi, adx, tf in top_long:
+            linhas.append(f"  LONG  {sym} | {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f} [{tf}]")
+        for _, sym, sc, rsi, adx, tf in top_short:
+            linhas.append(f"  SHORT {sym} | {sc:+d} | RSI {rsi:.0f} | ADX {adx:.0f} [{tf}]")
+
+    linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
+    await notificar(session, "\n".join(linhas))
+    log.info(f"[DIAG] Diagnostico enviado — {len(blq)} bloqueadores, {len(cand)} candidatos")
+
+
 # ── Filtro horário ────────────────────────────────────────────────────────────
 
 def dentro_horario_operacao():
@@ -62,6 +152,7 @@ def _h4_confirma(candles_h4, direcao):
 async def executar_ciclo(session, estado, tf, moedas):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     agora = time.time(); enviados = 0
+    _diag_buffer["ciclos"] += 1
     cooldown = max(tf_para_minutos(tf) * 60, 7200)
     candidatos = []
     watchlist  = []
@@ -105,6 +196,15 @@ async def executar_ciclo(session, estado, tf, moedas):
         log.info(f"[{tf}] {abrev:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | "
                  f"ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_subindo'] else 'DN'} | "
                  f"Grade:{grade} | {result['fonte_sinal'] or result['sinal'] or '—'}")
+
+        # Diagnóstico: acumula bloqueadores quando não há sinal
+        _diag_buffer["total_analisados"] += 1
+        if not result["sinal"] and abs(result.get("score", 0)) >= 30:
+            for _b in _detectar_bloqueadores_diag(result):
+                _diag_buffer["bloqueadores"][_b] = _diag_buffer["bloqueadores"].get(_b, 0) + 1
+            _diag_buffer["candidatos"].append(
+                (abs(result["score"]), abrev, result["score"], result["rsi"], result["adx"], tf)
+            )
 
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
@@ -224,6 +324,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                                     result["kalman_subindo"], result["swing_low"],
                                     result["swing_high"], result["fonte_sinal"], tf, grade, extra=extra)
             if ok:
+                _diag_buffer["ultimo_sinal"] = agora
                 estado[chave_dir] = agora; estado[chave_any] = agora
                 risco_ciclo   += pct_risco
                 scouts_enviados += 1 if fonte == "SCOUT" else 0
@@ -466,6 +567,9 @@ async def main():
     ciclo         = 0
     moedas_ativas = list(COINS)
     ultimo_scan   = 0
+    _agora_ini    = time.time()
+    _diag_buffer["ultimo_sinal"] = _agora_ini
+    _diag_buffer["ultimo_envio"] = _agora_ini
 
     async with aiohttp.ClientSession() as session:
         agora_str    = datetime.now().strftime("%H:%M — %d/%m/%Y")
@@ -535,6 +639,24 @@ async def main():
 
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
+
+            # Diagnóstico automático a cada 30 min sem sinais
+            if total > 0:
+                _diag_buffer["ultimo_sinal"] = time.time()
+            _agora_d = time.time()
+            _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 900
+            if _agora_d - _diag_buffer["ultimo_envio"] >= 1800 and _sem_sinal:
+                try:
+                    await _enviar_diagnostico(session)
+                except Exception as _e:
+                    log.error(f"❌ Erro diagnostico: {_e}")
+                _diag_buffer.update({
+                    "ultimo_envio":     _agora_d,
+                    "bloqueadores":     {},
+                    "candidatos":       [],
+                    "total_analisados": 0,
+                    "ciclos":           0,
+                })
 
             if not LOOP_MODE:
                 break
