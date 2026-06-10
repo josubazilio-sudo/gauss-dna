@@ -110,7 +110,7 @@ def calcular_indicadores(candles):
     else:
         stoch_rsi = 0.5
     stoch_esticado_up   = stoch_rsi > 0.80
-    stoch_esticado_down = stoch_rsi < 0.20
+    stoch_esticado_down = stoch_rsi < 0.05
 
     # DMI / ADX
     pdi, mdi, adx, adx_p = calcular_adx(candles[-60:])
