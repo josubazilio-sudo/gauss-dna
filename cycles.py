@@ -479,9 +479,10 @@ async def executar_ciclo_mtf(session, estado, moedas):
                      f"{result['fonte_sinal']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
             eh_long_mtf = result["sinal"] == "LONG"
             score_inst_mtf = result.get("score_inst_long" if eh_long_mtf else "score_inst_short", 0)
-            if grade == "B" or abs(result["score"]) < 50 or score_inst_mtf < 50:
-                motivo = (f"score {result['score']:+d}<50" if abs(result["score"]) < 50 else
-                          f"Score Inst {score_inst_mtf}<50" if score_inst_mtf < 50 else "Grade B")
+            _score_min_mtf = 40; _inst_min_mtf = 40
+            if abs(result["score"]) < _score_min_mtf or score_inst_mtf < _inst_min_mtf:
+                motivo = (f"score {result['score']:+d}<{_score_min_mtf}" if abs(result["score"]) < _score_min_mtf
+                          else f"Score Inst {score_inst_mtf}<{_inst_min_mtf}")
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, motivo))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — {motivo}")
                 continue
@@ -643,12 +644,13 @@ async def main():
                 log.error(f"❌ MTF erro ciclo #{ciclo}: {e}")
 
             try:
-                if "4h" in TIMEFRAMES:
-                    tf_base = next((t for t in TIMEFRAMES if t != "4h"), "1h")
-                else:
-                    tf_base = next((t for t in TIMEFRAMES if t != "1h"), TIMEFRAMES[0])
-                enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas)
-                total   += enviados
+                # Roda FLEX para cada TF que não é coberto pelo caminho MTF (4h/1h)
+                _tfs_flex = [tf for tf in TIMEFRAMES if tf not in ("4h", "1h")]
+                if not _tfs_flex:
+                    _tfs_flex = [t for t in TIMEFRAMES if t != "4h"] or [TIMEFRAMES[0]]
+                for tf_base in _tfs_flex:
+                    enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas)
+                    total   += enviados
                 log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{ciclo}: {e}")
