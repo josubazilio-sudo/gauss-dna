@@ -303,8 +303,8 @@ def calcular_indicadores(candles):
 
     # Anti-pump / anti-dump
     raw_c48 = [c["c"] for c in candles[-50:-1]]
-    nao_overext_long  = (preco - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.35
-    nao_overext_short = (max(raw_c48) - preco) / max(max(raw_c48), 1e-10) < 0.35
+    nao_overext_long  = (preco - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.50
+    nao_overext_short = (max(raw_c48) - preco) / max(max(raw_c48), 1e-10) < 0.50
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
@@ -538,10 +538,10 @@ def detectar_sinais(ind):
     # ── Surge ─────────────────────────────────────────────────────────────────
     long_surge  = (i["rvol_tier"] >= 3 and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
                    not i["exaustao_topo"] and (i["kalman_subindo"] or i["k_short_subindo"]) and i["ha_bull"] and
-                   not i["liq_topo"] and i["rsi"] < 60 and i["score_inst_long"] >= 50)
+                   not i["liq_topo"] and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_surge = (i["rvol_tier"] >= 3 and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
-                   not i["liq_fundo"] and i["rsi"] > 30 and i["score_inst_short"] >= 50)
+                   not i["liq_fundo"] and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
@@ -586,13 +586,13 @@ def detectar_sinais(ind):
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  (i["liq_long"] or i["liq_fundo"]) and
+                  (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  (i["liq_short"] or i["liq_topo"]) and
+                  (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
