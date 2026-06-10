@@ -67,10 +67,14 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("score baixo")
         return motivos
 
+    # Direção pelo score (mais confiável que kalman_subindo como proxy)
+    sc_dir = result.get("score", 0)
+    eh_long_cand = sc_dir > 0
+
     # RSI zona — bloqueador mais frequente, checar primeiro
-    if kal and rsi >= 55:
+    if eh_long_cand and rsi >= 55:
         motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
-    elif not kal and rsi <= 45:
+    elif not eh_long_cand and rsi <= 45:
         motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
 
     if adx < (10 if FILTER_LEVEL <= 0 else 15):
@@ -81,17 +85,17 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("mercado lateral")
     if rvol < _vol_thr:
         motivos.append(f"RVOL < {_vol_thr*100:.0f}%")
-    if kal and not ha1_b:
+    if eh_long_cand and not ha1_b:
         motivos.append("HA nao bull")
-    elif not kal and not ha1_s:
+    elif not eh_long_cand and not ha1_s:
         motivos.append("HA nao bear")
-    if kal and not dna_b and not trl_l and not f_b:
+    if eh_long_cand and not dna_b and not trl_l and not f_b:
         motivos.append("sem fluxo LONG")
-    elif not kal and not dna_s and not trl_s and not f_s:
+    elif not eh_long_cand and not dna_s and not trl_s and not f_s:
         motivos.append("sem fluxo SHORT")
-    if FILTER_LEVEL >= 3 and kal and liq_t:
+    if FILTER_LEVEL >= 3 and eh_long_cand and liq_t:
         motivos.append("liq topo SMC")
-    elif FILTER_LEVEL >= 3 and not kal and liq_f:
+    elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
         motivos.append("liq fundo SMC")
     if not motivos:
         motivos.append("HA/MACD pendente")
