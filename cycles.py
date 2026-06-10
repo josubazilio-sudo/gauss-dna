@@ -16,7 +16,7 @@ from config import (
     MAX_CYCLE_RISK, MAX_SCOUT_PER_CYCLE, MAX_LONG_PER_CYCLE, MAX_SHORT_PER_CYCLE,
     FILTER_LEVEL,
 )
-from coins import COINS
+from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
 from analyze import analisar, calcular_indicadores
 from notify import enviar_sinal, enviar_watchlist, notificar
@@ -612,7 +612,9 @@ async def main():
 
     estado        = carregar_estado()
     ciclo         = 0
-    moedas_ativas = list(COINS)
+    # Priority coins sempre na frente, depois restante da lista estática (sem duplicatas)
+    _prio_syms    = {s for s, _, _ in PRIORITY_WATCHLIST}
+    moedas_ativas = list(PRIORITY_WATCHLIST) + [c for c in COINS if c[0] not in _prio_syms]
     ultimo_scan   = 0
     _agora_ini    = time.time()
     _diag_buffer["ultimo_sinal"] = _agora_ini
@@ -642,7 +644,9 @@ async def main():
 
         if DYNAMIC_SCAN:
             resultado = await escanear_melhores_moedas(session, scan_tf, min(50, SCANNER_TOP))
-            if resultado: moedas_ativas = resultado
+            if resultado:
+                _scan_syms = {s for s, _, _ in resultado}
+                moedas_ativas = list(PRIORITY_WATCHLIST) + [c for c in resultado if c[0] not in _prio_syms]
             ultimo_scan = 0
 
         while True:
@@ -658,7 +662,8 @@ async def main():
 
             if DYNAMIC_SCAN and ciclo > 1 and (ciclo - ultimo_scan) >= SCAN_EVERY:
                 resultado = await escanear_melhores_moedas(session, scan_tf, SCANNER_TOP)
-                if resultado: moedas_ativas = resultado
+                if resultado:
+                    moedas_ativas = list(PRIORITY_WATCHLIST) + [c for c in resultado if c[0] not in _prio_syms]
                 ultimo_scan = ciclo
 
             log.info(f"── Ciclo #{ciclo} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(moedas_ativas)} moedas ──")

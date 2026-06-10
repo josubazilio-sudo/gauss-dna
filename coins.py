@@ -2,12 +2,42 @@
 GAUSS+DNA — Lista de moedas monitoradas e filtros do scanner dinâmico.
 """
 
-# Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner
+# ── Watchlist prioritária — escaneada PRIMEIRO em todo ciclo ─────────────────
+# Moedas do bubble pessoal do usuário: sempre na frente do top dinâmico
+PRIORITY_WATCHLIST = [
+    ("NEARUSDT",  "NEAR/USDT",  "NEAR"),
+    ("HYPEUSDT",  "HYPE/USDT",  "HYPE"),
+    ("TIAUSDT",   "TIA/USDT",   "TIA"),
+    ("HBARUSDT",  "HBAR/USDT",  "HBAR"),
+    ("ETHFIUSDT", "ETHFI/USDT", "ETHFI"),
+    ("PENGUUSDT", "PENGU/USDT", "PENGU"),
+    ("AGLDUSDT",  "AGLD/USDT",  "AGLD"),
+    ("HOMEUSDT",  "HOME/USDT",  "HOME"),
+    ("IRYSUSDT",  "IRYS/USDT",  "IRYS"),
+    ("MLNUSDT",   "MLN/USDT",   "MLN"),
+    ("ASTERUSDT", "ASTER/USDT", "ASTER"),
+    ("ALLOUUSDT", "ALLOU/USDT", "ALLOU"),
+    ("LTCUSDT",   "LTC/USDT",   "LTC"),
+    ("PENDLEUSDT","PENDLE/USDT","PENDLE"),
+    ("OPENUSDT",  "OPEN/USDT",  "OPEN"),
+    ("HUSDT",     "H/USDT",     "H"),
+    ("SUIUSDT",   "SUI/USDT",   "SUI"),
+    ("ETHUSDT",   "ETH/USDT",   "ETH"),
+    ("BTCUSDT",   "BTC/USDT",   "BTC"),
+    ("XMRUSDT",   "XMR/USDT",   "XMR"),
+    ("HMSTRUSDT", "HMSTR/USDT", "HMSTR"),
+    ("TRUMPUSDT", "TRUMP/USDT", "TRUMP"),
+    ("BNBUSDT",   "BNB/USDT",   "BNB"),
+    ("ADAUSDT",   "ADA/USDT",   "ADA"),
+    ("SOLUSDT",   "SOL/USDT",   "SOL"),
+]
+
+# Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
 _EXCLUIR = {
     "USDC", "BUSD", "TUSD", "FDUSD", "DAI", "USDP", "PAXG", "WBTC", "WETH",
     "EUR", "GBP", "BRL", "UST", "USDD", "FRAX", "USD1", "USDE", "USDT0",
     "AIXDROP",
-    "PENDLE", "GIGGLE", "USELESS", "EDEN", "PLAY", "MAGMA", "CHIP",
+    "GIGGLE", "USELESS", "EDEN", "PLAY", "MAGMA", "CHIP",
     "SLX", "JGGL", "MYX", "SENTIS", "XPL", "TAO",
 }
 _EXCLUIR_SUFIXO = ("UP", "DOWN", "BULL", "BEAR", "3L", "3S", "2L", "2S", "5L", "5S")
