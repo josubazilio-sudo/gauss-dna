@@ -46,7 +46,6 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     rsi   = result.get("rsi", 50)
     adx   = result.get("adx", 0)
     rvol  = result.get("rvol", 1.0)
-    kal   = result.get("kalman_subindo", True)
     adx_s = result.get("adx_subindo", True)
     lat   = result.get("tendencia", "NEUTRO") == "NEUTRO"
     dna_b = result.get("dna_flow_bull", False)
@@ -59,6 +58,10 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     f_s   = result.get("f_bear", False)
     ha1_b = result.get("ha_bull_1", False)
     ha1_s = result.get("ha_bear_1", False)
+    seg_l = result.get("seguro_long", True)
+    seg_s = result.get("seguro_short", True)
+    sc_il = result.get("score_inst_long", 100)
+    sc_is = result.get("score_inst_short", 100)
 
     _sc_min  = 25 if FILTER_LEVEL <= 0 else 40
     _vol_thr = 0.20 if FILTER_LEVEL <= 0 else (0.50 if FILTER_LEVEL == 1 else (0.65 if FILTER_LEVEL == 2 else 0.70))
@@ -67,7 +70,6 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("score baixo")
         return motivos
 
-    # Direção pelo score (mais confiável que kalman_subindo como proxy)
     sc_dir = result.get("score", 0)
     eh_long_cand = sc_dir > 0
 
@@ -89,6 +91,14 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("HA nao bull")
     elif not eh_long_cand and not ha1_s:
         motivos.append("HA nao bear")
+    if eh_long_cand and not seg_l:
+        motivos.append("seguro_long=F (stoch/ext)")
+    elif not eh_long_cand and not seg_s:
+        motivos.append("seguro_short=F (stoch/ext)")
+    if eh_long_cand and sc_il < 45:
+        motivos.append(f"score_inst LONG {sc_il}")
+    elif not eh_long_cand and sc_is < 45:
+        motivos.append(f"score_inst SHORT {sc_is}")
     if eh_long_cand and not dna_b and not trl_l and not f_b:
         motivos.append("sem fluxo LONG")
     elif not eh_long_cand and not dna_s and not trl_s and not f_s:
