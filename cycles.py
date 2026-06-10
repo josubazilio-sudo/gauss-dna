@@ -237,9 +237,10 @@ async def executar_ciclo(session, estado, tf, moedas):
             _hora_c   = datetime.now(timezone.utc).hour
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
-            _inst_min = (35 if fonte == "SCOUT" else
+            _inst_min = (0  if FILTER_LEVEL <= 0 else
+                         35 if fonte == "SCOUT" else
                          40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
-            if _sessao_perigosa or _abertura_falsa:
+            if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = max(_inst_min, 60)   # sessão perigosa: exige confirmação institucional forte
             if score_inst < _inst_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
@@ -576,7 +577,7 @@ async def main():
     scan_tf     = TIMEFRAMES[0]
     modo_str    = "LOOP CONTÍNUO" if LOOP_MODE else "EXECUÇÃO ÚNICA"
     scan_str    = "DINÂMICO" if DYNAMIC_SCAN else "LISTA FIXA"
-    _flv_desc = {1: "MINIMO (vol50/sem-SMC)", 2: "MODERADO (vol65/adx_sub)", 3: "COMPLETO (vol80/SMC)"}
+    _flv_desc = {0: "DEBUG (vol20/score25/sem-seguro)", 1: "MINIMO (vol50/sem-SMC)", 2: "MODERADO (vol65/adx_sub)", 3: "COMPLETO (vol80/SMC)"}
     log.info(f"🚀 GAUSS+DNA v3 | {SIGNAL_MODE} | TFs: {','.join(TIMEFRAMES)} | "
              f"Moedas: {scan_str} | {modo_str} | Filtros: {_flv_desc.get(FILTER_LEVEL, FILTER_LEVEL)}")
     log.info("✅ Bot pronto — enviando apenas sinais reais ao Telegram")

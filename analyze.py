@@ -284,7 +284,7 @@ def calcular_indicadores(candles):
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
-    _vol_thr      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
+    _vol_thr      = 0.20 if _FLV <= 0 else (0.50 if _FLV == 1 else (0.65 if _FLV == 2 else 0.80))
     vol_nao_fade  = volumes[-1] >= vol_ma * _vol_thr
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
@@ -509,7 +509,7 @@ def detectar_sinais(ind):
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
     # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
-    _fluxo_min   = 1 if _FLV <= 1 else 2
+    _fluxo_min   = 0 if _FLV <= 0 else (1 if _FLV == 1 else 2)
     _adx_sub_ok  = i["adx_subindo"] if _FLV >= 2 else True
     _no_liq_topo = (not i["liq_topo"])  if _FLV >= 3 else True
     _no_liq_fund = (not i["liq_fundo"]) if _FLV >= 3 else True
@@ -615,14 +615,18 @@ def detectar_sinais(ind):
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
-    long_scout  = (i["score"] >= 40 and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= 15 and
+    _sc_min  = 25 if _FLV <= 0 else 40
+    _adx_min = 10 if _FLV <= 0 else 15
+    _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
+    _seg_s   = i["seguro_short"] if _FLV >= 1 else True
+    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
-                   i["seguro_long"] and i["vol_nao_fade"] and i["nao_overext_long"] and
+                   _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
-    short_scout = (i["score"] <= -40 and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 15 and
+    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
-                   i["seguro_short"] and i["vol_nao_fade"] and i["nao_overext_short"] and
+                   _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 

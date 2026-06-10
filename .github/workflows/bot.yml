@@ -22,7 +22,7 @@ on:
         required: false
         default: '30m,1h,4h'
       filter_level:
-        description: 'Nivel de filtros: 1=minimo, 2=moderado, 3=completo (padrao)'
+        description: 'Nivel de filtros: 0=debug(force), 1=minimo, 2=moderado, 3=completo (padrao)'
         required: false
         default: '3'
 
