@@ -335,6 +335,13 @@ async def executar_ciclo(session, estado, tf, moedas):
             if _aber_falsa:
                 _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
 
+            # FLEX sem fluxo direcional + mercado neutro = TP1 improvável (~50%)
+            if fonte == "FLEX" and not _dna and not _trl and _tend == "NEUTRO":
+                log.info(f"  🚫 {abrev} FLEX bloqueado — sem fluxo + tendência neutra")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], "FLEX sem fluxo+neutro"))
+                continue
+
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
                 "rvol":         _rvol,
