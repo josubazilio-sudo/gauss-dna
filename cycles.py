@@ -640,12 +640,18 @@ async def main():
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
 
-            # Diagnóstico automático a cada 30 min sem sinais
-            if total > 0:
-                _diag_buffer["ultimo_sinal"] = time.time()
-            _agora_d = time.time()
-            _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 900
-            if _agora_d - _diag_buffer["ultimo_envio"] >= 1800 and _sem_sinal:
+            # Diagnóstico: varredura imediata no 1º ciclo, depois a cada 30 min sem sinais
+            _agora_d    = time.time()
+            _enviar_diag = False
+            if ciclo == 1 and _diag_buffer["total_analisados"] > 0:
+                _enviar_diag = True   # varredura imediata ao iniciar
+            else:
+                if total > 0:
+                    _diag_buffer["ultimo_sinal"] = _agora_d
+                _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 900
+                if _agora_d - _diag_buffer["ultimo_envio"] >= 1800 and _sem_sinal:
+                    _enviar_diag = True
+            if _enviar_diag:
                 try:
                     await _enviar_diagnostico(session)
                 except Exception as _e:
