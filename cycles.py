@@ -93,7 +93,22 @@ async def _enviar_diagnostico(session) -> None:
     ult_sin = _diag_buffer["ultimo_sinal"]
     sem_min = int((time.time() - ult_sin) / 60) if ult_sin > 0 else 0
 
-    linhas = [f"DIAGNOSTICO GAUSS+DNA — sem sinais ha {sem_min}min\n"]
+    # Detecta contexto de mercado pelos candidatos acumulados
+    _rsi_vals = [c[3] for c in cand] if cand else []
+    _rsi_med  = sum(_rsi_vals) / len(_rsi_vals) if _rsi_vals else 50
+    _n_long   = sum(1 for c in cand if c[2] > 0)
+    _n_short  = sum(1 for c in cand if c[2] < 0)
+    if _rsi_med < 35 and _n_short > _n_long * 2:
+        _ctx = "MERCADO EM QUEDA — RSI medio {:.0f} (dump coordenado)".format(_rsi_med)
+    elif _rsi_med > 65 and _n_long > _n_short * 2:
+        _ctx = "MERCADO SOBRECOMPRADO — RSI medio {:.0f}".format(_rsi_med)
+    elif 40 <= _rsi_med <= 60:
+        _ctx = "Mercado neutro — RSI medio {:.0f}".format(_rsi_med)
+    else:
+        _ctx = "RSI medio {:.0f}".format(_rsi_med)
+
+    linhas = [f"DIAGNOSTICO GAUSS+DNA — sem sinais ha {sem_min}min",
+              _ctx, ""]
 
     if blq:
         top_blq = sorted(blq.items(), key=lambda x: x[1], reverse=True)[:6]

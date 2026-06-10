@@ -737,7 +737,15 @@ def analisar(simbolo, candles, funding_rate=None):
             if not ind["ha_bull_1"]:    b.append("ha1=F")
             if ind["adx"] < 15:         b.append(f"adx={ind['adx']:.1f}<15")
             if ind["lateralizado"]:     b.append("lateral")
-            if not ind["seguro_long"]:  b.append(f"seguro=F(stoch={ind['stoch_rsi']:.2f})")
+            if not ind["seguro_long"]:
+                _sg = []
+                if ind["perto_bb_topo"]:       _sg.append("bb_topo")
+                if ind["ext_acima_e21"]:        _sg.append("ext_e21")
+                if ind["vol_secando"]:          _sg.append("vol_sec")
+                if ind.get("exaustao_topo"):    _sg.append("exaustao")
+                if ind["rsi"] >= 70:            _sg.append(f"rsi={ind['rsi']:.0f}")
+                if ind["stoch_esticado_up"]:    _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                b.append(f"seguro=F({','.join(_sg) or '?'})")
             if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
             if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
@@ -748,7 +756,13 @@ def analisar(simbolo, candles, funding_rate=None):
             if not ind["ha_bear_1"]:     b.append("ha1=F")
             if ind["adx"] < 15:          b.append(f"adx={ind['adx']:.1f}<15")
             if ind["lateralizado"]:      b.append("lateral")
-            if not ind["seguro_short"]:  b.append(f"seguro=F(stoch={ind['stoch_rsi']:.2f})")
+            if not ind["seguro_short"]:
+                _sg = []
+                if ind["vol_secando"]:          _sg.append("vol_sec")
+                if ind.get("exaustao_fund"):     _sg.append("exaustao")
+                if ind["rsi"] <= 27:            _sg.append(f"rsi={ind['rsi']:.0f}")
+                if ind["stoch_esticado_down"]:  _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                b.append(f"seguro=F({','.join(_sg) or '?'})")
             if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
             if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
