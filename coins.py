@@ -30,6 +30,7 @@ PRIORITY_WATCHLIST = [
     ("BNBUSDT",   "BNB/USDT",   "BNB"),
     ("ADAUSDT",   "ADA/USDT",   "ADA"),
     ("SOLUSDT",   "SOL/USDT",   "SOL"),
+    ("EPICUSDT",  "EPIC/USDT",  "EPIC"),
 ]
 
 # Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
