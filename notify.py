@@ -171,8 +171,17 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     valor_risco  = CAPITAL * pct_risco
     contratos    = valor_risco / risco if risco > 0 else 0
     valor_pos    = contratos * preco
-    alavancagem  = (5 if fonte == "SCOUT" else
-                    {"S+": 10, "S": 10, "A+": 8, "A": 7}.get(grade, 5))
+
+    # Alavancagem dinâmica 3x–10x por qualidade do sinal
+    _lev = {"S+": 10, "S": 9, "A+": 8, "A": 7, "B": 5}.get(grade, 5)
+    if score_inst >= 80:  _lev += 1   # confirmação institucional forte
+    elif score_inst < 45: _lev -= 1   # institucional fraco
+    if rvol_val >= 1.2:   _lev += 1   # volume acima da média
+    elif rvol_val < 0.80: _lev -= 1   # volume fraco
+    if armadilha:         _lev -= 2   # condições de armadilha detectadas
+    if fonte == "SCOUT":  _lev = min(_lev, 5)   # sinal secundário: teto 5x
+    alavancagem = max(3, min(10, _lev))          # clamp 3x–10x
+
     pos_alav     = valor_pos / alavancagem
     ganho_tp1    = valor_risco * r1 * 0.5
     ganho_total  = valor_risco * (r1 + r_final) * 0.5
