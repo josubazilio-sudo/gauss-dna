@@ -73,9 +73,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
 
     # RSI zona — bloqueador mais frequente, checar primeiro
     if eh_long_cand and rsi >= 55:
-        motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
+        motivos.append("RSI zona LONG bloq (>= 55)")
     elif not eh_long_cand and rsi <= 45:
-        motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
+        motivos.append("RSI zona SHORT bloq (<= 45)")
 
     if adx < (10 if FILTER_LEVEL <= 0 else 15):
         motivos.append("ADX baixo")
