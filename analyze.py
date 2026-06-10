@@ -509,21 +509,22 @@ def detectar_sinais(ind):
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
     # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
-    _fluxo_min   = 0 if _FLV <= 0 else 1
-    _adx_sub_ok  = i["adx_subindo"] if _FLV >= 2 else True
-    _no_liq_topo = (not i["liq_topo"])  if _FLV >= 3 else True
-    _no_liq_fund = (not i["liq_fundo"]) if _FLV >= 3 else True
+    _fluxo_min      = 0 if _FLV <= 0 else 1
+    _adx_sub_ok_bb  = i["adx_subindo"] if _FLV >= 2 else True   # BB_BREAK: exige ADX subindo
+    _adx_sub_ok     = True                                        # SCOUT: ADX presente basta (>= 15)
+    _no_liq_topo    = (not i["liq_topo"])  if _FLV >= 3 else True
+    _no_liq_fund    = (not i["liq_fundo"]) if _FLV >= 3 else True
 
     # ── BB Breakout ───────────────────────────────────────────────────────────
     _rvol_bb      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
-                      _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
+                      _adx_sub_ok_bb and not i["lateralizado"] and not i["ext_acima_e21"] and
                       i["obv_bull"] and _no_liq_topo and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
-                      _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
+                      _adx_sub_ok_bb and not i["lateralizado"] and not i["ext_abaixo_e21"] and
                       i["obv_bear"] and _no_liq_fund and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
@@ -593,13 +594,13 @@ def detectar_sinais(ind):
     long_flex  = (i["score"] >= 40 and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
-                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
+                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 45 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
-                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
+                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 45 and
                   (i["liq_short"] or i["liq_topo"] or not i["kalman_subindo"]) and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
