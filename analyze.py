@@ -397,6 +397,7 @@ def calcular_indicadores(candles):
         "rsi_zona_long": rsi_zona_long, "rsi_zona_short": rsi_zona_short,
         # ADX
         "pdi": pdi, "mdi": mdi, "adx_long_ok": adx_long_ok, "adx_short_ok": adx_short_ok,
+        "adx_p": adx_p, "adx_subindo": adx > adx_p,
         # Volume
         "rvol": rvol, "rvol_tier": rvol_tier, "rvol_label": rvol_label,
         "v_bom": v_bom, "v_forte": v_forte, "v_inst": v_inst, "v_forte2": v_forte2,
@@ -425,6 +426,7 @@ def calcular_indicadores(candles):
         "impulso_bull": impulso_bull, "impulso_bear": impulso_bear,
         "liq_long": liq_long, "liq_short": liq_short,
         "liq_topo": liq_topo, "liq_fundo": liq_fundo,
+        "sombra_sup": sombra_sup, "sombra_inf": sombra_inf,
         "sm_bull": sm_bull, "sm_bear": sm_bear,
         "absorb_bull": absorb_bull, "absorb_bear": absorb_bear,
         "exaustao_topo": exaustao_topo, "exaustao_fund": exaustao_fund,
@@ -508,11 +510,13 @@ def detectar_sinais(ind):
     # ── BB Breakout ───────────────────────────────────────────────────────────
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
-                      not i["lateralizado"] and not i["ext_acima_e21"] and i["obv_bull"] and
+                      i["adx_subindo"] and not i["lateralizado"] and not i["ext_acima_e21"] and
+                      i["obv_bull"] and not i["liq_topo"] and
                       i["rvol"] >= 0.80 and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
-                      not i["lateralizado"] and not i["ext_abaixo_e21"] and i["obv_bear"] and
+                      i["adx_subindo"] and not i["lateralizado"] and not i["ext_abaixo_e21"] and
+                      i["obv_bear"] and not i["liq_fundo"] and
                       i["rvol"] >= 0.80 and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
@@ -604,14 +608,14 @@ def detectar_sinais(ind):
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
     long_scout  = (i["score"] >= 40 and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= 15 and
-                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
-                   i["vol_nao_fade"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
-                   i["rsi_zona_long"] and
+                   i["adx_subindo"] and not i["lateralizado"] and i["nao_ext_long_tight"] and
+                   i["seguro_long"] and i["vol_nao_fade"] and i["nao_overext_long"] and
+                   i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and not i["liq_topo"] and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= 2)
     short_scout = (i["score"] <= -40 and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 15 and
-                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
-                   i["vol_nao_fade"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
-                   i["rsi_zona_short"] and
+                   i["adx_subindo"] and not i["lateralizado"] and i["nao_ext_short_tight"] and
+                   i["seguro_short"] and i["vol_nao_fade"] and i["nao_overext_short"] and
+                   i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and not i["liq_fundo"] and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= 2)
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
@@ -787,6 +791,8 @@ def analisar(simbolo, candles, funding_rate=None):
         "cls_inst_short":   ind["cls_inst_short"],
         "liq_fundo":    ind["liq_fundo"],
         "liq_topo":     ind["liq_topo"],
+        "sombra_sup":   ind["sombra_sup"],
+        "sombra_inf":   ind["sombra_inf"],
         "dna_flow_bull": ind["dna_flow_bull"],
         "dna_flow_bear": ind["dna_flow_bear"],
         "dna_flex_bull": ind["dna_flex_bull"],

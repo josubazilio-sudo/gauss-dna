@@ -118,8 +118,13 @@ async def executar_ciclo(session, estado, tf, moedas):
 
             eh_long_ = result["sinal"] == "LONG"
             score_inst = result.get("score_inst_long" if eh_long_ else "score_inst_short", 0)
+            _hora_c   = datetime.now(timezone.utc).hour
+            _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
+            _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             _inst_min = (35 if fonte == "SCOUT" else
                          40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
+            if _sessao_perigosa or _abertura_falsa:
+                _inst_min = max(_inst_min, 60)   # sessão perigosa: exige confirmação institucional forte
             if score_inst < _inst_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -168,7 +173,12 @@ async def executar_ciclo(session, estado, tf, moedas):
             _trl       = result.get("trendilo_long" if eh_long else "trendilo_short", False)
             _tend      = result.get("tendencia", "NEUTRO")
             _hora_utc  = datetime.now(timezone.utc).hour
-            _baixa_liq = 22 <= _hora_utc or _hora_utc < 6   # 22h–06h UTC = baixa liquidez
+            _baixa_liq    = 22 <= _hora_utc or _hora_utc < 8    # Asian/madrugada UTC
+            _aber_falsa   = _hora_utc in (8, 13)               # abertura Londres/NY
+            _sombra_sup   = result.get("sombra_sup", 0.0)
+            _sombra_inf   = result.get("sombra_inf", 0.0)
+            _liq_topo_r   = result.get("liq_topo", False)
+            _liq_fundo_r  = result.get("liq_fundo", False)
             _armadilha = []
             if _rvol < 0.80:
                 _armadilha.append("volume fraco")
@@ -182,8 +192,18 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _armadilha.append("fluxo não confirmado")
             if _tend == "NEUTRO":
                 _armadilha.append("tendência lateral")
+            if eh_long and _sombra_sup > 0.35:
+                _armadilha.append("pavio de rejeição no topo")
+            if not eh_long and _sombra_inf > 0.35:
+                _armadilha.append("pavio de rejeição no fundo")
+            if eh_long and _liq_topo_r:
+                _armadilha.append("varredura de topo detectada")
+            if not eh_long and _liq_fundo_r:
+                _armadilha.append("varredura de fundo detectada")
             if _baixa_liq:
                 _armadilha.append(f"sessão baixa liquidez ({_hora_utc:02d}h UTC)")
+            if _aber_falsa:
+                _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
 
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
