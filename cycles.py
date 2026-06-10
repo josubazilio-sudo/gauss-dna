@@ -138,20 +138,29 @@ async def _enviar_diagnostico(session) -> None:
     else:
         linhas.append("Nenhum bloqueador detectado neste periodo")
 
-    top_long  = sorted([c for c in cand if c[2] > 0],  key=lambda x: x[0], reverse=True)[:4]
-    top_short = sorted([c for c in cand if c[2] < 0],  key=lambda x: x[0], reverse=True)[:4]
+    # Prioridade: RSI na zona válida primeiro (mais perto de disparar), depois por score
+    def _sort_long(c):
+        rsi = c[3]; rsi_ok = 1 if rsi < 55 else 0
+        return (rsi_ok, c[0])
+    def _sort_short(c):
+        rsi = c[3]; rsi_ok = 1 if rsi > 45 else 0
+        return (rsi_ok, c[0])
+    top_long  = sorted([c for c in cand if c[2] > 0],  key=_sort_long,  reverse=True)[:6]
+    top_short = sorted([c for c in cand if c[2] < 0],  key=_sort_short, reverse=True)[:6]
     if top_long or top_short:
         linhas.append("\nCandidatos (por que nao disparou):")
         for entry in top_long:
             _, sym, sc, rsi, adx, tf = entry[:6]
             bloqs = entry[6] if len(entry) > 6 else []
             bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
-            linhas.append(f"  LONG  {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
+            marca = "✓" if rsi < 55 else "↑"
+            linhas.append(f"  LONG  {sym} {sc:+d} RSI{rsi:.0f}{marca} → {bloq_str}")
         for entry in top_short:
             _, sym, sc, rsi, adx, tf = entry[:6]
             bloqs = entry[6] if len(entry) > 6 else []
             bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
-            linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
+            marca = "✓" if rsi > 45 else "↓"
+            linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f}{marca} → {bloq_str}")
 
     linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
     await notificar(session, "\n".join(linhas))
