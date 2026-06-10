@@ -40,6 +40,12 @@ MAX_SCOUT_PER_CYCLE = 2      # máximo 2 SCOUTs por ciclo
 MAX_LONG_PER_CYCLE  = 2      # máximo 2 LONGs por ciclo (anti-correlação)
 MAX_SHORT_PER_CYCLE = 2      # máximo 2 SHORTs por ciclo
 
+# ── Nível de filtros (1=mínimo, 2=moderado, 3=completo) ──────────────────────
+# 1: vol 50%, sem adx_subindo, sem liq_topo/fundo, fluxo >=1
+# 2: vol 65%, adx_subindo ativo, fluxo >=2
+# 3: vol 80%, todas as defesas SMC ativas (padrão)
+FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
+
 # ── Arquivos de estado ────────────────────────────────────────────────────────
 STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"

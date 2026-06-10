@@ -21,6 +21,10 @@ on:
         description: 'Timeframes a analisar (ex: 5m,15m,1h  ou  30m,1h,4h)'
         required: false
         default: '30m,1h,4h'
+      filter_level:
+        description: 'Nivel de filtros: 1=minimo, 2=moderado, 3=completo (padrao)'
+        required: false
+        default: '3'
 
 concurrency:
   group: bot-sinais
@@ -75,6 +79,7 @@ jobs:
           WA_PHONE: ${{ secrets.WA_PHONE }}
           WA_APIKEY: ${{ secrets.WA_APIKEY }}
           TIMEFRAMES: ${{ github.event.inputs.timeframes || '30m,1h,4h' }}
+          FILTER_LEVEL: ${{ github.event.inputs.filter_level || '3' }}
           CYCLE_INTERVAL: '300'
           SIGNAL_MODE: 'FLEX'
           DYNAMIC_SCAN: 'true'

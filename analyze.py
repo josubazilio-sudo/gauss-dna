@@ -10,7 +10,7 @@ from indicators import (
     serie_heikin_ashi, calcular_bb, calcular_obv, calcular_vwap,
     filtro_kalman,
 )
-from config import SIGNAL_MODE
+from config import SIGNAL_MODE, FILTER_LEVEL as _FLV
 
 log = logging.getLogger("GAUSS+DNA")
 
@@ -284,7 +284,8 @@ def calcular_indicadores(candles):
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
-    vol_nao_fade  = volumes[-1] >= vol_ma * 0.80
+    _vol_thr      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
+    vol_nao_fade  = volumes[-1] >= vol_ma * _vol_thr
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
     flex_vol_ok   = v_bom or (obv_bull and trendilo_long)
@@ -507,17 +508,24 @@ def detectar_sinais(ind):
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
+    # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
+    _fluxo_min   = 1 if _FLV <= 1 else 2
+    _adx_sub_ok  = i["adx_subindo"] if _FLV >= 2 else True
+    _no_liq_topo = (not i["liq_topo"])  if _FLV >= 3 else True
+    _no_liq_fund = (not i["liq_fundo"]) if _FLV >= 3 else True
+
     # ── BB Breakout ───────────────────────────────────────────────────────────
+    _rvol_bb      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
-                      i["adx_subindo"] and not i["lateralizado"] and not i["ext_acima_e21"] and
-                      i["obv_bull"] and not i["liq_topo"] and
-                      i["rvol"] >= 0.80 and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
+                      _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
+                      i["obv_bull"] and _no_liq_topo and
+                      i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
-                      i["adx_subindo"] and not i["lateralizado"] and not i["ext_abaixo_e21"] and
-                      i["obv_bear"] and not i["liq_fundo"] and
-                      i["rvol"] >= 0.80 and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
+                      _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
+                      i["obv_bear"] and _no_liq_fund and
+                      i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
     long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi_zona_long"] and
@@ -608,15 +616,15 @@ def detectar_sinais(ind):
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
     long_scout  = (i["score"] >= 40 and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= 15 and
-                   i["adx_subindo"] and not i["lateralizado"] and i["nao_ext_long_tight"] and
+                   _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    i["seguro_long"] and i["vol_nao_fade"] and i["nao_overext_long"] and
-                   i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and not i["liq_topo"] and
-                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= 2)
+                   i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
+                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
     short_scout = (i["score"] <= -40 and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 15 and
-                   i["adx_subindo"] and not i["lateralizado"] and i["nao_ext_short_tight"] and
+                   _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    i["seguro_short"] and i["vol_nao_fade"] and i["nao_overext_short"] and
-                   i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and not i["liq_fundo"] and
-                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= 2)
+                   i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
+                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""

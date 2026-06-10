@@ -14,6 +14,7 @@ from config import (
     DYNAMIC_SCAN, SCANNER_TOP, SCAN_EVERY, CYCLE_INTERVAL,
     CAPITAL, RISK_BY_GRADE, RISK_SCOUT, RISK_PCT,
     MAX_CYCLE_RISK, MAX_SCOUT_PER_CYCLE, MAX_LONG_PER_CYCLE, MAX_SHORT_PER_CYCLE,
+    FILTER_LEVEL,
 )
 from coins import COINS
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -574,8 +575,9 @@ async def main():
     scan_tf     = TIMEFRAMES[0]
     modo_str    = "LOOP CONTÍNUO" if LOOP_MODE else "EXECUÇÃO ÚNICA"
     scan_str    = "DINÂMICO" if DYNAMIC_SCAN else "LISTA FIXA"
+    _flv_desc = {1: "MINIMO (vol50/sem-SMC)", 2: "MODERADO (vol65/adx_sub)", 3: "COMPLETO (vol80/SMC)"}
     log.info(f"🚀 GAUSS+DNA v3 | {SIGNAL_MODE} | TFs: {','.join(TIMEFRAMES)} | "
-             f"Moedas: {scan_str} | {modo_str}")
+             f"Moedas: {scan_str} | {modo_str} | Filtros: {_flv_desc.get(FILTER_LEVEL, FILTER_LEVEL)}")
     log.info("✅ Bot pronto — enviando apenas sinais reais ao Telegram")
 
     estado        = carregar_estado()
@@ -592,7 +594,8 @@ async def main():
             f"🤖 GAUSS+DNA iniciado\n"
             f"⏰ {agora_str}\n"
             f"📊 TFs: {', '.join(TIMEFRAMES)} | Moedas: {len(COINS)}\n"
-            f"🔄 Modo: {modo_str} | Ciclo: {CYCLE_INTERVAL}s"
+            f"🔄 Modo: {modo_str} | Ciclo: {CYCLE_INTERVAL}s\n"
+            f"🔧 Filtros nivel {FILTER_LEVEL}: {_flv_desc.get(FILTER_LEVEL, str(FILTER_LEVEL))}"
         )
 
         # Teste de conectividade
