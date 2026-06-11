@@ -35,6 +35,11 @@ PRIORITY_WATCHLIST = [
     ("IOUSDT",    "IO/USDT",    "IO"),
     ("BCHUSDT",   "BCH/USDT",   "BCH"),
     ("ZECUSDT",   "ZEC/USDT",   "ZEC"),
+    ("GRASSUSDT", "GRASS/USDT", "GRASS"),
+    ("CVXUSDT",   "CVX/USDT",   "CVX"),
+    ("LDOUSDT",   "LDO/USDT",   "LDO"),
+    ("XTZUSDT",   "XTZ/USDT",   "XTZ"),
+    ("GLMUSDT",   "GLM/USDT",   "GLM"),
 ]
 
 # Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
