@@ -146,11 +146,15 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         log.warning(f"⚠️ {abrev} risco=0 (stop={stop:.8f} == preco={preco:.8f}) — sinal ignorado")
         return False
 
-    # ── Alvos por grade e tipo de sinal ──────────────────────────────────────
+    # ── Alvos base por grade e tipo de sinal ─────────────────────────────────
     if fonte == "SCOUT":
         r1, r_final = 1.2, 2.0
-    elif grade in ("S+", "S"):
+    elif grade == "S+":
+        r1, r_final = 2.5, 5.0
+    elif grade == "S":
         r1, r_final = 2.2, 4.5
+    elif grade == "A+":
+        r1, r_final = 2.0, 4.0
     elif grade == "A":
         r1, r_final = 1.8, 3.5
     else:
@@ -161,6 +165,13 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         r_final = max(3.0, r_final - 1.0)
     elif fonte == "DIV":
         r_final = max(2.5, r_final - 0.5)
+
+    # ── Amplificação por timeframe: TF maior = tendência com mais espaço ─────
+    # 15m: base | 30m: +10% | 1h: +30% | 4h: +60%
+    _tf_mult = {"15m": 1.0, "30m": 1.1, "1h": 1.3, "4h": 1.6}
+    _m = _tf_mult.get(tf.lower(), 1.0)
+    r1      = round(r1 * _m, 1)
+    r_final = round(r_final * _m, 1)
 
     # ── Calibração por fase de mercado (ADX) ─────────────────────────────────
     # ADX < 20: mercado lateral/oscilando — saída rápida antes da reversão
