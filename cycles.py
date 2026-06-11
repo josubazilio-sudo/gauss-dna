@@ -327,7 +327,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             _inst_min = (0  if FILTER_LEVEL <= 0 else
-                         35 if fonte == "SCOUT" else
+                         55 if fonte == "SCOUT" else
                          40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = max(_inst_min, 60)   # sessão perigosa: exige confirmação institucional forte
