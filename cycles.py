@@ -323,8 +323,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             _inst_min = (0  if FILTER_LEVEL <= 0 else
-                         55 if fonte == "SCOUT" else
-                         40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
+                         55 if fonte == "SCOUT" else 50)
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = max(_inst_min, 60)   # sessão perigosa: exige confirmação institucional forte
             if score_inst < _inst_min:
@@ -408,9 +407,12 @@ async def executar_ciclo(session, estado, tf, moedas):
             if _aber_falsa:
                 _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
 
-            # Bloqueia sinais de baixa qualidade com múltiplas condições de risco
+            # Bloqueia sinais com múltiplas condições de risco por nível de qualidade
             if len(_armadilha) >= 2 and _score_inst < 55:
-                log.info(f"  🚫 {abrev} {result['sinal']} BLOQ qualidade baixa — inst {_score_inst} + {len(_armadilha)} risco(s): {'; '.join(_armadilha[:3])}")
+                log.info(f"  🚫 {abrev} {result['sinal']} BLOQ inst FRACO — {_score_inst} + {len(_armadilha)} risco(s): {'; '.join(_armadilha[:3])}")
+                continue
+            if len(_armadilha) >= 3 and _score_inst < 70:
+                log.info(f"  🚫 {abrev} {result['sinal']} BLOQ inst MÉDIO — {_score_inst} + {len(_armadilha)} risco(s): {'; '.join(_armadilha[:3])}")
                 continue
 
             # FLEX sem fluxo direcional + mercado neutro = TP1 improvável (~50%)
@@ -431,7 +433,6 @@ async def executar_ciclo(session, estado, tf, moedas):
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
                 "funding_rate": result.get("funding_rate"),
                 "oi_change":    oi_change.get(sym),
-                "armadilha":    _armadilha,
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],

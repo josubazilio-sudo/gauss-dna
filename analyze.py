@@ -728,17 +728,21 @@ def graduar_sinal(ind, sinal):
 
     if pts >= 17:   grade = "S+"
     elif pts >= 14: grade = "S"
+    elif pts >= 13: grade = "A+"
     elif pts >= 11: grade = "A"
     else:           grade = "B"
 
-    # Trava de coerência: "Setup perfeito" não pode conviver com Score Inst
-    # MÉDIO/FRACO nem com RSI já esticado na direção da entrada — sinais assim
-    # têm convicção real menor e não merecem o selo S/S+ (caso do SOL: Grade S
-    # com Score Inst 65 MÉDIO e RSI 69 que reverteu na entrada)
+    # Trava S/S+: requer inst >= 70 e RSI não esticado
     if grade in ("S", "S+"):
         score_inst = i["score_inst_long"] if sinal == "LONG" else i["score_inst_short"]
         rsi_esticado = (sinal == "LONG" and i["rsi"] > 65) or (sinal == "SHORT" and i["rsi"] < 35)
         if score_inst < 70 or rsi_esticado:
+            grade = "A+" if pts >= 13 else "A"
+
+    # Trava A+: requer inst >= 60 (MÉDIO confirmado)
+    if grade == "A+":
+        score_inst = i["score_inst_long"] if sinal == "LONG" else i["score_inst_short"]
+        if score_inst < 60:
             grade = "A"
 
     return grade, pts
