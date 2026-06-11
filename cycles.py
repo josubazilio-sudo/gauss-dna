@@ -62,39 +62,46 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     ha1_s = result.get("ha_bear_1", False)
 
     _sc_min  = 25 if FILTER_LEVEL <= 0 else 30
-    _vol_thr = 0.20 if FILTER_LEVEL <= 0 else (0.50 if FILTER_LEVEL == 1 else (0.65 if FILTER_LEVEL == 2 else 0.80))
+    _adx_min = 10 if FILTER_LEVEL <= 0 else 15   # espelha analyze.py
+    _fluxo_min = 0 if FILTER_LEVEL <= 0 else 1
+
+    vnf    = result.get("vol_nao_fade", False)   # max(rvol, rvol_prev) >= 0.80
+    _obv_b = result.get("obv_bull", False)
+    _obv_s = result.get("obv_bear", False)
+    kal_up = result.get("kalman_subindo", False)
 
     if sc < _sc_min:
         motivos.append("score baixo")
         return motivos
 
-    # RSI zona — usa direção do score (não kalman)
+    # RSI zona
     if eh_long_cand and rsi >= 60:
         motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
     elif not eh_long_cand and rsi <= 40:
         motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
 
-    if adx < (10 if FILTER_LEVEL <= 0 else 15):
-        motivos.append("ADX baixo")
+    if adx < _adx_min:
+        motivos.append(f"ADX {adx:.0f} < {_adx_min}")
     if FILTER_LEVEL >= 2 and not adx_s:
         motivos.append("ADX nao subindo")
     if lat:
-        motivos.append("mercado lateral")
-    _obv_b = result.get("obv_bull", False)
-    _obv_s = result.get("obv_bear", False)
+        motivos.append("BB squeeze lateral")
+    # Volume: usa vol_nao_fade real (max das 2 últimas velas >= 80%)
     if eh_long_cand:
-        if rvol < _vol_thr and not (_obv_b and trl_l):
-            motivos.append(f"RVOL < {_vol_thr*100:.0f}% (sem OBV+Trl alt)")
-    elif rvol < _vol_thr and not (_obv_s and trl_s):
-        motivos.append(f"RVOL < {_vol_thr*100:.0f}% (sem OBV+Trl alt)")
+        if not (vnf or (_obv_b and trl_l)):
+            motivos.append("RVOL < 80% (sem OBV+Trl alt)")
+    elif not (vnf or (_obv_s and trl_s)):
+        motivos.append("RVOL < 80% (sem OBV+Trl alt)")
     if eh_long_cand and not ha1_b:
         motivos.append("HA nao bull")
     elif not eh_long_cand and not ha1_s:
         motivos.append("HA nao bear")
-    if eh_long_cand and not dna_b and not trl_l and not f_b:
-        motivos.append("sem fluxo LONG")
-    elif not eh_long_cand and not dna_s and not trl_s and not f_s:
-        motivos.append("sem fluxo SHORT")
+    # Fluxo (DNA + f + trendilo + kalman — precisa >= 1)
+    if FILTER_LEVEL >= 1:
+        if eh_long_cand and sum([dna_b, f_b, trl_l, kal_up]) < _fluxo_min:
+            motivos.append("sem fluxo LONG")
+        elif not eh_long_cand and sum([dna_s, f_s, trl_s, not kal_up]) < _fluxo_min:
+            motivos.append("sem fluxo SHORT")
     if FILTER_LEVEL >= 3 and eh_long_cand and liq_t:
         motivos.append("liq topo SMC")
     elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
