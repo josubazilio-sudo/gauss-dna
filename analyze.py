@@ -626,19 +626,28 @@ def detectar_sinais(ind):
     _adx_min = 10 if _FLV <= 0 else 15
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
-    # vol alternativa: OBV acumulando + (Trendilo OU Kalman) — squeeze acumula OBV sem spike
-    _vol_scout_l = i["vol_nao_fade"] or (i["obv_bull"] and (i["trendilo_long"] or i["kalman_subindo"]))
-    _vol_scout_s = i["vol_nao_fade"] or (i["obv_bear"] and (i["trendilo_short"] or i["kalman_descendo"]))
-    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
+    # vol: vol_nao_fade OR OBV+dir OR (kalman+trendilo = 2 confirmações sem OBV)
+    _vol_scout_l = (i["vol_nao_fade"] or
+                    (i["obv_bull"] and (i["trendilo_long"] or i["kalman_subindo"])) or
+                    (i["kalman_subindo"] and i["trendilo_long"]))
+    _vol_scout_s = (i["vol_nao_fade"] or
+                    (i["obv_bear"] and (i["trendilo_short"] or i["kalman_descendo"])) or
+                    (i["kalman_descendo"] and i["trendilo_short"]))
+    # MACD: ao nível FL<=1 pode ser bypassado por 2+ confirmadores de fluxo
+    _fluxo_l = sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]])
+    _fluxo_s = sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]])
+    _macd_l = i["macd_bull_r"] if _FLV >= 2 else (i["macd_bull_r"] or _fluxo_l >= 2)
+    _macd_s = i["macd_bear_r"] if _FLV >= 2 else (i["macd_bear_r"] or _fluxo_s >= 2)
+    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and _macd_l and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and _vol_scout_l and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
-                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
-    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
+                   _fluxo_l >= _fluxo_min)
+    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and _macd_s and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and _vol_scout_s and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
-                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
+                   _fluxo_s >= _fluxo_min)
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
