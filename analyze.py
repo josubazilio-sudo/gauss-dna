@@ -627,12 +627,15 @@ def detectar_sinais(ind):
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
     # vol: vol_nao_fade OR OBV+dir OR (kalman+trendilo = 2 confirmações sem OBV)
+    # fallback: OBV+RSI_dir = OBV confirma + RSI confirma movimento (trendilo/kalman ainda lagging)
     _vol_scout_l = (i["vol_nao_fade"] or
                     (i["obv_bull"] and (i["trendilo_long"] or i["kalman_subindo"])) or
-                    (i["kalman_subindo"] and i["trendilo_long"]))
+                    (i["kalman_subindo"] and i["trendilo_long"]) or
+                    (i["obv_bull"] and rsi_subindo))
     _vol_scout_s = (i["vol_nao_fade"] or
                     (i["obv_bear"] and (i["trendilo_short"] or i["kalman_descendo"])) or
-                    (i["kalman_descendo"] and i["trendilo_short"]))
+                    (i["kalman_descendo"] and i["trendilo_short"]) or
+                    (i["obv_bear"] and rsi_caindo))
     # MACD: ao nível FL<=1 é bypassado por qualquer confirmador de fluxo (>= 1)
     # score_inst >= 55 é a guarda de qualidade — MACD sozinho era double-filter redundante
     _fluxo_l = sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]])
