@@ -168,7 +168,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     # ADX 20-24: tendência moderada — alvos ligeiramente comprimidos
     # ADX >= 25: tendência forte — manter alvos originais
     if adx < 20:
-        r1      = max(0.8, round(r1 * 0.65, 1))
+        r1      = max(1.0, round(r1 * 0.65, 1))
         r_final = max(1.5, round(r_final * 0.75, 1))
     elif adx < 25:
         r1      = max(1.0, round(r1 * 0.85, 1))
@@ -179,11 +179,11 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         if eh_long and swing_high > preco:
             dist_r = (swing_high - preco) / risco
             if dist_r < r1:
-                r1 = max(0.8, round(dist_r * 0.92, 1))
+                r1 = max(1.0, round(dist_r * 0.92, 1))
         elif not eh_long and swing_low < preco:
             dist_r = (preco - swing_low) / risco
             if dist_r < r1:
-                r1 = max(0.8, round(dist_r * 0.92, 1))
+                r1 = max(1.0, round(dist_r * 0.92, 1))
 
     tp1   = preco + risco * r1      if eh_long else preco - risco * r1
     final = preco + risco * r_final if eh_long else preco - risco * r_final
