@@ -62,7 +62,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     ha1_s = result.get("ha_bear_1", False)
 
     _sc_min   = 25 if FILTER_LEVEL <= 0 else 30
-    _adx_min  = 10 if FILTER_LEVEL <= 0 else 15
+    _adx_min  = 10 if FILTER_LEVEL <= 0 else 20
     _fluxo_min = 0 if FILTER_LEVEL <= 0 else 1
 
     vnf    = result.get("vol_nao_fade", False)
