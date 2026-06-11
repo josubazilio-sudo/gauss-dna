@@ -70,7 +70,8 @@ def calcular_indicadores(candles):
     macd_recuperando = hist > hist_p and hist_p > hist_pp
     macd_esgotando   = hist < hist_p and hist_p < hist_pp
 
-    # Heikin-Ashi: corpo mínimo (0.2 ATR) filtra dojis
+    # Heikin-Ashi: corpo mínimo filtra dojis nos sinais de 2+ candles
+    # ha_bull_1/bear_1 (SCOUT) não exige corpo — direção HA já é suficiente com os outros filtros
     ha_corpo_ok = abs(fechamentos[-1] - aberturas[-1]) > atr * 0.15
     ha_bull  = fechamentos[-1] > aberturas[-1] and fechamentos[-2] > aberturas[-2] and ha_corpo_ok
     ha_bear  = fechamentos[-1] < aberturas[-1] and fechamentos[-2] < aberturas[-2] and ha_corpo_ok
@@ -78,9 +79,8 @@ def calcular_indicadores(candles):
     ha_bear3 = ha_bear and fechamentos[-3] < aberturas[-3]
     ha_bull2 = ha_bull and ha_corpo_ok
     ha_bear2 = ha_bear and ha_corpo_ok
-    # Versão mais permissiva: apenas a última vela HA precisa ser bullish/bearish
-    ha_bull_1 = fechamentos[-1] > aberturas[-1] and ha_corpo_ok
-    ha_bear_1 = fechamentos[-1] < aberturas[-1] and ha_corpo_ok
+    ha_bull_1 = fechamentos[-1] > aberturas[-1]
+    ha_bear_1 = fechamentos[-1] < aberturas[-1]
 
     # RSI
     rsi       = calcular_rsi(fechamentos[-50:])
