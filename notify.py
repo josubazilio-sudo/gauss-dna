@@ -120,7 +120,6 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     evento_liq  = extra.get("liq_event", "")
     funding_rate = extra.get("funding_rate")
     oi_change    = extra.get("oi_change")
-    armadilha    = extra.get("armadilha", [])
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
     mult_atr = (2.0 if fonte == "SURGE"    else
@@ -194,15 +193,17 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     contratos    = valor_risco / risco if risco > 0 else 0
     valor_pos    = contratos * preco
 
-    # Alavancagem dinâmica 3x–10x por qualidade do sinal
-    _lev = {"S+": 10, "S": 9, "A+": 8, "A": 7, "B": 5}.get(grade, 5)
-    if score_inst >= 80:  _lev += 1   # confirmação institucional forte
-    elif score_inst < 45: _lev -= 1   # institucional fraco
-    if rvol_val >= 1.2:   _lev += 1   # volume acima da média
-    elif rvol_val < 0.80: _lev -= 1   # volume fraco
-    if armadilha:         _lev -= 2   # condições de armadilha detectadas
-    if fonte == "SCOUT":  _lev = min(_lev, 5)   # sinal secundário: teto 5x
-    alavancagem = max(3, min(10, _lev))          # clamp 3x–10x
+    # Alavancagem dinâmica 3x–20x por qualidade do sinal
+    _lev = {"S+": 20, "S": 16, "A+": 13, "A": 10, "B": 7}.get(grade, 7)
+    if score_inst >= 80:   _lev += 2   # confirmação institucional forte
+    elif score_inst >= 70: _lev += 1   # institucional bom
+    elif score_inst < 55:  _lev -= 2   # institucional fraco
+    if rvol_val >= 1.5:    _lev += 1   # volume muito acima da média
+    elif rvol_val < 0.80:  _lev -= 1   # volume fraco
+    if fonte == "SCOUT":     _lev = min(_lev, 5)    # sinal secundário: teto 5x
+    elif fonte == "MOMENTUM": _lev = min(_lev, 10)  # momentum rápido: teto 10x
+    elif fonte == "SURGE":    _lev = min(_lev, 12)  # breakout volátil: teto 12x
+    alavancagem = max(3, min(20, _lev))              # clamp 3x–20x
 
     pos_alav     = valor_pos / alavancagem
     ganho_tp1    = valor_risco * r1 * 0.5
@@ -267,17 +268,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     linha_inst  = f"\n🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar(cls_inst)}" if score_inst else ""
     linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
     aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
-    if armadilha:
-        motivos = "; ".join(armadilha)
-        aviso_armadilha = f"\n🪤 *POSSÍVEL ARMADILHA:* _{_escapar(motivos)}_"
-    else:
-        aviso_armadilha = ""
 
     texto = (
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
         f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 Gráfico: *{_escapar(tf_lbl)}*\n"
         f"{linha_cross}"
-        f"{_escapar(label_grade)}{linha_inst}{linha_liq}{aviso_scout}{aviso_armadilha}\n\n"
+        f"{_escapar(label_grade)}{linha_inst}{linha_liq}{aviso_scout}\n\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
         f"🛑 Stop: `${_bruto(_fmt(stop))}` \\({_escapar(label_stop)}\\)\n"
         f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ mover stop → entrada\n"

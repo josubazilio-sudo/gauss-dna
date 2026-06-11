@@ -60,12 +60,12 @@ rsi_zona_short = rsi > 40
 - 22h–08h UTC (Asian/madrugada): `_inst_min` = 60 (confirmação institucional forte obrigatória)
 - 08h e 13h UTC (abertura Londres/NY): mesmo piso de 60 (primeiros 30min de risco)
 
-## REGRA #4 — Alavancagem dinâmica 3x–10x
+## REGRA #4 — Alavancagem dinâmica 3x–20x
 
-- Base por grade: S+=10, S=9, A+=8, A=7, B=5
-- Modificadores: +1 inst≥80, -1 inst<45, +1 RVOL≥1.2, -1 RVOL<0.80, -2 armadilha
-- SCOUT: teto 5x
-- Clamp final: min 3x, máx 10x
+- Base por grade: S+=20, S=16, A+=13, A=10, B=7
+- Modificadores: +2 inst≥80, +1 inst≥70, -2 inst<55, +1 RVOL≥1.5, -1 RVOL<0.80
+- Tetos por tipo: SCOUT=5x, MOMENTUM=10x, SURGE=12x
+- Clamp final: min 3x, máx 20x
 
 ## REGRA #5 — Defesas SMC (Smart Money)
 
