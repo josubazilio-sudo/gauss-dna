@@ -381,6 +381,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             _sombra_inf   = result.get("sombra_inf", 0.0)
             _liq_topo_r   = result.get("liq_topo", False)
             _liq_fundo_r  = result.get("liq_fundo", False)
+            _score_inst = result.get("score_inst_long" if eh_long else "score_inst_short", 0)
             _armadilha = []
             if _rvol < 0.80:
                 _armadilha.append("volume fraco")
@@ -406,6 +407,11 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _armadilha.append(f"sessão baixa liquidez ({_hora_utc:02d}h UTC)")
             if _aber_falsa:
                 _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
+
+            # Bloqueia sinais de baixa qualidade com múltiplas condições de risco
+            if len(_armadilha) >= 2 and _score_inst < 55:
+                log.info(f"  🚫 {abrev} {result['sinal']} BLOQ qualidade baixa — inst {_score_inst} + {len(_armadilha)} risco(s): {'; '.join(_armadilha[:3])}")
+                continue
 
             # FLEX sem fluxo direcional + mercado neutro = TP1 improvável (~50%)
             if fonte == "FLEX" and not _dna and not _trl and _tend == "NEUTRO":
