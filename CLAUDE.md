@@ -28,12 +28,12 @@
 **Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.**
 
 ### LONG (compra):
-- RSI deve ser **< 65** no momento do sinal *(autorizado 10/06 — era 55)*
-- Objetivo: entrar com espaço para subir (65 captura sinais fracos pós-dump)
+- RSI deve ser **< 60** no momento do sinal *(autorizado 10/06 — era 55)*
+- Objetivo: entrar com espaço para subir (60 captura sinais fracos pós-dump)
 
 ### SHORT (venda):
-- RSI deve ser **> 35** no momento do sinal *(autorizado 10/06 — era 45)*
-- Objetivo: entrar com espaço para cair (35 captura sinais fracos pós-dump)
+- RSI deve ser **> 40** no momento do sinal *(autorizado 10/06 — era 45)*
+- Objetivo: entrar com espaço para cair (40 captura sinais fracos pós-dump)
 
 ### Aplicação:
 - Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP, SURGE, MOMENTUM, REVERSAL, REBOUND
@@ -41,9 +41,9 @@
 - Implementado em `analyze.py` como `rsi_zona_long` e `rsi_zona_short`
 
 ```python
-# analyze.py — autorizado pelo usuário em 10/06 (era 55/45)
-rsi_zona_long  = rsi < 65
-rsi_zona_short = rsi > 35
+# analyze.py — autorizado pelo usuário em 10/06 (era 55/45, relaxado 65/35, ajustado 60/40)
+rsi_zona_long  = rsi < 60
+rsi_zona_short = rsi > 40
 ```
 
 ---
