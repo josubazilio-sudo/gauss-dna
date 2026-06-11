@@ -40,6 +40,10 @@ PRIORITY_WATCHLIST = [
     ("LDOUSDT",   "LDO/USDT",   "LDO"),
     ("XTZUSDT",   "XTZ/USDT",   "XTZ"),
     ("GLMUSDT",   "GLM/USDT",   "GLM"),
+    ("BTWUSDT",   "BTW/USDT",   "BTW"),
+    ("SKYAIUSDT", "SKYAI/USDT", "SKYAI"),
+    ("PYTHUSDT",  "PYTH/USDT",  "PYTH"),
+    ("TELUSDT",   "TEL/USDT",   "TEL"),
 ]
 
 # Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
@@ -225,4 +229,6 @@ COINS = [
     ("IRYSUSDT","IRYS/USDT","IRYS"), ("ASTERUSDT","ASTER/USDT","ASTER"),
     ("PENGUUSDT","PENGU/USDT","PENGU"), ("EPICUSDT","EPIC/USDT","EPIC"),
     ("HOMEUSDT","HOME/USDT","HOME"),
+    ("BTWUSDT","BTW/USDT","BTW"), ("SKYAIUSDT","SKYAI/USDT","SKYAI"),
+    ("TELUSDT","TEL/USDT","TEL"),
 ]
