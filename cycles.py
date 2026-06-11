@@ -387,10 +387,10 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _armadilha.append("volume fraco")
             if fonte == "BB_BREAK" and _rvol < 1.0:
                 _armadilha.append("BB break sem volume")
-            if eh_long and _rsi >= 50:
-                _armadilha.append(f"RSI {_rsi:.0f} elevado para LONG")
-            if not eh_long and _rsi <= 50:
-                _armadilha.append(f"RSI {_rsi:.0f} baixo para SHORT")
+            if eh_long and _rsi >= 58:
+                _armadilha.append(f"RSI {_rsi:.0f} próximo ao limite LONG")
+            if not eh_long and _rsi <= 42:
+                _armadilha.append(f"RSI {_rsi:.0f} próximo ao limite SHORT")
             if not _dna and not _trl:
                 _armadilha.append("fluxo não confirmado")
             if _tend == "NEUTRO":
