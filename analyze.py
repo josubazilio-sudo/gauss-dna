@@ -621,9 +621,9 @@ def detectar_sinais(ind):
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"])
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
-    # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
+    # ADX >= 20: notify.py já comprime alvos 35% abaixo de 20 — entrar sem tendência = stop certo
     _sc_min  = 25 if _FLV <= 0 else 30
-    _adx_min = 10 if _FLV <= 0 else 15
+    _adx_min = 10 if _FLV <= 0 else 20
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
     # vol: vol_nao_fade OR OBV+dir OR (kalman+trendilo = 2 confirmações sem OBV)
