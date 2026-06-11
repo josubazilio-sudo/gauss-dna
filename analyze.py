@@ -180,8 +180,10 @@ def calcular_indicadores(candles):
     perto_bb_fund = pos_bb < 0.03
     ext_acima_e21  = (preco - e21) / atr > 3.0
     ext_abaixo_e21 = (e21 - preco) / atr > 3.0
-    vol3 = [volumes[-4], volumes[-3], volumes[-2]]
-    vol_secando = volumes[-1] < vol_ma * 0.25 and volumes[-1] < min(vol3) * 0.5
+    # vol_secando: usa max das 2 últimas velas (igual a rvol_max2/vol_nao_fade)
+    # volumes[-1] pode ser candle parcial (recém aberto) → volume artificialmente baixo
+    _vol_sec = max(volumes[-1], volumes[-2])
+    vol_secando = _vol_sec < vol_ma * 0.25 and _vol_sec < min(volumes[-5], volumes[-4], volumes[-3]) * 0.5
 
     def _minima_tocou_ema(ema_arr, n=5):
         return any(minimas[i] <= ema_arr[i] * 1.015 for i in range(-n, -1))
