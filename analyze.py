@@ -633,11 +633,12 @@ def detectar_sinais(ind):
     _vol_scout_s = (i["vol_nao_fade"] or
                     (i["obv_bear"] and (i["trendilo_short"] or i["kalman_descendo"])) or
                     (i["kalman_descendo"] and i["trendilo_short"]))
-    # MACD: ao nível FL<=1 pode ser bypassado por 2+ confirmadores de fluxo
+    # MACD: ao nível FL<=1 é bypassado por qualquer confirmador de fluxo (>= 1)
+    # score_inst >= 55 é a guarda de qualidade — MACD sozinho era double-filter redundante
     _fluxo_l = sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]])
     _fluxo_s = sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]])
-    _macd_l = i["macd_bull_r"] if _FLV >= 2 else (i["macd_bull_r"] or _fluxo_l >= 2)
-    _macd_s = i["macd_bear_r"] if _FLV >= 2 else (i["macd_bear_r"] or _fluxo_s >= 2)
+    _macd_l = i["macd_bull_r"] if _FLV >= 2 else (i["macd_bull_r"] or _fluxo_l >= 1)
+    _macd_s = i["macd_bear_r"] if _FLV >= 2 else (i["macd_bear_r"] or _fluxo_s >= 1)
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and _macd_l and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and _vol_scout_l and i["nao_overext_long"] and
