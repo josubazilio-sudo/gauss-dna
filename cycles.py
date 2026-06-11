@@ -61,7 +61,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     ha1_b = result.get("ha_bull_1", False)
     ha1_s = result.get("ha_bear_1", False)
 
-    _sc_min  = 25 if FILTER_LEVEL <= 0 else 40
+    _sc_min  = 25 if FILTER_LEVEL <= 0 else 30
     _vol_thr = 0.20 if FILTER_LEVEL <= 0 else (0.50 if FILTER_LEVEL == 1 else (0.65 if FILTER_LEVEL == 2 else 0.80))
 
     if sc < _sc_min:
@@ -69,9 +69,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         return motivos
 
     # RSI zona — usa direção do score (não kalman)
-    if eh_long_cand and rsi >= 55:
+    if eh_long_cand and rsi >= 60:
         motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
-    elif not eh_long_cand and rsi <= 45:
+    elif not eh_long_cand and rsi <= 40:
         motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
 
     if adx < (10 if FILTER_LEVEL <= 0 else 15):
