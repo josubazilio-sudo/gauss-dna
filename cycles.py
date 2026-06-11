@@ -44,12 +44,12 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     motivos = []
     sc_raw = result.get("score", 0)
     sc    = abs(sc_raw)
-    eh_long_cand = sc_raw > 0   # usa score como proxy de direção (não kalman)
+    eh_long_cand = sc_raw > 0
     rsi   = result.get("rsi", 50)
     adx   = result.get("adx", 0)
     rvol  = result.get("rvol", 1.0)
     adx_s = result.get("adx_subindo", True)
-    lat   = result.get("tendencia", "NEUTRO") == "NEUTRO"
+    lat   = result.get("lateralizado", False)
     dna_b = result.get("dna_flow_bull", False)
     dna_s = result.get("dna_flow_bear", False)
     trl_l = result.get("trendilo_long", False)
@@ -61,14 +61,15 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     ha1_b = result.get("ha_bull_1", False)
     ha1_s = result.get("ha_bear_1", False)
 
-    _sc_min  = 25 if FILTER_LEVEL <= 0 else 30
-    _adx_min = 10 if FILTER_LEVEL <= 0 else 15   # espelha analyze.py
+    _sc_min   = 25 if FILTER_LEVEL <= 0 else 30
+    _adx_min  = 10 if FILTER_LEVEL <= 0 else 15
     _fluxo_min = 0 if FILTER_LEVEL <= 0 else 1
 
-    vnf    = result.get("vol_nao_fade", False)   # max(rvol, rvol_prev) >= 0.80
+    vnf    = result.get("vol_nao_fade", False)
     _obv_b = result.get("obv_bull", False)
     _obv_s = result.get("obv_bear", False)
     kal_up = result.get("kalman_subindo", False)
+    kal_dn = result.get("kalman_descendo", False)
 
     if sc < _sc_min:
         motivos.append("score baixo")
@@ -86,15 +87,55 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("ADX nao subindo")
     if lat:
         motivos.append("BB squeeze lateral")
-    # Volume: usa vol_nao_fade real (max das 2 últimas velas >= 80%)
-    kal_dn = result.get("kalman_descendo", False)
-    _fvok   = result.get("flex_vol_ok"  if eh_long_cand else "flex_vol_ok_s", False)
+
+    # MACD — bloqueador oculto mais comum depois de HA
+    macd_b = result.get("macd_bull_r", False)
+    macd_s = result.get("macd_bear_r", False)
+    if eh_long_cand and not macd_b:
+        motivos.append("MACD nao bull")
+    elif not eh_long_cand and not macd_s:
+        motivos.append("MACD nao bear")
+
+    # Volume SCOUT (vol_nao_fade) e FLEX (flex_vol_ok + rvol>=0.5)
+    _fvok  = result.get("flex_vol_ok" if eh_long_cand else "flex_vol_ok_s", False)
     _flex_v = _fvok and rvol >= 0.5
     if eh_long_cand:
         if not (vnf or (_obv_b and (trl_l or kal_up))):
             motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
     elif not (vnf or (_obv_s and (trl_s or kal_dn))):
         motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
+
+    # HA (SCOUT usa ha1, FLEX usa ha2)
+    ha2_b = result.get("ha_bull2", False)
+    ha2_s = result.get("ha_bear2", False)
+    if eh_long_cand and not ha1_b:
+        motivos.append("HA nao bull" + (" (FLEX ha2✓)" if ha2_b else ""))
+    elif not eh_long_cand and not ha1_s:
+        motivos.append("HA nao bear" + (" (FLEX ha2✓)" if ha2_s else ""))
+
+    # Seguro (StochRSI e outros filtros de segurança)
+    if FILTER_LEVEL >= 1:
+        seg_l = result.get("seguro_long", True)
+        seg_s = result.get("seguro_short", True)
+        if eh_long_cand and not seg_l:
+            motivos.append("stoch/seguro bloq LONG")
+        elif not eh_long_cand and not seg_s:
+            motivos.append("stoch/seguro bloq SHORT")
+
+    # Fluxo
+    if FILTER_LEVEL >= 1:
+        if eh_long_cand and sum([dna_b, f_b, trl_l, kal_up]) < _fluxo_min:
+            motivos.append("sem fluxo LONG")
+        elif not eh_long_cand and sum([dna_s, f_s, trl_s, not kal_up]) < _fluxo_min:
+            motivos.append("sem fluxo SHORT")
+
+    if FILTER_LEVEL >= 3 and eh_long_cand and liq_t:
+        motivos.append("liq topo SMC")
+    elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
+        motivos.append("liq fundo SMC")
+    if not motivos:
+        motivos.append("HA/MACD pendente")
+    return motivos
     # HA: mostra se FLEX (ha2) pode passar mesmo com ha1 bloqueado
     ha2_b = result.get("ha_bull2", False)
     ha2_s = result.get("ha_bear2", False)
