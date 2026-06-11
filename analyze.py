@@ -71,7 +71,7 @@ def calcular_indicadores(candles):
     macd_esgotando   = hist < hist_p and hist_p < hist_pp
 
     # Heikin-Ashi: corpo mínimo (0.2 ATR) filtra dojis
-    ha_corpo_ok = abs(fechamentos[-1] - aberturas[-1]) > atr * 0.2
+    ha_corpo_ok = abs(fechamentos[-1] - aberturas[-1]) > atr * 0.15
     ha_bull  = fechamentos[-1] > aberturas[-1] and fechamentos[-2] > aberturas[-2] and ha_corpo_ok
     ha_bear  = fechamentos[-1] < aberturas[-1] and fechamentos[-2] < aberturas[-2] and ha_corpo_ok
     ha_bull3 = ha_bull and fechamentos[-3] > aberturas[-3]
