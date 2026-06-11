@@ -623,7 +623,7 @@ def detectar_sinais(ind):
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
     _sc_min  = 25 if _FLV <= 0 else 40
-    _adx_min = 10 if _FLV <= 0 else 15
+    _adx_min = 10 if _FLV <= 0 else 20
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
     # vol alternativa: OBV acumulando + Trendilo confirmando = mesmo gate do FLEX

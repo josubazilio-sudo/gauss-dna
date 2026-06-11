@@ -105,7 +105,7 @@ async def buscar_top_pares_usdt(session, vol_min_m=1.0, max_pares=400):
 
         # Maiores altas do dia (≥5% e volume mínimo $500k) — captura pumps em andamento
         por_alta = sorted(todos_pares, key=lambda x: x[3], reverse=True)
-        top_alta = [(s, b, v) for s, b, v, p in por_alta if p >= 5.0 and v >= 500_000][:50]
+        top_alta = [(s, b, v) for s, b, v, p in por_alta if p >= 3.0 and v >= 500_000][:50]
 
         # Combina e deduplica mantendo top_vol primeiro
         vistos = {s for s, _, _ in top_vol}
