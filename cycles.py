@@ -336,6 +336,13 @@ async def executar_ciclo(session, estado, tf, moedas):
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "Grade B descartado"))
                 continue
+            if (result["sinal"] == "LONG" and
+                    fonte not in ("REBOUND", "REVERSAL") and
+                    result.get("rsi_caindo", False)):
+                log.info(f"  🚫 {abrev} LONG bloqueado — RSI caindo ({result['rsi']:.0f} < ant {result.get('rsi_ant',0):.0f})")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], f"RSI caindo LONG bloq"))
+                continue
 
             if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"]):
                 log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto")
