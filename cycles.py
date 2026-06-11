@@ -88,12 +88,16 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     if lat:
         motivos.append("BB squeeze lateral")
 
-    # MACD — bloqueador oculto mais comum depois de HA
-    macd_b = result.get("macd_bull_r", False)
-    macd_s = result.get("macd_bear_r", False)
-    if eh_long_cand and not macd_b:
+    # Fluxo — calculado cedo porque o bypass de MACD depende dele
+    _fl_b = sum([dna_b, f_b, trl_l, kal_up])
+    _fl_s = sum([dna_s, f_s, trl_s, not kal_up])
+
+    # MACD — aplica mesmo bypass FL<=1 de analyze.py (fluxo>=1 substitui MACD)
+    _macd_b_eff = result.get("macd_bull_r", False) or (FILTER_LEVEL <= 1 and _fl_b >= 1)
+    _macd_s_eff = result.get("macd_bear_r", False) or (FILTER_LEVEL <= 1 and _fl_s >= 1)
+    if eh_long_cand and not _macd_b_eff:
         motivos.append("MACD nao bull")
-    elif not eh_long_cand and not macd_s:
+    elif not eh_long_cand and not _macd_s_eff:
         motivos.append("MACD nao bear")
 
     # Volume SCOUT (vol_nao_fade) e FLEX (flex_vol_ok + rvol>=0.5)
@@ -136,18 +140,15 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
 
     # Fluxo
     if FILTER_LEVEL >= 1:
-        if eh_long_cand and sum([dna_b, f_b, trl_l, kal_up]) < _fluxo_min:
+        if eh_long_cand and _fl_b < _fluxo_min:
             motivos.append("sem fluxo LONG")
-        elif not eh_long_cand and sum([dna_s, f_s, trl_s, not kal_up]) < _fluxo_min:
+        elif not eh_long_cand and _fl_s < _fluxo_min:
             motivos.append("sem fluxo SHORT")
 
     if FILTER_LEVEL >= 3 and eh_long_cand and liq_t:
         motivos.append("liq topo SMC")
     elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
         motivos.append("liq fundo SMC")
-    if not motivos:
-        motivos.append("HA/MACD pendente")
-    return motivos
     if not motivos:
         motivos.append("HA/MACD pendente")
     return motivos
