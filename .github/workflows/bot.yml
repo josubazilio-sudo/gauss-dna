@@ -24,7 +24,7 @@ on:
       filter_level:
         description: 'Nivel de filtros: 0=debug(force), 1=minimo, 2=moderado, 3=completo (padrao)'
         required: false
-        default: '3'
+        default: '1'
 
 concurrency:
   group: bot-sinais
