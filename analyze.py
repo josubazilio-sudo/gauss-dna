@@ -626,9 +626,9 @@ def detectar_sinais(ind):
     _adx_min = 10 if _FLV <= 0 else 15
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
-    # vol alternativa: OBV acumulando + Trendilo confirmando = mesmo gate do FLEX
-    _vol_scout_l = i["vol_nao_fade"] or (i["obv_bull"] and i["trendilo_long"])
-    _vol_scout_s = i["vol_nao_fade"] or (i["obv_bear"] and i["trendilo_short"])
+    # vol alternativa: OBV acumulando + (Trendilo OU Kalman) — squeeze acumula OBV sem spike
+    _vol_scout_l = i["vol_nao_fade"] or (i["obv_bull"] and (i["trendilo_long"] or i["kalman_subindo"]))
+    _vol_scout_s = i["vol_nao_fade"] or (i["obv_bear"] and (i["trendilo_short"] or i["kalman_descendo"]))
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and _vol_scout_l and i["nao_overext_long"] and

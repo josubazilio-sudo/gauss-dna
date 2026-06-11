@@ -87,11 +87,12 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     if lat:
         motivos.append("BB squeeze lateral")
     # Volume: usa vol_nao_fade real (max das 2 últimas velas >= 80%)
+    kal_dn = result.get("kalman_descendo", False)
     if eh_long_cand:
-        if not (vnf or (_obv_b and trl_l)):
-            motivos.append("RVOL < 80% (sem OBV+Trl alt)")
-    elif not (vnf or (_obv_s and trl_s)):
-        motivos.append("RVOL < 80% (sem OBV+Trl alt)")
+        if not (vnf or (_obv_b and (trl_l or kal_up))):
+            motivos.append("RVOL < 80% (sem OBV+Kal alt)")
+    elif not (vnf or (_obv_s and (trl_s or kal_dn))):
+        motivos.append("RVOL < 80% (sem OBV+Kal alt)")
     if eh_long_cand and not ha1_b:
         motivos.append("HA nao bull")
     elif not eh_long_cand and not ha1_s:
