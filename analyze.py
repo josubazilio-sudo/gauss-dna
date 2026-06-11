@@ -292,8 +292,8 @@ def calcular_indicadores(candles):
     vol_nao_fade  = max(volumes[-1], volumes[-2]) >= vol_ma * _vol_thr  # usa melhor das 2 últimas velas
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
-    flex_vol_ok   = v_bom or (obv_bull and trendilo_long)
-    flex_vol_ok_s = v_bom or (obv_bear and trendilo_short)
+    flex_vol_ok   = v_bom or (obv_bull and (trendilo_long or kalman_subindo))
+    flex_vol_ok_s = v_bom or (obv_bear and (trendilo_short or kalman_descendo))
 
     # DNA Flow relaxado (FLEX)
     macd_bull_r  = (ml > sl_v) or (hist > hist_p)

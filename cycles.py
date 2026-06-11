@@ -88,15 +88,20 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("BB squeeze lateral")
     # Volume: usa vol_nao_fade real (max das 2 últimas velas >= 80%)
     kal_dn = result.get("kalman_descendo", False)
+    _fvok   = result.get("flex_vol_ok"  if eh_long_cand else "flex_vol_ok_s", False)
+    _flex_v = _fvok and rvol >= 0.5
     if eh_long_cand:
         if not (vnf or (_obv_b and (trl_l or kal_up))):
-            motivos.append("RVOL < 80% (sem OBV+Kal alt)")
+            motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
     elif not (vnf or (_obv_s and (trl_s or kal_dn))):
-        motivos.append("RVOL < 80% (sem OBV+Kal alt)")
+        motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
+    # HA: mostra se FLEX (ha2) pode passar mesmo com ha1 bloqueado
+    ha2_b = result.get("ha_bull2", False)
+    ha2_s = result.get("ha_bear2", False)
     if eh_long_cand and not ha1_b:
-        motivos.append("HA nao bull")
+        motivos.append("HA nao bull" + (" (FLEX ha2✓)" if ha2_b else ""))
     elif not eh_long_cand and not ha1_s:
-        motivos.append("HA nao bear")
+        motivos.append("HA nao bear" + (" (FLEX ha2✓)" if ha2_s else ""))
     # Fluxo (DNA + f + trendilo + kalman — precisa >= 1)
     if FILTER_LEVEL >= 1:
         if eh_long_cand and sum([dna_b, f_b, trl_l, kal_up]) < _fluxo_min:
