@@ -113,6 +113,18 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     elif not eh_long_cand and not ha1_s:
         motivos.append("HA nao bear" + (" (FLEX ha2✓)" if ha2_s else ""))
 
+    # Extensão de preço (pode bloquear SHORT após dump ou LONG após pump)
+    if eh_long_cand:
+        if not result.get("nao_ext_long_tight", True):
+            motivos.append("ext long bloq")
+        if not result.get("nao_overext_long", True):
+            motivos.append("overext long")
+    else:
+        if not result.get("nao_ext_short_tight", True):
+            motivos.append("ext short bloq")
+        if not result.get("nao_overext_short", True):
+            motivos.append("overext short")
+
     # Seguro (StochRSI e outros filtros de segurança)
     if FILTER_LEVEL >= 1:
         seg_l = result.get("seguro_long", True)
@@ -136,23 +148,6 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     if not motivos:
         motivos.append("HA/MACD pendente")
     return motivos
-    # HA: mostra se FLEX (ha2) pode passar mesmo com ha1 bloqueado
-    ha2_b = result.get("ha_bull2", False)
-    ha2_s = result.get("ha_bear2", False)
-    if eh_long_cand and not ha1_b:
-        motivos.append("HA nao bull" + (" (FLEX ha2✓)" if ha2_b else ""))
-    elif not eh_long_cand and not ha1_s:
-        motivos.append("HA nao bear" + (" (FLEX ha2✓)" if ha2_s else ""))
-    # Fluxo (DNA + f + trendilo + kalman — precisa >= 1)
-    if FILTER_LEVEL >= 1:
-        if eh_long_cand and sum([dna_b, f_b, trl_l, kal_up]) < _fluxo_min:
-            motivos.append("sem fluxo LONG")
-        elif not eh_long_cand and sum([dna_s, f_s, trl_s, not kal_up]) < _fluxo_min:
-            motivos.append("sem fluxo SHORT")
-    if FILTER_LEVEL >= 3 and eh_long_cand and liq_t:
-        motivos.append("liq topo SMC")
-    elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
-        motivos.append("liq fundo SMC")
     if not motivos:
         motivos.append("HA/MACD pendente")
     return motivos
@@ -206,13 +201,13 @@ async def _enviar_diagnostico(session) -> None:
         for entry in top_long:
             _, sym, sc, rsi, adx, tf = entry[:6]
             bloqs = entry[6] if len(entry) > 6 else []
-            bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
+            bloq_str = ", ".join(bloqs[:3]) if bloqs else "HA/MACD pendente"
             marca = "✓" if rsi < 55 else "↑"
             linhas.append(f"  LONG  {sym} {sc:+d} RSI{rsi:.0f}{marca} → {bloq_str}")
         for entry in top_short:
             _, sym, sc, rsi, adx, tf = entry[:6]
             bloqs = entry[6] if len(entry) > 6 else []
-            bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
+            bloq_str = ", ".join(bloqs[:3]) if bloqs else "HA/MACD pendente"
             marca = "✓" if rsi > 45 else "↓"
             linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f}{marca} → {bloq_str}")
 
