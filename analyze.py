@@ -511,11 +511,11 @@ def detectar_sinais(ind):
 
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
-                   i["preco"] > i["e200"] and i["preco"] > i["e50"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
+                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["rsi_entrada_long"] and i["rsi_subindo"] and i["tbull_loose"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]))
     short_cross = (i["algum_cross_bear"] and i["dna_flow_bear"] and i["adx_short_ok"] and
-                   i["preco"] < i["e200"] and i["preco"] < i["e50"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
+                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["rsi_entrada_short"] and i["rsi_caindo"] and i["tbear_loose"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
@@ -612,14 +612,14 @@ def detectar_sinais(ind):
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and i["rsi_entrada_long"] and
                   i["rsi_subindo"] and i["tbull_loose"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
-                  i["preco"] > i["e50"] and i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and
+                  i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and i["rsi_entrada_short"] and
                   i["rsi_caindo"] and i["tbear_loose"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
-                  i["preco"] < i["e50"] and i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and
+                  i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and
                   (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
@@ -659,15 +659,13 @@ def detectar_sinais(ind):
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and _vol_scout_l and i["rvol"] >= 1.0 and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and i["rsi_entrada_long"] and
-                   i["rsi_subindo"] and i["tbull_loose"] and
-                   i["preco"] > i["e50"] and i["preco"] > i["e200"] and
+                   i["rsi_subindo"] and i["tbull_loose"] and i["preco"] > i["e200"] and
                    _no_liq_topo and _fluxo_l >= _fluxo_min)
     short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and _macd_s and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and _vol_scout_s and i["rvol"] >= 1.0 and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and i["rsi_entrada_short"] and
-                   i["rsi_caindo"] and i["tbear_loose"] and
-                   i["preco"] < i["e50"] and i["preco"] < i["e200"] and
+                   i["rsi_caindo"] and i["tbear_loose"] and i["preco"] < i["e200"] and
                    _no_liq_fund and _fluxo_s >= _fluxo_min)
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
@@ -807,7 +805,6 @@ def analisar(simbolo, candles, funding_rate=None):
             if not ind["rsi_entrada_long"]: b.append(f"rsi_entrada=F(rsi={ind['rsi']:.0f}<45)")
             if not ind["rsi_subindo"]:      b.append(f"rsi_dir=F(caindo,rsi={ind['rsi']:.0f}<ant={ind['rsi_ant']:.0f})")
             if not ind["tbull_loose"]:      b.append("tend=F(EMA nao alinhada)")
-            if ind["preco"] <= ind["e50"]:  b.append(f"e50=F(preco={ind['preco']:.4f}<e50={ind['e50']:.4f})")
             if ind["preco"] <= ind["e200"]: b.append(f"e200=F(preco abaixo)")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
             if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
@@ -830,7 +827,6 @@ def analisar(simbolo, candles, funding_rate=None):
             if not ind["rsi_entrada_short"]: b.append(f"rsi_entrada=F(rsi={ind['rsi']:.0f}>55)")
             if not ind["rsi_caindo"]:        b.append(f"rsi_dir=F(subindo,rsi={ind['rsi']:.0f}>ant={ind['rsi_ant']:.0f})")
             if not ind["tbear_loose"]:       b.append("tend=F(EMA nao alinhada)")
-            if ind["preco"] >= ind["e50"]:  b.append(f"e50=F(preco={ind['preco']:.4f}>e50={ind['e50']:.4f})")
             if ind["preco"] >= ind["e200"]: b.append(f"e200=F(preco acima)")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
             if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
