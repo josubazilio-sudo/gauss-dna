@@ -610,14 +610,14 @@ def detectar_sinais(ind):
     # ── FLEX geral ────────────────────────────────────────────────────────────
     long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
-                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and i["rsi_entrada_long"] and
+                  i["flex_vol_ok"] and i["rvol"] >= 1.0 and i["rsi_zona_long"] and i["rsi_entrada_long"] and
                   i["rsi_subindo"] and i["tbull_loose"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
-                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and i["rsi_entrada_short"] and
+                  i["flex_vol_ok_s"] and i["rvol"] >= 1.0 and i["rsi_zona_short"] and i["rsi_entrada_short"] and
                   i["rsi_caindo"] and i["tbear_loose"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and
                   (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
