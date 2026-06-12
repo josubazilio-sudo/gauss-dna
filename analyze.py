@@ -637,13 +637,13 @@ def detectar_sinais(ind):
     _adx_min = 10 if _FLV <= 0 else 20
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
-    # vol: vol_nao_fade OR OBV+dir OR (kalman+trendilo = 2 confirmações sem OBV)
-    # fallback: OBV+RSI_dir = OBV confirma + RSI confirma movimento (trendilo/kalman ainda lagging)
-    _vol_scout_l = (i["vol_nao_fade"] or
+    # vol: vol_nao_fade + RVOL>=0.5 (pico isolado sem volume sustentado não garante TP1)
+    # fallback com OBV/Kalman+Trendilo dispensa o piso de RVOL (confirmação independente)
+    _vol_scout_l = ((i["vol_nao_fade"] and i["rvol"] >= 0.5) or
                     (i["obv_bull"] and (i["trendilo_long"] or i["kalman_subindo"])) or
                     (i["kalman_subindo"] and i["trendilo_long"]) or
                     (i["obv_bull"] and i["rsi_subindo"]))
-    _vol_scout_s = (i["vol_nao_fade"] or
+    _vol_scout_s = ((i["vol_nao_fade"] and i["rvol"] >= 0.5) or
                     (i["obv_bear"] and (i["trendilo_short"] or i["kalman_descendo"])) or
                     (i["kalman_descendo"] and i["trendilo_short"]) or
                     (i["obv_bear"] and i["rsi_caindo"]))
