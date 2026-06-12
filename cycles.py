@@ -818,10 +818,10 @@ async def main():
                 log.error(f"❌ MTF erro ciclo #{ciclo}: {e}")
 
             try:
-                # Roda FLEX para cada TF que não é coberto pelo caminho MTF (4h/1h)
-                _tfs_flex = [tf for tf in TIMEFRAMES if tf not in ("4h", "1h")]
+                # Roda FLEX para cada TF que não é 4h (1h incluído — gera sinais diretos H1)
+                _tfs_flex = [tf for tf in TIMEFRAMES if tf != "4h"]
                 if not _tfs_flex:
-                    _tfs_flex = [t for t in TIMEFRAMES if t != "4h"] or [TIMEFRAMES[0]]
+                    _tfs_flex = [TIMEFRAMES[0]]
                 for tf_base in _tfs_flex:
                     enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas)
                     total   += enviados
