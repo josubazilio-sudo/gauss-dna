@@ -655,12 +655,12 @@ def detectar_sinais(ind):
     _macd_s = i["macd_bear_r"] if _FLV >= 2 else (i["macd_bear_r"] or _fluxo_s >= 1)
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and _macd_l and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
-                   _seg_l and _vol_scout_l and i["nao_overext_long"] and
+                   _seg_l and _vol_scout_l and i["rvol"] >= 1.0 and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and i["rsi_entrada_long"] and
                    i["rsi_subindo"] and i["tbull_loose"] and _no_liq_topo and _fluxo_l >= _fluxo_min)
     short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and _macd_s and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
-                   _seg_s and _vol_scout_s and i["nao_overext_short"] and
+                   _seg_s and _vol_scout_s and i["rvol"] >= 1.0 and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and i["rsi_entrada_short"] and
                    i["rsi_caindo"] and i["tbear_loose"] and _no_liq_fund and _fluxo_s >= _fluxo_min)
 
@@ -796,6 +796,7 @@ def analisar(simbolo, candles, funding_rate=None):
                 if ind["rsi"] >= 70:            _sg.append(f"rsi={ind['rsi']:.0f}")
                 if ind["stoch_esticado_up"]:    _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
+            if ind["rvol"] < 1.0:           b.append(f"rvol_scout=F({ind['rvol']:.2f}x<1.0)")
             if not ind["rsi_zona_long"]:   b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             if not ind["rsi_entrada_long"]: b.append(f"rsi_entrada=F(rsi={ind['rsi']:.0f}<45)")
             if not ind["rsi_subindo"]:      b.append(f"rsi_dir=F(caindo,rsi={ind['rsi']:.0f}<ant={ind['rsi_ant']:.0f})")
@@ -816,6 +817,7 @@ def analisar(simbolo, candles, funding_rate=None):
                 if ind["rsi"] <= 27:            _sg.append(f"rsi={ind['rsi']:.0f}")
                 if ind["stoch_esticado_down"]:  _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
+            if ind["rvol"] < 1.0:            b.append(f"rvol_scout=F({ind['rvol']:.2f}x<1.0)")
             if not ind["rsi_zona_short"]:    b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             if not ind["rsi_entrada_short"]: b.append(f"rsi_entrada=F(rsi={ind['rsi']:.0f}>55)")
             if not ind["rsi_caindo"]:        b.append(f"rsi_dir=F(subindo,rsi={ind['rsi']:.0f}>ant={ind['rsi_ant']:.0f})")
