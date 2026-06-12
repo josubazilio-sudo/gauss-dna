@@ -350,16 +350,22 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], "H4 oposto"))
                 continue
 
-            chave_dir = f"{sym}_{tf}_{result['sinal']}"
-            chave_any = f"{sym}_{tf}"
+            chave_dir    = f"{sym}_{tf}_{result['sinal']}"
+            chave_any    = f"{sym}_{tf}"
+            chave_global = f"{sym}_GLOBAL"
+            bloq_global = agora - estado.get(chave_global, 0) < 1800
             bloq_dir  = agora - estado.get(chave_dir, 0) < cooldown
             bloq_flip = agora - estado.get(chave_any, 0) < 7200
-            if bloq_dir or bloq_flip:
-                if bloq_dir:
+            if bloq_global or bloq_dir or bloq_flip:
+                if bloq_global:
+                    mins = int((1800 - (agora - estado.get(chave_global, 0))) / 60)
+                    log.info(f"  ⏳ {abrev} [{tf}] dedup global {mins}min")
+                elif bloq_dir:
                     mins = int((cooldown - (agora - estado.get(chave_dir, 0))) / 60)
+                    log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
                 else:
                     mins = int((7200 - (agora - estado.get(chave_any, 0))) / 60)
-                log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
+                    log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "cooldown"))
                 continue
@@ -453,7 +459,10 @@ async def executar_ciclo(session, estado, tf, moedas):
                                     result["swing_high"], result["fonte_sinal"], tf, grade, extra=extra)
             if ok:
                 _diag_buffer["ultimo_sinal"] = agora
-                estado[chave_dir] = agora; estado[chave_any] = agora
+                estado[chave_dir]    = agora
+                estado[chave_any]    = agora
+                estado[chave_global] = agora
+                salvar_estado(estado)
                 risco_ciclo   += pct_risco
                 scouts_enviados += 1 if fonte == "SCOUT" else 0
                 longs_enviados  += 1 if eh_long else 0
@@ -599,7 +608,13 @@ async def executar_ciclo_mtf(session, estado, moedas):
                 log.info(f"[MTF] {abrev:7s} | bloqueado — {motivo}")
                 continue
 
-            chave = f"{sym}_MTF"
+            chave        = f"{sym}_MTF"
+            chave_global = f"{sym}_GLOBAL"
+            if agora - estado.get(chave_global, 0) < 1800:
+                mins = int((1800 - (agora - estado.get(chave_global, 0))) / 60)
+                log.info(f"  ⏳ {abrev} [MTF] dedup global {mins}min")
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"dedup {mins}min"))
+                continue
             if agora - estado.get(chave, 0) >= cooldown_mtf:
                 eh_long = result["sinal"] == "LONG"
                 extra = {
@@ -618,7 +633,10 @@ async def executar_ciclo_mtf(session, estado, moedas):
                                         result["kalman_subindo"], result["swing_low"],
                                         result["swing_high"], result["fonte_sinal"], "1h", grade, extra=extra)
                 if ok:
-                    estado[chave] = agora; enviados += 1
+                    estado[chave] = agora
+                    estado[chave_global] = agora
+                    salvar_estado(estado)
+                    enviados += 1
             else:
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"cooldown {mins}min"))
