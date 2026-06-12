@@ -100,25 +100,25 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     elif not eh_long_cand and not _macd_s_eff:
         motivos.append("MACD nao bear")
 
-    # Volume SCOUT: vol_nao_fade requer rvol>=0.5 (pico isolado não garante TP1)
+    # Volume SCOUT/FLEX: requer rvol>=1.0 (volume mínimo médio)
     # Fallback OBV/Kalman+Trendilo dispensa piso de RVOL
     _fvok  = result.get("flex_vol_ok" if eh_long_cand else "flex_vol_ok_s", False)
-    _flex_v = _fvok and rvol >= 0.5
+    _flex_v = _fvok and rvol >= 1.0
     _rsi_sub = result.get("rsi_subindo", False)
     _rsi_cai = result.get("rsi_caindo", False)
-    _vol_scout_l_ok = ((vnf and rvol >= 0.5) or (_obv_b and (trl_l or kal_up)) or
+    _vol_scout_l_ok = ((vnf and rvol >= 1.0) or (_obv_b and (trl_l or kal_up)) or
                        (kal_up and trl_l) or (_obv_b and _rsi_sub))
-    _vol_scout_s_ok = ((vnf and rvol >= 0.5) or (_obv_s and (trl_s or kal_dn)) or
+    _vol_scout_s_ok = ((vnf and rvol >= 1.0) or (_obv_s and (trl_s or kal_dn)) or
                        (kal_dn and trl_s) or (_obv_s and _rsi_cai))
     if eh_long_cand:
         if not _vol_scout_l_ok:
-            if vnf and rvol < 0.5:
-                motivos.append(f"RVOL < 50% (pico sem vol sustentado, rvol={rvol:.2f}x)")
+            if vnf and rvol < 1.0:
+                motivos.append(f"RVOL < 100% (volume abaixo da média, rvol={rvol:.2f}x)")
             else:
                 motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
     elif not _vol_scout_s_ok:
-        if vnf and rvol < 0.5:
-            motivos.append(f"RVOL < 50% (pico sem vol sustentado, rvol={rvol:.2f}x)")
+        if vnf and rvol < 1.0:
+            motivos.append(f"RVOL < 100% (volume abaixo da média, rvol={rvol:.2f}x)")
         else:
             motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
 
