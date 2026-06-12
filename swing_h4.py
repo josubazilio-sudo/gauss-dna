@@ -143,11 +143,19 @@ def montar_mensagem(abrev, direcao, preco, atr, rsi, adx, e21, e50):
     cruz  = "EMA21 cruzou acima EMA50" if eh_long else "EMA21 cruzou abaixo EMA50"
     forca = "FORTE \\(RSI > 50\\)" if eh_long else "FRACA \\(RSI < 50\\)"
 
+    if adx >= 30:
+        mkt_qual = "🟢 *Condições favoráveis* — tendência forte"
+    elif adx >= 25:
+        mkt_qual = "🟢 *Tendência formada*"
+    else:
+        mkt_qual = "🟡 *Neutro* — tendência fraca, cautela"
+
     return (
         f"📈 *SWING H4 \\— {direcao}*\n\n"
         f"{ico} *{_esc(abrev)}/USDT* \\| ⏱ Gráfico: *H4*\n"
         f"🔀 Trend Master Flow\n"
-        f"{_esc(cruz)} \\| RSI {_esc(f'{rsi:.0f}')} {forca}\n\n"
+        f"{_esc(cruz)} \\| RSI {_esc(f'{rsi:.0f}')} {forca}\n"
+        f"{mkt_qual}\n\n"
         f"💰 Entrada: `{_esc(_fmt(preco))}`\n"
         f"🛑 Stop: `{_esc(_fmt(sl))}` \\({_esc(str(ATR_SL))}x ATR\\)\n"
         f"🎯 TP1 \\(1R\\): `{_esc(_fmt(tp1))}` → fechar 50%\n"

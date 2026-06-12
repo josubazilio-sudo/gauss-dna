@@ -284,11 +284,20 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
     aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
 
+    # Qualidade do mercado
+    if adx < 20 or (adx < 25 and rvol_val < 0.8):
+        mkt_qual = "🔴 *ATENÇÃO: Mercado sem tendência* — possível armadilha"
+    elif adx >= 25 and rvol_val >= 1.0:
+        mkt_qual = "🟢 *Condições favoráveis* — tendência \\+ volume"
+    else:
+        mkt_qual = "🟡 *Neutro* — tendência fraca, cautela"
+
     texto = (
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
         f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 Gráfico: *{_escapar(tf_lbl)}*\n"
         f"{linha_cross}"
-        f"{_escapar(label_grade)} \\| RSI {_escapar(f'{rsi:.0f}')} \\| RVOL {_escapar(f'{rvol_val:.2f}')}x{_escapar(' '+rvol_lbl if rvol_lbl else '')}{linha_inst}{linha_liq}{aviso_scout}\n\n"
+        f"{_escapar(label_grade)} \\| RSI {_escapar(f'{rsi:.0f}')} \\| RVOL {_escapar(f'{rvol_val:.2f}')}x{_escapar(' '+rvol_lbl if rvol_lbl else '')}{linha_inst}{linha_liq}{aviso_scout}\n"
+        f"{mkt_qual}\n\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
         f"🛑 Stop: `${_bruto(_fmt(stop))}` \\({_escapar(label_stop)}\\)\n"
         f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
