@@ -229,5 +229,15 @@ async def main():
 
     log.info(f"✅ Concluído — {sinais} sinal(is) enviado(s)")
 
+    agora = datetime.now().strftime("%H:%M — %d/%m/%Y")
+    if sinais == 0:
+        resumo = (
+            f"🔍 *Swing H4 — Scan concluído*\n"
+            f"{_esc(str(len(ALL_COINS)))} moedas escaneadas \\| 0 sinais\n"
+            f"⏰ {_esc(agora)}"
+        )
+        async with aiohttp.ClientSession() as s:
+            await enviar_tg(s, resumo)
+
 if __name__ == "__main__":
     asyncio.run(main())
