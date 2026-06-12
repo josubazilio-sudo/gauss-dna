@@ -189,10 +189,11 @@ async def analisar(session, simbolo, abrev, estado):
     sep = abs(ema21[-1] - ema50[-1]) / preco if preco > 0 else 0
     sep_ok = sep >= 0.0015                                      # separação mínima 0.15%
 
-    if cross_bull and 50 < rsi < 68 and tendencia and sep_ok and not ja_sinalizou(estado, simbolo, "LONG"):
-        return ("LONG",  preco, atr, rsi, adx, ema21[-1], ema50[-1])
-    if cross_bear and 32 < rsi < 50 and tendencia and sep_ok and not ja_sinalizou(estado, simbolo, "SHORT"):
+    # Modo contrário: detecta a direção original mas inverte o sinal enviado
+    if cross_bull and 50 < rsi < 68 and tendencia and sep_ok and not ja_sinalizou(estado, simbolo, "SHORT"):
         return ("SHORT", preco, atr, rsi, adx, ema21[-1], ema50[-1])
+    if cross_bear and 32 < rsi < 50 and tendencia and sep_ok and not ja_sinalizou(estado, simbolo, "LONG"):
+        return ("LONG",  preco, atr, rsi, adx, ema21[-1], ema50[-1])
     return None
 
 

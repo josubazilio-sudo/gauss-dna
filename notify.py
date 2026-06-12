@@ -107,6 +107,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                        rsi, adx, tendencia, kalman_subindo, swing_low, swing_high,
                        fonte, tf, grade, extra=None):
     """Monta e envia o sinal completo para o Telegram."""
+    # Modo contrário: inverte a direção do sinal
+    direcao = "SHORT" if direcao == "LONG" else "LONG"
     eh_long = direcao == "LONG"
     if extra is None:
         extra = {}
