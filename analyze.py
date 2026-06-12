@@ -878,7 +878,15 @@ def analisar(simbolo, candles, funding_rate=None):
         "trendilo_long":  ind["trendilo_long"],
         "trendilo_short": ind["trendilo_short"],
         "funding_rate":   funding_rate,
-        # Filtros de qualidade (diagnóstico)
+        # Filtros de qualidade e segurança (diagnóstico)
+        "perto_bb_topo":     ind["perto_bb_topo"],
+        "ext_acima_e21":     ind["ext_acima_e21"],
+        "exaustao_topo":     ind["exaustao_topo"],
+        "exaustao_fund":     ind["exaustao_fund"],
+        "stoch_rsi":         ind["stoch_rsi"],
+        "stoch_esticado_up": ind["stoch_esticado_up"],
+        "stoch_esticado_down": ind["stoch_esticado_down"],
+        "vol_secando":       ind["vol_secando"],
         "e200":              ind["e200"],
         "rsi_ant":           ind["rsi_ant"],
         "rsi_subindo":       ind["rsi_subindo"],

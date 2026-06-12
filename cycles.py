@@ -156,9 +156,19 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         seg_l = result.get("seguro_long", True)
         seg_s = result.get("seguro_short", True)
         if eh_long_cand and not seg_l:
-            motivos.append("stoch/seguro bloq LONG")
+            _sg = []
+            if result.get("perto_bb_topo"):         _sg.append("bb_topo")
+            if result.get("ext_acima_e21"):          _sg.append("ext_e21")
+            if result.get("vol_secando"):            _sg.append("vol_sec")
+            if result.get("exaustao_topo"):          _sg.append("exaustao")
+            if result.get("stoch_esticado_up"):      _sg.append(f"stoch>{result.get('stoch_rsi',0):.2f}")
+            motivos.append("seguro=F(" + (",".join(_sg) or "?") + ")")
         elif not eh_long_cand and not seg_s:
-            motivos.append("stoch/seguro bloq SHORT")
+            _sg = []
+            if result.get("vol_secando"):            _sg.append("vol_sec")
+            if result.get("exaustao_fund"):          _sg.append("exaust_fund")
+            if result.get("stoch_esticado_down"):    _sg.append(f"stoch<{result.get('stoch_rsi',0):.2f}")
+            motivos.append("seguro=F(" + (",".join(_sg) or "?") + ")")
 
     # Fluxo
     if FILTER_LEVEL >= 1:
