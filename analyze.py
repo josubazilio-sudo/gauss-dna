@@ -291,7 +291,7 @@ def calcular_indicadores(candles):
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
     _vol_thr      = 0.20 if _FLV <= 0 else (0.50 if _FLV == 1 else (0.65 if _FLV == 2 else 0.80))
-    vol_nao_fade  = max(volumes[-1], volumes[-2]) >= vol_ma * _vol_thr  # usa melhor das 2 últimas velas
+    vol_nao_fade  = vol_ma > 0 and max(volumes[-1], volumes[-2]) >= vol_ma * _vol_thr
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
     flex_vol_ok   = v_bom or (obv_bull and (trendilo_long or kalman_subindo))
