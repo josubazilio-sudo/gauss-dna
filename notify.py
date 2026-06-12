@@ -284,7 +284,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
         f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 Gráfico: *{_escapar(tf_lbl)}*\n"
         f"{linha_cross}"
-        f"{_escapar(label_grade)}{linha_inst}{linha_liq}{aviso_scout}\n\n"
+        f"{_escapar(label_grade)} \\| RSI {_escapar(f'{rsi:.0f}')} \\| RVOL {_escapar(f'{rvol_val:.2f}')}x{_escapar(' '+rvol_lbl if rvol_lbl else '')}{linha_inst}{linha_liq}{aviso_scout}\n\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
         f"🛑 Stop: `${_bruto(_fmt(stop))}` \\({_escapar(label_stop)}\\)\n"
         f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
@@ -294,7 +294,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"  💵 Entrada na operação: `${_bruto(f'{valor_pos:.2f}')} USDT` \\({_escapar(f'{contratos:.4f}')} {_escapar(abrev)}\\)\n"
         f"  Alavancagem {_escapar(str(alavancagem))}x: `${_bruto(f'{pos_alav:.2f}')}` colateral\n"
         f"💸 Ganho: TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| Total \\+`${_bruto(f'{ganho_total:.2f}')}`\n\n"
-        f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
+        f"📊 Score: *{_escapar(score)}/145* \\| ADX: {_escapar(f'{adx:.0f}')}\n"
         + (f"{linha_rvol}\n" if linha_rvol else "")
         + (f"{linha_funding}\n" if linha_funding else "")
         + (f"{linha_oi}\n" if linha_oi else "")
