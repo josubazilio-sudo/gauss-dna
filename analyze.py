@@ -318,6 +318,10 @@ def calcular_indicadores(candles):
     # RSI zona de entrada — autorizado pelo usuário em 10/06 (era 55/45)
     rsi_zona_long  = rsi < 60
     rsi_zona_short = rsi > 40
+    # Janela RSI para entrada — evita comprar em queda livre / vender em recuperação
+    # Exceções: REVERSAL (RSI extremo), REBOUND (RSI baixo), SURGE (breakout move RSI)
+    rsi_entrada_long  = rsi >= 45   # não comprar quando RSI ainda está no fundo
+    rsi_entrada_short = rsi <= 55   # não vender quando RSI ainda está alto
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -400,6 +404,7 @@ def calcular_indicadores(candles):
         "stoch_rsi": stoch_rsi, "stoch_esticado_up": stoch_esticado_up, "stoch_esticado_down": stoch_esticado_down,
         "rsi_nao_chasing_long": rsi_nao_chasing_long, "rsi_nao_chasing_short": rsi_nao_chasing_short,
         "rsi_zona_long": rsi_zona_long, "rsi_zona_short": rsi_zona_short,
+        "rsi_entrada_long": rsi_entrada_long, "rsi_entrada_short": rsi_entrada_short,
         # ADX
         "pdi": pdi, "mdi": mdi, "adx_long_ok": adx_long_ok, "adx_short_ok": adx_short_ok,
         "adx_p": adx_p, "adx_subindo": adx > adx_p,
@@ -507,9 +512,11 @@ def detectar_sinais(ind):
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
+                   i["rsi_entrada_long"] and i["tbull_loose"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]))
     short_cross = (i["algum_cross_bear"] and i["dna_flow_bear"] and i["adx_short_ok"] and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
+                   i["rsi_entrada_short"] and i["tbear_loose"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
     # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
@@ -601,14 +608,16 @@ def detectar_sinais(ind):
     # ── FLEX geral ────────────────────────────────────────────────────────────
     long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
-                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
-                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
+                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and i["rsi_entrada_long"] and
+                  i["tbull_loose"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
+                  i["score_inst_long"] >= 50 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
-                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
-                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
+                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and i["rsi_entrada_short"] and
+                  i["tbear_loose"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
+                  i["score_inst_short"] >= 50 and
                   (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
@@ -647,13 +656,13 @@ def detectar_sinais(ind):
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and _macd_l and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and _vol_scout_l and i["nao_overext_long"] and
-                   i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
-                   _fluxo_l >= _fluxo_min)
+                   i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and i["rsi_entrada_long"] and
+                   i["tbull_loose"] and _no_liq_topo and _fluxo_l >= _fluxo_min)
     short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and _macd_s and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and _vol_scout_s and i["nao_overext_short"] and
-                   i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
-                   _fluxo_s >= _fluxo_min)
+                   i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and i["rsi_entrada_short"] and
+                   i["tbear_loose"] and _no_liq_fund and _fluxo_s >= _fluxo_min)
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
@@ -787,7 +796,9 @@ def analisar(simbolo, candles, funding_rate=None):
                 if ind["rsi"] >= 70:            _sg.append(f"rsi={ind['rsi']:.0f}")
                 if ind["stoch_esticado_up"]:    _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
-            if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
+            if not ind["rsi_zona_long"]:   b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
+            if not ind["rsi_entrada_long"]: b.append(f"rsi_entrada=F(rsi={ind['rsi']:.0f}<45)")
+            if not ind["tbull_loose"]:      b.append("tend=F(EMA nao alinhada)")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
             if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
             log.info(f"  LONG-BLOQ {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
@@ -804,7 +815,9 @@ def analisar(simbolo, candles, funding_rate=None):
                 if ind["rsi"] <= 27:            _sg.append(f"rsi={ind['rsi']:.0f}")
                 if ind["stoch_esticado_down"]:  _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
-            if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
+            if not ind["rsi_zona_short"]:    b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
+            if not ind["rsi_entrada_short"]: b.append(f"rsi_entrada=F(rsi={ind['rsi']:.0f}>55)")
+            if not ind["tbear_loose"]:       b.append("tend=F(EMA nao alinhada)")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
             if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
             log.info(f"  SHORT-BLOQ {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
