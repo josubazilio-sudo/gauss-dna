@@ -86,7 +86,7 @@ jobs:
           SCANNER_TOP: '200'
           LOOP_MODE: ${{ github.event.inputs.test_mode == 'true' && 'false' || 'true' }}
           TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
-          CAPITAL: ${{ vars.CAPITAL || '77' }}
+          CAPITAL: ${{ vars.CAPITAL || '64' }}
           RISK_PCT: '0.03'
         run: python bot_actions.py
 
