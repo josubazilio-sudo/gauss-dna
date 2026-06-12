@@ -200,6 +200,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
 
     # ── Tamanho da posição ────────────────────────────────────────────────────
     pct_risco    = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
+    if fonte == "SURGE":
+        pct_risco = min(pct_risco, 0.02)
     valor_risco  = CAPITAL * pct_risco
     contratos    = valor_risco / risco if risco > 0 else 0
     valor_pos    = contratos * preco
