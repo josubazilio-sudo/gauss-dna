@@ -265,6 +265,16 @@ async def executar_ciclo(session, estado, tf, moedas):
         log.info(f"[{tf}] Buscando H4 de {len(moedas)} moedas para filtro de direção...")
         todos_h4 = await _prefetch_lote(session, moedas, "4h")
 
+    # BTC macro H4 — direção global para bloquear SURGE noturno
+    _btc_bull_flex = _btc_bear_flex = False
+    btc_c4 = await buscar_candles(session, "BTCUSDT", "4h")
+    if btc_c4 and len(btc_c4) >= 50:
+        _bc = [c["c"] for c in btc_c4]
+        _be21 = serie_ema(_bc, 21)[-1]; _be50 = serie_ema(_bc, 50)[-1]
+        _be200 = serie_ema(_bc, 200)[-1]; _bp = _bc[-1]
+        _btc_bull_flex = _bp > _be21 > _be50 and _bp > _be200 * 0.98
+        _btc_bear_flex = _bp < _be21 < _be50 and _bp < _be200 * 1.02
+
     funding_rates, oi_atual = await buscar_contract_data(session)
 
     # Calcula variação % do OI em relação ao ciclo anterior (persiste no estado)
@@ -372,6 +382,9 @@ async def executar_ciclo(session, estado, tf, moedas):
 
             eh_long  = result["sinal"] == "LONG"
             pct_risco = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
+            # SURGE: capa risco em 2% — breakout pode reverter com velocidade
+            if fonte == "SURGE":
+                pct_risco = min(pct_risco, 0.02)
 
             if risco_ciclo + pct_risco > MAX_CYCLE_RISK:
                 log.info(f"  🛑 {abrev} bloqueado — risco ciclo {risco_ciclo*100:.0f}%+{pct_risco*100:.0f}% > teto")
@@ -394,6 +407,19 @@ async def executar_ciclo(session, estado, tf, moedas):
             _hora_utc  = datetime.now(timezone.utc).hour
             _baixa_liq    = 22 <= _hora_utc or _hora_utc < 8    # Asian/madrugada UTC
             _aber_falsa   = _hora_utc in (8, 13)               # abertura Londres/NY
+
+            # SURGE noturno: breakout falso em sessão de baixa liquidez sem BTC ALTA
+            if fonte == "SURGE" and _baixa_liq:
+                if eh_long and not _btc_bull_flex:
+                    log.info(f"  🚫 {abrev} SURGE LONG bloq — noturno ({_hora_utc:02d}h UTC) BTC não ALTA")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], "SURGE noturno"))
+                    continue
+                if not eh_long and not _btc_bear_flex:
+                    log.info(f"  🚫 {abrev} SURGE SHORT bloq — noturno ({_hora_utc:02d}h UTC) BTC não BAIXA")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], "SURGE noturno"))
+                    continue
             _sombra_sup   = result.get("sombra_sup", 0.0)
             _sombra_inf   = result.get("sombra_inf", 0.0)
             _liq_topo_r   = result.get("liq_topo", False)
