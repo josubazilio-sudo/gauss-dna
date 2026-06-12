@@ -82,7 +82,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
 
     if adx < _adx_min:
-        motivos.append(f"ADX {adx:.0f} < {_adx_min}")
+        motivos.append(f"ADX {adx:.1f} < {_adx_min}")
     if FILTER_LEVEL >= 2 and not adx_s:
         motivos.append("ADX nao subindo")
     if lat:
