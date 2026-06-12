@@ -501,9 +501,9 @@ async def executar_ciclo(session, estado, tf, moedas):
             dfl = result.get("dna_flex_bull", False); dfs = result.get("dna_flex_bear", False)
             trl = result.get("trendilo_long", False);  trs = result.get("trendilo_short", False)
             kal = result.get("kalman_subindo", False)
-            if sc > 12  and rsi < 72 and adx >= 8 and (kal or trl or dfl or sc > 40):
+            if sc > 12  and rsi < 60 and adx >= 8 and (kal or trl or dfl or sc > 40):
                 watchlist.append(("LONG",  abrev, sc, rsi, adx, dfl, trl))
-            elif sc < -12 and rsi > 35 and adx >= 8 and (not kal or trs or dfs or sc < -40):
+            elif sc < -12 and rsi > 40 and adx >= 8 and (not kal or trs or dfs or sc < -40):
                 watchlist.append(("SHORT", abrev, sc, rsi, adx, dfs, trs))
 
     if enviados == 0 and candidatos:
