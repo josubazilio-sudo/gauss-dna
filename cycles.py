@@ -46,6 +46,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     sc    = abs(sc_raw)
     eh_long_cand = sc_raw > 0
     rsi   = result.get("rsi", 50)
+    rsi_ant = result.get("rsi_ant", rsi)
     adx   = result.get("adx", 0)
     rvol  = result.get("rvol", 1.0)
     adx_s = result.get("adx_subindo", True)
@@ -60,6 +61,14 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     f_s   = result.get("f_bear", False)
     ha1_b = result.get("ha_bull_1", False)
     ha1_s = result.get("ha_bear_1", False)
+    preco   = result.get("preco", 0)
+    e200    = result.get("e200", 0)
+    tbull_l = result.get("tbull_loose", False)
+    tbear_l = result.get("tbear_loose", False)
+    rsi_sub = result.get("rsi_subindo", False)
+    rsi_cai = result.get("rsi_caindo", False)
+    rsi_ent_l = result.get("rsi_entrada_long", True)
+    rsi_ent_s = result.get("rsi_entrada_short", True)
 
     _sc_min   = 25 if FILTER_LEVEL <= 0 else 30
     _adx_min  = 10 if FILTER_LEVEL <= 0 else 18
@@ -162,6 +171,27 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("liq topo SMC")
     elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
         motivos.append("liq fundo SMC")
+
+    # Filtros de qualidade (adicionados 12/06)
+    if eh_long_cand:
+        if not rsi_ent_l:
+            motivos.append(f"RSI entrada=F({rsi:.0f}<45)")
+        if not rsi_sub:
+            motivos.append(f"RSI caindo({rsi:.0f}<ant{rsi_ant:.0f})")
+        if not tbull_l:
+            motivos.append("EMA nao alinhada (long)")
+        if e200 > 0 and preco <= e200:
+            motivos.append(f"abaixo e200")
+    else:
+        if not rsi_ent_s:
+            motivos.append(f"RSI entrada=F({rsi:.0f}>55)")
+        if not rsi_cai:
+            motivos.append(f"RSI subindo({rsi:.0f}>ant{rsi_ant:.0f})")
+        if not tbear_l:
+            motivos.append("EMA nao alinhada (short)")
+        if e200 > 0 and preco >= e200:
+            motivos.append(f"acima e200")
+
     if not motivos:
         motivos.append("HA/MACD pendente")
     return motivos
