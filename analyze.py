@@ -562,10 +562,10 @@ def detectar_sinais(ind):
     _surge_vol_ok  = i["rvol_tier_max2"] >= 3
     long_surge  = (_surge_vol_ok and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
                    not i["exaustao_topo"] and (i["kalman_subindo"] or i["k_short_subindo"]) and i["ha_bull"] and
-                   i["rsi"] < 78 and i["score_inst_long"] >= 50)
+                   i["rsi"] < 78 and i["score_inst_long"] >= 50 and i["preco"] > i["e200"])
     short_surge = (_surge_vol_ok and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
-                   i["rsi"] > 22 and i["score_inst_short"] >= 50)
+                   i["rsi"] > 22 and i["score_inst_short"] >= 50 and i["preco"] < i["e200"])
 
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
