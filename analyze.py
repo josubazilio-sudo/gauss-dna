@@ -636,7 +636,7 @@ def detectar_sinais(ind):
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # ADX >= 20: notify.py já comprime alvos 35% abaixo de 20 — entrar sem tendência = stop certo
     _sc_min  = 25 if _FLV <= 0 else 30
-    _adx_min = 10 if _FLV <= 0 else 20
+    _adx_min = 10 if _FLV <= 0 else 18
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
     # vol: vol_nao_fade + RVOL>=0.5 (pico isolado sem volume sustentado não garante TP1)
