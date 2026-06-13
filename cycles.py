@@ -435,6 +435,11 @@ async def executar_ciclo(session, estado, tf, moedas):
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue
+            if grade == "B" and fonte == "SCOUT":
+                log.info(f"  ⚠️ {abrev} SCOUT Grade B bloqueado")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], "SCOUT Grade B"))
+                continue
 
             if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"], score_inst, result.get("rvol", 1.0)):
                 log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto (inst={score_inst} rvol={result.get('rvol',1):.1f})")
