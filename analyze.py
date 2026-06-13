@@ -602,15 +602,11 @@ def detectar_sinais(ind):
     long_flex  = (i["score"] >= 40 and i["macd_bull_r"] and i["adx"] >= 10 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["rvol"] >= 0.5 and i["rsi_zona_long"] and
-                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
-                  (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
+                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50)
     short_flex = (i["score"] <= -40 and i["macd_bear_r"] and i["adx"] >= 10 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["rvol"] >= 0.5 and i["rsi_zona_short"] and
-                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
-                  (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
+                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50)
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
     long_setup  = (i["score"] > 50 and i["ha_bull_1"] and i["macd_recuperando"] and i["adx"] > 14 and
