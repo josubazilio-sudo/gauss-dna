@@ -303,10 +303,14 @@ def dentro_horario_operacao():
 
 # ── Filtro H4 ─────────────────────────────────────────────────────────────────
 
-def _h4_confirma(candles_h4, direcao):
-    """Retorna True se H4 confirma a direção do sinal. Sem H4 → não bloqueia.
-    Só bloqueia quando H4 está FORTEMENTE oposto (score < -40 / > 40, ADX > 20).
-    H4 neutro ou mildly bearish/bullish não bloqueia — deixa TFs menores operarem."""
+def _h4_confirma(candles_h4, direcao, score_inst=0, rvol=1.0):
+    """Retorna True se o sinal pode prosseguir considerando o H4.
+
+    Três níveis:
+    - H4 FORTE oposto (score<-40/>+40 + ADX>=20): bloqueia sempre
+    - H4 MODERADO oposto (score<-25/>+25 + ADX>=15): bloqueia se sinal FRACO (score_inst<65 ou rvol<1.2)
+    - H4 leve/neutro: não bloqueia
+    """
     if candles_h4 is None:
         return True
     r4 = calcular_indicadores(candles_h4)
@@ -315,12 +319,24 @@ def _h4_confirma(candles_h4, direcao):
     h4_rsi  = r4["rsi"]
     h4_vol  = r4.get("v_forte", False) or r4.get("obv_bull", False)
     h4_vols = r4.get("v_forte", False) or r4.get("obv_bear", False)
-    h4_bear_strong = (r4.get("tbear_r", False) and r4["adx"] >= 20 and
-                      h4_vols and r4["score"] < -40 and h4_rsi > 45)
-    h4_bull_strong = (r4.get("tbull_r", False) and r4["adx"] >= 20 and
-                      h4_vol and r4["score"] > 40 and h4_rsi < 65)
-    if direcao == "LONG"  and h4_bear_strong: return False
-    if direcao == "SHORT" and h4_bull_strong: return False
+    sinal_forte = score_inst >= 65 and rvol >= 1.2
+
+    if direcao == "LONG":
+        h4_strong = (r4.get("tbear_r", False) and r4["adx"] >= 20 and
+                     h4_vols and r4["score"] < -40 and h4_rsi > 45)
+        h4_mild   = (r4.get("tbear_r", False) and r4["adx"] >= 15 and
+                     h4_vols and r4["score"] < -25 and h4_rsi > 43)
+        if h4_strong: return False
+        if h4_mild and not sinal_forte: return False
+
+    elif direcao == "SHORT":
+        h4_strong = (r4.get("tbull_r", False) and r4["adx"] >= 20 and
+                     h4_vol and r4["score"] > 40 and h4_rsi < 65)
+        h4_mild   = (r4.get("tbull_r", False) and r4["adx"] >= 15 and
+                     h4_vol and r4["score"] > 25 and h4_rsi < 68)
+        if h4_strong: return False
+        if h4_mild and not sinal_forte: return False
+
     return True
 
 
@@ -436,10 +452,11 @@ async def executar_ciclo(session, estado, tf, moedas):
                                        result["rsi"], result["adx"], f"RSI caindo LONG bloq"))
                     continue
 
-            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"]):
-                log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto")
+            _sc_inst_h4 = result.get("score_inst_long" if result["sinal"] == "LONG" else "score_inst_short", 0)
+            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"], _sc_inst_h4, result.get("rvol", 1.0)):
+                log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto (inst={_sc_inst_h4} rvol={result.get('rvol',1):.1f})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "H4 oposto"))
+                                   result["rsi"], result["adx"], f"H4 oposto (inst={_sc_inst_h4})"))
                 continue
 
             chave_dir    = f"{sym}_{tf}_{result['sinal']}"

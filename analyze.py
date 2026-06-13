@@ -611,20 +611,18 @@ def detectar_sinais(ind):
     _flex_norm_l  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] >= 40  and 45 < i["rsi"] < 55
     _flex_break_l = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] >= 75  and 42 < i["rsi"] < 62
     _flex_ha_l = i["ha_bull_1"] or i["score"] >= 85   # HA bypass quando DNA excepcionalmente bull
-    _flex_kal_l = i["kalman_subindo"] or _flex_break_l  # kalman obrigatório só no path normal
     long_flex  = (_flex_ha_l and i["macd_bull_r"] and (_flex_norm_l or _flex_break_l) and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  _flex_kal_l and
+                  i["kalman_subindo"] and
                   i["preco"] > i["e200"] and i["preco"] <= i["e21"] * 1.05)
     _flex_norm_s  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40 and 45 < i["rsi"] < 55
     _flex_break_s = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] <= -75 and 38 < i["rsi"] < 58
     _flex_ha_s = i["ha_bear_1"] or i["score"] <= -85  # HA bypass quando DNA excepcionalmente bear
-    _flex_kal_s = not i["kalman_subindo"] or _flex_break_s  # kalman obrigatório só no path normal
     short_flex = (_flex_ha_s and i["macd_bear_r"] and (_flex_norm_s or _flex_break_s) and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  _flex_kal_s and
+                  not i["kalman_subindo"] and
                   i["preco"] < i["e200"] and i["preco"] >= i["e21"] * 0.95)
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
