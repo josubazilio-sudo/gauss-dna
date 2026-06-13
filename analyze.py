@@ -599,15 +599,17 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    long_flex  = (i["score"] >= 40 and i["ha_bull_1"] and i["macd_bull_r"] and
-                  ((i["adx"] >= 22 and i["rvol"] >= 0.7) or (i["adx"] >= 16 and i["rvol"] >= 1.0)) and
+    long_flex  = (i["ha_bull_1"] and i["macd_bull_r"] and
+                  ((i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] >= 40) or
+                   (i["adx"] >= 16 and i["rvol"] >= 1.5 and i["score"] >= 75)) and
                   45 < i["rsi"] < 55 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 55 and
                   i["kalman_subindo"] and i["trendilo_long"] and
                   i["preco"] > i["e200"] and i["preco"] <= i["e21"] * 1.05)
-    short_flex = (i["score"] <= -40 and i["ha_bear_1"] and i["macd_bear_r"] and
-                  ((i["adx"] >= 22 and i["rvol"] >= 0.7) or (i["adx"] >= 16 and i["rvol"] >= 1.0)) and
+    short_flex = (i["ha_bear_1"] and i["macd_bear_r"] and
+                  ((i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40) or
+                   (i["adx"] >= 16 and i["rvol"] >= 1.5 and i["score"] <= -75)) and
                   45 < i["rsi"] < 55 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 55 and
