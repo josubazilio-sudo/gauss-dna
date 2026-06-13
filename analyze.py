@@ -315,9 +315,9 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI zona de entrada — autorizado pelo usuário em 10/06 (era 55/45)
-    rsi_zona_long  = rsi < 60
-    rsi_zona_short = rsi > 40
+    # RSI zona de entrada — janela ideal 42-58 (recuperação confirmada, espaço para mover)
+    rsi_zona_long  = 42 < rsi < 58
+    rsi_zona_short = 42 < rsi < 58
     # Janela RSI para entrada — evita comprar em queda livre / vender em recuperação
     # Exceções: REVERSAL (RSI extremo), REBOUND (RSI baixo), SURGE (breakout move RSI)
     rsi_entrada_long  = rsi >= 45   # não comprar quando RSI ainda está no fundo
