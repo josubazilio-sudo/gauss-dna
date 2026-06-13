@@ -89,8 +89,8 @@ def calcular_indicadores(candles):
     rsi_ant   = calcular_rsi(fechamentos[-53:-3]) if n >= 53 else rsi
     rsi_6     = calcular_rsi(fechamentos[-56:-6]) if n >= 56 else rsi
     rsi_9     = calcular_rsi(fechamentos[-59:-9]) if n >= 59 else rsi
-    rsi_subindo  = rsi > rsi_ant
-    rsi_caindo   = rsi < rsi_ant
+    rsi_subindo  = rsi > rsi_ant + 0.3   # delta mínimo 0.3 para evitar falso-positivo float
+    rsi_caindo   = rsi < rsi_ant - 0.3
 
     rsi_dip_short      = rsi_ant < 35 or rsi_6 < 35 or rsi_9 < 35
     rsi_rebound_short  = 38 <= rsi <= 46 and rsi > rsi_ant
@@ -605,17 +605,19 @@ def detectar_sinais(ind):
     # Via breakout: RSI 42-62, ADX 22, RVOL 1.5, Score 75 — captura movimentos fortes fora da zona padrão
     _flex_norm_l  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] >= 40  and 45 < i["rsi"] < 55
     _flex_break_l = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] >= 75  and 42 < i["rsi"] < 62
-    long_flex  = (i["ha_bull_1"] and i["macd_bull_r"] and (_flex_norm_l or _flex_break_l) and
+    _flex_ha_l = i["ha_bull_1"] or i["score"] >= 85   # HA bypass quando DNA excepcionalmente bull
+    long_flex  = (_flex_ha_l and i["macd_bull_r"] and (_flex_norm_l or _flex_break_l) and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 55 and
-                  i["kalman_subindo"] and (i["trendilo_long"] or i["score_inst_long"] >= 70) and
+                  i["kalman_subindo"] and (i["trendilo_long"] or i["score_inst_long"] >= 60) and
                   i["preco"] > i["e200"] and i["preco"] <= i["e21"] * 1.05)
     _flex_norm_s  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40 and 45 < i["rsi"] < 55
     _flex_break_s = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] <= -75 and 38 < i["rsi"] < 58
-    short_flex = (i["ha_bear_1"] and i["macd_bear_r"] and (_flex_norm_s or _flex_break_s) and
+    _flex_ha_s = i["ha_bear_1"] or i["score"] <= -85  # HA bypass quando DNA excepcionalmente bear
+    short_flex = (_flex_ha_s and i["macd_bear_r"] and (_flex_norm_s or _flex_break_s) and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 55 and
-                  not i["kalman_subindo"] and (i["trendilo_short"] or i["score_inst_short"] >= 70) and
+                  not i["kalman_subindo"] and (i["trendilo_short"] or i["score_inst_short"] >= 60) and
                   i["preco"] < i["e200"] and i["preco"] >= i["e21"] * 0.95)
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
