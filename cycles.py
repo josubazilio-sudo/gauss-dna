@@ -426,7 +426,8 @@ async def executar_ciclo(session, estado, tf, moedas):
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             _inst_min = (0  if FILTER_LEVEL <= 0 else
-                         55 if fonte == "SCOUT" else 50)
+                         35 if fonte == "SCOUT" else
+                         40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = max(_inst_min, 60)   # sessão perigosa: exige confirmação institucional forte
             if score_inst < _inst_min:
@@ -434,42 +435,19 @@ async def executar_ciclo(session, estado, tf, moedas):
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue
-            if grade == "B":
-                log.info(f"  ⚠️ {abrev} bloqueado — Grade B descartado")
-                candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "Grade B descartado"))
-                continue
-            if (result["sinal"] == "LONG" and
-                    fonte not in ("REBOUND", "REVERSAL") and
-                    result.get("rsi_caindo", False)):
-                # Exceção breakout: RVOL>=1.5 + score>=75 — movimento institucional forte
-                _flex_break_exc = (fonte == "FLEX" and result.get("rvol", 0) >= 1.5 and abs(result.get("score", 0)) >= 75)
-                # Exceção zona: RSI já está dentro da janela ideal 45-55 — caindo dentro da zona não invalida
-                _flex_zona_exc  = (fonte == "FLEX" and 45 < result.get("rsi", 0) < 55)
-                if not _flex_break_exc and not _flex_zona_exc:
-                    log.info(f"  🚫 {abrev} LONG bloqueado — RSI caindo ({result['rsi']:.0f} < ant {result.get('rsi_ant',0):.0f})")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"RSI caindo LONG bloq"))
-                    continue
 
-            _sc_inst_h4 = result.get("score_inst_long" if result["sinal"] == "LONG" else "score_inst_short", 0)
-            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"], _sc_inst_h4, result.get("rvol", 1.0)):
-                log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto (inst={_sc_inst_h4} rvol={result.get('rvol',1):.1f})")
+            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"], score_inst, result.get("rvol", 1.0)):
+                log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto (inst={score_inst} rvol={result.get('rvol',1):.1f})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"H4 oposto (inst={_sc_inst_h4})"))
+                                   result["rsi"], result["adx"], f"H4 oposto (inst={score_inst})"))
                 continue
 
-            chave_dir    = f"{sym}_{tf}_{result['sinal']}"
-            chave_any    = f"{sym}_{tf}"
-            chave_global = f"{sym}_GLOBAL"
-            bloq_global = agora - estado.get(chave_global, 0) < 1800
+            chave_dir = f"{sym}_{tf}_{result['sinal']}"
+            chave_any = f"{sym}_{tf}"
             bloq_dir  = agora - estado.get(chave_dir, 0) < cooldown
             bloq_flip = agora - estado.get(chave_any, 0) < 7200
-            if bloq_global or bloq_dir or bloq_flip:
-                if bloq_global:
-                    mins = int((1800 - (agora - estado.get(chave_global, 0))) / 60)
-                    log.info(f"  ⏳ {abrev} [{tf}] dedup global {mins}min")
-                elif bloq_dir:
+            if bloq_dir or bloq_flip:
+                if bloq_dir:
                     mins = int((cooldown - (agora - estado.get(chave_dir, 0))) / 60)
                     log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
                 else:
@@ -523,16 +501,15 @@ async def executar_ciclo(session, estado, tf, moedas):
             _sombra_inf   = result.get("sombra_inf", 0.0)
             _liq_topo_r   = result.get("liq_topo", False)
             _liq_fundo_r  = result.get("liq_fundo", False)
-            _score_inst = result.get("score_inst_long" if eh_long else "score_inst_short", 0)
             _armadilha = []
             if _rvol < 0.80:
                 _armadilha.append("volume fraco")
             if fonte == "BB_BREAK" and _rvol < 1.0:
                 _armadilha.append("BB break sem volume")
-            if eh_long and _rsi >= 58:
-                _armadilha.append(f"RSI {_rsi:.0f} próximo ao limite LONG")
-            if not eh_long and _rsi <= 42:
-                _armadilha.append(f"RSI {_rsi:.0f} próximo ao limite SHORT")
+            if eh_long and _rsi >= 50:
+                _armadilha.append(f"RSI {_rsi:.0f} elevado para LONG")
+            if not eh_long and _rsi <= 50:
+                _armadilha.append(f"RSI {_rsi:.0f} baixo para SHORT")
             if not _dna and not _trl:
                 _armadilha.append("fluxo não confirmado")
             if _tend == "NEUTRO":
@@ -549,19 +526,6 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _armadilha.append(f"sessão baixa liquidez ({_hora_utc:02d}h UTC)")
             if _aber_falsa:
                 _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
-            # ha_bull_1 sem ha_bull = apenas 1 vela confirmada — conta como risco na armadilha
-            _ha_1v_only = (eh_long  and result.get("ha_bull_1") and not result.get("ha_bull")) or \
-                          (not eh_long and result.get("ha_bear_1") and not result.get("ha_bear"))
-            if _ha_1v_only:
-                _armadilha.append("HA apenas 1 vela (sem confirmação anterior)")
-
-            # Bloqueia sinais com múltiplas condições de risco por nível de qualidade
-            if len(_armadilha) >= 2 and _score_inst < 55:
-                log.info(f"  🚫 {abrev} {result['sinal']} BLOQ inst FRACO — {_score_inst} + {len(_armadilha)} risco(s): {'; '.join(_armadilha[:3])}")
-                continue
-            if len(_armadilha) >= 3 and _score_inst < 70:
-                log.info(f"  🚫 {abrev} {result['sinal']} BLOQ inst MÉDIO — {_score_inst} + {len(_armadilha)} risco(s): {'; '.join(_armadilha[:3])}")
-                continue
 
             # FLEX sem fluxo direcional + mercado neutro = TP1 improvável (~50%)
             if fonte == "FLEX" and not _dna and not _trl and _tend == "NEUTRO":
@@ -581,6 +545,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
                 "funding_rate": result.get("funding_rate"),
                 "oi_change":    oi_change.get(sym),
+                "armadilha":    _armadilha,
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],
@@ -589,9 +554,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                                     result["swing_high"], result["fonte_sinal"], tf, grade, extra=extra)
             if ok:
                 _diag_buffer["ultimo_sinal"] = agora
-                estado[chave_dir]    = agora
-                estado[chave_any]    = agora
-                estado[chave_global] = agora
+                estado[chave_dir] = agora
+                estado[chave_any] = agora
                 salvar_estado(estado)
                 risco_ciclo   += pct_risco
                 scouts_enviados += 1 if fonte == "SCOUT" else 0

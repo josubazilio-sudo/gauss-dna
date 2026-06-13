@@ -606,31 +606,25 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    # Via normal: RSI 45-55, ADX 18, RVOL 0.8
-    # Via breakout: RSI 42-62, ADX 22, RVOL 1.5, Score 75 — captura movimentos fortes fora da zona padrão
-    _flex_norm_l  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] >= 40  and 45 < i["rsi"] < 55
-    _flex_break_l = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] >= 75  and 42 < i["rsi"] < 62
-    _flex_ha_l = i["ha_bull_1"] or i["score"] >= 85   # HA bypass quando DNA excepcionalmente bull
-    long_flex  = (_flex_ha_l and i["macd_bull_r"] and (_flex_norm_l or _flex_break_l) and
+    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
+                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  i["kalman_subindo"] and
-                  i["preco"] > i["e200"] and i["preco"] <= i["e21"] * 1.05)
-    _flex_norm_s  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40 and 45 < i["rsi"] < 55
-    _flex_break_s = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] <= -75 and 38 < i["rsi"] < 58
-    _flex_ha_s = i["ha_bear_1"] or i["score"] <= -85  # HA bypass quando DNA excepcionalmente bear
-    short_flex = (_flex_ha_s and i["macd_bear_r"] and (_flex_norm_s or _flex_break_s) and
+                  (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
+                  (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
+    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
+                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  not i["kalman_subindo"] and
-                  i["preco"] < i["e200"] and i["preco"] >= i["e21"] * 0.95)
+                  (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
+                  (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
-    long_setup  = (i["score"] > 50 and i["ha_bull_1"] and i["macd_recuperando"] and i["adx"] > 14 and
+    long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > 18 and
                    i["obv_bull"] and i["v_bom"] and i["acima_vwap"] and not i["lateralizado"] and
                    i["nao_ext_long_tight"] and i["seguro_long"] and (i["liq_long"] or i["liq_fundo"]) and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"])
-    short_setup = (i["score"] < -50 and i["ha_bear_1"] and i["macd_esgotando"] and i["adx"] > 14 and
+    short_setup = (i["score"] < -50 and i["ha_bear2"] and i["macd_esgotando"] and i["adx"] > 18 and
                    i["obv_bear"] and i["v_bom"] and i["abaixo_vwap"] and not i["lateralizado"] and
                    i["nao_ext_short_tight"] and i["seguro_short"] and (i["liq_short"] or i["liq_topo"]) and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"])
