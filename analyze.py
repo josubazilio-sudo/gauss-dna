@@ -606,14 +606,14 @@ def detectar_sinais(ind):
     long_flex  = (i["ha_bull_1"] and i["macd_bull_r"] and (_flex_norm_l or _flex_break_l) and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 55 and
-                  i["kalman_subindo"] and i["trendilo_long"] and
+                  i["kalman_subindo"] and (i["trendilo_long"] or i["score_inst_long"] >= 70) and
                   i["preco"] > i["e200"] and i["preco"] <= i["e21"] * 1.05)
     _flex_norm_s  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40 and 45 < i["rsi"] < 55
     _flex_break_s = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] <= -75 and 38 < i["rsi"] < 58
     short_flex = (i["ha_bear_1"] and i["macd_bear_r"] and (_flex_norm_s or _flex_break_s) and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 55 and
-                  not i["kalman_subindo"] and i["trendilo_short"] and
+                  not i["kalman_subindo"] and (i["trendilo_short"] or i["score_inst_short"] >= 70) and
                   i["preco"] < i["e200"] and i["preco"] >= i["e21"] * 0.95)
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
