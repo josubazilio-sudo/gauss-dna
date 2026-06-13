@@ -602,11 +602,11 @@ def detectar_sinais(ind):
     long_flex  = (i["score"] >= 40 and i["macd_bull_r"] and i["adx"] >= 10 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["rvol"] >= 0.5 and i["rsi_zona_long"] and
-                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 40)
+                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 45)
     short_flex = (i["score"] <= -40 and i["macd_bear_r"] and i["adx"] >= 10 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["rvol"] >= 0.5 and i["rsi_zona_short"] and
-                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 40)
+                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 45)
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
     long_setup  = (i["score"] > 50 and i["ha_bull_1"] and i["macd_recuperando"] and i["adx"] > 14 and
