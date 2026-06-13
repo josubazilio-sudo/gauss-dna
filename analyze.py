@@ -183,7 +183,8 @@ def calcular_indicadores(candles):
     ext_acima_e21  = (preco - e21) / atr > 3.0
     ext_abaixo_e21 = (e21 - preco) / atr > 3.0
     vol3 = [volumes[-4], volumes[-3], volumes[-2]]
-    vol_secando = volumes[-1] < vol_ma * 0.25 and volumes[-1] < min(vol3) * 0.5
+    vol_sec_max2 = max(volumes[-1], volumes[-2]) if len(volumes) >= 2 else volumes[-1]
+    vol_secando = vol_sec_max2 < vol_ma * 0.25 and vol_sec_max2 < min(vol3) * 0.5
 
     def _minima_tocou_ema(ema_arr, n=5):
         return any(minimas[i] <= ema_arr[i] * 1.015 for i in range(-n, -1))
