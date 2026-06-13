@@ -599,18 +599,18 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    long_flex  = (i["ha_bull_1"] and i["macd_bull_r"] and
-                  ((i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] >= 40) or
-                   (i["adx"] >= 16 and i["rvol"] >= 1.5 and i["score"] >= 75)) and
-                  45 < i["rsi"] < 55 and
+    # Via normal: RSI 45-55, ADX 18, RVOL 0.8
+    # Via breakout: RSI 42-62, ADX 22, RVOL 1.5, Score 75 — captura movimentos fortes fora da zona padrão
+    _flex_norm_l  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] >= 40  and 45 < i["rsi"] < 55
+    _flex_break_l = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] >= 75  and 42 < i["rsi"] < 62
+    long_flex  = (i["ha_bull_1"] and i["macd_bull_r"] and (_flex_norm_l or _flex_break_l) and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 55 and
                   i["kalman_subindo"] and i["trendilo_long"] and
                   i["preco"] > i["e200"] and i["preco"] <= i["e21"] * 1.05)
-    short_flex = (i["ha_bear_1"] and i["macd_bear_r"] and
-                  ((i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40) or
-                   (i["adx"] >= 16 and i["rvol"] >= 1.5 and i["score"] <= -75)) and
-                  45 < i["rsi"] < 55 and
+    _flex_norm_s  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40 and 45 < i["rsi"] < 55
+    _flex_break_s = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] <= -75 and 38 < i["rsi"] < 58
+    short_flex = (i["ha_bear_1"] and i["macd_bear_r"] and (_flex_norm_s or _flex_break_s) and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 55 and
                   not i["kalman_subindo"] and i["trendilo_short"] and
