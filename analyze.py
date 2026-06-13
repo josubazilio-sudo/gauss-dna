@@ -111,8 +111,8 @@ def calcular_indicadores(candles):
         stoch_rsi = (_r14[-1] - _rmin) / (_rmax - _rmin) if _rmax > _rmin else 0.5
     else:
         stoch_rsi = 0.5
-    stoch_esticado_up   = stoch_rsi > 0.80
-    stoch_esticado_down = stoch_rsi < 0.05
+    stoch_esticado_up   = stoch_rsi > 0.80 and rsi > 58   # só bloqueia LONG quando RSI também está elevado
+    stoch_esticado_down = stoch_rsi < 0.05 and rsi < 42   # só bloqueia SHORT quando RSI também está deprimido
 
     # DMI / ADX
     pdi, mdi, adx, adx_p = calcular_adx(candles[-60:])
@@ -874,4 +874,20 @@ def analisar(simbolo, candles, funding_rate=None):
         "macd_bear_r":    ind["macd_bear_r"],
         "rsi_entrada_long":  ind["rsi_entrada_long"],
         "rsi_entrada_short": ind["rsi_entrada_short"],
+        # Sub-campos de seguro (diagnóstico mostra causa real em vez de "?")
+        "perto_bb_topo":     ind["perto_bb_topo"],
+        "ext_acima_e21":     ind["ext_acima_e21"],
+        "vol_secando":       ind["vol_secando"],
+        "exaustao_topo":     ind["exaustao_topo"],
+        "exaustao_fund":     ind["exaustao_fund"],
+        "stoch_rsi":         ind["stoch_rsi"],
+        "stoch_esticado_up": ind["stoch_esticado_up"],
+        "stoch_esticado_down": ind["stoch_esticado_down"],
+        # Outros campos usados no diagnóstico
+        "e200":              ind["e200"],
+        "kalman_descendo":   ind["kalman_descendo"],
+        "ha_bull2":          ind["ha_bull2"],
+        "ha_bear2":          ind["ha_bear2"],
+        "flex_vol_ok":       ind["flex_vol_ok"],
+        "flex_vol_ok_s":     ind["flex_vol_ok_s"],
     }
