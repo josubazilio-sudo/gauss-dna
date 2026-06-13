@@ -79,8 +79,10 @@ def calcular_indicadores(candles):
     ha_bull2 = ha_bull and ha_corpo_ok
     ha_bear2 = ha_bear and ha_corpo_ok
     # Versão mais permissiva: apenas a última vela HA precisa ser bullish/bearish
-    ha_bull_1 = fechamentos[-1] > aberturas[-1] and ha_corpo_ok
-    ha_bear_1 = fechamentos[-1] < aberturas[-1] and ha_corpo_ok
+    # Usa threshold menor (0.1 ATR) pois 1-vela já é mais restritiva por exigir direção
+    _ha_c1    = abs(fechamentos[-1] - aberturas[-1]) > atr * 0.1
+    ha_bull_1 = fechamentos[-1] > aberturas[-1] and _ha_c1
+    ha_bear_1 = fechamentos[-1] < aberturas[-1] and _ha_c1
 
     # RSI
     rsi       = calcular_rsi(fechamentos[-50:])
