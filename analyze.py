@@ -85,6 +85,7 @@ def calcular_indicadores(candles):
     # RSI
     rsi       = calcular_rsi(fechamentos[-50:])
     rsi_ant   = calcular_rsi(fechamentos[-53:-3]) if n >= 53 else rsi
+    rsi_2     = calcular_rsi(fechamentos[-52:-2]) if n >= 52 else rsi  # RSI 2 velas atrás
     rsi_6     = calcular_rsi(fechamentos[-56:-6]) if n >= 56 else rsi
     rsi_9     = calcular_rsi(fechamentos[-59:-9]) if n >= 59 else rsi
     rsi_subindo  = rsi > rsi_ant
@@ -315,9 +316,9 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI zona de entrada — janela ideal 42-58 (recuperação confirmada, espaço para mover)
-    rsi_zona_long  = 42 < rsi < 58
-    rsi_zona_short = 42 < rsi < 58
+    # RSI zona de entrada — 45-55 com confirmação de 2 velas consecutivas na direção
+    rsi_zona_long  = 45 < rsi < 55 and rsi > rsi_2 and rsi_2 >= rsi_ant  # subindo 2 velas
+    rsi_zona_short = 45 < rsi < 55 and rsi < rsi_2 and rsi_2 <= rsi_ant  # caindo 2 velas
     # Janela RSI para entrada — evita comprar em queda livre / vender em recuperação
     # Exceções: REVERSAL (RSI extremo), REBOUND (RSI baixo), SURGE (breakout move RSI)
     rsi_entrada_long  = rsi >= 45   # não comprar quando RSI ainda está no fundo
@@ -608,18 +609,18 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
+    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 22 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 1.0 and i["rsi_zona_long"] and i["rsi_entrada_long"] and
                   i["rsi_subindo"] and i["tbull_loose"] and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and
-                  i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and
+                  i["preco"] > i["e200"] and i["e200_subindo"] and i["score_inst_long"] >= 60 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
-    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
+    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 22 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 1.0 and i["rsi_zona_short"] and i["rsi_entrada_short"] and
                   i["rsi_caindo"] and i["tbear_loose"] and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and
-                  i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and
+                  i["preco"] < i["e200"] and i["e200_descendo"] and i["score_inst_short"] >= 60 and
                   (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
