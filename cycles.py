@@ -71,7 +71,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     rsi_ent_s = result.get("rsi_entrada_short", True)
 
     _sc_min   = 25 if FILTER_LEVEL <= 0 else 30
-    _adx_min  = 10 if FILTER_LEVEL <= 0 else 18
+    _adx_min  = 10 if FILTER_LEVEL <= 0 else 15
     _fluxo_min = 0 if FILTER_LEVEL <= 0 else 1
 
     vnf    = result.get("vol_nao_fade", False)
@@ -202,8 +202,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"abaixo e200")
         if not kal_up:
             motivos.append("Kalman descendo (LONG bloq)")
-        if score_inst < 50:
-            motivos.append(f"score_inst={score_inst}<50")
+        _inst_diag = 60 if result.get("fonte_sinal") == "SCOUT" else 45
+        if score_inst < _inst_diag:
+            motivos.append(f"score_inst={score_inst}<{_inst_diag}")
         if e21 > 0 and preco > e21 * 1.05:
             motivos.append(f"preco>{e21*1.05:.4f} (acima e21+5%)")
     else:
@@ -219,8 +220,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"acima e200")
         if kal_up:
             motivos.append("Kalman subindo (SHORT bloq)")
-        if score_inst < 50:
-            motivos.append(f"score_inst={score_inst}<50")
+        _inst_diag = 60 if result.get("fonte_sinal") == "SCOUT" else 45
+        if score_inst < _inst_diag:
+            motivos.append(f"score_inst={score_inst}<{_inst_diag}")
         if e21 > 0 and preco < e21 * 0.95:
             motivos.append(f"preco<{e21*0.95:.4f} (abaixo e21-5%)")
 
