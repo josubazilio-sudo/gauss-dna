@@ -402,9 +402,11 @@ async def executar_ciclo(session, estado, tf, moedas):
             if (result["sinal"] == "LONG" and
                     fonte not in ("REBOUND", "REVERSAL") and
                     result.get("rsi_caindo", False)):
-                # Exceção: FLEX breakout institucional (RVOL>=1.5 + score>=75) permite pullback de RSI
+                # Exceção breakout: RVOL>=1.5 + score>=75 — movimento institucional forte
                 _flex_break_exc = (fonte == "FLEX" and result.get("rvol", 0) >= 1.5 and abs(result.get("score", 0)) >= 75)
-                if not _flex_break_exc:
+                # Exceção zona: RSI já está dentro da janela ideal 45-55 — caindo dentro da zona não invalida
+                _flex_zona_exc  = (fonte == "FLEX" and 45 < result.get("rsi", 0) < 55)
+                if not _flex_break_exc and not _flex_zona_exc:
                     log.info(f"  🚫 {abrev} LONG bloqueado — RSI caindo ({result['rsi']:.0f} < ant {result.get('rsi_ant',0):.0f})")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
                                        result["rsi"], result["adx"], f"RSI caindo LONG bloq"))

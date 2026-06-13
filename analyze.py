@@ -355,11 +355,11 @@ def calcular_indicadores(candles):
 
     score_inst_long  = _score_inst(tendencia_bull, adx_long_ok,
                                    dna_flow_bull or (f_bull and pressao_bull),
-                                   ha_bull, trendilo_long, rsi_subindo,
+                                   ha_bull_1, trendilo_long, rsi_subindo,
                                    v_forte, rsi_div_bull, sm_bull)
     score_inst_short = _score_inst(tendencia_bear, adx_short_ok,
                                    dna_flow_bear or (f_bear and pressao_bear),
-                                   ha_bear, trendilo_short, rsi_caindo,
+                                   ha_bear_1, trendilo_short, rsi_caindo,
                                    v_forte, rsi_div_bear, sm_bear)
 
     def _cls_inst(s):
