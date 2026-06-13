@@ -304,7 +304,9 @@ def dentro_horario_operacao():
 # ── Filtro H4 ─────────────────────────────────────────────────────────────────
 
 def _h4_confirma(candles_h4, direcao):
-    """Retorna True se H4 confirma a direção do sinal. Sem H4 → não bloqueia."""
+    """Retorna True se H4 confirma a direção do sinal. Sem H4 → não bloqueia.
+    Só bloqueia quando H4 está FORTEMENTE oposto (score < -40 / > 40, ADX > 20).
+    H4 neutro ou mildly bearish/bullish não bloqueia — deixa TFs menores operarem."""
     if candles_h4 is None:
         return True
     r4 = calcular_indicadores(candles_h4)
@@ -313,12 +315,12 @@ def _h4_confirma(candles_h4, direcao):
     h4_rsi  = r4["rsi"]
     h4_vol  = r4.get("v_forte", False) or r4.get("obv_bull", False)
     h4_vols = r4.get("v_forte", False) or r4.get("obv_bear", False)
-    h4_bull = (r4["score"] > 15 and r4.get("tbull_r", False) and
-               r4["adx"] >= 13 and h4_rsi < (75 if r4["adx"] > 30 else 65) and h4_vol)
-    h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
-               h4_vols and r4["score"] < -15 and h4_rsi > 43)
-    if direcao == "LONG"  and h4_bear and r4["score"] < -30: return False
-    if direcao == "SHORT" and h4_bull and r4["score"] >  30: return False
+    h4_bear_strong = (r4.get("tbear_r", False) and r4["adx"] >= 20 and
+                      h4_vols and r4["score"] < -40 and h4_rsi > 45)
+    h4_bull_strong = (r4.get("tbull_r", False) and r4["adx"] >= 20 and
+                      h4_vol and r4["score"] > 40 and h4_rsi < 65)
+    if direcao == "LONG"  and h4_bear_strong: return False
+    if direcao == "SHORT" and h4_bull_strong: return False
     return True
 
 

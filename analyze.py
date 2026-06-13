@@ -320,6 +320,8 @@ def calcular_indicadores(candles):
     # LONG: RSI < 60 | SHORT: RSI > 40 (autorizado 10/06)
     rsi_zona_long  = rsi < 60
     rsi_zona_short = rsi > 40
+    rsi_entrada_long  = rsi >= 45   # RSI mínimo para entrar LONG (diagnóstico)
+    rsi_entrada_short = rsi <= 55   # RSI máximo para entrar SHORT (diagnóstico)
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -402,6 +404,7 @@ def calcular_indicadores(candles):
         "stoch_rsi": stoch_rsi, "stoch_esticado_up": stoch_esticado_up, "stoch_esticado_down": stoch_esticado_down,
         "rsi_nao_chasing_long": rsi_nao_chasing_long, "rsi_nao_chasing_short": rsi_nao_chasing_short,
         "rsi_zona_long": rsi_zona_long, "rsi_zona_short": rsi_zona_short,
+        "rsi_entrada_long": rsi_entrada_long, "rsi_entrada_short": rsi_entrada_short,
         # ADX
         "pdi": pdi, "mdi": mdi, "adx_long_ok": adx_long_ok, "adx_short_ok": adx_short_ok,
         "adx_p": adx_p, "adx_subindo": adx > adx_p,
@@ -572,11 +575,13 @@ def detectar_sinais(ind):
     mom_seguro_short = (not i["perto_bb_fund"] and not i["ext_abaixo_e21"] and not i["vol_secando"] and
                         not i["exaustao_fund"] and not i["stoch_esticado_down"])
     long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
-                      i["adx"] > 22 and i["v_forte"] and i["trendilo_long"]  and i["score_inst_long"]  >= 60 and
-                      mom_seguro_long)
+                      i["adx"] > 22 and i["v_forte"] and
+                      (i["trendilo_long"]  or i["score_inst_long"]  >= 75) and
+                      i["score_inst_long"]  >= 60 and mom_seguro_long)
     short_momentum = (rsi_fresh_short and i["ha_bear"] and i["dna_flow_bear"] and not i["liq_fundo"] and
-                      i["adx"] > 22 and i["v_forte"] and i["trendilo_short"] and i["score_inst_short"] >= 60 and
-                      mom_seguro_short)
+                      i["adx"] > 22 and i["v_forte"] and
+                      (i["trendilo_short"] or i["score_inst_short"] >= 75) and
+                      i["score_inst_short"] >= 60 and mom_seguro_short)
 
     # ── Rebound RSI ───────────────────────────────────────────────────────────
     long_rebound  = (i["rsi_spike_long"]  and i["rsi_rebound_long"]  and i["ha_bull"] and
@@ -606,18 +611,20 @@ def detectar_sinais(ind):
     _flex_norm_l  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] >= 40  and 45 < i["rsi"] < 55
     _flex_break_l = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] >= 75  and 42 < i["rsi"] < 62
     _flex_ha_l = i["ha_bull_1"] or i["score"] >= 85   # HA bypass quando DNA excepcionalmente bull
+    _flex_kal_l = i["kalman_subindo"] or _flex_break_l  # kalman obrigatório só no path normal
     long_flex  = (_flex_ha_l and i["macd_bull_r"] and (_flex_norm_l or _flex_break_l) and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  i["kalman_subindo"] and
+                  _flex_kal_l and
                   i["preco"] > i["e200"] and i["preco"] <= i["e21"] * 1.05)
     _flex_norm_s  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40 and 45 < i["rsi"] < 55
     _flex_break_s = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] <= -75 and 38 < i["rsi"] < 58
     _flex_ha_s = i["ha_bear_1"] or i["score"] <= -85  # HA bypass quando DNA excepcionalmente bear
+    _flex_kal_s = not i["kalman_subindo"] or _flex_break_s  # kalman obrigatório só no path normal
     short_flex = (_flex_ha_s and i["macd_bear_r"] and (_flex_norm_s or _flex_break_s) and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  not i["kalman_subindo"] and
+                  _flex_kal_s and
                   i["preco"] < i["e200"] and i["preco"] >= i["e21"] * 0.95)
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────

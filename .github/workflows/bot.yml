@@ -33,7 +33,7 @@ concurrency:
 jobs:
   scanner:
     runs-on: ubuntu-latest
-    timeout-minutes: 345
+    timeout-minutes: 330
 
     steps:
       - name: Checkout
@@ -90,29 +90,6 @@ jobs:
           CAPITAL: ${{ vars.CAPITAL || '64' }}
           RISK_PCT: '0.03'
         run: python bot_actions.py
-
-      - name: Restaurar estado Swing H4
-        if: always()
-        uses: actions/cache/restore@v4
-        with:
-          path: swing_h4_signals.json
-          key: swing-h4-${{ github.run_id }}
-          restore-keys: swing-h4-
-
-      - name: Rodar Swing H4
-        if: always()
-        env:
-          TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
-          TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
-          CAPITAL: ${{ vars.CAPITAL || '64' }}
-        run: python swing_h4.py
-
-      - name: Salvar estado Swing H4
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: swing_h4_signals.json
-          key: swing-h4-${{ github.run_id }}
 
       - name: Salvar cooldown entre runs
         if: always()
