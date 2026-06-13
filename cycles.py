@@ -187,7 +187,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         if not rsi_ent_l:
             motivos.append(f"RSI entrada=F({rsi:.0f}<45)")
         if not rsi_sub:
-            motivos.append(f"RSI caindo({rsi:.0f}<ant{rsi_ant:.0f})")
+            motivos.append(f"RSI caindo({rsi:.1f}<ant{rsi_ant:.1f})")
         if not tbull_l:
             motivos.append("EMA nao alinhada (long)")
         if e200 > 0 and preco <= e200:
@@ -196,7 +196,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         if not rsi_ent_s:
             motivos.append(f"RSI entrada=F({rsi:.0f}>55)")
         if not rsi_cai:
-            motivos.append(f"RSI subindo({rsi:.0f}>ant{rsi_ant:.0f})")
+            motivos.append(f"RSI subindo({rsi:.1f}>ant{rsi_ant:.1f})")
         if not tbear_l:
             motivos.append("EMA nao alinhada (short)")
         if e200 > 0 and preco >= e200:
