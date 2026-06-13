@@ -42,6 +42,7 @@ PRIORITY_WATCHLIST = [
     ("SKYAIUSDT", "SKYAI/USDT", "SKYAI"),
     ("PYTHUSDT",  "PYTH/USDT",  "PYTH"),
     ("TELUSDT",   "TEL/USDT",   "TEL"),
+    ("TAOUSDT",   "TAO/USDT",   "TAO"),
 ]
 
 # Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
@@ -82,7 +83,7 @@ COINS = [
     ("SNXUSDT","SNX/USDT","SNX"), ("GMXUSDT","GMX/USDT","GMX"),
     ("COMPUSDT","COMP/USDT","COMP"), ("STGUSDT","STG/USDT","STG"),
     # ── IA / narrativa ───────────────────────────────────────────────────
-    ("FETUSDT","FET/USDT","FET"), ("TAOUSDT","TAO/USDT","TAO"),
+    ("FETUSDT","FET/USDT","FET"),
     ("RENDERUSDT","RENDER/USDT","RENDER"), ("WLDUSDT","WLD/USDT","WLD"),
     ("IMXUSDT","IMX/USDT","IMX"), ("EIGENUSDT","EIGEN/USDT","EIGEN"),
     # ── Meme coins com alta liquidez ─────────────────────────────────────
