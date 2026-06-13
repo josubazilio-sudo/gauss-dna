@@ -508,6 +508,11 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _armadilha.append(f"sessão baixa liquidez ({_hora_utc:02d}h UTC)")
             if _aber_falsa:
                 _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
+            # ha_bull_1 sem ha_bull = apenas 1 vela confirmada — conta como risco na armadilha
+            _ha_1v_only = (eh_long  and result.get("ha_bull_1") and not result.get("ha_bull")) or \
+                          (not eh_long and result.get("ha_bear_1") and not result.get("ha_bear"))
+            if _ha_1v_only:
+                _armadilha.append("HA apenas 1 vela (sem confirmação anterior)")
 
             # Bloqueia sinais com múltiplas condições de risco por nível de qualidade
             if len(_armadilha) >= 2 and _score_inst < 55:

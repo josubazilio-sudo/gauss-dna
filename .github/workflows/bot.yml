@@ -73,6 +73,7 @@ jobs:
           echo "✅ Credenciais OK — Token: ${TOKEN:0:8}... | Chat: $CHATID"
 
       - name: Rodar bot
+        timeout-minutes: 325
         env:
           TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
@@ -91,6 +92,7 @@ jobs:
         run: python bot_actions.py
 
       - name: Restaurar estado Swing H4
+        if: always()
         uses: actions/cache/restore@v4
         with:
           path: swing_h4_signals.json
@@ -98,6 +100,7 @@ jobs:
           restore-keys: swing-h4-
 
       - name: Rodar Swing H4
+        if: always()
         env:
           TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}

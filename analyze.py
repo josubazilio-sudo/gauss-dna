@@ -731,7 +731,10 @@ def graduar_sinal(ind, sinal):
     if grade in ("S", "S+"):
         score_inst = i["score_inst_long"] if sinal == "LONG" else i["score_inst_short"]
         rsi_esticado = (sinal == "LONG" and i["rsi"] > 65) or (sinal == "SHORT" and i["rsi"] < 35)
-        if score_inst < 70 or rsi_esticado:
+        # 1 vela HA sem confirmação na anterior não merece alavancagem S (exige ha_bull/ha_bear)
+        ha_fraco = (sinal == "LONG"  and i["ha_bull_1"] and not i["ha_bull"]) or \
+                   (sinal == "SHORT" and i["ha_bear_1"] and not i["ha_bear"])
+        if score_inst < 70 or rsi_esticado or ha_fraco:
             grade = "A"
 
     return grade, pts
@@ -810,7 +813,8 @@ def analisar(simbolo, candles, funding_rate=None):
         "grade":        grade,
         "pts_grade":    pts,
         # Indicadores para ciclo e envio
-        "ha_bull":      ind["ha_bull"],
+        "ha_bull":      ind["ha_bull"],  "ha_bear":   ind["ha_bear"],
+        "ha_bull_1":    ind["ha_bull_1"], "ha_bear_1": ind["ha_bear_1"],
         "obv_bull":     ind["obv_bull"],
         "acima_vwap":   ind["acima_vwap"],
         "v_forte":      ind["v_forte"],
