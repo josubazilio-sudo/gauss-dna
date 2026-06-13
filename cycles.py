@@ -202,9 +202,14 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"abaixo e200")
         if not kal_up:
             motivos.append("Kalman descendo (LONG bloq)")
+        _hora_diag = datetime.now(timezone.utc).hour
+        _sess_perig = _hora_diag >= 22 or _hora_diag < 8 or _hora_diag in (8, 13)
         _inst_diag = 60 if result.get("fonte_sinal") == "SCOUT" else 45
+        if _sess_perig:
+            _inst_diag = max(_inst_diag, 60)
         if score_inst < _inst_diag:
-            motivos.append(f"score_inst={score_inst}<{_inst_diag}")
+            sess_tag = "(sess.perig)" if _sess_perig and _inst_diag == 60 and result.get("fonte_sinal") != "SCOUT" else ""
+            motivos.append(f"score_inst={score_inst}<{_inst_diag}{sess_tag}")
         if e21 > 0 and preco > e21 * 1.05:
             motivos.append(f"preco>{e21*1.05:.4f} (acima e21+5%)")
     else:
@@ -220,9 +225,14 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"acima e200")
         if kal_up:
             motivos.append("Kalman subindo (SHORT bloq)")
+        _hora_diag = datetime.now(timezone.utc).hour
+        _sess_perig = _hora_diag >= 22 or _hora_diag < 8 or _hora_diag in (8, 13)
         _inst_diag = 60 if result.get("fonte_sinal") == "SCOUT" else 45
+        if _sess_perig:
+            _inst_diag = max(_inst_diag, 60)
         if score_inst < _inst_diag:
-            motivos.append(f"score_inst={score_inst}<{_inst_diag}")
+            sess_tag = "(sess.perig)" if _sess_perig and _inst_diag == 60 and result.get("fonte_sinal") != "SCOUT" else ""
+            motivos.append(f"score_inst={score_inst}<{_inst_diag}{sess_tag}")
         if e21 > 0 and preco < e21 * 0.95:
             motivos.append(f"preco<{e21*0.95:.4f} (abaixo e21-5%)")
 
