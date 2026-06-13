@@ -1,0 +1,145 @@
+//════════════════════════════════════════════════════════════
+// COLE ESTE BLOCO NO FINAL DA ESTRATÉGIA EXISTENTE
+// GRADE DE INDICADORES — GAUSS+DNA STATUS DE ENTRADA
+//════════════════════════════════════════════════════════════
+
+// ── Indicadores adicionais para o dashboard ───────────────
+rsiVal  = ta.rsi(close, 14)
+
+// StochRSI (14, 3)
+_rsiH  = ta.highest(rsiVal, 14)
+_rsiL  = ta.lowest(rsiVal, 14)
+_sRaw  = (_rsiH - _rsiL) > 0 ? (rsiVal - _rsiL) / (_rsiH - _rsiL) : 0.5
+sRsiK  = ta.sma(_sRaw, 3)
+
+// OBV
+obvVal = ta.obv
+obvEma = ta.ema(obvVal, 20)
+
+// Sombras da vela
+_cRange  = math.max(high - low, syminfo.mintick)
+_sSupPct = (high - math.max(open, close)) / _cRange
+_sInfPct = (math.min(open, close) - low)  / _cRange
+
+// Condições GAUSS+DNA
+_stEsUp  = sRsiK > 0.80 and rsiVal > 58         // stoch_esticado_up
+_stEsDn  = sRsiK < 0.05 and rsiVal < 42         // stoch_esticado_down
+_exTopo  = _sSupPct > 0.40                       // exaustao_topo
+_exFund  = _sInfPct > 0.40                       // exaustao_fund
+_segL    = not _stEsUp  and not _exTopo          // seguro_long
+_segS    = not _stEsDn  and not _exFund          // seguro_short
+
+_volBest = math.max(volume, volume[1])           // melhor das 2 últimas (vol_nao_fade)
+_volNF   = _volBest >= volMa * 0.80
+_rvol    = volume / math.max(volMa, 1.0)
+
+_ha2L    = haBull and haBull[1]                  // ha_bull2
+_ha2S    = haBear and haBear[1]                  // ha_bear2
+
+_emaL    = ema10 > ema21 and ema21 > ema50       // trendilo_long
+_emaS    = ema10 < ema21 and ema21 < ema50       // trendilo_short
+
+_volSec  = _rvol < 0.25                          // vol_secando proxy
+
+// ── UDT (linha da grade) ─────────────────────────────────
+type GRow
+    string nm
+    string vl
+    bool   cL
+    bool   cS
+
+var _gr = array.new<GRow>()
+
+if barstate.islast
+    array.clear(_gr)
+
+    array.push(_gr, GRow.new("RSI zona  (L<60 | S>40)",    str.tostring(math.round(rsiVal,  1)),     rsiVal < 60,          rsiVal > 40))
+    array.push(_gr, GRow.new("ADX força (L≥14 | S≥18)",    str.tostring(math.round(adx,     1)),     adx >= adxMin,        adx >= adxMinShort))
+    array.push(_gr, GRow.new("ADX subindo",                 "",                                       adxNotDecaying,       adxNotDecaying))
+    array.push(_gr, GRow.new("Não lateralizado  (≥15)",    "",                                       adx >= 15,            adx >= 15))
+    array.push(_gr, GRow.new("HA  1 vela",                  "",                                       haBull,               haBear))
+    array.push(_gr, GRow.new("HA  2 velas consecutivas",    "",                                       _ha2L,                _ha2S))
+    array.push(_gr, GRow.new("MACD  direcão + HA",         str.tostring(math.round(histLine,5)),     macdBull,             macdBear))
+    array.push(_gr, GRow.new("Fluxo de volume",             "",                                       flowBull,             flowBear))
+    array.push(_gr, GRow.new("EMAs alinhadas (10>21>50)",   "",                                       _emaL,                _emaS))
+    array.push(_gr, GRow.new("Posição vs EMA 200",          "",                                       close > ema200,       close < ema200))
+    array.push(_gr, GRow.new("Volume ≥ 80% MA (2 velas)",  str.tostring(math.round(_rvol, 2)) + "x", _volNF,              _volNF))
+    array.push(_gr, GRow.new("RVOL ≥ 0.5x",               str.tostring(math.round(_rvol, 2)) + "x", _rvol >= 0.50,       _rvol >= 0.50))
+    array.push(_gr, GRow.new("Vol. não secando",            "",                                       not _volSec,          not _volSec))
+    array.push(_gr, GRow.new("StochRSI ok  (<0.80 / >0.05)",str.tostring(math.round(sRsiK,  2)),     not _stEsUp,          not _stEsDn))
+    array.push(_gr, GRow.new("Seguro — exaustão",           "",                                       _segL,                _segS))
+    array.push(_gr, GRow.new("Não extendido  (<2.5 ATR)",  str.tostring(math.round(distLong,1)) + "a",notExtendedLong,    notExtendedShort))
+    array.push(_gr, GRow.new("OBV confirmado",              "",                                       obvVal > obvEma,      obvVal < obvEma))
+    array.push(_gr, GRow.new("Sweep de liquidez",           "",                                       liqSweepLong,         liqSweepShort))
+    array.push(_gr, GRow.new("Score  ≥ |40|",              str.tostring(scoreLong),                  scoreLong  >= 40,     scoreShort <= -40))
+
+    _nR   = array.size(_gr)
+    _metL = 0
+    _metS = 0
+    for i = 0 to _nR - 1
+        _r = array.get(_gr, i)
+        if _r.cL
+            _metL += 1
+        if _r.cS
+            _metS += 1
+
+    // ── Tabela ───────────────────────────────────────────
+    _tbl = table.new(position.top_right, 4, _nR + 2,
+         border_width = 1,
+         border_color = color.new(color.gray, 58),
+         frame_width  = 2,
+         frame_color  = color.new(color.rgb(50, 110, 230), 35))
+
+    _hBg = color.new(color.rgb(10, 18, 52), 0)
+    table.cell(_tbl, 0, 0, "GAUSS+DNA  ·  INDICADOR",
+         bgcolor=_hBg, text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(_tbl, 1, 0, "VALOR",
+         bgcolor=_hBg, text_color=color.silver, text_size=size.small)
+    table.cell(_tbl, 2, 0, "▲ LONG",
+         bgcolor=_hBg, text_color=color.lime, text_size=size.small)
+    table.cell(_tbl, 3, 0, "▼ SHORT",
+         bgcolor=_hBg, text_color=color.red,  text_size=size.small)
+
+    for i = 0 to _nR - 1
+        _r   = array.get(_gr, i)
+        _row = i + 1
+        _aBg = i % 2 == 0
+             ? color.new(color.rgb(10,12,28), 0)
+             : color.new(color.rgb(18,20,42), 0)
+
+        table.cell(_tbl, 0, _row, _r.nm,
+             bgcolor=_aBg, text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
+        table.cell(_tbl, 1, _row, _r.vl,
+             bgcolor=_aBg, text_color=color.gray, text_size=size.tiny)
+        table.cell(_tbl, 2, _row, _r.cL ? "✓" : "✗",
+             bgcolor    = _r.cL ? color.new(color.green, 70) : color.new(color.red, 78),
+             text_color = _r.cL ? color.lime : color.red,
+             text_size  = size.small)
+        table.cell(_tbl, 3, _row, _r.cS ? "✓" : "✗",
+             bgcolor    = _r.cS ? color.new(color.green, 70) : color.new(color.red, 78),
+             text_color = _r.cS ? color.lime : color.red,
+             text_size  = size.small)
+
+    // ── Rodapé: contagem ─────────────────────────────────
+    _fBg = color.new(color.rgb(10, 18, 52), 0)
+    _pL  = str.tostring(_metL) + " / " + str.tostring(_nR)
+    _pS  = str.tostring(_metS) + " / " + str.tostring(_nR)
+    _cPL = _metL >= _nR - 2
+         ? color.lime
+         : _metL >= int(_nR * 0.65)
+         ? color.yellow
+         : color.red
+    _cPS = _metS >= _nR - 2
+         ? color.lime
+         : _metS >= int(_nR * 0.65)
+         ? color.yellow
+         : color.red
+
+    table.cell(_tbl, 0, _nR + 1, "✅  PRONTOS",
+         bgcolor=_fBg, text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(_tbl, 1, _nR + 1, "",
+         bgcolor=_fBg, text_color=color.white, text_size=size.small)
+    table.cell(_tbl, 2, _nR + 1, _pL,
+         bgcolor=_fBg, text_color=_cPL, text_size=size.normal)
+    table.cell(_tbl, 3, _nR + 1, _pS,
+         bgcolor=_fBg, text_color=_cPS, text_size=size.normal)
