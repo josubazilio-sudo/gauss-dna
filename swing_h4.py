@@ -14,7 +14,7 @@ from pathlib import Path
 import aiohttp
 
 from coins import PRIORITY_WATCHLIST, COINS
-from indicators import serie_ema, calcular_rsi, serie_atr, calcular_adx
+from indicators import serie_ema, calcular_rsi, serie_atr
 
 # ── Config ────────────────────────────────────────────────────────────────────
 TG_TOKEN   = os.environ.get("TG_TOKEN", "")
@@ -123,7 +123,7 @@ async def enviar_tg(session, texto):
                 log.error(f"TG falhou: {e}")
 
 
-def montar_mensagem(abrev, direcao, preco, atr, rsi, adx, e21, e50):
+def montar_mensagem(abrev, direcao, preco, atr, rsi, e21, e50):
     eh_long = direcao == "LONG"
     sl  = preco - atr * ATR_SL  if eh_long else preco + atr * ATR_SL
     tp1 = preco + atr * ATR_TP1 if eh_long else preco - atr * ATR_TP1
@@ -143,19 +143,11 @@ def montar_mensagem(abrev, direcao, preco, atr, rsi, adx, e21, e50):
     cruz  = "EMA21 cruzou acima EMA50" if eh_long else "EMA21 cruzou abaixo EMA50"
     forca = "FORTE \\(RSI > 50\\)" if eh_long else "FRACA \\(RSI < 50\\)"
 
-    if adx >= 30:
-        mkt_qual = "🟢 *Condições favoráveis* — tendência forte"
-    elif adx >= 25:
-        mkt_qual = "🟢 *Tendência formada*"
-    else:
-        mkt_qual = "🟡 *Neutro* — tendência fraca, cautela"
-
     return (
         f"📈 *SWING H4 \\— {direcao}*\n\n"
         f"{ico} *{_esc(abrev)}/USDT* \\| ⏱ Gráfico: *H4*\n"
         f"🔀 Trend Master Flow\n"
-        f"{_esc(cruz)} \\| RSI {_esc(f'{rsi:.0f}')} {forca}\n"
-        f"{mkt_qual}\n\n"
+        f"{_esc(cruz)} \\| RSI {_esc(f'{rsi:.0f}')} {forca}\n\n"
         f"💰 Entrada: `{_esc(_fmt(preco))}`\n"
         f"🛑 Stop: `{_esc(_fmt(sl))}` \\({_esc(str(ATR_SL))}x ATR\\)\n"
         f"🎯 TP1 \\(1R\\): `{_esc(_fmt(tp1))}` → fechar 50%\n"
@@ -167,7 +159,7 @@ def montar_mensagem(abrev, direcao, preco, atr, rsi, adx, e21, e50):
         f"  {_esc(str(alavancagem))}x: `\\${_esc(f'{colateral:.2f}')}` colateral\n"
         f"💸 Ganho: TP1 \\+`\\${_esc(f'{ganho_tp1:.2f}')}` "
         f"\\| Total \\+`\\${_esc(f'{ganho_tp2:.2f}')}`\n\n"
-        f"📊 ATR: `{_esc(_fmt(atr))}` \\| ADX: `{_esc(f'{adx:.0f}')}` \\| "
+        f"📊 ATR: `{_esc(_fmt(atr))}` \\| "
         f"EMA21: `{_esc(_fmt(e21))}` \\| EMA50: `{_esc(_fmt(e50))}`\n"
         f"⏰ {_esc(agora)}"
     )
@@ -185,22 +177,16 @@ async def analisar(session, simbolo, abrev, estado):
     ema50  = serie_ema(closes, 50)
     rsi    = calcular_rsi(closes[-50:], 14)
     atr    = serie_atr(candles, 14)[-1]
-    _, _, adx, _ = calcular_adx(candles, 14)
     preco  = closes[-1]
 
     # Cruzamento na vela que acabou de fechar (penúltima → última)
     cross_bull = ema21[-2] <= ema50[-2] and ema21[-1] > ema50[-1]
     cross_bear = ema21[-2] >= ema50[-2] and ema21[-1] < ema50[-1]
 
-    # Filtros de qualidade
-    tendencia = adx > 20                                        # mercado em tendência
-    sep = abs(ema21[-1] - ema50[-1]) / preco if preco > 0 else 0
-    sep_ok = sep >= 0.0015                                      # separação mínima 0.15%
-
-    if cross_bull and 50 < rsi < 68 and tendencia and sep_ok and not ja_sinalizou(estado, simbolo, "LONG"):
-        return ("LONG",  preco, atr, rsi, adx, ema21[-1], ema50[-1])
-    if cross_bear and 32 < rsi < 50 and tendencia and sep_ok and not ja_sinalizou(estado, simbolo, "SHORT"):
-        return ("SHORT", preco, atr, rsi, adx, ema21[-1], ema50[-1])
+    if cross_bull and rsi > 50 and not ja_sinalizou(estado, simbolo, "LONG"):
+        return ("LONG",  preco, atr, rsi, ema21[-1], ema50[-1])
+    if cross_bear and rsi < 50 and not ja_sinalizou(estado, simbolo, "SHORT"):
+        return ("SHORT", preco, atr, rsi, ema21[-1], ema50[-1])
     return None
 
 
@@ -216,13 +202,13 @@ async def main():
             try:
                 resultado = await analisar(session, simbolo, abrev, estado)
                 if resultado:
-                    direcao, preco, atr, rsi, adx, e21, e50 = resultado
-                    texto = montar_mensagem(abrev, direcao, preco, atr, rsi, adx, e21, e50)
+                    direcao, preco, atr, rsi, e21, e50 = resultado
+                    texto = montar_mensagem(abrev, direcao, preco, atr, rsi, e21, e50)
                     await enviar_tg(session, texto)
                     marcar(estado, simbolo, direcao)
                     salvar_estado(estado)
                     sinais += 1
-                    log.info(f"✅ {direcao} {abrev} — RSI {rsi:.0f} | ADX {adx:.0f} | ATR {_fmt(atr)}")
+                    log.info(f"✅ {direcao} {abrev} — RSI {rsi:.0f} | ATR {_fmt(atr)}")
                     await asyncio.sleep(1)
             except Exception as e:
                 log.warning(f"{abrev}: erro — {e}")
