@@ -182,25 +182,47 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
         motivos.append("liq fundo SMC")
 
-    # Filtros de qualidade (adicionados 12/06)
+    # Filtros de qualidade
+    e21         = result.get("e21", 0)
+    score_inst  = result.get("score_inst_long" if eh_long_cand else "score_inst_short", 0)
+    kal_up      = result.get("kalman_subindo", False)
+    rsi_sub_real = result.get("rsi_subindo", None)  # None = campo ausente (legado)
+    rsi_cai_real = result.get("rsi_caindo", None)
     if eh_long_cand:
         if not rsi_ent_l:
             motivos.append(f"RSI entrada=F({rsi:.0f}<45)")
-        if not rsi_sub:
+        # RSI caindo: só mostra se o campo real está disponível E RSI caiu >= 0.3
+        if rsi_cai_real is True:
             motivos.append(f"RSI caindo({rsi:.2f}<ant{rsi_ant:.2f})")
+        elif rsi_sub_real is False and rsi_cai_real is False:
+            motivos.append("RSI estavel (nao subindo)")
         if not tbull_l:
             motivos.append("EMA nao alinhada (long)")
         if e200 > 0 and preco <= e200:
             motivos.append(f"abaixo e200")
+        if not kal_up:
+            motivos.append("Kalman descendo (LONG bloq)")
+        if score_inst < 50:
+            motivos.append(f"score_inst={score_inst}<50")
+        if e21 > 0 and preco > e21 * 1.05:
+            motivos.append(f"preco>{e21*1.05:.4f} (acima e21+5%)")
     else:
         if not rsi_ent_s:
             motivos.append(f"RSI entrada=F({rsi:.0f}>55)")
-        if not rsi_cai:
+        if rsi_sub_real is True:
             motivos.append(f"RSI subindo({rsi:.2f}>ant{rsi_ant:.2f})")
+        elif rsi_sub_real is False and rsi_cai_real is False:
+            motivos.append("RSI estavel (nao caindo)")
         if not tbear_l:
             motivos.append("EMA nao alinhada (short)")
         if e200 > 0 and preco >= e200:
             motivos.append(f"acima e200")
+        if kal_up:
+            motivos.append("Kalman subindo (SHORT bloq)")
+        if score_inst < 50:
+            motivos.append(f"score_inst={score_inst}<50")
+        if e21 > 0 and preco < e21 * 0.95:
+            motivos.append(f"preco<{e21*0.95:.4f} (abaixo e21-5%)")
 
     if not motivos:
         motivos.append("HA/MACD pendente")
