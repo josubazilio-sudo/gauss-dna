@@ -501,14 +501,16 @@ def detectar_sinais(ind):
 
     # ── FLEX — pullback ───────────────────────────────────────────────────────
     tbull_r = i["tbull_r"]; tbear_r = i["tbear_r"]
+    # PULLBACK pós-stop-hunt é setup premium: liq_topo (stop hunt no topo) + preço retorna à EMA
+    # é exatamente o cenário de pullback de maior qualidade — not liq_topo eliminaria esse setup.
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
                       i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
                       i["rsi_zona_long"] and i["score_inst_long"] >= 50 and
-                      i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"])
+                      i["seguro_long"] and i["trendilo_long"])
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
                       i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
                       i["rsi_zona_short"] and i["score_inst_short"] >= 50 and
-                      i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"])
+                      i["seguro_short"] and i["trendilo_short"])
 
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
@@ -526,15 +528,17 @@ def detectar_sinais(ind):
 
     # ── BB Breakout ───────────────────────────────────────────────────────────
     _rvol_bb      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
+    # BB_BREAK: bb_break_long já implica preço > bb_sup ≈ máxima recente → liq_topo é esperado.
+    # Mesmo raciocínio do SURGE: _no_liq_topo/fund seria contradição direta.
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
-                      i["obv_bull"] and _no_liq_topo and
+                      i["obv_bull"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
-                      i["obv_bear"] and _no_liq_fund and
+                      i["obv_bear"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
@@ -575,11 +579,13 @@ def detectar_sinais(ind):
                         not i["exaustao_topo"] and not i["stoch_esticado_up"])
     mom_seguro_short = (not i["perto_bb_fund"] and not i["ext_abaixo_e21"] and not i["vol_secando"] and
                         not i["exaustao_fund"] and not i["stoch_esticado_down"])
-    long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
+    # MOMENTUM: RSI cruzando 65 com impulso de alta frequentemente quebra sm_swing_h → liq_topo.
+    # not liq_topo bloquearia o cenário mais legítimo de MOMENTUM (breakout com RSI fresco 65-73).
+    long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and
                       i["adx"] > 22 and i["v_forte"] and
                       (i["trendilo_long"]  or i["score_inst_long"]  >= 75) and
                       i["score_inst_long"]  >= 60 and mom_seguro_long)
-    short_momentum = (rsi_fresh_short and i["ha_bear"] and i["dna_flow_bear"] and not i["liq_fundo"] and
+    short_momentum = (rsi_fresh_short and i["ha_bear"] and i["dna_flow_bear"] and
                       i["adx"] > 22 and i["v_forte"] and
                       (i["trendilo_short"] or i["score_inst_short"] >= 75) and
                       i["score_inst_short"] >= 60 and mom_seguro_short)

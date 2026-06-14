@@ -70,7 +70,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     rsi_ent_l = result.get("rsi_entrada_long", True)
     rsi_ent_s = result.get("rsi_entrada_short", True)
 
-    _sc_min   = 25 if FILTER_LEVEL <= 0 else 30
+    _sc_min   = 25 if FILTER_LEVEL <= 0 else 40   # alinha com filtro real (linha ~428)
     _adx_min  = 10 if FILTER_LEVEL <= 0 else 15
     _fluxo_min = 0 if FILTER_LEVEL <= 0 else 1
 
@@ -109,27 +109,24 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     elif not eh_long_cand and not _macd_s_eff:
         motivos.append("MACD nao bear")
 
-    # Volume SCOUT/FLEX: requer rvol>=1.0 (volume mínimo médio)
-    # Fallback OBV/Kalman+Trendilo dispensa piso de RVOL
-    _fvok  = result.get("flex_vol_ok" if eh_long_cand else "flex_vol_ok_s", False)
-    _flex_v = _fvok and rvol >= 1.0
+    # Volume: vol_nao_fade já é calculado em analyze.py com threshold correto por FILTER_LEVEL
+    # (FILTER_LEVEL=3 → max(vol[-1],vol[-2]) >= vol_ma*0.80). Usar vnf diretamente.
+    _fvok    = result.get("flex_vol_ok" if eh_long_cand else "flex_vol_ok_s", False)
+    _flex_v  = _fvok and rvol >= 0.5
     _rsi_sub = result.get("rsi_subindo", False)
     _rsi_cai = result.get("rsi_caindo", False)
-    _vol_scout_l_ok = ((vnf and rvol >= 1.0) or (_obv_b and (trl_l or kal_up)) or
+    _rvol_m2 = result.get("rvol_tier_max2", rvol)   # melhor das 2 últimas velas
+    _vol_scout_l_ok = (vnf or (_obv_b and (trl_l or kal_up)) or
                        (kal_up and trl_l) or (_obv_b and _rsi_sub))
-    _vol_scout_s_ok = ((vnf and rvol >= 1.0) or (_obv_s and (trl_s or kal_dn)) or
+    _vol_scout_s_ok = (vnf or (_obv_s and (trl_s or kal_dn)) or
                        (kal_dn and trl_s) or (_obv_s and _rsi_cai))
     if eh_long_cand:
         if not _vol_scout_l_ok:
-            if vnf and rvol < 1.0:
-                motivos.append(f"RVOL < 100% (volume abaixo da média, rvol={rvol:.2f}x)")
-            else:
-                motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
+            motivos.append(f"RVOL < 80% (rvol={rvol:.2f}x max2={_rvol_m2:.2f}x)" +
+                           (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
     elif not _vol_scout_s_ok:
-        if vnf and rvol < 1.0:
-            motivos.append(f"RVOL < 100% (volume abaixo da média, rvol={rvol:.2f}x)")
-        else:
-            motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
+        motivos.append(f"RVOL < 80% (rvol={rvol:.2f}x max2={_rvol_m2:.2f}x)" +
+                       (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
 
     # HA (SCOUT usa ha1, FLEX usa ha2)
     ha2_b = result.get("ha_bull2", False)
@@ -202,13 +199,16 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"abaixo e200")
         if not kal_up:
             motivos.append("Kalman descendo (LONG bloq)")
-        _hora_diag = datetime.now(timezone.utc).hour
+        _hora_diag  = datetime.now(timezone.utc).hour
         _sess_perig = _hora_diag >= 22 or _hora_diag < 8 or _hora_diag in (8, 13)
-        _inst_diag = 60 if result.get("fonte_sinal") == "SCOUT" else 45
-        if _sess_perig:
+        # fonte_sinal é "" quando não há sinal — usar RSI para inferir tipo de sinal provável
+        # REVERSAL LONG: RSI < 30 → threshold real é 40; outros: 45; SCOUT (score alto): 50
+        _inst_diag = (40 if rsi < 30 else
+                      50 if sc >= 70 else 45)
+        if _sess_perig and FILTER_LEVEL >= 1:
             _inst_diag = max(_inst_diag, 60)
         if score_inst < _inst_diag:
-            sess_tag = "(sess.perig)" if _sess_perig and _inst_diag == 60 and result.get("fonte_sinal") != "SCOUT" else ""
+            sess_tag = "(sess.perig)" if _sess_perig and _inst_diag >= 60 else ""
             motivos.append(f"score_inst={score_inst}<{_inst_diag}{sess_tag}")
         if e21 > 0 and preco > e21 * 1.05:
             motivos.append(f"preco>{e21*1.05:.4f} (acima e21+5%)")
@@ -225,16 +225,29 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"acima e200")
         if kal_up:
             motivos.append("Kalman subindo (SHORT bloq)")
-        _hora_diag = datetime.now(timezone.utc).hour
+        _hora_diag  = datetime.now(timezone.utc).hour
         _sess_perig = _hora_diag >= 22 or _hora_diag < 8 or _hora_diag in (8, 13)
-        _inst_diag = 60 if result.get("fonte_sinal") == "SCOUT" else 45
-        if _sess_perig:
+        # REVERSAL SHORT: RSI > 70 → threshold real é 40; outros: 45; score alto: 50
+        _inst_diag = (40 if rsi > 70 else
+                      50 if sc >= 70 else 45)
+        if _sess_perig and FILTER_LEVEL >= 1:
             _inst_diag = max(_inst_diag, 60)
         if score_inst < _inst_diag:
-            sess_tag = "(sess.perig)" if _sess_perig and _inst_diag == 60 and result.get("fonte_sinal") != "SCOUT" else ""
+            sess_tag = "(sess.perig)" if _sess_perig and _inst_diag >= 60 else ""
             motivos.append(f"score_inst={score_inst}<{_inst_diag}{sess_tag}")
         if e21 > 0 and preco < e21 * 0.95:
             motivos.append(f"preco<{e21*0.95:.4f} (abaixo e21-5%)")
+
+    # Bloqueadores pós-sinal (cycles.py) que não aparecem no diagnóstico padrão
+    _grade_diag = result.get("grade", "")
+    _fonte_diag = result.get("fonte_sinal", "")
+    _dna_diag   = result.get("dna_flex_bull" if eh_long_cand else "dna_flex_bear", False)
+    _trl_diag   = result.get("trendilo_long"  if eh_long_cand else "trendilo_short", False)
+    _tend_diag  = result.get("tendencia", "NEUTRO")
+    if _fonte_diag == "SCOUT" and _grade_diag == "B":
+        motivos.append("SCOUT Grade B (requer >= A)")
+    if _fonte_diag == "FLEX" and not _dna_diag and not _trl_diag and _tend_diag == "NEUTRO":
+        motivos.append("FLEX bloq: sem fluxo+neutro")
 
     if not motivos:
         motivos.append("HA/MACD pendente")
@@ -414,7 +427,7 @@ async def executar_ciclo(session, estado, tf, moedas):
 
         # Diagnóstico: acumula bloqueadores quando não há sinal
         _diag_buffer["total_analisados"] += 1
-        if not result["sinal"] and abs(result.get("score", 0)) >= 30:
+        if not result["sinal"] and abs(result.get("score", 0)) >= 35:
             _bloqs = _detectar_bloqueadores_diag(result)
             for _b in _bloqs:
                 _diag_buffer["bloqueadores"][_b] = _diag_buffer["bloqueadores"].get(_b, 0) + 1
@@ -580,7 +593,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                 shorts_enviados += 0 if eh_long else 1
                 enviados += 1
         else:
-            candidatos.append((result["score"], abrev, result["score"],
+            candidatos.append((abs(result["score"]), abrev, result["score"],
                                result["rsi"], result["adx"], result.get("fonte_sinal", "sem-sinal")))
             sc  = result["score"]; rsi = result["rsi"]; adx = result["adx"]
             dfl = result.get("dna_flex_bull", False); dfs = result.get("dna_flex_bear", False)
