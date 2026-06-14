@@ -397,6 +397,17 @@ async def executar_ciclo(session, estado, tf, moedas):
 
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
+
+            # Pump extremo: RVOL ≥3x (tier 4) → sinais normais bloqueados.
+            # Só especialistas operam em pump/dump: PUMP, DUMP, SURGE, BREAKOUT, REVERSAL, SM_SWEEP.
+            _pump_tier = result.get("rvol_tier_max2", 0)
+            _sinais_pump_veto = {"SCOUT", "FLEX", "SETUP", "DIV", "REBOUND", "CROSS"}
+            if _pump_tier >= 4 and fonte in _sinais_pump_veto:
+                log.info(f"  🚫 {abrev} [{tf}] {fonte} vetado — pump extremo (RVOL tier {_pump_tier}=3x+)")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], f"pump_veto({fonte})"))
+                continue
+
             # Sinais de reversão extrema têm piso de score menor (mercado em pânico/euforia)
             _score_min = 20 if fonte == "DUMP" else 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV", "CORE") else 35 if fonte in ("BREAKOUT", "PUMP") else 40
             if abs(result["score"]) < _score_min:
