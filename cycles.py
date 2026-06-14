@@ -583,11 +583,15 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _rvol_flex = result.get("rvol", 0.0)
                 _adx_flex  = result.get("adx", 0)
                 _obv_bull  = result.get("obv_bull", False)
+                _obv_bear  = result.get("obv_bear", False)
                 _preco_f   = result.get("preco", 0)
                 _e50_f     = result.get("e50", 0)
                 _tbull     = result.get("tbull_loose", False)
                 _tbear     = result.get("tbear_loose", False)
+                _liq_t_f   = result.get("liq_topo", False)
+                _liq_f_f   = result.get("liq_fundo", False)
                 _bloq_flex = []
+                # Critérios comuns LONG e SHORT
                 if _rvol_flex < 1.5:
                     _bloq_flex.append(f"RVOL {_rvol_flex:.2f}x<1.5")
                 if _adx_flex < 18:
@@ -595,25 +599,53 @@ async def executar_ciclo(session, estado, tf, moedas):
                 if not _dna and not _trl:
                     _bloq_flex.append("sem DNA Flow nem Trendilo")
                 if eh_long:
-                    if not (40 <= _rsi_flex <= 60):
+                    # RSI 40–60, bloquear >65
+                    if not (40 <= _rsi_flex <= 60) or _rsi_flex > 65:
                         _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 40-60 (LONG)")
                     if _e50_f > 0 and _preco_f < _e50_f:
                         _bloq_flex.append("preco abaixo MM50")
                     if not _tbull:
-                        _bloq_flex.append("EMA nao alinhada (LONG)")
+                        _bloq_flex.append("MM10>MM21>MM50 nao alinhada")
                     if not _obv_bull:
                         _bloq_flex.append("OBV nao positivo")
+                    if _liq_t_f:
+                        _bloq_flex.append("resistencia <1ATR (liq topo)")
                 else:
-                    if not (43 <= _rsi_flex <= 58):
-                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 43-58 (SHORT)")
+                    # RSI 40–60, bloquear <35
+                    if not (40 <= _rsi_flex <= 60) or _rsi_flex < 35:
+                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 40-60 (SHORT)")
                     if _e50_f > 0 and _preco_f > _e50_f:
-                        _bloq_flex.append("preco acima MM50 (SHORT)")
+                        _bloq_flex.append("preco acima MM50")
                     if not _tbear:
-                        _bloq_flex.append("EMA nao alinhada (SHORT)")
+                        _bloq_flex.append("MM10<MM21<MM50 nao alinhada")
+                    if not _obv_bear:
+                        _bloq_flex.append("OBV nao negativo")
+                    if _liq_f_f:
+                        _bloq_flex.append("suporte <1ATR (liq fundo)")
                 if _bloq_flex:
                     log.info(f"  🚫 {abrev} FLEX bloqueado — {' | '.join(_bloq_flex)}")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
                                        result["rsi"], result["adx"], f"FLEX({_bloq_flex[0]})"))
+                    continue
+
+            # SURGE / BREAKOUT / PUMP: nível pesado — RVOL≥2.5x, RSI 45-65, DNA obrigatório
+            if fonte in ("SURGE", "BREAKOUT", "PUMP") and FILTER_LEVEL >= 1:
+                _rsi_exp   = result.get("rsi", 50)
+                _rvol_exp  = result.get("rvol", 0.0)
+                _adx_exp   = result.get("adx", 0)
+                _bloq_exp  = []
+                if _rvol_exp < 2.5:
+                    _bloq_exp.append(f"RVOL {_rvol_exp:.2f}x<2.5")
+                if _adx_exp < 22:
+                    _bloq_exp.append(f"ADX {_adx_exp:.0f}<22")
+                if not (45 <= _rsi_exp <= 65):
+                    _bloq_exp.append(f"RSI {_rsi_exp:.0f} fora 45-65")
+                if not _dna:
+                    _bloq_exp.append("DNA Flow ausente")
+                if _bloq_exp:
+                    log.info(f"  🚫 {abrev} {fonte} bloqueado — {' | '.join(_bloq_exp)}")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"{fonte}({_bloq_exp[0]})"))
                     continue
 
             extra = {
