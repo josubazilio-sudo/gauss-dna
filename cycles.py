@@ -351,6 +351,19 @@ async def executar_ciclo(session, estado, tf, moedas):
         _btc_bull_flex = _bp > _be21 > _be50 and _bp > _be200 * 0.98
         _btc_bear_flex = _bp < _be21 < _be50 and _bp < _be200 * 1.02
 
+    # BTC no TF atual — filtro direcional obrigatório para BREAKOUT, SURGE, SCOUT
+    _btc15_bull = _btc15_bear = False
+    btc_ctf = await buscar_candles(session, "BTCUSDT", tf)
+    if btc_ctf and len(btc_ctf) >= 50:
+        _bc15 = [c["c"] for c in btc_ctf]
+        _be10_tf = serie_ema(_bc15, 10)[-1]
+        _be21_tf = serie_ema(_bc15, 21)[-1]
+        _be50_tf = serie_ema(_bc15, 50)[-1]
+        _bp15    = _bc15[-1]
+        _btc15_bull = _bp15 > _be50_tf and _be10_tf > _be21_tf
+        _btc15_bear = _bp15 < _be50_tf and _be10_tf < _be21_tf
+        log.info(f"[{tf}] BTC {tf}: {'BULL ↑' if _btc15_bull else 'BEAR ↓' if _btc15_bear else 'NEUTRO'} | ${_bp15:.0f}")
+
     funding_rates, oi_atual = await buscar_contract_data(session)
 
     # Calcula variação % do OI em relação ao ciclo anterior (persiste no estado)
@@ -423,14 +436,14 @@ async def executar_ciclo(session, estado, tf, moedas):
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
             _inst_min = (0   if FILTER_LEVEL <= 0 else
-                         25  if fonte == "CORE" else       # 11 condições = gate institucional próprio
-                         35  if fonte == "DUMP" else       # blow-off top: pattern é o gate
-                         40  if fonte == "BREAKOUT" else   # nova máxima + RVOL 1.5x + momentum
-                         45  if fonte in ("REVERSAL", "PUMP") else
-                         50  if fonte in ("SM_SWEEP", "DIV") else
-                         70  if fonte == "SCOUT" else
-                         60  if fonte == "MOMENTUM" else
-                         55)  # FLEX, SETUP, PULLBACK, CROSS, BB_BREAK, SURGE, REBOUND
+                         35  if fonte == "CORE" else       # subiu 25→35
+                         40  if fonte == "DUMP" else       # subiu 35→40
+                         45  if fonte == "BREAKOUT" else   # subiu 40→45
+                         50  if fonte in ("PUMP", "REVERSAL", "DIV") else
+                         55  if fonte == "BB_BREAK" else   # subiu 50→55
+                         65  if fonte in ("SM_SWEEP", "MOMENTUM") else  # SM_SWEEP 50→65, MOM 60→65
+                         75  if fonte == "SCOUT" else      # subiu 70→75
+                         55)  # FLEX, SETUP, PULLBACK, CROSS, SURGE, REBOUND
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = min(_inst_min + 10, 70)   # sessão perigosa: +10 pts (cap 70)
             # Ajuste profissional: funding rate e OI alinhados confirmam smart money
@@ -454,6 +467,19 @@ async def executar_ciclo(session, estado, tf, moedas):
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"H4 oposto (inst={score_inst})"))
                 continue
+
+            # BTC no TF atual: BREAKOUT, SURGE, SCOUT obrigam alinhamento direcional com BTC
+            if fonte in ("BREAKOUT", "SURGE", "SCOUT"):
+                if eh_long_ and not _btc15_bull:
+                    log.info(f"  🚫 {abrev} [{tf}] {fonte} LONG bloq — BTC {tf} não bull")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"BTC não bull"))
+                    continue
+                if not eh_long_ and not _btc15_bear:
+                    log.info(f"  🚫 {abrev} [{tf}] {fonte} SHORT bloq — BTC {tf} não bear")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"BTC não bear"))
+                    continue
 
             chave_dir = f"{sym}_{tf}_{result['sinal']}"
             chave_any = f"{sym}_{tf}"
