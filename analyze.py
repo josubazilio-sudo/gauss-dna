@@ -560,6 +560,25 @@ def detectar_sinais(ind):
                       i["adx"] > 12 and i["preco"] < i["e200"] * 1.04 and
                       (i["dna_flow_bear"] or i["obv_bear"]))
 
+    # ── PUMP — spike súbito: RVOL 3x+ + rompimento nascente (1.5%+) ──────────
+    # Captura moedas que disparam do nada antes do RSI estourar.
+    # Threshold de preço menor que SURGE (3%) — detecção mais cedo.
+    _pump_vol = i["rvol_tier_max2"] >= 3  # vol 3x+ na vela atual ou anterior
+    long_pump = (
+        _pump_vol and i["surge_break_h"] and
+        i["candle_bull_pct"] > 0.015 and        # candle ≥1.5% (SURGE usa 3%)
+        35 < i["rsi"] < 78 and
+        (i["kalman_subindo"] or i["k_short_subindo"]) and
+        i["ha_bull_1"] and not i["exaustao_topo"] and not i["perto_bb_topo"]
+    )
+    short_pump = (
+        _pump_vol and i["surge_break_l"] and
+        i["candle_bear_pct"] > 0.015 and
+        22 < i["rsi"] < 65 and
+        (i["kalman_descendo"] or i["k_short_descendo"]) and
+        i["ha_bear_1"] and not i["exaustao_fund"] and not i["perto_bb_fund"]
+    )
+
     # ── Surge ─────────────────────────────────────────────────────────────────
     # SURGE — breakout/breakdown explosivo com volume VSTRONG (3x+)
     # surge_break_h/l JÁ implica liq_topo/fundo (rompe máxima/mínima recente),
@@ -662,20 +681,25 @@ def detectar_sinais(ind):
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
+    # FL>=3: exige DNA Flow OU Trendilo — bloqueia SCOUTs com só f_bull+kalman (noise)
     _sc_min  = 25 if _FLV <= 0 else 40
     _adx_min = 10 if _FLV <= 0 else 15
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
+    _scout_qual_l = (i["dna_flow_bull"] or i["trendilo_long"])  if _FLV >= 3 else True
+    _scout_qual_s = (i["dna_flow_bear"] or i["trendilo_short"]) if _FLV >= 3 else True
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
-                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
+                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min and
+                   _scout_qual_l)
     short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
-                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
+                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min and
+                   _scout_qual_s)
 
     # ── DNA CORE — 11 critérios essenciais do operador ────────────────────────
     # Dispara quando TODOS estão confirmados. Sem filtros adicionais.
@@ -722,6 +746,8 @@ def detectar_sinais(ind):
             (short_sm,       "SHORT", "SM_SWEEP"),
             (long_reversal,  "LONG",  "REVERSAL"),
             (short_reversal, "SHORT", "REVERSAL"),
+            (long_pump,      "LONG",  "PUMP"),
+            (short_pump,     "SHORT", "PUMP"),
             (long_surge,     "LONG",  "SURGE"),
             (short_surge,    "SHORT", "SURGE"),
             (long_momentum,  "LONG",  "MOMENTUM"),
