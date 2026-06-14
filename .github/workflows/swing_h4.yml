@@ -48,7 +48,7 @@ jobs:
         env:
           TG_TOKEN:  ${{ secrets.TG_TOKEN }}
           TG_CHATID: ${{ secrets.TG_CHATID }}
-          CAPITAL:   ${{ vars.CAPITAL || '64' }}
+          CAPITAL:   ${{ vars.CAPITAL || '87' }}
         run: python swing_h4.py
 
       - name: Salvar estado
