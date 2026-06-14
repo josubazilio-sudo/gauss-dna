@@ -396,7 +396,7 @@ async def executar_ciclo(session, estado, tf, moedas):
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
             # Sinais de reversão extrema têm piso de score menor (mercado em pânico/euforia)
-            _score_min = 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 40
+            _score_min = 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV", "CORE") else 40
             if abs(result["score"]) < _score_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {_score_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -410,6 +410,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
             _inst_min = (0   if FILTER_LEVEL <= 0 else
+                         40  if fonte == "CORE" else     # 11 condições próprias garantem qualidade
                          50  if fonte == "SCOUT" else
                          45  if fonte == "REVERSAL" else
                          50  if fonte in ("SM_SWEEP", "DIV") else
@@ -691,7 +692,8 @@ async def executar_ciclo_mtf(session, estado, moedas):
                      f"{result['fonte_sinal']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
             eh_long_mtf = result["sinal"] == "LONG"
             score_inst_mtf = result.get("score_inst_long" if eh_long_mtf else "score_inst_short", 0)
-            _score_min_mtf = 40; _inst_min_mtf = 60
+            _fonte_mtf = result.get("fonte_sinal", "")
+            _score_min_mtf = 40; _inst_min_mtf = 40 if _fonte_mtf == "CORE" else 60
             if abs(result["score"]) < _score_min_mtf or score_inst_mtf < _inst_min_mtf:
                 motivo = (f"score {result['score']:+d}<{_score_min_mtf}" if abs(result["score"]) < _score_min_mtf
                           else f"Score Inst {score_inst_mtf}<{_inst_min_mtf}")

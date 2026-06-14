@@ -654,6 +654,30 @@ def detectar_sinais(ind):
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 
+    # ── DNA CORE — 11 critérios essenciais do operador ────────────────────────
+    # Dispara quando TODOS estão confirmados. Sem filtros adicionais.
+    # LONG: RSI 45-58 subindo | ADX≥18 | RVOL≥80% | Kalman+ | Trendilo+ |
+    #        EMA alinhada | HA bull | sem liq_topo | acima EMA200 | dist EMA21≤2%
+    _core_vol = i["vol_nao_fade"] and not i["vol_secando"]
+    long_core = (
+        45 <= i["rsi"] <= 58 and i["rsi_subindo"] and
+        i["adx"] >= 18 and _core_vol and
+        i["kalman_subindo"] and i["trendilo_long"] and
+        i["tbull_loose"] and i["ha_bull"] and
+        not i["liq_topo"] and i["preco"] > i["e200"] and
+        i["preco"] <= i["e21"] * 1.02
+    )
+    # SHORT: RSI 42-55 caindo | ADX≥18 | RVOL≥80% | Kalman- | Trendilo- |
+    #         EMA alinhada bear | HA bear | sem liq_fundo | abaixo EMA200 | dist EMA21≤2%
+    short_core = (
+        42 <= i["rsi"] <= 55 and i["rsi_caindo"] and
+        i["adx"] >= 18 and _core_vol and
+        not i["kalman_subindo"] and i["trendilo_short"] and
+        i["tbear_loose"] and i["ha_bear"] and
+        not i["liq_fundo"] and i["preco"] < i["e200"] and
+        i["preco"] >= i["e21"] * 0.98
+    )
+
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
     if SIGNAL_MODE == "ELITE":
@@ -663,6 +687,8 @@ def detectar_sinais(ind):
         ordem = [
             (long_pullback,  "LONG",  "PULLBACK"),
             (short_pullback, "SHORT", "PULLBACK"),
+            (long_core,      "LONG",  "CORE"),
+            (short_core,     "SHORT", "CORE"),
             (long_cross,     "LONG",  f"CROSS:{i['label_cross']}"),
             (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
             (long_bb_break,  "LONG",  "BB_BREAK"),
