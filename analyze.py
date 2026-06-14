@@ -550,6 +550,22 @@ def detectar_sinais(ind):
     short_sm = (i["sm_bear"] and i["rsi_zona_short"] and i["rsi"] < 75 and
                 i["preco"] < i["e200"] and i["score_inst_short"] >= 60)
 
+    # ── DUMP — SHORT após pump explosivo (blow-off top) ──────────────────────
+    # Captura reversão de moedas que subiram muito rápido: SIREN, memecoins etc.
+    # Diferença do REVERSAL: NÃO exige preco < e200*1.04 — pump afasta da e200.
+    # rsi_spike_long = RSI esteve >65 nas últimas barras (detecta histórico do pump)
+    _dump_hist = i["rsi_spike_long"] or i["rvol_tier_max2"] >= 3  # evidência de pump recente
+    short_dump = (
+        _dump_hist and
+        i["rsi"] > 65 and i["rsi_caindo"] and           # RSI de extremo, virando
+        i["ha_bear_1"] and                               # HA virou bearish
+        (i["exaustao_topo"] or i["liq_topo"] or i["absorb_bear"]) and  # formação de topo
+        not i["vol_secando"] and                         # ainda tem volume (não escapou todo)
+        i["adx"] > 10 and                               # algum momentum direcional
+        (i["dna_flow_bear"] or i["obv_bear"] or i["f_bear"])  # fluxo confirmando queda
+    )
+    # DUMP só existe SHORT (reversa de pump — o equivalente LONG é REVERSAL rsi<30)
+
     # ── Reversão extrema ──────────────────────────────────────────────────────
     long_reversal  = (i["rsi"] < 30 and i["ha_bull"] and i["v_forte"] and
                       (i["liq_fundo"] or i["absorb_bull"]) and i["macd_recuperando"] and
@@ -744,6 +760,7 @@ def detectar_sinais(ind):
             (short_bb_break, "SHORT", "BB_BREAK"),
             (long_sm,        "LONG",  "SM_SWEEP"),
             (short_sm,       "SHORT", "SM_SWEEP"),
+            (short_dump,     "SHORT", "DUMP"),
             (long_reversal,  "LONG",  "REVERSAL"),
             (short_reversal, "SHORT", "REVERSAL"),
             (long_pump,      "LONG",  "PUMP"),

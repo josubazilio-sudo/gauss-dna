@@ -122,7 +122,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     oi_change    = extra.get("oi_change")
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
-    mult_atr = (2.0 if fonte == "SURGE"                        else
+    mult_atr = (2.0 if fonte in ("SURGE", "DUMP")              else
                 1.2 if fonte == "SM_SWEEP"                   else
                 1.8 if fonte in ("FLEX", "SETUP")            else
                 1.5 if fonte in ("CORE", "BREAKOUT", "PUMP") else 1.5)
@@ -201,7 +201,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
 
     # ── Tamanho da posição ────────────────────────────────────────────────────
     pct_risco    = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
-    if fonte in ("SURGE", "PUMP"):
+    if fonte in ("SURGE", "PUMP", "DUMP"):
         pct_risco = min(pct_risco, 0.02)
     valor_risco  = CAPITAL * pct_risco
     contratos    = valor_risco / risco if risco > 0 else 0
@@ -214,10 +214,11 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     elif score_inst < 55:  _lev -= 2   # institucional fraco
     if rvol_val >= 1.5:    _lev += 1   # volume muito acima da média
     elif rvol_val < 0.80:  _lev -= 1   # volume fraco
-    if fonte == "SCOUT":            _lev = min(_lev, 5)   # sinal secundário: teto 5x
-    elif fonte == "MOMENTUM":      _lev = min(_lev, 10)  # momentum rápido: teto 10x
-    elif fonte == "SURGE":         _lev = min(_lev, 12)  # breakout explosivo: teto 12x
+    if fonte == "SCOUT":                 _lev = min(_lev, 5)   # sinal secundário: teto 5x
+    elif fonte == "MOMENTUM":           _lev = min(_lev, 10)  # momentum rápido: teto 10x
+    elif fonte == "SURGE":              _lev = min(_lev, 12)  # breakout explosivo: teto 12x
     elif fonte in ("BREAKOUT", "PUMP"): _lev = min(_lev, 10)  # breakout nascente: teto 10x
+    elif fonte == "DUMP":               _lev = min(_lev, 8)   # pós-pump: alta volatilidade, conservador
     alavancagem = max(3, min(20, _lev))              # clamp 3x–20x
 
     pos_alav     = valor_pos / alavancagem
@@ -230,6 +231,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         "CORE":      "🏛 DNA CORE",
         "BREAKOUT":  "🔥 BREAKOUT INICIAL",
         "PUMP":      "🌋 PUMP DETECTADO",
+        "DUMP":      "💣 DUMP PÓS-PUMP",
         "PULLBACK":  "🎯 DNA PULLBACK",
         "SM_SWEEP":  "🏦 SMART MONEY SWEEP",
         "SURGE":     "⚡ DNA SURGE",
