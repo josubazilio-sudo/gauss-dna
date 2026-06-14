@@ -28,8 +28,8 @@
 **Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.**
 
 ### LONG (compra):
-- RSI deve ser **< 60** no momento do sinal *(autorizado 10/06 — era 55)*
-- Objetivo: entrar com espaço para subir (60 captura sinais fracos pós-dump)
+- RSI deve ser **< 55** no momento do sinal *(restaurado 14/06 — era 60 desde 10/06)*
+- Objetivo: entrar com espaço para subir, longe de sobrecomprado
 
 ### SHORT (venda):
 - RSI deve ser **> 40** no momento do sinal *(autorizado 10/06 — era 45)*

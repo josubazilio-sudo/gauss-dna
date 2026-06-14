@@ -282,11 +282,17 @@ def calcular_indicadores(candles):
     tbear_loose = e10 < e21 and e21 < e50
 
     # Filtros de segurança compostos
+    # Pump/dump de RSI: subiu/caiu >10 pts em 3 velas — não comprar topo/vender fundo em spike
+    pump_rsi_spike_long  = (rsi - rsi_ant) > 10 and rsi > 50
+    dump_rsi_spike_short = (rsi_ant - rsi) > 10 and rsi < 50
+
     rsi_nao_topo   = rsi < 70
     rsi_nao_fundo  = rsi > 27
     seguro_long  = (not perto_bb_topo and not ext_acima_e21 and not vol_secando and
-                    not exaustao_topo and rsi_nao_topo and not stoch_esticado_up)
-    seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
+                    not exaustao_topo and rsi_nao_topo and not stoch_esticado_up and
+                    not pump_rsi_spike_long)
+    seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and
+                    not stoch_esticado_down and not dump_rsi_spike_short)
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
@@ -316,9 +322,9 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
     # RSI zona de entrada — corte rígido sem exceção, aplicado a todos os tipos de sinal
-    # LONG: RSI < 55 (espaço para subir, longe de sobrecomprado)
-    # LONG: RSI < 60 | SHORT: RSI > 40 (autorizado 10/06)
-    rsi_zona_long  = rsi < 60
+    # LONG: RSI < 55 (não comprar topo — restaurado 14/06)
+    # SHORT: RSI > 40 (não vender fundo)
+    rsi_zona_long  = rsi < 55
     rsi_zona_short = rsi > 40
     rsi_entrada_long  = rsi >= 45   # RSI mínimo para entrar LONG (diagnóstico)
     rsi_entrada_short = rsi <= 55   # RSI máximo para entrar SHORT (diagnóstico)
@@ -450,6 +456,7 @@ def calcular_indicadores(candles):
         "trendilo_long": trendilo_long, "trendilo_short": trendilo_short,
         # Filtros compostos
         "seguro_long": seguro_long, "seguro_short": seguro_short,
+        "pump_rsi_spike_long": pump_rsi_spike_long, "dump_rsi_spike_short": dump_rsi_spike_short,
         "perto_bb_topo": perto_bb_topo, "perto_bb_fund": perto_bb_fund,
         "ext_acima_e21": ext_acima_e21, "ext_abaixo_e21": ext_abaixo_e21,
         "vol_secando": vol_secando,
@@ -776,6 +783,7 @@ def analisar(simbolo, candles, funding_rate=None):
                 if ind.get("exaustao_topo"):    _sg.append("exaustao")
                 if ind["rsi"] >= 70:            _sg.append(f"rsi={ind['rsi']:.0f}")
                 if ind["stoch_esticado_up"]:    _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                if ind.get("pump_rsi_spike_long"): _sg.append(f"pump_rsi(+{ind['rsi']-ind['rsi_ant']:.0f}pt)")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
             if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
@@ -793,6 +801,7 @@ def analisar(simbolo, candles, funding_rate=None):
                 if ind.get("exaustao_fund"):     _sg.append("exaustao")
                 if ind["rsi"] <= 27:            _sg.append(f"rsi={ind['rsi']:.0f}")
                 if ind["stoch_esticado_down"]:  _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                if ind.get("dump_rsi_spike_short"): _sg.append(f"dump_rsi(-{ind['rsi_ant']-ind['rsi']:.0f}pt)")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
             if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
@@ -877,6 +886,8 @@ def analisar(simbolo, candles, funding_rate=None):
         "stoch_rsi":         ind["stoch_rsi"],
         "stoch_esticado_up": ind["stoch_esticado_up"],
         "stoch_esticado_down": ind["stoch_esticado_down"],
+        "pump_rsi_spike_long":  ind["pump_rsi_spike_long"],
+        "dump_rsi_spike_short": ind["dump_rsi_spike_short"],
         # Outros campos usados no diagnóstico
         "e200":              ind["e200"],
         "kalman_descendo":   ind["kalman_descendo"],

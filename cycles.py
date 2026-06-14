@@ -75,20 +75,17 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     _fluxo_min = 0 if FILTER_LEVEL <= 0 else 1
 
     vnf    = result.get("vol_nao_fade", False)
-    _obv_b = result.get("obv_bull", False)
-    _obv_s = result.get("obv_bear", False)
     kal_up = result.get("kalman_subindo", False)
-    kal_dn = result.get("kalman_descendo", False)
 
     if sc < _sc_min:
         motivos.append("score baixo")
         return motivos
 
     # RSI zona
-    if eh_long_cand and rsi >= 60:
-        motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
+    if eh_long_cand and rsi >= 55:
+        motivos.append(f"RSI {rsi:.0f} >= 55 (LONG bloqueado)")
     elif not eh_long_cand and rsi <= 40:
-        motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
+        motivos.append(f"RSI {rsi:.0f} <= 40 (SHORT bloqueado)")
 
     if adx < _adx_min:
         motivos.append(f"ADX {adx:.1f} < {_adx_min}")
@@ -109,27 +106,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     elif not eh_long_cand and not _macd_s_eff:
         motivos.append("MACD nao bear")
 
-    # Volume SCOUT/FLEX: requer rvol>=1.0 (volume mínimo médio)
-    # Fallback OBV/Kalman+Trendilo dispensa piso de RVOL
-    _fvok  = result.get("flex_vol_ok" if eh_long_cand else "flex_vol_ok_s", False)
-    _flex_v = _fvok and rvol >= 1.0
-    _rsi_sub = result.get("rsi_subindo", False)
-    _rsi_cai = result.get("rsi_caindo", False)
-    _vol_scout_l_ok = ((vnf and rvol >= 1.0) or (_obv_b and (trl_l or kal_up)) or
-                       (kal_up and trl_l) or (_obv_b and _rsi_sub))
-    _vol_scout_s_ok = ((vnf and rvol >= 1.0) or (_obv_s and (trl_s or kal_dn)) or
-                       (kal_dn and trl_s) or (_obv_s and _rsi_cai))
-    if eh_long_cand:
-        if not _vol_scout_l_ok:
-            if vnf and rvol < 1.0:
-                motivos.append(f"RVOL < 100% (volume abaixo da média, rvol={rvol:.2f}x)")
-            else:
-                motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
-    elif not _vol_scout_s_ok:
-        if vnf and rvol < 1.0:
-            motivos.append(f"RVOL < 100% (volume abaixo da média, rvol={rvol:.2f}x)")
-        else:
-            motivos.append("RVOL < 80%" + (" (FLEX vol✓)" if _flex_v else " (sem OBV+Kal alt)"))
+    # Volume: vol_nao_fade é o requisito mínimo de qualquer sinal (max das 2 últimas velas >= 80% MA)
+    if not vnf:
+        motivos.append(f"vol_nao_fade=F (rvol={rvol:.2f}x — max 2 velas < 80% media)")
 
     # HA (SCOUT usa ha1, FLEX usa ha2)
     ha2_b = result.get("ha_bull2", False)
@@ -162,12 +141,14 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             if result.get("vol_secando"):            _sg.append("vol_sec")
             if result.get("exaustao_topo"):          _sg.append("exaustao")
             if result.get("stoch_esticado_up"):      _sg.append(f"stoch>{result.get('stoch_rsi',0):.2f}")
+            if result.get("pump_rsi_spike_long"):    _sg.append(f"pump_rsi(+{result.get('rsi',50)-result.get('rsi_ant',50):.0f}pt)")
             motivos.append("seguro=F(" + (",".join(_sg) or "?") + ")")
         elif not eh_long_cand and not seg_s:
             _sg = []
             if result.get("vol_secando"):            _sg.append("vol_sec")
             if result.get("exaustao_fund"):          _sg.append("exaust_fund")
             if result.get("stoch_esticado_down"):    _sg.append(f"stoch<{result.get('stoch_rsi',0):.2f}")
+            if result.get("dump_rsi_spike_short"):   _sg.append(f"dump_rsi(-{result.get('rsi_ant',50)-result.get('rsi',50):.0f}pt)")
             motivos.append("seguro=F(" + (",".join(_sg) or "?") + ")")
 
     # Fluxo
@@ -202,8 +183,8 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"abaixo e200")
         if not kal_up:
             motivos.append("Kalman descendo (LONG bloq)")
-        if score_inst < 50:
-            motivos.append(f"score_inst={score_inst}<50")
+        if score_inst < 60:
+            motivos.append(f"score_inst={score_inst}<60")
         if e21 > 0 and preco > e21 * 1.05:
             motivos.append(f"preco>{e21*1.05:.4f} (acima e21+5%)")
     else:
@@ -219,8 +200,8 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"acima e200")
         if kal_up:
             motivos.append("Kalman subindo (SHORT bloq)")
-        if score_inst < 50:
-            motivos.append(f"score_inst={score_inst}<50")
+        if score_inst < 60:
+            motivos.append(f"score_inst={score_inst}<60")
         if e21 > 0 and preco < e21 * 0.95:
             motivos.append(f"preco<{e21*0.95:.4f} (abaixo e21-5%)")
 
@@ -284,7 +265,7 @@ async def _enviar_diagnostico(session) -> None:
             _, sym, sc, rsi, adx, tf = entry[:6]
             bloqs = entry[6] if len(entry) > 6 else []
             bloq_str = ", ".join(bloqs[:3]) if bloqs else "HA/MACD pendente"
-            marca = "✓" if rsi > 45 else "↓"
+            marca = "✓" if rsi > 40 else "↓"
             linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f}{marca} → {bloq_str}")
 
     linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
@@ -425,11 +406,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             _hora_c   = datetime.now(timezone.utc).hour
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
-            _inst_min = (0  if FILTER_LEVEL <= 0 else
-                         35 if fonte == "SCOUT" else
-                         40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
-            if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
-                _inst_min = max(_inst_min, 60)   # sessão perigosa: exige confirmação institucional forte
+            _inst_min = 0 if FILTER_LEVEL <= 0 else 60   # sempre exige confirmação institucional forte
             if score_inst < _inst_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -569,7 +546,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             dfl = result.get("dna_flex_bull", False); dfs = result.get("dna_flex_bear", False)
             trl = result.get("trendilo_long", False);  trs = result.get("trendilo_short", False)
             kal = result.get("kalman_subindo", False)
-            if sc > 12  and rsi < 60 and adx >= 8 and (kal or trl or dfl or sc > 40):
+            if sc > 12  and rsi < 55 and adx >= 8 and (kal or trl or dfl or sc > 40):
                 watchlist.append(("LONG",  abrev, sc, rsi, adx, dfl, trl))
             elif sc < -12 and rsi > 40 and adx >= 8 and (not kal or trs or dfs or sc < -40):
                 watchlist.append(("SHORT", abrev, sc, rsi, adx, dfs, trs))
@@ -694,7 +671,7 @@ async def executar_ciclo_mtf(session, estado, moedas):
                      f"{result['fonte_sinal']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
             eh_long_mtf = result["sinal"] == "LONG"
             score_inst_mtf = result.get("score_inst_long" if eh_long_mtf else "score_inst_short", 0)
-            _score_min_mtf = 40; _inst_min_mtf = 40
+            _score_min_mtf = 40; _inst_min_mtf = 60
             if abs(result["score"]) < _score_min_mtf or score_inst_mtf < _inst_min_mtf:
                 motivo = (f"score {result['score']:+d}<{_score_min_mtf}" if abs(result["score"]) < _score_min_mtf
                           else f"Score Inst {score_inst_mtf}<{_inst_min_mtf}")
