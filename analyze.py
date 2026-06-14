@@ -232,6 +232,32 @@ def calcular_indicadores(candles):
     liq_fundo = ((minimas[-2] <= sm_swing_l or minimas[-1] <= sm_swing_l) and
                  fechamentos[-1] > sm_swing_l and (fechamentos[-1] - minimas[-1]) > atr * 0.2)
 
+    # Varredura de topo/fundo histórica (filtro baleia) — padrão: nova extrema + rejeição/absorção
+    _atr_liq = atr * 0.2
+    liq_fundo_hist10 = liq_fundo or any(
+        (minimas[i] < minimas[i-1] and fechamentos[i] > minimas[i-1] and
+         fechamentos[i] > aberturas[i] and (fechamentos[i] - minimas[i]) > _atr_liq)
+        for i in range(-10, -1)
+    )
+    liq_topo_hist10 = liq_topo or any(
+        (maximas[i] > maximas[i-1] and fechamentos[i] < maximas[i-1] and
+         fechamentos[i] < aberturas[i] and (maximas[i] - fechamentos[i]) > _atr_liq)
+        for i in range(-10, -1)
+    )
+    liq_fundo_hist5 = liq_fundo or any(
+        (minimas[i] < minimas[i-1] and fechamentos[i] > minimas[i-1] and
+         (fechamentos[i] - minimas[i]) > _atr_liq)
+        for i in range(-5, -1)
+    )
+    liq_topo_hist5 = liq_topo or any(
+        (maximas[i] > maximas[i-1] and fechamentos[i] < maximas[i-1] and
+         (maximas[i] - fechamentos[i]) > _atr_liq)
+        for i in range(-5, -1)
+    )
+    # Distância da EMA21 — gate de qualidade
+    dist_e21_long  = preco <= e21 * 1.03   # LONG: preço até 3% acima da EMA21
+    dist_e21_short = preco >= e21 * 0.97   # SHORT: preço até 3% abaixo da EMA21
+
     crange = maximas[-1] - minimas[-1]
     lwick  = min(aberturas[-1], preco) - minimas[-1]
     uwick  = maximas[-1] - max(aberturas[-1], preco)
@@ -443,6 +469,9 @@ def calcular_indicadores(candles):
         "impulso_bull": impulso_bull, "impulso_bear": impulso_bear,
         "liq_long": liq_long, "liq_short": liq_short,
         "liq_topo": liq_topo, "liq_fundo": liq_fundo,
+        "liq_fundo_hist10": liq_fundo_hist10, "liq_topo_hist10": liq_topo_hist10,
+        "liq_fundo_hist5": liq_fundo_hist5, "liq_topo_hist5": liq_topo_hist5,
+        "dist_e21_long": dist_e21_long, "dist_e21_short": dist_e21_short,
         "sombra_sup": sombra_sup, "sombra_inf": sombra_inf,
         "sm_bull": sm_bull, "sm_bear": sm_bear,
         "absorb_bull": absorb_bull, "absorb_bear": absorb_bear,
@@ -555,9 +584,11 @@ def detectar_sinais(ind):
     # Diferença do REVERSAL: NÃO exige preco < e200*1.04 — pump afasta da e200.
     # rsi_spike_long = RSI esteve >65 nas últimas barras (detecta histórico do pump)
     _dump_hist = i["rsi_spike_long"] or i["rvol_tier_max2"] >= 3  # evidência de pump recente
+    # RSI cruzando abaixo de 65: rsi_ant>=65 e rsi<67 (pega o momento exato da virada)
+    _dump_rsi_cross = i["rsi_ant"] >= 65 and i["rsi"] < 67 and i["rsi_caindo"]
     short_dump = (
         _dump_hist and
-        i["rsi"] > 65 and i["rsi_caindo"] and           # RSI de extremo, virando
+        _dump_rsi_cross and                              # cruzando abaixo de 65
         i["ha_bear_1"] and                               # HA virou bearish
         (i["exaustao_topo"] or i["liq_topo"] or i["absorb_bear"]) and  # formação de topo
         not i["vol_secando"] and                         # ainda tem volume (não escapou todo)
@@ -583,9 +614,10 @@ def detectar_sinais(ind):
     long_pump = (
         _pump_vol and i["surge_break_h"] and
         i["candle_bull_pct"] > 0.015 and        # candle ≥1.5% (SURGE usa 3%)
-        35 < i["rsi"] < 78 and
+        35 < i["rsi"] < 72 and
         (i["kalman_subindo"] or i["k_short_subindo"]) and
-        i["ha_bull_1"] and not i["exaustao_topo"] and not i["perto_bb_topo"]
+        i["ha_bull_1"] and not i["exaustao_topo"] and not i["perto_bb_topo"] and
+        i["dist_e21_long"]
     )
     short_pump = (
         _pump_vol and i["surge_break_l"] and
@@ -615,12 +647,14 @@ def detectar_sinais(ind):
     # RSI 33-52 SHORT (espaço para cair mas com momentum de baixa iniciando).
     _brk_vol = i["v_forte"] and not i["vol_secando"]  # RVOL >= 1.5x e não secando
     long_breakout = (
-        48 <= i["rsi"] <= 67 and i["rsi_subindo"] and
+        45 <= i["rsi"] <= 62 and i["rsi_subindo"] and
         i["adx"] >= 20 and i["adx_subindo"] and
         _brk_vol and i["kalman_subindo"] and i["trendilo_long"] and
         i["ha_bull_1"] and i["surge_break_h"] and
         i["preco"] > i["e50"] and not i["liq_topo"] and
-        not i["exaustao_topo"] and not i["perto_bb_topo"]
+        not i["exaustao_topo"] and not i["perto_bb_topo"] and
+        i["dist_e21_long"] and
+        (i["liq_fundo_hist10"] or not i["liq_topo_hist5"])
     )
     short_breakout = (
         33 <= i["rsi"] <= 52 and i["rsi_caindo"] and
@@ -628,7 +662,9 @@ def detectar_sinais(ind):
         _brk_vol and not i["kalman_subindo"] and i["trendilo_short"] and
         i["ha_bear_1"] and i["surge_break_l"] and
         i["preco"] < i["e50"] and not i["liq_fundo"] and
-        not i["exaustao_fund"] and not i["perto_bb_fund"]
+        not i["exaustao_fund"] and not i["perto_bb_fund"] and
+        i["dist_e21_short"] and
+        (i["liq_topo_hist10"] or not i["liq_fundo_hist5"])
     )
 
     # ── Momentum RSI ──────────────────────────────────────────────────────────
@@ -702,25 +738,35 @@ def detectar_sinais(ind):
     _rvol_scout = 2.0 if _FLV >= 3 else 0.0                      # FL=3: RVOL>=2.0 (VSTRONG)
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
+    # FL=3: RSI LONG restrito 35–52 (entrada antecipada — quanto menor melhor)
+    _scout_rsi_l = (35 <= i["rsi"] <= 52) if _FLV >= 3 else i["rsi_zona_long"]
+    # FL=3: RSI SHORT restrito 35–50 (acima de 50 ainda tem espaço para subir)
+    _scout_rsi_s = (35 < i["rsi"] <= 50) if _FLV >= 3 else i["rsi_zona_short"]
     # FL=3: exige DNA Flow OU Trendilo — bloqueia SCOUTs com só f_bull+kalman (noise)
     _scout_qual_l = (i["dna_flow_bull"] or i["trendilo_long"])  if _FLV >= 3 else True
     _scout_qual_s = (i["dna_flow_bear"] or i["trendilo_short"]) if _FLV >= 3 else True
     # FL=3: preço deve confirmar a tendência (acima MM50+MM200 LONG / abaixo SHORT)
     _scout_trend_l = (i["preco"] > i["e50"] and i["preco"] > i["e200"]) if _FLV >= 3 else True
     _scout_trend_s = (i["preco"] < i["e50"] and i["preco"] < i["e200"]) if _FLV >= 3 else True
-    # FL=3: RSI SHORT restrito 35-50 (acima de 50 ainda tem espaço para subir)
-    _scout_rsi_s = (35 < i["rsi"] <= 50) if _FLV >= 3 else i["rsi_zona_short"]
+    # FL=3: distância da EMA21 (não entrar longe da EMA21)
+    _scout_dist_l = i["dist_e21_long"]  if _FLV >= 3 else True
+    _scout_dist_s = i["dist_e21_short"] if _FLV >= 3 else True
+    # FL=3: filtro baleia — liquidez histórica de fundo/topo
+    _whale_l = (i["liq_fundo_hist10"] or not i["liq_topo_hist5"]) if _FLV >= 3 else True
+    _whale_s = (i["liq_topo_hist10"] or not i["liq_fundo_hist5"]) if _FLV >= 3 else True
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
-                   i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
+                   i["rsi_nao_chasing_long"] and _scout_rsi_l and _no_liq_topo and
                    i["rvol"] >= _rvol_scout and _scout_trend_l and _scout_qual_l and
+                   _scout_dist_l and _whale_l and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
     short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and _scout_rsi_s and _no_liq_fund and
                    i["rvol"] >= _rvol_scout and _scout_trend_s and _scout_qual_s and
+                   _scout_dist_s and _whale_s and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 
     # ── DNA CORE — 11 critérios essenciais do operador ────────────────────────
@@ -729,7 +775,7 @@ def detectar_sinais(ind):
     #        EMA alinhada | HA bull | sem liq_topo | acima EMA200 | dist EMA21≤2%
     _core_vol = i["vol_nao_fade"] and not i["vol_secando"]
     long_core = (
-        45 <= i["rsi"] <= 58 and i["rsi_subindo"] and
+        42 <= i["rsi"] <= 55 and i["rsi_subindo"] and
         i["adx"] >= 18 and _core_vol and
         i["kalman_subindo"] and i["trendilo_long"] and
         i["tbull_loose"] and i["ha_bull"] and
