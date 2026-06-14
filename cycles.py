@@ -39,6 +39,8 @@ _diag_buffer: dict = {
     "ultimo_envio":     0.0,
 }
 
+_nearmiss_buffer: list = []  # (score_inst, abrev, tf, bloq_str, rsi, fonte_potencial, direcao)
+
 
 def _detectar_bloqueadores_diag(result: dict) -> list:
     motivos = []
@@ -431,6 +433,16 @@ async def executar_ciclo(session, estado, tf, moedas):
 
             eh_long_ = result["sinal"] == "LONG"
             score_inst = result.get("score_inst_long" if eh_long_ else "score_inst_short", 0)
+
+            # Near-miss tracking: captura candidatos sérios com ≤2 bloqueadores
+            _bloqs_nm = _detectar_bloqueadores_diag(result)
+            if len(_bloqs_nm) <= 2 and score_inst >= 45:
+                _nearmiss_buffer.append((
+                    score_inst, abrev, tf,
+                    " + ".join(_bloqs_nm[:2]) if _bloqs_nm else "aguardando confirmacao",
+                    result["rsi"], result.get("fonte_sinal", "?"), result["sinal"]
+                ))
+
             _hora_c   = datetime.now(timezone.utc).hour
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
@@ -925,10 +937,26 @@ async def main():
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
 
-            # Diagnóstico desativado — apenas sinais LONG/SHORT são enviados ao Telegram
+            # Near-miss: após 90min sem sinal, avisa candidatos mais próximos
             _agora_d = time.time()
             if total > 0:
                 _diag_buffer["ultimo_sinal"] = _agora_d
+                _nearmiss_buffer.clear()
+            _sem_sinal_min = (_agora_d - _diag_buffer["ultimo_sinal"]) / 60
+            if _sem_sinal_min >= 90 and _agora_d - _diag_buffer.get("ultimo_envio", 0) >= 5400:
+                if _nearmiss_buffer:
+                    # Ordena por score_inst e pega os 5 mais próximos
+                    top_nm = sorted(_nearmiss_buffer, key=lambda x: x[0], reverse=True)[:5]
+                    linhas = [f"⏱ {int(_sem_sinal_min)}min sem sinal — candidatos mais próximos:\n"]
+                    for score_i, abrev_i, tf_i, bloq_i, rsi_i, fonte_i, dir_i in top_nm:
+                        seta = "↑" if dir_i == "LONG" else "↓"
+                        linhas.append(f"{seta} {abrev_i} [{tf_i}] {fonte_i} RSI{rsi_i:.0f} — falta: {bloq_i}")
+                    try:
+                        await notificar(session, "\n".join(linhas))
+                    except Exception:
+                        pass
+                _diag_buffer["ultimo_envio"] = _agora_d
+                _nearmiss_buffer.clear()
 
             if not LOOP_MODE:
                 break

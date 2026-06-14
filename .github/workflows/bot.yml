@@ -72,6 +72,16 @@ jobs:
           fi
           echo "✅ Credenciais OK — Token: ${TOKEN:0:8}... | Chat: $CHATID"
 
+      - name: Auto-review (testes de saude)
+        env:
+          TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
+          TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
+          CAPITAL: ${{ vars.CAPITAL || '87' }}
+          FILTER_LEVEL: '1'
+          TIMEFRAMES: '15m'
+          SIGNAL_MODE: 'FLEX'
+        run: python test_bot.py
+
       - name: Rodar bot
         timeout-minutes: 325
         env:
