@@ -47,6 +47,7 @@ PRIORITY_WATCHLIST = [
     ("ALOUSDT",   "ALO/USDT",   "ALO"),
     ("OPGUSDT",   "OPG/USDT",   "OPG"),
     ("BEATUSDT",  "BEAT/USDT",  "BEAT"),
+    ("GWEIUSDT",  "GWEI/USDT",  "GWEI"),
 ]
 
 # Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
