@@ -375,8 +375,10 @@ async def executar_ciclo(session, estado, tf, moedas):
         grade = result.get("grade", "B")
 
         atr_pct = (result["atr"] / result["preco"]) * 100 if result["preco"] else 0
-        if atr_pct > 4.0:
-            log.info(f"[{tf}] {abrev:7s} | ATR {atr_pct:.1f}% > 4% — muito volátil, ignorando")
+        _fonte_pre  = result.get("fonte_sinal", "")
+        _atr_limite = 8.0 if _fonte_pre in ("SURGE", "BREAKOUT") else 4.0
+        if atr_pct > _atr_limite:
+            log.info(f"[{tf}] {abrev:7s} | ATR {atr_pct:.1f}% > {_atr_limite:.0f}% — muito volátil, ignorando")
             continue
 
         log.info(f"[{tf}] {abrev:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | "
@@ -396,7 +398,7 @@ async def executar_ciclo(session, estado, tf, moedas):
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
             # Sinais de reversão extrema têm piso de score menor (mercado em pânico/euforia)
-            _score_min = 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV", "CORE") else 40
+            _score_min = 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV", "CORE") else 35 if fonte == "BREAKOUT" else 40
             if abs(result["score"]) < _score_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {_score_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -410,7 +412,8 @@ async def executar_ciclo(session, estado, tf, moedas):
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
             _inst_min = (0   if FILTER_LEVEL <= 0 else
-                         25  if fonte == "CORE" else     # 11 condições = gate institucional próprio; min real é 30 (ha+trl+rsi)
+                         25  if fonte == "CORE" else       # 11 condições = gate institucional próprio
+                         40  if fonte == "BREAKOUT" else   # nova máxima + RVOL 1.5x + momentum
                          50  if fonte == "SCOUT" else
                          45  if fonte == "REVERSAL" else
                          50  if fonte in ("SM_SWEEP", "DIV") else
@@ -458,8 +461,8 @@ async def executar_ciclo(session, estado, tf, moedas):
             eh_long  = result["sinal"] == "LONG"
             pct_risco = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
             # SURGE: capa risco em 2% — breakout pode reverter com velocidade
-            if fonte == "SURGE":
-                pct_risco = min(pct_risco, 0.02)
+            if fonte in ("SURGE", "BREAKOUT"):
+                pct_risco = min(pct_risco, 0.02)  # risco máx 2% em breakouts voláteis
 
             if risco_ciclo + pct_risco > MAX_CYCLE_RISK:
                 log.info(f"  🛑 {abrev} bloqueado — risco ciclo {risco_ciclo*100:.0f}%+{pct_risco*100:.0f}% > teto")

@@ -573,6 +573,29 @@ def detectar_sinais(ind):
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
                    i["rsi"] > 22 and i["score_inst_short"] >= 50)
 
+    # ── BREAKOUT — rompimento nascente identificado no início ─────────────────
+    # Segunda regra: captura moedas que valem a pena ANTES do RSI estourar.
+    # Condições: nova máxima de 10 barras + RVOL ≥ 1.5x + momentum alinhado.
+    # RSI 48-67 LONG (espaço para subir mas com momentum iniciando).
+    # RSI 33-52 SHORT (espaço para cair mas com momentum de baixa iniciando).
+    _brk_vol = i["v_forte"] and not i["vol_secando"]  # RVOL >= 1.5x e não secando
+    long_breakout = (
+        48 <= i["rsi"] <= 67 and i["rsi_subindo"] and
+        i["adx"] >= 20 and i["adx_subindo"] and
+        _brk_vol and i["kalman_subindo"] and i["trendilo_long"] and
+        i["ha_bull_1"] and i["surge_break_h"] and
+        i["preco"] > i["e50"] and not i["liq_topo"] and
+        not i["exaustao_topo"] and not i["perto_bb_topo"]
+    )
+    short_breakout = (
+        33 <= i["rsi"] <= 52 and i["rsi_caindo"] and
+        i["adx"] >= 20 and i["adx_subindo"] and
+        _brk_vol and not i["kalman_subindo"] and i["trendilo_short"] and
+        i["ha_bear_1"] and i["surge_break_l"] and
+        i["preco"] < i["e50"] and not i["liq_fundo"] and
+        not i["exaustao_fund"] and not i["perto_bb_fund"]
+    )
+
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
     rsi_fresh_short = i["rsi_ant"] > 42 >= i["rsi"] > 30
@@ -687,9 +710,11 @@ def detectar_sinais(ind):
         ordem = [
             (long_pullback,  "LONG",  "PULLBACK"),
             (short_pullback, "SHORT", "PULLBACK"),
-            (long_core,      "LONG",  "CORE"),
-            (short_core,     "SHORT", "CORE"),
-            (long_cross,     "LONG",  f"CROSS:{i['label_cross']}"),
+            (long_core,       "LONG",  "CORE"),
+            (short_core,      "SHORT", "CORE"),
+            (long_breakout,   "LONG",  "BREAKOUT"),
+            (short_breakout,  "SHORT", "BREAKOUT"),
+            (long_cross,      "LONG",  f"CROSS:{i['label_cross']}"),
             (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
             (long_bb_break,  "LONG",  "BB_BREAK"),
             (short_bb_break, "SHORT", "BB_BREAK"),
