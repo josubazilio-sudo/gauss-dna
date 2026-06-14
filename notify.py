@@ -122,9 +122,10 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     oi_change    = extra.get("oi_change")
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
-    mult_atr = (2.0 if fonte == "SURGE"    else
-                1.2 if fonte == "SM_SWEEP" else
-                1.8 if fonte in ("FLEX", "SETUP") else 1.5)
+    mult_atr = (2.0 if fonte == "SURGE"            else
+                1.2 if fonte == "SM_SWEEP"         else
+                1.8 if fonte in ("FLEX", "SETUP") else
+                1.5 if fonte == "CORE"             else 1.5)
 
     stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
     stop_estrutural = swing_low - atr * 0.3 if eh_long else swing_high + atr * 0.3
@@ -225,6 +226,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     # ── Labels de modo ────────────────────────────────────────────────────────
     tf_lbl = _label_tf(tf)
     modos = {
+        "CORE":      "🏛 DNA CORE",
         "PULLBACK":  "🎯 DNA PULLBACK",
         "SM_SWEEP":  "🏦 SMART MONEY SWEEP",
         "SURGE":     "⚡ DNA SURGE",

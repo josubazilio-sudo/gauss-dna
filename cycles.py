@@ -183,7 +183,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"abaixo e200")
         if not kal_up:
             motivos.append("Kalman descendo (LONG bloq)")
-        _inst_diag = (50 if eh_long_cand else 55)  # piso estimado para diagnóstico
+        _inst_diag = 35  # <35 bloqueia até CORE na sessão perigosa (25+10)
         if score_inst < _inst_diag:
             motivos.append(f"score_inst={score_inst}<{_inst_diag}")
         if e21 > 0 and preco > e21 * 1.05:
@@ -201,7 +201,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"acima e200")
         if kal_up:
             motivos.append("Kalman subindo (SHORT bloq)")
-        _inst_diag = (50 if eh_long_cand else 55)  # piso estimado para diagnóstico
+        _inst_diag = 35  # <35 bloqueia até CORE na sessão perigosa (25+10)
         if score_inst < _inst_diag:
             motivos.append(f"score_inst={score_inst}<{_inst_diag}")
         if e21 > 0 and preco < e21 * 0.95:
@@ -410,7 +410,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
             _inst_min = (0   if FILTER_LEVEL <= 0 else
-                         40  if fonte == "CORE" else     # 11 condições próprias garantem qualidade
+                         25  if fonte == "CORE" else     # 11 condições = gate institucional próprio; min real é 30 (ha+trl+rsi)
                          50  if fonte == "SCOUT" else
                          45  if fonte == "REVERSAL" else
                          50  if fonte in ("SM_SWEEP", "DIV") else
