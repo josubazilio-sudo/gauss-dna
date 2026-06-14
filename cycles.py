@@ -183,8 +183,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"abaixo e200")
         if not kal_up:
             motivos.append("Kalman descendo (LONG bloq)")
-        if score_inst < 60:
-            motivos.append(f"score_inst={score_inst}<60")
+        _inst_diag = (50 if eh_long_cand else 55)  # piso estimado para diagnóstico
+        if score_inst < _inst_diag:
+            motivos.append(f"score_inst={score_inst}<{_inst_diag}")
         if e21 > 0 and preco > e21 * 1.05:
             motivos.append(f"preco>{e21*1.05:.4f} (acima e21+5%)")
     else:
@@ -200,8 +201,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
             motivos.append(f"acima e200")
         if kal_up:
             motivos.append("Kalman subindo (SHORT bloq)")
-        if score_inst < 60:
-            motivos.append(f"score_inst={score_inst}<60")
+        _inst_diag = (50 if eh_long_cand else 55)  # piso estimado para diagnóstico
+        if score_inst < _inst_diag:
+            motivos.append(f"score_inst={score_inst}<{_inst_diag}")
         if e21 > 0 and preco < e21 * 0.95:
             motivos.append(f"preco<{e21*0.95:.4f} (abaixo e21-5%)")
 
@@ -406,9 +408,27 @@ async def executar_ciclo(session, estado, tf, moedas):
             _hora_c   = datetime.now(timezone.utc).hour
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
-            _inst_min = 0 if FILTER_LEVEL <= 0 else 60   # sempre exige confirmação institucional forte
+            # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
+            _inst_min = (0   if FILTER_LEVEL <= 0 else
+                         50  if fonte == "SCOUT" else
+                         45  if fonte == "REVERSAL" else
+                         50  if fonte in ("SM_SWEEP", "DIV") else
+                         60  if fonte == "MOMENTUM" else
+                         55)  # FLEX, SETUP, PULLBACK, CROSS, BB_BREAK, SURGE, REBOUND
+            if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
+                _inst_min = min(_inst_min + 10, 70)   # sessão perigosa: +10 pts (cap 70)
+            # Ajuste profissional: funding rate e OI alinhados confirmam smart money
+            _fr = result.get("funding_rate") or 0
+            _oi = oi_change.get(sym, 0) or 0
+            _eh_long_c = result["sinal"] == "LONG"
+            _fr_alinhado = (_fr > 0.0005 and not _eh_long_c) or (_fr < -0.0005 and _eh_long_c)
+            _oi_alinhado = _oi > 2.0  # OI cresceu >2% = posições novas sendo abertas
+            if FILTER_LEVEL >= 1:
+                if _fr_alinhado:   _inst_min = max(0, _inst_min - 5)   # funding confirma = -5 pts exigência
+                if _oi_alinhado:   _inst_min = max(0, _inst_min - 5)   # OI confirma = -5 pts exigência
             if score_inst < _inst_min:
-                log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
+                _fr_str = f" fr={_fr*100:.3f}%" if _fr else ""
+                log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}{_fr_str}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue

@@ -282,9 +282,10 @@ def calcular_indicadores(candles):
     tbear_loose = e10 < e21 and e21 < e50
 
     # Filtros de segurança compostos
-    # Pump/dump de RSI: subiu/caiu >10 pts em 3 velas — não comprar topo/vender fundo em spike
-    pump_rsi_spike_long  = (rsi - rsi_ant) > 10 and rsi > 50
-    dump_rsi_spike_short = (rsi_ant - rsi) > 10 and rsi < 50
+    # Anti-pump: RSI disparou >15 pts em 3 velas E já está rente ao teto de 55 — não perseguir
+    # (apenas para LONG — o SHORT oposto não se aplica: RSI caindo de 65→47 É um bom SHORT)
+    pump_rsi_spike_long  = (rsi - rsi_ant) > 15 and rsi > 54
+    dump_rsi_spike_short = (rsi_ant - rsi) > 15 and rsi < 41  # apenas caso extremo já próximo do piso 40
 
     rsi_nao_topo   = rsi < 70
     rsi_nao_fundo  = rsi > 27
@@ -292,7 +293,7 @@ def calcular_indicadores(candles):
                     not exaustao_topo and rsi_nao_topo and not stoch_esticado_up and
                     not pump_rsi_spike_long)
     seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and
-                    not stoch_esticado_down and not dump_rsi_spike_short)
+                    not stoch_esticado_down)
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
