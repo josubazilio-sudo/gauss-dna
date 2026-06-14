@@ -200,7 +200,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         if not kal_up:
             motivos.append("Kalman descendo (LONG bloq)")
         _hora_diag  = datetime.now(timezone.utc).hour
-        _sess_perig = _hora_diag >= 22 or _hora_diag < 8 or _hora_diag in (8, 13)
+        _sess_perig = _hora_diag >= 23 or _hora_diag < 8 or _hora_diag in (8, 13)
         # fonte_sinal é "" quando não há sinal — usar RSI para inferir tipo de sinal provável
         # REVERSAL LONG: RSI < 30 → threshold real é 40; outros: 45; SCOUT (score alto): 50
         _inst_diag = (40 if rsi < 30 else
@@ -226,7 +226,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         if kal_up:
             motivos.append("Kalman subindo (SHORT bloq)")
         _hora_diag  = datetime.now(timezone.utc).hour
-        _sess_perig = _hora_diag >= 22 or _hora_diag < 8 or _hora_diag in (8, 13)
+        _sess_perig = _hora_diag >= 23 or _hora_diag < 8 or _hora_diag in (8, 13)
         # REVERSAL SHORT: RSI > 70 → threshold real é 40; outros: 45; score alto: 50
         _inst_diag = (40 if rsi > 70 else
                       50 if sc >= 70 else 45)
@@ -448,7 +448,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             eh_long_ = result["sinal"] == "LONG"
             score_inst = result.get("score_inst_long" if eh_long_ else "score_inst_short", 0)
             _hora_c   = datetime.now(timezone.utc).hour
-            _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
+            _sessao_perigosa = _hora_c >= 23 or _hora_c < 8   # Asian / madrugada UTC (23h-08h = 20h-05h BRT)
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             _inst_min = (0  if FILTER_LEVEL <= 0 else
                          50 if fonte == "SCOUT" else
