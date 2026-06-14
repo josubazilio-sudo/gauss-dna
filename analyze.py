@@ -227,9 +227,9 @@ def calcular_indicadores(candles):
     liq_short = maximas[-1] > maximas[-2] and preco < maximas[-2] and preco < aberturas[-1]
 
     sm_swing_h = max(maximas[-21:-1]); sm_swing_l = min(minimas[-21:-1])
-    liq_topo = ((maximas[-2] >= sm_swing_h or maximas[-1] >= sm_swing_h) and
+    liq_topo = (maximas[-1] >= sm_swing_h and
                 fechamentos[-1] < sm_swing_h and (maximas[-1] - fechamentos[-1]) > atr * 0.2)
-    liq_fundo = ((minimas[-2] <= sm_swing_l or minimas[-1] <= sm_swing_l) and
+    liq_fundo = (minimas[-1] <= sm_swing_l and
                  fechamentos[-1] > sm_swing_l and (fechamentos[-1] - minimas[-1]) > atr * 0.2)
 
     # Varredura de topo/fundo histórica (filtro baleia) — padrão: nova extrema + rejeição/absorção
@@ -584,8 +584,8 @@ def detectar_sinais(ind):
     # Diferença do REVERSAL: NÃO exige preco < e200*1.04 — pump afasta da e200.
     # rsi_spike_long = RSI esteve >65 nas últimas barras (detecta histórico do pump)
     _dump_hist = i["rsi_spike_long"] or i["rvol_tier_max2"] >= 3  # evidência de pump recente
-    # RSI cruzando abaixo de 65: rsi_ant>=65 e rsi<67 (pega o momento exato da virada)
-    _dump_rsi_cross = i["rsi_ant"] >= 65 and i["rsi"] < 67 and i["rsi_caindo"]
+    # RSI caindo da zona de euforia (≥65): pega a virada logo após o pico do pump
+    _dump_rsi_cross = i["rsi_ant"] >= 65 and i["rsi"] < 65 and i["rsi_caindo"]
     short_dump = (
         _dump_hist and
         _dump_rsi_cross and                              # cruzando abaixo de 65
@@ -741,7 +741,7 @@ def detectar_sinais(ind):
     # FL=3: RSI LONG restrito 35–52 (entrada antecipada — quanto menor melhor)
     _scout_rsi_l = (35 <= i["rsi"] <= 52) if _FLV >= 3 else i["rsi_zona_long"]
     # FL=3: RSI SHORT restrito 35–50 (acima de 50 ainda tem espaço para subir)
-    _scout_rsi_s = (35 < i["rsi"] <= 50) if _FLV >= 3 else i["rsi_zona_short"]
+    _scout_rsi_s = (35 <= i["rsi"] <= 50) if _FLV >= 3 else i["rsi_zona_short"]
     # FL=3: exige DNA Flow OU Trendilo — bloqueia SCOUTs com só f_bull+kalman (noise)
     _scout_qual_l = (i["dna_flow_bull"] or i["trendilo_long"])  if _FLV >= 3 else True
     _scout_qual_s = (i["dna_flow_bear"] or i["trendilo_short"]) if _FLV >= 3 else True
