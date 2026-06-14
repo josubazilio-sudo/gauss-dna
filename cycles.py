@@ -455,7 +455,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                          55  if fonte == "BB_BREAK" else   # subiu 50→55
                          65  if fonte in ("SM_SWEEP", "MOMENTUM") else  # SM_SWEEP 50→65, MOM 60→65
                          75  if fonte == "SCOUT" else      # subiu 70→75
-                         55)  # FLEX, SETUP, PULLBACK, CROSS, SURGE, REBOUND
+                         70  if fonte == "FLEX" else       # subiu 55→70 (institucional forte)
+                         55)  # SETUP, PULLBACK, CROSS, SURGE, REBOUND
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = min(_inst_min + 10, 70)   # sessão perigosa: +10 pts (cap 70)
             # Ajuste profissional: funding rate e OI alinhados confirmam smart money
@@ -578,12 +579,24 @@ async def executar_ciclo(session, estado, tf, moedas):
             if _aber_falsa:
                 _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
 
-            # FLEX sem fluxo direcional + mercado neutro = TP1 improvável (~50%)
-            if fonte == "FLEX" and not _dna and not _trl and _tend == "NEUTRO":
-                log.info(f"  🚫 {abrev} FLEX bloqueado — sem fluxo + tendência neutra")
-                candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "FLEX sem fluxo+neutro"))
-                continue
+            # FLEX: critérios institucionais fortes (inst>70, RVOL>=2x, RSI 38-54L/45-57S, DNA ou Trendilo)
+            if fonte == "FLEX" and FILTER_LEVEL >= 1:
+                _rsi_flex = result.get("rsi", 50)
+                _rvol_flex = result.get("rvol", 0.0)
+                _bloq_flex = []
+                if _rvol_flex < 2.0:
+                    _bloq_flex.append(f"RVOL {_rvol_flex:.2f}x<2.0")
+                if eh_long and not (38 <= _rsi_flex <= 54):
+                    _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 38-54 (LONG)")
+                if not eh_long and not (45 <= _rsi_flex <= 57):
+                    _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 45-57 (SHORT)")
+                if not _dna and not _trl:
+                    _bloq_flex.append("sem DNA Flow nem Trendilo")
+                if _bloq_flex:
+                    log.info(f"  🚫 {abrev} FLEX bloqueado — {' | '.join(_bloq_flex)}")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"FLEX({_bloq_flex[0]})"))
+                    continue
 
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
