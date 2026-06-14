@@ -448,15 +448,13 @@ async def executar_ciclo(session, estado, tf, moedas):
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
             _inst_min = (0   if FILTER_LEVEL <= 0 else
-                         35  if fonte == "CORE" else       # subiu 25→35
-                         40  if fonte == "DUMP" else       # subiu 35→40
-                         45  if fonte == "BREAKOUT" else   # subiu 40→45
-                         50  if fonte in ("PUMP", "REVERSAL", "DIV") else
-                         55  if fonte == "BB_BREAK" else   # subiu 50→55
-                         65  if fonte in ("SM_SWEEP", "MOMENTUM") else  # SM_SWEEP 50→65, MOM 60→65
-                         75  if fonte == "SCOUT" else      # subiu 70→75
-                         70  if fonte == "FLEX" else       # subiu 55→70 (institucional forte)
-                         55)  # SETUP, PULLBACK, CROSS, SURGE, REBOUND
+                         35  if fonte == "CORE" else
+                         40  if fonte == "DUMP" else
+                         50  if fonte in ("REVERSAL", "DIV") else
+                         55  if fonte == "BB_BREAK" else
+                         65  if fonte in ("FLEX", "SM_SWEEP", "MOMENTUM") else
+                         75  if fonte in ("SCOUT", "SURGE", "BREAKOUT", "PUMP") else
+                         55)  # SETUP, PULLBACK, CROSS, REBOUND
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = min(_inst_min + 10, 70)   # sessão perigosa: +10 pts (cap 70)
             # Ajuste profissional: funding rate e OI alinhados confirmam smart money
@@ -579,19 +577,39 @@ async def executar_ciclo(session, estado, tf, moedas):
             if _aber_falsa:
                 _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
 
-            # FLEX: critérios institucionais fortes (inst>70, RVOL>=2x, RSI 38-54L/45-57S, DNA ou Trendilo)
+            # FLEX: qualidade equilibrada — aberto mas com DNA/Trendilo, RVOL, RSI e estrutura
             if fonte == "FLEX" and FILTER_LEVEL >= 1:
-                _rsi_flex = result.get("rsi", 50)
+                _rsi_flex  = result.get("rsi", 50)
                 _rvol_flex = result.get("rvol", 0.0)
+                _adx_flex  = result.get("adx", 0)
+                _obv_bull  = result.get("obv_bull", False)
+                _preco_f   = result.get("preco", 0)
+                _e50_f     = result.get("e50", 0)
+                _tbull     = result.get("tbull_loose", False)
+                _tbear     = result.get("tbear_loose", False)
                 _bloq_flex = []
-                if _rvol_flex < 2.0:
-                    _bloq_flex.append(f"RVOL {_rvol_flex:.2f}x<2.0")
-                if eh_long and not (38 <= _rsi_flex <= 54):
-                    _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 38-54 (LONG)")
-                if not eh_long and not (45 <= _rsi_flex <= 57):
-                    _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 45-57 (SHORT)")
+                if _rvol_flex < 1.5:
+                    _bloq_flex.append(f"RVOL {_rvol_flex:.2f}x<1.5")
+                if _adx_flex < 18:
+                    _bloq_flex.append(f"ADX {_adx_flex:.0f}<18")
                 if not _dna and not _trl:
                     _bloq_flex.append("sem DNA Flow nem Trendilo")
+                if eh_long:
+                    if not (40 <= _rsi_flex <= 60):
+                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 40-60 (LONG)")
+                    if _e50_f > 0 and _preco_f < _e50_f:
+                        _bloq_flex.append("preco abaixo MM50")
+                    if not _tbull:
+                        _bloq_flex.append("EMA nao alinhada (LONG)")
+                    if not _obv_bull:
+                        _bloq_flex.append("OBV nao positivo")
+                else:
+                    if not (43 <= _rsi_flex <= 58):
+                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 43-58 (SHORT)")
+                    if _e50_f > 0 and _preco_f > _e50_f:
+                        _bloq_flex.append("preco acima MM50 (SHORT)")
+                    if not _tbear:
+                        _bloq_flex.append("EMA nao alinhada (SHORT)")
                 if _bloq_flex:
                     log.info(f"  🚫 {abrev} FLEX bloqueado — {' | '.join(_bloq_flex)}")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
