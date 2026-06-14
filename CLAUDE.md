@@ -28,21 +28,21 @@
 **Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.**
 
 ### LONG (compra):
-- RSI deve ser **< 60** no momento do sinal *(autorizado 10/06 — era 55)*
-- Objetivo: entrar com espaço para subir (60 captura sinais fracos pós-dump)
+- RSI deve ser **< 55** no momento do sinal *(restaurado 14/06 — era 60 desde 10/06)*
+- Objetivo: entrar com espaço para subir, longe de sobrecomprado
 
 ### SHORT (venda):
 - RSI deve ser **> 40** no momento do sinal *(autorizado 10/06 — era 45)*
 - Objetivo: entrar com espaço para cair (40 captura sinais fracos pós-dump)
 
 ### Aplicação:
-- Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP, SURGE, MOMENTUM, REVERSAL, REBOUND
+- Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP, SURGE, MOMENTUM, REVERSAL, REBOUND, **CORE** (própria janela: 45-58 L / 42-55 S)
 - Exceções já existentes: REVERSAL (RSI < 30 LONG / > 70 SHORT), MOMENTUM (janela rsi_fresh 65/42), SURGE (cap 22/78 — breakouts movem RSI junto)
 - Implementado em `analyze.py` como `rsi_zona_long` e `rsi_zona_short`
 
 ```python
-# analyze.py — autorizado pelo usuário em 10/06 (era 55/45, relaxado 65/35, ajustado 60/40)
-rsi_zona_long  = rsi < 60
+# analyze.py — restaurado 14/06 (era 60 LONG, 40 SHORT — rsi_zona_long < 55)
+rsi_zona_long  = rsi < 55
 rsi_zona_short = rsi > 40
 ```
 
@@ -50,15 +50,15 @@ rsi_zona_short = rsi > 40
 
 ## REGRA #2 — Volume mínimo para sinais
 
-- `vol_nao_fade` (SCOUT): melhor das 2 últimas velas >= 80% da média
+- `vol_nao_fade` (SCOUT/CORE): `max(volumes[-1], volumes[-2]) >= vol_ma * 0.80` (FL=3)
 - BB_BREAK: RVOL ≥ 0.80 + OBV confirmado
 - SURGE: melhor das 2 últimas velas `rvol_tier_max2 >= 3` (3x+)
 - Rompimento sem volume = falso rompimento
 
 ## REGRA #3 — Sessão perigosa
 
-- 22h–08h UTC (Asian/madrugada): `_inst_min` = 60 (confirmação institucional forte obrigatória)
-- 08h e 13h UTC (abertura Londres/NY): mesmo piso de 60 (primeiros 30min de risco)
+- 22h–08h UTC (Asian/madrugada): `_inst_min += 10` (cap 70)
+- 08h e 13h UTC (abertura Londres/NY): `_inst_min += 10` (cap 70)
 
 ## REGRA #4 — Alavancagem dinâmica 3x–20x
 
@@ -80,12 +80,181 @@ rsi_zona_short = rsi > 40
 
 Commit: `96f3f20` — estado após correções estruturais do dia 10/06
 
-**Fixes aplicados nesta sessão:**
-- SURGE: removido `not liq_topo/liq_fundo` (contradição com surge_break)
-- SURGE: removido `rsi_zona_long/short` (breakouts movem RSI — cap 22/78)
-- RVOL: lookback 2 velas (`rvol_tier_max2`, `vol_nao_fade` max das 2 últimas)
-- MOMENTUM SHORT: janela estendida `rsi_ant > 42 >= rsi > 30`
-- Diagnóstico: per-moeda com bloqueador específico, 4 LONG + 4 SHORT
-- PRIORITY_WATCHLIST: 26 moedas do bubble escaneadas primeiro
-- FLEX: bloqueado quando sem fluxo + tendência neutra
-- Cron: 6h → 2h, timeframes fallback 30m → 15m
+---
+
+## SESSÃO 14/06/2026 — Melhorias aplicadas
+
+**Commit base de restauração:** `a7226d8` → refatorado em `de4f1a2` → `12c45b5` → atual
+
+### Correções críticas (14/06):
+- RSI zona LONG: 60 → 55 (restaurado — não comprar topo)
+- `dump_rsi_spike_short`: removido de `seguro_short` (bloqueava SHORTs válidos como SiREM)
+- `pump_rsi_spike_long`: threshold elevado para >15pts E rsi>54 (menos agressivo)
+- Score inst por tipo de sinal (não mais fixo 60 para todos)
+- Funding rate + OI: reduz inst_min em -5pts cada quando alinhados
+- **Sinal CORE adicionado** com 11 critérios do operador
+
+### Score Inst por tipo (cycles.py):
+| Tipo | inst_min base | Com sessão perigosa |
+|------|--------------|---------------------|
+| CORE | 25 | 35 |
+| REVERSAL | 45 | 55 |
+| SCOUT, SM_SWEEP, DIV | 50 | 60 |
+| FLEX, SETUP, PULLBACK, CROSS, BB_BREAK, SURGE, REBOUND | 55 | 65 |
+| MOMENTUM | 60 | 70 |
+
+---
+
+## MEMÓRIA INSTITUCIONAL — Mapa completo de bloqueadores
+
+### Score Institucional (0-100) — analyze.py `_score_inst()`
+```
+20 pts: tendencia_bull/bear (preço > e200 AND e10>e21>e50>e200)
+15 pts: adx_long/short_ok (adx > 22 AND pdi/mdi dominante AND adx subindo)
+15 pts: dna_flow OR (f_bull/bear AND pressao_bull/bear)
+10 pts: ha_bull_1 / ha_bear_1 (1 vela HA confirmada)
+10 pts: trendilo_long / trendilo_short
+10 pts: rsi_subindo / rsi_caindo
+10 pts: v_forte (RVOL >= 1.5x média)
+ 5 pts: rsi_div_bull / rsi_div_bear
+ 5 pts: sm_bull / sm_bear
+```
+**Score mínimo para CORE** = 30 (ha+trl+rsi sempre verdadeiros quando CORE dispara).
+**Por isso inst_min=25 para CORE** — garante que passa mas com margem para sessão perigosa.
+
+### Grade do sinal — analyze.py `graduar_sinal()`
+```
+pts = tendencia_bull/bear (3) + alinhado (2) + macd_bull3/bear3 (2) +
+      ha_bull/bear (2) + adx_ok (2) + obv (1) + vwap (1) + v_forte (1) +
+      kalman_accel (1) + e200_subindo (1) + f_forte (1) + tend_consist (1)
+
+S+: pts >= 17 | S: pts >= 14 | A: pts >= 11 | B: < 11
+Trava: S/S+ degradado para A se score_inst < 70 ou RSI > 65 ou HA fraco
+```
+
+### Prioridade de sinais (ordem de verificação):
+1. PULLBACK (tbull_r + pullback + dna_flow + adx_long_ok)
+2. **CORE** (11 critérios do operador — ver abaixo)
+3. CROSS (cruzamento de EMAs)
+4. BB_BREAK (Bollinger Band breakout)
+5. SM_SWEEP (Smart Money sweep + absorção)
+6. REVERSAL (RSI extremo + divergência)
+7. SURGE (breakout 3%+ de candle + rvol≥3x)
+8. MOMENTUM (RSI cruzando 65/35)
+9. REBOUND (RSI rebound de zona extrema)
+10. DIV (divergência RSI vs preço)
+11. FLEX (setup flexível)
+12. SETUP (setup completo com OBV + VWAP)
+13. SCOUT (sinal secundário)
+
+---
+
+## SINAL CORE — 11 Critérios Institucionais (14/06/2026)
+
+```python
+long_core = (
+    45 <= rsi <= 58 and rsi_subindo and          # RSI zona momentum ascendente
+    adx >= 18 and vol_nao_fade and not vol_secando and  # Força + volume
+    kalman_subindo and trendilo_long and         # Momentum confirmado
+    tbull_loose and ha_bull and                  # Estrutura + candle
+    not liq_topo and preco > e200 and            # SMC + tendência macro
+    preco <= e21 * 1.02                          # Próximo da EMA21 (≤2%)
+)
+
+short_core = (
+    42 <= rsi <= 55 and rsi_caindo and
+    adx >= 18 and vol_nao_fade and not vol_secando and
+    not kalman_subindo and trendilo_short and
+    tbear_loose and ha_bear and
+    not liq_fundo and preco < e200 and
+    preco >= e21 * 0.98
+)
+```
+
+**inst_min = 25** (11 condições são o gate — score_inst será ≥30 sempre)
+**score_min = 30** (score geral: mesma faixa de REVERSAL/SM_SWEEP)
+**MTF inst_min = 40** (mais exigente em H4 confirmation)
+**Stop: 1.5 ATR** | **Leverage: por grade (sem cap adicional)**
+
+---
+
+## BLOQUEADORES MAIS COMUNS — Diagnóstico rápido
+
+### "rsi_zona=F" → RSI fora da janela
+- LONG bloqueado: RSI >= 55 → mercado ja subiu, não perseguir
+- SHORT bloqueado: RSI <= 40 → mercado já caiu, não vender fundo
+- **Ação**: aguardar RSI voltar para janela OU ver se REVERSAL/MOMENTUM ativa
+
+### "seguro=F(bb_topo)" → Preço em topo das Bollinger Bands
+- Sinal: pos_bb > 0.97 (preço > 97% da amplitude BB)
+- **Ação**: normal — protege de comprar topo de band
+
+### "seguro=F(stoch>0.xx)" → StochRSI esticado
+- stoch_rsi > 0.80 AND rsi > 58 → sobrecomprado no curto prazo
+- **Ação**: aguardar StochRSI cair para < 0.70
+
+### "seguro=F(pump_rsi(+Xpt))" → RSI subiu >15pts em 3 velas
+- Pump detectado — não perseguir rally já feito
+- **Ação**: aguardar RSI estabilizar
+
+### "inst<N" → Score institucional insuficiente
+- Min por tipo: CORE=25, SCOUT=50, outros=55, MOMENTUM=60
+- **Ação**: verificar qual dos 9 fatores está faltando (tendencia_bull/bear = maior peso 20pts)
+
+### "fluxo=X/4" → Fluxo direcional insuficiente
+- Soma de: dna_flow, f_bull/bear, trendilo, kalman < 2
+- **Ação**: esperar MACD, DNA e Kalman alinharem
+
+### "adx=X<15" → ADX muito baixo
+- Mercado lateral/ranging
+- **Ação**: esperar ADX > 18 para CORE, > 22 para PULLBACK/CROSS
+
+### "lateral" → Mercado lateralizado
+- bb_squeeze (BB estreito) E adx < 15
+- **Ação**: aguardar breakout do squeeze
+
+---
+
+## INDICADORES CALCULADOS MAS NÃO USADOS EM SINAIS
+(disponíveis para futuras implementações)
+
+- `e200_inclinada_up/down` — slope da EMA200 nos últimos 6 períodos (ótimo para confirmar tendência macro)
+- `reteste_mm50_bull/bear` — padrão de reteste da MM50
+- `correcao_bull/bear` — correção 2-6% em tendência (entrada em pullback profundo)
+- `sombra_sup/inf` — proporção de wick superior/inferior (útil para rejeição de nível)
+
+**FVG (Fair Value Gap) — NÃO implementado ainda:**
+```python
+# Padrão 3 velas: vela[-3].high < vela[-1].low = FVG bullish (imbalance)
+# vela[-3].low > vela[-1].high = FVG bearish
+# Instituições retornam para preencher FVGs — forte zona de suporte/resistência
+```
+
+---
+
+## LÓGICA INSTITUCIONAL — Como operar como os fundos
+
+### O que instituições FAZEM:
+1. **Esperam pelo preço** — nunca perseguem, deixam o mercado vir até eles
+2. **Operam em zonas de liquidez** — onde stops de varejo estão concentrados
+3. **Confirmam com múltiplos TFs** — H4/D1 para bias, 15m/1h para entrada
+4. **Usam order flow** — funding rate negativo = shorts pagando longs = alta mais provável
+5. **Size correto** — nunca arriscam mais que 1-3% por trade
+6. **Cut losses rápido** — saem quando estrutura quebra, não quando stop percentual bate
+
+### O que instituições NÃO fazem:
+- Comprar quando RSI > 70 (já estão vendendo)
+- Vender quando RSI < 30 (já estão comprando)
+- Operar na sessão asiática (22h-08h UTC) sem motivo forte
+- Perseguir pumps ou dumps (vol_secando = saída deles)
+- Operar em mercado lateral sem direcionalidade (ADX < 15)
+
+### Funding rate como sinal institucional:
+- Funding > +0.03%: longs estão pagando shorts → mercado sobreaquecido no LONG → favorece SHORT
+- Funding < -0.03%: shorts pagando longs → mercado sobreaquecido no SHORT → favorece LONG
+- Funding neutro (±0.01%): sem bias claro
+
+### OI (Open Interest) como confirmação:
+- OI +2%+ com preço subindo → novas posições LONG sendo abertas → sinal de alta válido
+- OI -2%- com preço caindo → fechamento de longs (liquidação) → pode ser oportunidade SHORT
+- OI crescendo contra a direção = smart money acumulando posição contrária ao movimento

@@ -111,8 +111,8 @@ def calcular_indicadores(candles):
         stoch_rsi = (_r14[-1] - _rmin) / (_rmax - _rmin) if _rmax > _rmin else 0.5
     else:
         stoch_rsi = 0.5
-    stoch_esticado_up   = stoch_rsi > 0.80
-    stoch_esticado_down = stoch_rsi < 0.05
+    stoch_esticado_up   = stoch_rsi > 0.80 and rsi > 58   # só bloqueia LONG quando RSI também está elevado
+    stoch_esticado_down = stoch_rsi < 0.05 and rsi < 42   # só bloqueia SHORT quando RSI também está deprimido
 
     # DMI / ADX
     pdi, mdi, adx, adx_p = calcular_adx(candles[-60:])
@@ -227,10 +227,36 @@ def calcular_indicadores(candles):
     liq_short = maximas[-1] > maximas[-2] and preco < maximas[-2] and preco < aberturas[-1]
 
     sm_swing_h = max(maximas[-21:-1]); sm_swing_l = min(minimas[-21:-1])
-    liq_topo = ((maximas[-2] >= sm_swing_h or maximas[-1] >= sm_swing_h) and
+    liq_topo = (maximas[-1] >= sm_swing_h and
                 fechamentos[-1] < sm_swing_h and (maximas[-1] - fechamentos[-1]) > atr * 0.2)
-    liq_fundo = ((minimas[-2] <= sm_swing_l or minimas[-1] <= sm_swing_l) and
+    liq_fundo = (minimas[-1] <= sm_swing_l and
                  fechamentos[-1] > sm_swing_l and (fechamentos[-1] - minimas[-1]) > atr * 0.2)
+
+    # Varredura de topo/fundo histórica (filtro baleia) — padrão: nova extrema + rejeição/absorção
+    _atr_liq = atr * 0.2
+    liq_fundo_hist10 = liq_fundo or any(
+        (minimas[i] < minimas[i-1] and fechamentos[i] > minimas[i-1] and
+         fechamentos[i] > aberturas[i] and (fechamentos[i] - minimas[i]) > _atr_liq)
+        for i in range(-10, -1)
+    )
+    liq_topo_hist10 = liq_topo or any(
+        (maximas[i] > maximas[i-1] and fechamentos[i] < maximas[i-1] and
+         fechamentos[i] < aberturas[i] and (maximas[i] - fechamentos[i]) > _atr_liq)
+        for i in range(-10, -1)
+    )
+    liq_fundo_hist5 = liq_fundo or any(
+        (minimas[i] < minimas[i-1] and fechamentos[i] > minimas[i-1] and
+         (fechamentos[i] - minimas[i]) > _atr_liq)
+        for i in range(-5, -1)
+    )
+    liq_topo_hist5 = liq_topo or any(
+        (maximas[i] > maximas[i-1] and fechamentos[i] < maximas[i-1] and
+         (maximas[i] - fechamentos[i]) > _atr_liq)
+        for i in range(-5, -1)
+    )
+    # Distância da EMA21 — gate de qualidade
+    dist_e21_long  = preco <= e21 * 1.03   # LONG: preço até 3% acima da EMA21
+    dist_e21_short = preco >= e21 * 0.97   # SHORT: preço até 3% abaixo da EMA21
 
     crange = maximas[-1] - minimas[-1]
     lwick  = min(aberturas[-1], preco) - minimas[-1]
@@ -282,11 +308,18 @@ def calcular_indicadores(candles):
     tbear_loose = e10 < e21 and e21 < e50
 
     # Filtros de segurança compostos
+    # Anti-pump: RSI disparou >15 pts em 3 velas E já está rente ao teto de 55 — não perseguir
+    # (apenas para LONG — o SHORT oposto não se aplica: RSI caindo de 65→47 É um bom SHORT)
+    pump_rsi_spike_long  = (rsi - rsi_ant) > 15 and rsi > 54
+    dump_rsi_spike_short = (rsi_ant - rsi) > 15 and rsi < 41  # apenas caso extremo já próximo do piso 40
+
     rsi_nao_topo   = rsi < 70
     rsi_nao_fundo  = rsi > 27
     seguro_long  = (not perto_bb_topo and not ext_acima_e21 and not vol_secando and
-                    not exaustao_topo and rsi_nao_topo and not stoch_esticado_up)
-    seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
+                    not exaustao_topo and rsi_nao_topo and not stoch_esticado_up and
+                    not pump_rsi_spike_long)
+    seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and
+                    not stoch_esticado_down)
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
@@ -316,10 +349,12 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
     # RSI zona de entrada — corte rígido sem exceção, aplicado a todos os tipos de sinal
-    # LONG: RSI < 55 (espaço para subir, longe de sobrecomprado)
-    # LONG: RSI < 60 | SHORT: RSI > 40 (autorizado 10/06)
-    rsi_zona_long  = rsi < 60
+    # LONG: RSI < 55 (não comprar topo — restaurado 14/06)
+    # SHORT: RSI > 40 (não vender fundo)
+    rsi_zona_long  = rsi < 55
     rsi_zona_short = rsi > 40
+    rsi_entrada_long  = rsi >= 45   # RSI mínimo para entrar LONG (diagnóstico)
+    rsi_entrada_short = rsi <= 55   # RSI máximo para entrar SHORT (diagnóstico)
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -402,6 +437,7 @@ def calcular_indicadores(candles):
         "stoch_rsi": stoch_rsi, "stoch_esticado_up": stoch_esticado_up, "stoch_esticado_down": stoch_esticado_down,
         "rsi_nao_chasing_long": rsi_nao_chasing_long, "rsi_nao_chasing_short": rsi_nao_chasing_short,
         "rsi_zona_long": rsi_zona_long, "rsi_zona_short": rsi_zona_short,
+        "rsi_entrada_long": rsi_entrada_long, "rsi_entrada_short": rsi_entrada_short,
         # ADX
         "pdi": pdi, "mdi": mdi, "adx_long_ok": adx_long_ok, "adx_short_ok": adx_short_ok,
         "adx_p": adx_p, "adx_subindo": adx > adx_p,
@@ -433,6 +469,9 @@ def calcular_indicadores(candles):
         "impulso_bull": impulso_bull, "impulso_bear": impulso_bear,
         "liq_long": liq_long, "liq_short": liq_short,
         "liq_topo": liq_topo, "liq_fundo": liq_fundo,
+        "liq_fundo_hist10": liq_fundo_hist10, "liq_topo_hist10": liq_topo_hist10,
+        "liq_fundo_hist5": liq_fundo_hist5, "liq_topo_hist5": liq_topo_hist5,
+        "dist_e21_long": dist_e21_long, "dist_e21_short": dist_e21_short,
         "sombra_sup": sombra_sup, "sombra_inf": sombra_inf,
         "sm_bull": sm_bull, "sm_bear": sm_bear,
         "absorb_bull": absorb_bull, "absorb_bear": absorb_bear,
@@ -447,6 +486,7 @@ def calcular_indicadores(candles):
         "trendilo_long": trendilo_long, "trendilo_short": trendilo_short,
         # Filtros compostos
         "seguro_long": seguro_long, "seguro_short": seguro_short,
+        "pump_rsi_spike_long": pump_rsi_spike_long, "dump_rsi_spike_short": dump_rsi_spike_short,
         "perto_bb_topo": perto_bb_topo, "perto_bb_fund": perto_bb_fund,
         "ext_acima_e21": ext_acima_e21, "ext_abaixo_e21": ext_abaixo_e21,
         "vol_secando": vol_secando,
@@ -539,6 +579,24 @@ def detectar_sinais(ind):
     short_sm = (i["sm_bear"] and i["rsi_zona_short"] and i["rsi"] < 75 and
                 i["preco"] < i["e200"] and i["score_inst_short"] >= 60)
 
+    # ── DUMP — SHORT após pump explosivo (blow-off top) ──────────────────────
+    # Captura reversão de moedas que subiram muito rápido: SIREN, memecoins etc.
+    # Diferença do REVERSAL: NÃO exige preco < e200*1.04 — pump afasta da e200.
+    # rsi_spike_long = RSI esteve >65 nas últimas barras (detecta histórico do pump)
+    _dump_hist = i["rsi_spike_long"] or i["rvol_tier_max2"] >= 3  # evidência de pump recente
+    # RSI caindo da zona de euforia (≥65): pega a virada logo após o pico do pump
+    _dump_rsi_cross = i["rsi_ant"] >= 65 and i["rsi"] < 65 and i["rsi_caindo"]
+    short_dump = (
+        _dump_hist and
+        _dump_rsi_cross and                              # cruzando abaixo de 65
+        i["ha_bear_1"] and                               # HA virou bearish
+        (i["exaustao_topo"] or i["liq_topo"] or i["absorb_bear"]) and  # formação de topo
+        not i["vol_secando"] and                         # ainda tem volume (não escapou todo)
+        i["adx"] > 10 and                               # algum momentum direcional
+        (i["dna_flow_bear"] or i["obv_bear"] or i["f_bear"])  # fluxo confirmando queda
+    )
+    # DUMP só existe SHORT (reversa de pump — o equivalente LONG é REVERSAL rsi<30)
+
     # ── Reversão extrema ──────────────────────────────────────────────────────
     long_reversal  = (i["rsi"] < 30 and i["ha_bull"] and i["v_forte"] and
                       (i["liq_fundo"] or i["absorb_bull"]) and i["macd_recuperando"] and
@@ -548,6 +606,26 @@ def detectar_sinais(ind):
                       (i["liq_topo"] or i["absorb_bear"]) and i["macd_esgotando"] and
                       i["adx"] > 12 and i["preco"] < i["e200"] * 1.04 and
                       (i["dna_flow_bear"] or i["obv_bear"]))
+
+    # ── PUMP — spike súbito: RVOL 3x+ + rompimento nascente (1.5%+) ──────────
+    # Captura moedas que disparam do nada antes do RSI estourar.
+    # Threshold de preço menor que SURGE (3%) — detecção mais cedo.
+    _pump_vol = i["rvol_tier_max2"] >= 3  # vol 3x+ na vela atual ou anterior
+    long_pump = (
+        _pump_vol and i["surge_break_h"] and
+        i["candle_bull_pct"] > 0.015 and        # candle ≥1.5% (SURGE usa 3%)
+        35 < i["rsi"] < 72 and
+        (i["kalman_subindo"] or i["k_short_subindo"]) and
+        i["ha_bull_1"] and not i["exaustao_topo"] and not i["perto_bb_topo"] and
+        i["dist_e21_long"]
+    )
+    short_pump = (
+        _pump_vol and i["surge_break_l"] and
+        i["candle_bear_pct"] > 0.015 and
+        22 < i["rsi"] < 65 and
+        (i["kalman_descendo"] or i["k_short_descendo"]) and
+        i["ha_bear_1"] and not i["exaustao_fund"] and not i["perto_bb_fund"]
+    )
 
     # ── Surge ─────────────────────────────────────────────────────────────────
     # SURGE — breakout/breakdown explosivo com volume VSTRONG (3x+)
@@ -562,6 +640,33 @@ def detectar_sinais(ind):
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
                    i["rsi"] > 22 and i["score_inst_short"] >= 50)
 
+    # ── BREAKOUT — rompimento nascente identificado no início ─────────────────
+    # Segunda regra: captura moedas que valem a pena ANTES do RSI estourar.
+    # Condições: nova máxima de 10 barras + RVOL ≥ 1.5x + momentum alinhado.
+    # RSI 48-67 LONG (espaço para subir mas com momentum iniciando).
+    # RSI 33-52 SHORT (espaço para cair mas com momentum de baixa iniciando).
+    _brk_vol = i["v_forte"] and not i["vol_secando"]  # RVOL >= 1.5x e não secando
+    long_breakout = (
+        45 <= i["rsi"] <= 62 and i["rsi_subindo"] and
+        i["adx"] >= 20 and i["adx_subindo"] and
+        _brk_vol and i["kalman_subindo"] and i["trendilo_long"] and
+        i["ha_bull_1"] and i["surge_break_h"] and
+        i["preco"] > i["e50"] and not i["liq_topo"] and
+        not i["exaustao_topo"] and not i["perto_bb_topo"] and
+        i["dist_e21_long"] and
+        (i["liq_fundo_hist10"] or not i["liq_topo_hist5"])
+    )
+    short_breakout = (
+        33 <= i["rsi"] <= 52 and i["rsi_caindo"] and
+        i["adx"] >= 20 and i["adx_subindo"] and
+        _brk_vol and not i["kalman_subindo"] and i["trendilo_short"] and
+        i["ha_bear_1"] and i["surge_break_l"] and
+        i["preco"] < i["e50"] and not i["liq_fundo"] and
+        not i["exaustao_fund"] and not i["perto_bb_fund"] and
+        i["dist_e21_short"] and
+        (i["liq_topo_hist10"] or not i["liq_fundo_hist5"])
+    )
+
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
     rsi_fresh_short = i["rsi_ant"] > 42 >= i["rsi"] > 30
@@ -572,11 +677,13 @@ def detectar_sinais(ind):
     mom_seguro_short = (not i["perto_bb_fund"] and not i["ext_abaixo_e21"] and not i["vol_secando"] and
                         not i["exaustao_fund"] and not i["stoch_esticado_down"])
     long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
-                      i["adx"] > 22 and i["v_forte"] and i["trendilo_long"]  and i["score_inst_long"]  >= 60 and
-                      mom_seguro_long)
+                      i["adx"] > 22 and i["v_forte"] and
+                      (i["trendilo_long"]  or i["score_inst_long"]  >= 75) and
+                      i["score_inst_long"]  >= 60 and mom_seguro_long)
     short_momentum = (rsi_fresh_short and i["ha_bear"] and i["dna_flow_bear"] and not i["liq_fundo"] and
-                      i["adx"] > 22 and i["v_forte"] and i["trendilo_short"] and i["score_inst_short"] >= 60 and
-                      mom_seguro_short)
+                      i["adx"] > 22 and i["v_forte"] and
+                      (i["trendilo_short"] or i["score_inst_short"] >= 75) and
+                      i["score_inst_short"] >= 60 and mom_seguro_short)
 
     # ── Rebound RSI ───────────────────────────────────────────────────────────
     long_rebound  = (i["rsi_spike_long"]  and i["rsi_rebound_long"]  and i["ha_bull"] and
@@ -601,51 +708,90 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    # Via normal: RSI 45-55, ADX 18, RVOL 0.8
-    # Via breakout: RSI 42-62, ADX 22, RVOL 1.5, Score 75 — captura movimentos fortes fora da zona padrão
-    _flex_norm_l  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] >= 40  and 45 < i["rsi"] < 55
-    _flex_break_l = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] >= 75  and 42 < i["rsi"] < 62
-    _flex_ha_l = i["ha_bull_1"] or i["score"] >= 85   # HA bypass quando DNA excepcionalmente bull
-    long_flex  = (_flex_ha_l and i["macd_bull_r"] and (_flex_norm_l or _flex_break_l) and
+    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
+                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  i["kalman_subindo"] and
-                  i["preco"] > i["e200"] and i["preco"] <= i["e21"] * 1.05)
-    _flex_norm_s  = i["adx"] >= 18 and i["rvol"] >= 0.8 and i["score"] <= -40 and 45 < i["rsi"] < 55
-    _flex_break_s = i["adx"] >= 22 and i["rvol"] >= 1.5 and i["score"] <= -75 and 38 < i["rsi"] < 58
-    _flex_ha_s = i["ha_bear_1"] or i["score"] <= -85  # HA bypass quando DNA excepcionalmente bear
-    short_flex = (_flex_ha_s and i["macd_bear_r"] and (_flex_norm_s or _flex_break_s) and
+                  (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
+                  (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
+    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
+                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  not i["kalman_subindo"] and
-                  i["preco"] < i["e200"] and i["preco"] >= i["e21"] * 0.95)
+                  (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
+                  (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
-    long_setup  = (i["score"] > 50 and i["ha_bull_1"] and i["macd_recuperando"] and i["adx"] > 14 and
+    long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > 18 and
                    i["obv_bull"] and i["v_bom"] and i["acima_vwap"] and not i["lateralizado"] and
                    i["nao_ext_long_tight"] and i["seguro_long"] and (i["liq_long"] or i["liq_fundo"]) and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"])
-    short_setup = (i["score"] < -50 and i["ha_bear_1"] and i["macd_esgotando"] and i["adx"] > 14 and
+    short_setup = (i["score"] < -50 and i["ha_bear2"] and i["macd_esgotando"] and i["adx"] > 18 and
                    i["obv_bear"] and i["v_bom"] and i["abaixo_vwap"] and not i["lateralizado"] and
                    i["nao_ext_short_tight"] and i["seguro_short"] and (i["liq_short"] or i["liq_topo"]) and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"])
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
-    # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
+    # FL=3: critérios institucionais rígidos — cada gate abaixo é obrigatório
     _sc_min  = 25 if _FLV <= 0 else 40
-    _adx_min = 10 if _FLV <= 0 else 15
+    _adx_min = 10 if _FLV <= 0 else (25 if _FLV >= 3 else 15)   # FL=3: ADX>=25
+    _rvol_scout = 2.0 if _FLV >= 3 else 0.0                      # FL=3: RVOL>=2.0 (VSTRONG)
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
+    # FL=3: RSI LONG restrito 35–52 (entrada antecipada — quanto menor melhor)
+    _scout_rsi_l = (35 <= i["rsi"] <= 52) if _FLV >= 3 else i["rsi_zona_long"]
+    # FL=3: RSI SHORT restrito 35–50 (acima de 50 ainda tem espaço para subir)
+    _scout_rsi_s = (35 <= i["rsi"] <= 50) if _FLV >= 3 else i["rsi_zona_short"]
+    # FL=3: exige DNA Flow OU Trendilo — bloqueia SCOUTs com só f_bull+kalman (noise)
+    _scout_qual_l = (i["dna_flow_bull"] or i["trendilo_long"])  if _FLV >= 3 else True
+    _scout_qual_s = (i["dna_flow_bear"] or i["trendilo_short"]) if _FLV >= 3 else True
+    # FL=3: preço deve confirmar a tendência (acima MM50+MM200 LONG / abaixo SHORT)
+    _scout_trend_l = (i["preco"] > i["e50"] and i["preco"] > i["e200"]) if _FLV >= 3 else True
+    _scout_trend_s = (i["preco"] < i["e50"] and i["preco"] < i["e200"]) if _FLV >= 3 else True
+    # FL=3: distância da EMA21 (não entrar longe da EMA21)
+    _scout_dist_l = i["dist_e21_long"]  if _FLV >= 3 else True
+    _scout_dist_s = i["dist_e21_short"] if _FLV >= 3 else True
+    # FL=3: filtro baleia — liquidez histórica de fundo/topo
+    _whale_l = (i["liq_fundo_hist10"] or not i["liq_topo_hist5"]) if _FLV >= 3 else True
+    _whale_s = (i["liq_topo_hist10"] or not i["liq_fundo_hist5"]) if _FLV >= 3 else True
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
-                   i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
+                   i["rsi_nao_chasing_long"] and _scout_rsi_l and _no_liq_topo and
+                   i["rvol"] >= _rvol_scout and _scout_trend_l and _scout_qual_l and
+                   _scout_dist_l and _whale_l and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
     short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
-                   i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
+                   i["rsi_nao_chasing_short"] and _scout_rsi_s and _no_liq_fund and
+                   i["rvol"] >= _rvol_scout and _scout_trend_s and _scout_qual_s and
+                   _scout_dist_s and _whale_s and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
+
+    # ── DNA CORE — 11 critérios essenciais do operador ────────────────────────
+    # Dispara quando TODOS estão confirmados. Sem filtros adicionais.
+    # LONG: RSI 45-58 subindo | ADX≥18 | RVOL≥80% | Kalman+ | Trendilo+ |
+    #        EMA alinhada | HA bull | sem liq_topo | acima EMA200 | dist EMA21≤2%
+    _core_vol = i["vol_nao_fade"] and not i["vol_secando"]
+    long_core = (
+        42 <= i["rsi"] <= 55 and i["rsi_subindo"] and
+        i["adx"] >= 18 and _core_vol and
+        i["kalman_subindo"] and i["trendilo_long"] and
+        i["tbull_loose"] and i["ha_bull"] and
+        not i["liq_topo"] and i["preco"] > i["e200"] and
+        i["preco"] <= i["e21"] * 1.02
+    )
+    # SHORT: RSI 42-55 caindo | ADX≥18 | RVOL≥80% | Kalman- | Trendilo- |
+    #         EMA alinhada bear | HA bear | sem liq_fundo | abaixo EMA200 | dist EMA21≤2%
+    short_core = (
+        42 <= i["rsi"] <= 55 and i["rsi_caindo"] and
+        i["adx"] >= 18 and _core_vol and
+        not i["kalman_subindo"] and i["trendilo_short"] and
+        i["tbear_loose"] and i["ha_bear"] and
+        not i["liq_fundo"] and i["preco"] < i["e200"] and
+        i["preco"] >= i["e21"] * 0.98
+    )
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
@@ -656,14 +802,21 @@ def detectar_sinais(ind):
         ordem = [
             (long_pullback,  "LONG",  "PULLBACK"),
             (short_pullback, "SHORT", "PULLBACK"),
-            (long_cross,     "LONG",  f"CROSS:{i['label_cross']}"),
+            (long_core,       "LONG",  "CORE"),
+            (short_core,      "SHORT", "CORE"),
+            (long_breakout,   "LONG",  "BREAKOUT"),
+            (short_breakout,  "SHORT", "BREAKOUT"),
+            (long_cross,      "LONG",  f"CROSS:{i['label_cross']}"),
             (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
             (long_bb_break,  "LONG",  "BB_BREAK"),
             (short_bb_break, "SHORT", "BB_BREAK"),
             (long_sm,        "LONG",  "SM_SWEEP"),
             (short_sm,       "SHORT", "SM_SWEEP"),
+            (short_dump,     "SHORT", "DUMP"),
             (long_reversal,  "LONG",  "REVERSAL"),
             (short_reversal, "SHORT", "REVERSAL"),
+            (long_pump,      "LONG",  "PUMP"),
+            (short_pump,     "SHORT", "PUMP"),
             (long_surge,     "LONG",  "SURGE"),
             (short_surge,    "SHORT", "SURGE"),
             (long_momentum,  "LONG",  "MOMENTUM"),
@@ -777,6 +930,7 @@ def analisar(simbolo, candles, funding_rate=None):
                 if ind.get("exaustao_topo"):    _sg.append("exaustao")
                 if ind["rsi"] >= 70:            _sg.append(f"rsi={ind['rsi']:.0f}")
                 if ind["stoch_esticado_up"]:    _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                if ind.get("pump_rsi_spike_long"): _sg.append(f"pump_rsi(+{ind['rsi']-ind['rsi_ant']:.0f}pt)")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
             if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
@@ -794,6 +948,7 @@ def analisar(simbolo, candles, funding_rate=None):
                 if ind.get("exaustao_fund"):     _sg.append("exaustao")
                 if ind["rsi"] <= 27:            _sg.append(f"rsi={ind['rsi']:.0f}")
                 if ind["stoch_esticado_down"]:  _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                if ind.get("dump_rsi_spike_short"): _sg.append(f"dump_rsi(-{ind['rsi_ant']-ind['rsi']:.0f}pt)")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
             if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
@@ -823,9 +978,10 @@ def analisar(simbolo, candles, funding_rate=None):
         "acima_vwap":   ind["acima_vwap"],
         "v_forte":      ind["v_forte"],
         "obv_bear":     ind["obv_bear"],
-        "rvol":         ind["rvol"],
-        "rvol_label":   ind["rvol_label"],
-        "rvol_tier":    ind["rvol_tier"],
+        "rvol":          ind["rvol"],
+        "rvol_label":    ind["rvol_label"],
+        "rvol_tier":     ind["rvol_tier"],
+        "rvol_tier_max2": ind["rvol_tier_max2"],
         "tbull_r":      ind["tbull_r"],
         "tbear_r":      ind["tbear_r"],
         "tbull_loose":  ind["tbull_loose"],
@@ -838,6 +994,12 @@ def analisar(simbolo, candles, funding_rate=None):
         "cls_inst_short":   ind["cls_inst_short"],
         "liq_fundo":    ind["liq_fundo"],
         "liq_topo":     ind["liq_topo"],
+        "liq_fundo_hist10": ind["liq_fundo_hist10"],
+        "liq_topo_hist10":  ind["liq_topo_hist10"],
+        "liq_fundo_hist5":  ind["liq_fundo_hist5"],
+        "liq_topo_hist5":   ind["liq_topo_hist5"],
+        "dist_e21_long":    ind["dist_e21_long"],
+        "dist_e21_short":   ind["dist_e21_short"],
         "sombra_sup":   ind["sombra_sup"],
         "sombra_inf":   ind["sombra_inf"],
         "dna_flow_bull": ind["dna_flow_bull"],
@@ -869,4 +1031,22 @@ def analisar(simbolo, candles, funding_rate=None):
         "macd_bear_r":    ind["macd_bear_r"],
         "rsi_entrada_long":  ind["rsi_entrada_long"],
         "rsi_entrada_short": ind["rsi_entrada_short"],
+        # Sub-campos de seguro (diagnóstico mostra causa real em vez de "?")
+        "perto_bb_topo":     ind["perto_bb_topo"],
+        "ext_acima_e21":     ind["ext_acima_e21"],
+        "vol_secando":       ind["vol_secando"],
+        "exaustao_topo":     ind["exaustao_topo"],
+        "exaustao_fund":     ind["exaustao_fund"],
+        "stoch_rsi":         ind["stoch_rsi"],
+        "stoch_esticado_up": ind["stoch_esticado_up"],
+        "stoch_esticado_down": ind["stoch_esticado_down"],
+        "pump_rsi_spike_long":  ind["pump_rsi_spike_long"],
+        "dump_rsi_spike_short": ind["dump_rsi_spike_short"],
+        # Outros campos usados no diagnóstico
+        "e200":              ind["e200"],
+        "kalman_descendo":   ind["kalman_descendo"],
+        "ha_bull2":          ind["ha_bull2"],
+        "ha_bear2":          ind["ha_bear2"],
+        "flex_vol_ok":       ind["flex_vol_ok"],
+        "flex_vol_ok_s":     ind["flex_vol_ok_s"],
     }
