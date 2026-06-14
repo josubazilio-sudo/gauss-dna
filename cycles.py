@@ -428,7 +428,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                          40  if fonte == "BREAKOUT" else   # nova máxima + RVOL 1.5x + momentum
                          45  if fonte in ("REVERSAL", "PUMP") else
                          50  if fonte in ("SM_SWEEP", "DIV") else
-                         60  if fonte == "SCOUT" else
+                         70  if fonte == "SCOUT" else
                          60  if fonte == "MOMENTUM" else
                          55)  # FLEX, SETUP, PULLBACK, CROSS, BB_BREAK, SURGE, REBOUND
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):

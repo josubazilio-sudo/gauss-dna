@@ -696,26 +696,32 @@ def detectar_sinais(ind):
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"])
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
-    # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
-    # FL>=3: exige DNA Flow OU Trendilo — bloqueia SCOUTs com só f_bull+kalman (noise)
+    # FL=3: critérios institucionais rígidos — cada gate abaixo é obrigatório
     _sc_min  = 25 if _FLV <= 0 else 40
-    _adx_min = 10 if _FLV <= 0 else 15
+    _adx_min = 10 if _FLV <= 0 else (25 if _FLV >= 3 else 15)   # FL=3: ADX>=25
+    _rvol_scout = 2.0 if _FLV >= 3 else 0.0                      # FL=3: RVOL>=2.0 (VSTRONG)
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
+    # FL=3: exige DNA Flow OU Trendilo — bloqueia SCOUTs com só f_bull+kalman (noise)
     _scout_qual_l = (i["dna_flow_bull"] or i["trendilo_long"])  if _FLV >= 3 else True
     _scout_qual_s = (i["dna_flow_bear"] or i["trendilo_short"]) if _FLV >= 3 else True
+    # FL=3: preço deve confirmar a tendência (acima MM50+MM200 LONG / abaixo SHORT)
+    _scout_trend_l = (i["preco"] > i["e50"] and i["preco"] > i["e200"]) if _FLV >= 3 else True
+    _scout_trend_s = (i["preco"] < i["e50"] and i["preco"] < i["e200"]) if _FLV >= 3 else True
+    # FL=3: RSI SHORT restrito 35-50 (acima de 50 ainda tem espaço para subir)
+    _scout_rsi_s = (35 < i["rsi"] <= 50) if _FLV >= 3 else i["rsi_zona_short"]
     long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
-                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min and
-                   _scout_qual_l)
+                   i["rvol"] >= _rvol_scout and _scout_trend_l and _scout_qual_l and
+                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
     short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
-                   i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
-                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min and
-                   _scout_qual_s)
+                   i["rsi_nao_chasing_short"] and _scout_rsi_s and _no_liq_fund and
+                   i["rvol"] >= _rvol_scout and _scout_trend_s and _scout_qual_s and
+                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 
     # ── DNA CORE — 11 critérios essenciais do operador ────────────────────────
     # Dispara quando TODOS estão confirmados. Sem filtros adicionais.
