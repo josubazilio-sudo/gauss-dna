@@ -636,12 +636,8 @@ async def executar_ciclo(session, estado, tf, moedas):
         if linhas:
             log.info(f"[{tf}] Sem sinais — " + " | ".join(linhas[:3]))
 
-    log.info(f"[{tf}] Watchlist: {len(watchlist)} moedas encontradas")
-    if watchlist:
-        chave_wl = f"_watchlist_{tf}"
-        if agora - estado.get(chave_wl, 0) >= 1800:
-            ok = await enviar_watchlist(session, tf, watchlist)
-            if ok: estado[chave_wl] = agora
+    log.info(f"[{tf}] Watchlist: {len(watchlist)} moedas encontradas (envio desativado)")
+    # Watchlist desativada — apenas sinais LONG/SHORT são enviados ao Telegram
 
     return enviados
 
@@ -929,29 +925,10 @@ async def main():
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
 
-            # Diagnóstico: varredura imediata no 1º ciclo, depois a cada 30 min sem sinais
-            _agora_d    = time.time()
-            _enviar_diag = False
-            if ciclo == 1 and _diag_buffer["total_analisados"] > 0:
-                _enviar_diag = True   # varredura imediata ao iniciar
-            else:
-                if total > 0:
-                    _diag_buffer["ultimo_sinal"] = _agora_d
-                _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 900
-                if _agora_d - _diag_buffer["ultimo_envio"] >= 1800 and _sem_sinal:
-                    _enviar_diag = True
-            if _enviar_diag:
-                try:
-                    await _enviar_diagnostico(session)
-                except Exception as _e:
-                    log.error(f"❌ Erro diagnostico: {_e}")
-                _diag_buffer.update({
-                    "ultimo_envio":     _agora_d,
-                    "bloqueadores":     {},
-                    "candidatos":       [],
-                    "total_analisados": 0,
-                    "ciclos":           0,
-                })
+            # Diagnóstico desativado — apenas sinais LONG/SHORT são enviados ao Telegram
+            _agora_d = time.time()
+            if total > 0:
+                _diag_buffer["ultimo_sinal"] = _agora_d
 
             if not LOOP_MODE:
                 break
