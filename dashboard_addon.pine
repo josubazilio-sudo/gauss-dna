@@ -3,207 +3,199 @@
 // GRADE DE INDICADORES — GAUSS+DNA STATUS DE ENTRADA
 //════════════════════════════════════════════════════════════
 
-// ── Indicadores adicionais ───────────────────────────────
-rsiVal  = ta.rsi(close, 14)
-_rsiH   = ta.highest(rsiVal, 14)
-_rsiL   = ta.lowest(rsiVal, 14)
-sRsiK   = ta.sma((_rsiH - _rsiL) > 0 ? (rsiVal - _rsiL) / (_rsiH - _rsiL) : 0.5, 3)
+// ── Indicadores adicionais (escopo global) ────────────────
+_d_rsi  = ta.rsi(close, 14)
+_d_rsiH = ta.highest(_d_rsi, 14)
+_d_rsiL = ta.lowest (_d_rsi, 14)
+_d_sRsi = ta.sma((_d_rsiH - _d_rsiL) > 0
+     ? (_d_rsi - _d_rsiL) / (_d_rsiH - _d_rsiL) : 0.5, 3)
+_d_obv  = ta.obv
+_d_obvM = ta.ema(_d_obv, 20)
+_d_cr   = math.max(high - low, syminfo.mintick)
+_d_ssup = (high - math.max(open, close)) / _d_cr
+_d_sinf = (math.min(open, close) - low)  / _d_cr
+_d_stU  = _d_sRsi > 0.80 and _d_rsi > 58
+_d_stD  = _d_sRsi < 0.05 and _d_rsi < 42
+_d_exT  = _d_ssup > 0.40
+_d_exF  = _d_sinf > 0.40
+_d_segL = not _d_stU and not _d_exT
+_d_segS = not _d_stD and not _d_exF
+_d_vb   = math.max(volume, volume[1])
+_d_vNF  = _d_vb >= volMa * 0.80
+_d_rv   = volume / math.max(volMa, 1.0)
+_d_vSec = _d_rv < 0.25
+_d_h2L  = haBull and haBull[1]
+_d_h2S  = haBear and haBear[1]
+_d_eL   = ema10 > ema21 and ema21 > ema50
+_d_eS   = ema10 < ema21 and ema21 < ema50
 
-obvVal  = ta.obv
-obvEma  = ta.ema(obvVal, 20)
+// ── Funções auxiliares (escopo global) ───────────────────
+_dBg(v) => v ? color.new(color.green, 70) : color.new(color.red, 78)
+_dTx(v) => v ? color.lime : color.red
+_dLb(v) => v ? "+" : "-"
 
-_cRange  = math.max(high - low, syminfo.mintick)
-_sSupPct = (high - math.max(open, close)) / _cRange
-_sInfPct = (math.min(open, close) - low)  / _cRange
-
-_stEsUp  = sRsiK > 0.80 and rsiVal > 58
-_stEsDn  = sRsiK < 0.05 and rsiVal < 42
-_exTopo  = _sSupPct > 0.40
-_exFund  = _sInfPct > 0.40
-_segL    = not _stEsUp and not _exTopo
-_segS    = not _stEsDn and not _exFund
-
-_volBest = math.max(volume, volume[1])
-_volNF   = _volBest >= volMa * 0.80
-_rvol    = volume / math.max(volMa, 1.0)
-_volSec  = _rvol < 0.25
-
-_ha2L    = haBull and haBull[1]
-_ha2S    = haBear and haBear[1]
-_emaL    = ema10 > ema21 and ema21 > ema50
-_emaS    = ema10 < ema21 and ema21 < ema50
-
-// ── Arrays paralelos (sem UDT) ───────────────────────────
-var _gnm = array.new_string()
-var _gvl = array.new_string()
-var _gcL = array.new_bool()
-var _gcS = array.new_bool()
-
+// ── Dashboard — só na última barra ───────────────────────
 if barstate.islast
-    array.clear(_gnm)
-    array.clear(_gvl)
-    array.clear(_gcL)
-    array.clear(_gcS)
 
-    array.push(_gnm, "RSI zona  (L<60 | S>40)")
-    array.push(_gvl, str.tostring(math.round(rsiVal, 1)))
-    array.push(_gcL, rsiVal < 60)
-    array.push(_gcS, rsiVal > 40)
+    // Condições: b##L = Long, b##S = Short
+    b01L = _d_rsi < 60;          b01S = _d_rsi > 40
+    b02L = adx >= adxMin;        b02S = adx >= adxMinShort
+    b03L = adxNotDecaying;       b03S = adxNotDecaying
+    b04L = adx >= 15;            b04S = adx >= 15
+    b05L = haBull;               b05S = haBear
+    b06L = _d_h2L;               b06S = _d_h2S
+    b07L = macdBull;             b07S = macdBear
+    b08L = flowBull;             b08S = flowBear
+    b09L = _d_eL;                b09S = _d_eS
+    b10L = close > ema200;       b10S = close < ema200
+    b11L = _d_vNF;               b11S = _d_vNF
+    b12L = _d_rv  >= 0.50;       b12S = _d_rv  >= 0.50
+    b13L = not _d_vSec;          b13S = not _d_vSec
+    b14L = not _d_stU;           b14S = not _d_stD
+    b15L = _d_segL;              b15S = _d_segS
+    b16L = notExtendedLong;      b16S = notExtendedShort
+    b17L = _d_obv > _d_obvM;     b17S = _d_obv < _d_obvM
+    b18L = liqSweepLong;         b18S = liqSweepShort
+    b19L = scoreLong  >= 40;     b19S = scoreShort <= -40
 
-    array.push(_gnm, "ADX forca (L>=14 | S>=18)")
-    array.push(_gvl, str.tostring(math.round(adx, 1)))
-    array.push(_gcL, adx >= adxMin)
-    array.push(_gcS, adx >= adxMinShort)
+    // Contagem
+    mL = (b01L?1:0)+(b02L?1:0)+(b03L?1:0)+(b04L?1:0)+(b05L?1:0)+
+         (b06L?1:0)+(b07L?1:0)+(b08L?1:0)+(b09L?1:0)+(b10L?1:0)+
+         (b11L?1:0)+(b12L?1:0)+(b13L?1:0)+(b14L?1:0)+(b15L?1:0)+
+         (b16L?1:0)+(b17L?1:0)+(b18L?1:0)+(b19L?1:0)
 
-    array.push(_gnm, "ADX subindo")
-    array.push(_gvl, "")
-    array.push(_gcL, adxNotDecaying)
-    array.push(_gcS, adxNotDecaying)
+    mS = (b01S?1:0)+(b02S?1:0)+(b03S?1:0)+(b04S?1:0)+(b05S?1:0)+
+         (b06S?1:0)+(b07S?1:0)+(b08S?1:0)+(b09S?1:0)+(b10S?1:0)+
+         (b11S?1:0)+(b12S?1:0)+(b13S?1:0)+(b14S?1:0)+(b15S?1:0)+
+         (b16S?1:0)+(b17S?1:0)+(b18S?1:0)+(b19S?1:0)
 
-    array.push(_gnm, "Nao lateralizado (>=15)")
-    array.push(_gvl, "")
-    array.push(_gcL, adx >= 15)
-    array.push(_gcS, adx >= 15)
+    // Tabela 4 colunas × 21 linhas (1 header + 19 linhas + 1 rodapé)
+    T = table.new(position.top_right, 4, 21,
+         border_width=1, border_color=color.new(color.gray, 58),
+         frame_width=2,  frame_color=color.new(color.rgb(50,110,230), 35))
 
-    array.push(_gnm, "HA  1 vela")
-    array.push(_gvl, "")
-    array.push(_gcL, haBull)
-    array.push(_gcS, haBear)
+    hB = color.new(color.rgb(10,18,52), 0)
+    aB = color.new(color.rgb(10,12,28), 0)
+    bB = color.new(color.rgb(18,20,42), 0)
+    fB = color.new(color.rgb(10,18,52), 0)
 
-    array.push(_gnm, "HA  2 velas consecutivas")
-    array.push(_gvl, "")
-    array.push(_gcL, _ha2L)
-    array.push(_gcS, _ha2S)
+    // Header
+    table.cell(T,0,0,"GAUSS+DNA  INDICADOR",bgcolor=hB,text_color=color.white, text_size=size.small,text_halign=text.align_left)
+    table.cell(T,1,0,"VALOR",               bgcolor=hB,text_color=color.silver,text_size=size.small)
+    table.cell(T,2,0,"LONG",                bgcolor=hB,text_color=color.lime,  text_size=size.small)
+    table.cell(T,3,0,"SHORT",               bgcolor=hB,text_color=color.red,   text_size=size.small)
 
-    array.push(_gnm, "MACD direcao + HA")
-    array.push(_gvl, str.tostring(math.round(histLine, 5)))
-    array.push(_gcL, macdBull)
-    array.push(_gcS, macdBear)
+    // Linhas de dados
+    v01 = str.tostring(math.round(_d_rsi, 1))
+    v02 = str.tostring(math.round(adx, 1))
+    v07 = str.tostring(math.round(histLine, 5))
+    v12 = str.tostring(math.round(_d_rv, 2)) + "x"
+    v14 = str.tostring(math.round(_d_sRsi, 2))
+    v16 = str.tostring(math.round(distLong, 1)) + "a"
+    v19 = str.tostring(scoreLong)
 
-    array.push(_gnm, "Fluxo de volume")
-    array.push(_gvl, "")
-    array.push(_gcL, flowBull)
-    array.push(_gcS, flowBear)
+    table.cell(T,0, 1,"RSI zona (L<60 | S>40)",   bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 1,v01,bgcolor=aB,text_color=color.gray,text_size=size.tiny)
+    table.cell(T,2, 1,_dLb(b01L),bgcolor=_dBg(b01L),text_color=_dTx(b01L),text_size=size.small)
+    table.cell(T,3, 1,_dLb(b01S),bgcolor=_dBg(b01S),text_color=_dTx(b01S),text_size=size.small)
 
-    array.push(_gnm, "EMAs alinhadas (10>21>50)")
-    array.push(_gvl, "")
-    array.push(_gcL, _emaL)
-    array.push(_gcS, _emaS)
+    table.cell(T,0, 2,"ADX forca (L>=14 | S>=18)",bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 2,v02,bgcolor=bB,text_color=color.gray,text_size=size.tiny)
+    table.cell(T,2, 2,_dLb(b02L),bgcolor=_dBg(b02L),text_color=_dTx(b02L),text_size=size.small)
+    table.cell(T,3, 2,_dLb(b02S),bgcolor=_dBg(b02S),text_color=_dTx(b02S),text_size=size.small)
 
-    array.push(_gnm, "Posicao vs EMA 200")
-    array.push(_gvl, "")
-    array.push(_gcL, close > ema200)
-    array.push(_gcS, close < ema200)
+    table.cell(T,0, 3,"ADX subindo",              bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 3,"",                          bgcolor=aB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2, 3,_dLb(b03L),bgcolor=_dBg(b03L),text_color=_dTx(b03L),text_size=size.small)
+    table.cell(T,3, 3,_dLb(b03S),bgcolor=_dBg(b03S),text_color=_dTx(b03S),text_size=size.small)
 
-    array.push(_gnm, "Volume >= 80% MA (2 velas)")
-    array.push(_gvl, str.tostring(math.round(_rvol, 2)) + "x")
-    array.push(_gcL, _volNF)
-    array.push(_gcS, _volNF)
+    table.cell(T,0, 4,"Nao lateralizado (>=15)",  bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 4,"",                          bgcolor=bB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2, 4,_dLb(b04L),bgcolor=_dBg(b04L),text_color=_dTx(b04L),text_size=size.small)
+    table.cell(T,3, 4,_dLb(b04S),bgcolor=_dBg(b04S),text_color=_dTx(b04S),text_size=size.small)
 
-    array.push(_gnm, "RVOL >= 0.5x")
-    array.push(_gvl, str.tostring(math.round(_rvol, 2)) + "x")
-    array.push(_gcL, _rvol >= 0.50)
-    array.push(_gcS, _rvol >= 0.50)
+    table.cell(T,0, 5,"HA  1 vela",               bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 5,"",                          bgcolor=aB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2, 5,_dLb(b05L),bgcolor=_dBg(b05L),text_color=_dTx(b05L),text_size=size.small)
+    table.cell(T,3, 5,_dLb(b05S),bgcolor=_dBg(b05S),text_color=_dTx(b05S),text_size=size.small)
 
-    array.push(_gnm, "Vol. nao secando")
-    array.push(_gvl, "")
-    array.push(_gcL, not _volSec)
-    array.push(_gcS, not _volSec)
+    table.cell(T,0, 6,"HA  2 velas consecutivas", bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 6,"",                          bgcolor=bB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2, 6,_dLb(b06L),bgcolor=_dBg(b06L),text_color=_dTx(b06L),text_size=size.small)
+    table.cell(T,3, 6,_dLb(b06S),bgcolor=_dBg(b06S),text_color=_dTx(b06S),text_size=size.small)
 
-    array.push(_gnm, "StochRSI ok (<0.80 / >0.05)")
-    array.push(_gvl, str.tostring(math.round(sRsiK, 2)))
-    array.push(_gcL, not _stEsUp)
-    array.push(_gcS, not _stEsDn)
+    table.cell(T,0, 7,"MACD direcao + HA",        bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 7,v07,bgcolor=aB,text_color=color.gray,text_size=size.tiny)
+    table.cell(T,2, 7,_dLb(b07L),bgcolor=_dBg(b07L),text_color=_dTx(b07L),text_size=size.small)
+    table.cell(T,3, 7,_dLb(b07S),bgcolor=_dBg(b07S),text_color=_dTx(b07S),text_size=size.small)
 
-    array.push(_gnm, "Seguro  exaustao topo/fund")
-    array.push(_gvl, "")
-    array.push(_gcL, _segL)
-    array.push(_gcS, _segS)
+    table.cell(T,0, 8,"Fluxo de volume",           bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 8,"",                          bgcolor=bB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2, 8,_dLb(b08L),bgcolor=_dBg(b08L),text_color=_dTx(b08L),text_size=size.small)
+    table.cell(T,3, 8,_dLb(b08S),bgcolor=_dBg(b08S),text_color=_dTx(b08S),text_size=size.small)
 
-    array.push(_gnm, "Nao extendido  (<2.5 ATR)")
-    array.push(_gvl, str.tostring(math.round(distLong, 1)) + "a")
-    array.push(_gcL, notExtendedLong)
-    array.push(_gcS, notExtendedShort)
+    table.cell(T,0, 9,"EMAs alinhadas (10>21>50)", bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1, 9,"",                          bgcolor=aB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2, 9,_dLb(b09L),bgcolor=_dBg(b09L),text_color=_dTx(b09L),text_size=size.small)
+    table.cell(T,3, 9,_dLb(b09S),bgcolor=_dBg(b09S),text_color=_dTx(b09S),text_size=size.small)
 
-    array.push(_gnm, "OBV confirmado")
-    array.push(_gvl, "")
-    array.push(_gcL, obvVal > obvEma)
-    array.push(_gcS, obvVal < obvEma)
+    table.cell(T,0,10,"Posicao vs EMA 200",        bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,10,"",                          bgcolor=bB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2,10,_dLb(b10L),bgcolor=_dBg(b10L),text_color=_dTx(b10L),text_size=size.small)
+    table.cell(T,3,10,_dLb(b10S),bgcolor=_dBg(b10S),text_color=_dTx(b10S),text_size=size.small)
 
-    array.push(_gnm, "Sweep de liquidez")
-    array.push(_gvl, "")
-    array.push(_gcL, liqSweepLong)
-    array.push(_gcS, liqSweepShort)
+    table.cell(T,0,11,"Volume >= 80% MA (2 velas)",bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,11,v12,bgcolor=aB,text_color=color.gray,text_size=size.tiny)
+    table.cell(T,2,11,_dLb(b11L),bgcolor=_dBg(b11L),text_color=_dTx(b11L),text_size=size.small)
+    table.cell(T,3,11,_dLb(b11S),bgcolor=_dBg(b11S),text_color=_dTx(b11S),text_size=size.small)
 
-    array.push(_gnm, "Score  >= |40|")
-    array.push(_gvl, str.tostring(scoreLong))
-    array.push(_gcL, scoreLong  >= 40)
-    array.push(_gcS, scoreShort <= -40)
+    table.cell(T,0,12,"RVOL >= 0.5x",             bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,12,v12,bgcolor=bB,text_color=color.gray,text_size=size.tiny)
+    table.cell(T,2,12,_dLb(b12L),bgcolor=_dBg(b12L),text_color=_dTx(b12L),text_size=size.small)
+    table.cell(T,3,12,_dLb(b12S),bgcolor=_dBg(b12S),text_color=_dTx(b12S),text_size=size.small)
 
-    // ── Contar prontos ───────────────────────────────────
-    _nR   = array.size(_gnm)
-    _metL = 0
-    _metS = 0
-    for i = 0 to _nR - 1
-        if array.get(_gcL, i)
-            _metL += 1
-        if array.get(_gcS, i)
-            _metS += 1
+    table.cell(T,0,13,"Vol. nao secando",          bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,13,"",                          bgcolor=aB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2,13,_dLb(b13L),bgcolor=_dBg(b13L),text_color=_dTx(b13L),text_size=size.small)
+    table.cell(T,3,13,_dLb(b13S),bgcolor=_dBg(b13S),text_color=_dTx(b13S),text_size=size.small)
 
-    // ── Tabela ───────────────────────────────────────────
-    _tbl = table.new(position.top_right, 4, _nR + 2,
-         border_width = 1,
-         border_color = color.new(color.gray, 58),
-         frame_width  = 2,
-         frame_color  = color.new(color.rgb(50, 110, 230), 35))
+    table.cell(T,0,14,"StochRSI ok (<0.80/>0.05)", bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,14,v14,bgcolor=bB,text_color=color.gray,text_size=size.tiny)
+    table.cell(T,2,14,_dLb(b14L),bgcolor=_dBg(b14L),text_color=_dTx(b14L),text_size=size.small)
+    table.cell(T,3,14,_dLb(b14S),bgcolor=_dBg(b14S),text_color=_dTx(b14S),text_size=size.small)
 
-    _hBg = color.new(color.rgb(10, 18, 52), 0)
-    table.cell(_tbl, 0, 0, "GAUSS+DNA  INDICADOR",
-         bgcolor=_hBg, text_color=color.white, text_size=size.small, text_halign=text.align_left)
-    table.cell(_tbl, 1, 0, "VALOR",
-         bgcolor=_hBg, text_color=color.silver, text_size=size.small)
-    table.cell(_tbl, 2, 0, "LONG",
-         bgcolor=_hBg, text_color=color.lime, text_size=size.small)
-    table.cell(_tbl, 3, 0, "SHORT",
-         bgcolor=_hBg, text_color=color.red, text_size=size.small)
+    table.cell(T,0,15,"Seguro exaustao",           bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,15,"",                          bgcolor=aB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2,15,_dLb(b15L),bgcolor=_dBg(b15L),text_color=_dTx(b15L),text_size=size.small)
+    table.cell(T,3,15,_dLb(b15S),bgcolor=_dBg(b15S),text_color=_dTx(b15S),text_size=size.small)
 
-    for i = 0 to _nR - 1
-        _row = i + 1
-        _aBg = i % 2 == 0
-             ? color.new(color.rgb(10, 12, 28), 0)
-             : color.new(color.rgb(18, 20, 42), 0)
-        _bl  = array.get(_gcL, i)
-        _bs  = array.get(_gcS, i)
+    table.cell(T,0,16,"Nao extendido (<2.5 ATR)",  bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,16,v16,bgcolor=bB,text_color=color.gray,text_size=size.tiny)
+    table.cell(T,2,16,_dLb(b16L),bgcolor=_dBg(b16L),text_color=_dTx(b16L),text_size=size.small)
+    table.cell(T,3,16,_dLb(b16S),bgcolor=_dBg(b16S),text_color=_dTx(b16S),text_size=size.small)
 
-        table.cell(_tbl, 0, _row, array.get(_gnm, i),
-             bgcolor=_aBg, text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
-        table.cell(_tbl, 1, _row, array.get(_gvl, i),
-             bgcolor=_aBg, text_color=color.gray, text_size=size.tiny)
-        table.cell(_tbl, 2, _row, _bl ? "+" : "-",
-             bgcolor    = _bl ? color.new(color.green, 70) : color.new(color.red, 78),
-             text_color = _bl ? color.lime : color.red,
-             text_size  = size.small)
-        table.cell(_tbl, 3, _row, _bs ? "+" : "-",
-             bgcolor    = _bs ? color.new(color.green, 70) : color.new(color.red, 78),
-             text_color = _bs ? color.lime : color.red,
-             text_size  = size.small)
+    table.cell(T,0,17,"OBV confirmado",            bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,17,"",                          bgcolor=aB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2,17,_dLb(b17L),bgcolor=_dBg(b17L),text_color=_dTx(b17L),text_size=size.small)
+    table.cell(T,3,17,_dLb(b17S),bgcolor=_dBg(b17S),text_color=_dTx(b17S),text_size=size.small)
 
-    // ── Rodape: contagem ─────────────────────────────────
-    _fBg = color.new(color.rgb(10, 18, 52), 0)
-    _pL  = str.tostring(_metL) + " / " + str.tostring(_nR)
-    _pS  = str.tostring(_metS) + " / " + str.tostring(_nR)
-    _cPL = _metL >= _nR - 2 ? color.lime
-         : _metL >= int(_nR * 0.65) ? color.yellow
-         : color.red
-    _cPS = _metS >= _nR - 2 ? color.lime
-         : _metS >= int(_nR * 0.65) ? color.yellow
-         : color.red
+    table.cell(T,0,18,"Sweep de liquidez",         bgcolor=bB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,18,"",                          bgcolor=bB,text_color=color.gray,  text_size=size.tiny)
+    table.cell(T,2,18,_dLb(b18L),bgcolor=_dBg(b18L),text_color=_dTx(b18L),text_size=size.small)
+    table.cell(T,3,18,_dLb(b18S),bgcolor=_dBg(b18S),text_color=_dTx(b18S),text_size=size.small)
 
-    table.cell(_tbl, 0, _nR + 1, "PRONTOS",
-         bgcolor=_fBg, text_color=color.white, text_size=size.small, text_halign=text.align_left)
-    table.cell(_tbl, 1, _nR + 1, "",
-         bgcolor=_fBg, text_color=color.white, text_size=size.small)
-    table.cell(_tbl, 2, _nR + 1, _pL,
-         bgcolor=_fBg, text_color=_cPL, text_size=size.normal)
-    table.cell(_tbl, 3, _nR + 1, _pS,
-         bgcolor=_fBg, text_color=_cPS, text_size=size.normal)
+    table.cell(T,0,19,"Score >= |40|",             bgcolor=aB,text_color=color.silver,text_size=size.tiny,text_halign=text.align_left)
+    table.cell(T,1,19,v19,bgcolor=aB,text_color=color.gray,text_size=size.tiny)
+    table.cell(T,2,19,_dLb(b19L),bgcolor=_dBg(b19L),text_color=_dTx(b19L),text_size=size.small)
+    table.cell(T,3,19,_dLb(b19S),bgcolor=_dBg(b19S),text_color=_dTx(b19S),text_size=size.small)
+
+    // Rodapé: contagem total
+    pL  = str.tostring(mL) + " / 19"
+    pS  = str.tostring(mS) + " / 19"
+    cPL = mL >= 17 ? color.lime : mL >= 12 ? color.yellow : color.red
+    cPS = mS >= 17 ? color.lime : mS >= 12 ? color.yellow : color.red
+
+    table.cell(T,0,20,"PRONTOS",bgcolor=fB,text_color=color.white, text_size=size.small,text_halign=text.align_left)
+    table.cell(T,1,20,"",       bgcolor=fB,text_color=color.white, text_size=size.small)
+    table.cell(T,2,20,pL,       bgcolor=fB,text_color=cPL,         text_size=size.normal)
+    table.cell(T,3,20,pS,       bgcolor=fB,text_color=cPS,         text_size=size.normal)
