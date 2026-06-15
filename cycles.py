@@ -412,24 +412,14 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], f"mercado RSI<{_rsi_medio:.0f}"))
                 continue
 
-            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"], score_inst, result.get("rvol", 1.0)):
-                log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto (inst={score_inst} rvol={result.get('rvol',1):.1f})")
+            # H4 oposto: SCOUT_FLEX conta como sinal_forte (60+ é suficiente para bypassar H4 leve)
+            _h4_rvol = result.get("rvol", 1.0)
+            _h4_inst = score_inst if fonte == "PREMIUM" else max(score_inst, 65)
+            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"], _h4_inst, _h4_rvol):
+                log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 forte oposto (inst={score_inst})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"H4 oposto (inst={score_inst})"))
+                                   result["rsi"], result["adx"], f"H4 forte oposto"))
                 continue
-
-            # BTC no TF atual: SCOUT_FLEX obriga alinhamento direcional com BTC
-            if fonte in ("SCOUT_FLEX",):
-                if eh_long_ and not _btc15_bull:
-                    log.info(f"  🚫 {abrev} [{tf}] {fonte} LONG bloq — BTC {tf} não bull")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"BTC não bull"))
-                    continue
-                if not eh_long_ and not _btc15_bear:
-                    log.info(f"  🚫 {abrev} [{tf}] {fonte} SHORT bloq — BTC {tf} não bear")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"BTC não bear"))
-                    continue
 
             chave_dir = f"{sym}_{tf}_{result['sinal']}"
             chave_any = f"{sym}_{tf}"
