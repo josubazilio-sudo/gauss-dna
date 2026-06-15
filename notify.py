@@ -143,9 +143,16 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         label_stop = f"{mult_atr:.1f} ATR"
 
     risco = abs(preco - stop)
+    # Rede de segurança: mínimo 0.5% para não gerar TP acima do fill do usuário
+    _risco_min = preco * 0.005
+    if 0 < risco < _risco_min:
+        risco = _risco_min
+        stop = preco - risco if eh_long else preco + risco
+        label_stop = "Min 0.5%"
     if risco <= 0:
         log.warning(f"⚠️ {abrev} risco=0 (stop={stop:.8f} == preco={preco:.8f}) — sinal ignorado")
         return False
+    _risco_pct = risco / preco * 100
 
     # ── Alvos base por grade e tipo de sinal ─────────────────────────────────
     if fonte == "SCOUT":
@@ -317,7 +324,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"{linha_liq}"
         f"\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
-        f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}`\n"
+        f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}` · R\\={_escapar(f'{_risco_pct:.1f}')}%\n"
         f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
         f"🎯 TP2 \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n"
         f"\n"

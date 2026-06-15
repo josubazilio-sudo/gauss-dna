@@ -395,6 +395,11 @@ async def executar_ciclo(session, estado, tf, moedas):
         if atr_pct > _atr_limite:
             log.info(f"[{tf}] {abrev:7s} | ATR {atr_pct:.1f}% > {_atr_limite:.0f}% — muito volátil, ignorando")
             continue
+        if FILTER_LEVEL >= 1 and atr_pct < 0.30:
+            log.info(f"[{tf}] {abrev:7s} | ATR {atr_pct:.2f}% < 0.30% — stop justo demais, TPs inválidos no fill")
+            candidatos.append((abs(result["score"]), abrev, result["score"],
+                               result["rsi"], result["adx"], f"ATR justo {atr_pct:.2f}%"))
+            continue
 
         log.info(f"[{tf}] {abrev:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | "
                  f"ADX {result['adx']:5.1f} | K:{'UP' if result['kalman_subindo'] else 'DN'} | "
