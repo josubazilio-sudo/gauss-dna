@@ -413,18 +413,15 @@ async def executar_ciclo(session, estado, tf, moedas):
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
 
-            # Pump extremo: RVOL ≥3x (tier 4) → sinais normais bloqueados.
-            # Só especialistas operam em pump/dump: PUMP, DUMP, SURGE, BREAKOUT, REVERSAL, SM_SWEEP.
+            # Pump extremo: RVOL ≥3x (tier 4) → SCOUT_FLEX bloqueado
             _pump_tier = result.get("rvol_tier_max2", 0)
-            _sinais_pump_veto = {"SCOUT", "FLEX", "SETUP", "DIV", "REBOUND", "CROSS"}
-            if _pump_tier >= 4 and fonte in _sinais_pump_veto:
+            if _pump_tier >= 4 and fonte == "SCOUT_FLEX":
                 log.info(f"  🚫 {abrev} [{tf}] {fonte} vetado — pump extremo (RVOL tier {_pump_tier}=3x+)")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"pump_veto({fonte})"))
                 continue
 
-            # Sinais de reversão extrema têm piso de score menor (mercado em pânico/euforia)
-            _score_min = 20 if fonte == "DUMP" else 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV", "CORE") else 35 if fonte in ("BREAKOUT", "PUMP") else 40
+            _score_min = 40
             if abs(result["score"]) < _score_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {_score_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -447,16 +444,11 @@ async def executar_ciclo(session, estado, tf, moedas):
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
             # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
-            _inst_min = (0   if FILTER_LEVEL <= 0 else
-                         35  if fonte == "CORE" else
-                         40  if fonte == "DUMP" else
-                         50  if fonte in ("REVERSAL", "DIV") else
-                         55  if fonte == "BB_BREAK" else
-                         65  if fonte in ("FLEX", "SM_SWEEP", "MOMENTUM") else
-                         75  if fonte in ("SCOUT", "SURGE", "BREAKOUT", "PUMP") else
-                         55)  # SETUP, PULLBACK, CROSS, REBOUND
+            _inst_min = (0  if FILTER_LEVEL <= 0 else
+                         70 if fonte == "PREMIUM" else
+                         60)  # SCOUT_FLEX
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
-                _inst_min = min(_inst_min + 10, 70)   # sessão perigosa: +10 pts (cap 70)
+                _inst_min = max(_inst_min, 70)
             # Ajuste profissional: funding rate e OI alinhados confirmam smart money
             _fr = result.get("funding_rate") or 0
             _oi = oi_change.get(sym, 0) or 0
@@ -473,14 +465,28 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue
 
+            # Filtro de mercado: RSI médio > 70 bloqueia PREMIUM LONG
+            _rsi_vals_diag = [c[3] for c in _diag_buffer["candidatos"]] if _diag_buffer["candidatos"] else []
+            _rsi_medio = sum(_rsi_vals_diag) / len(_rsi_vals_diag) if _rsi_vals_diag else 50
+            if fonte == "PREMIUM" and result["sinal"] == "LONG" and _rsi_medio > 70:
+                log.info(f"  🌡️ {abrev} PREMIUM LONG bloqueado — RSI médio mercado {_rsi_medio:.0f}>70")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], f"mercado RSI>{_rsi_medio:.0f}"))
+                continue
+            if fonte == "PREMIUM" and result["sinal"] == "SHORT" and _rsi_medio < 30:
+                log.info(f"  🌡️ {abrev} PREMIUM SHORT bloqueado — RSI médio mercado {_rsi_medio:.0f}<30")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], f"mercado RSI<{_rsi_medio:.0f}"))
+                continue
+
             if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"], score_inst, result.get("rvol", 1.0)):
                 log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto (inst={score_inst} rvol={result.get('rvol',1):.1f})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"H4 oposto (inst={score_inst})"))
                 continue
 
-            # BTC no TF atual: BREAKOUT, SURGE, SCOUT obrigam alinhamento direcional com BTC
-            if fonte in ("BREAKOUT", "SURGE", "SCOUT"):
+            # BTC no TF atual: SCOUT_FLEX obriga alinhamento direcional com BTC
+            if fonte in ("SCOUT_FLEX",):
                 if eh_long_ and not _btc15_bull:
                     log.info(f"  🚫 {abrev} [{tf}] {fonte} LONG bloq — BTC {tf} não bull")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -508,16 +514,13 @@ async def executar_ciclo(session, estado, tf, moedas):
                 continue
 
             eh_long  = result["sinal"] == "LONG"
-            pct_risco = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
-            # Sinais de alta volatilidade: capa risco em 2%
-            if fonte in ("SURGE", "BREAKOUT", "PUMP", "DUMP"):
-                pct_risco = min(pct_risco, 0.02)  # risco máx 2% — moves rápidos e violentos
+            pct_risco = (0.02 if fonte == "PREMIUM" else 0.01)  # PREMIUM 2%, SCOUT_FLEX 1%
 
             if risco_ciclo + pct_risco > MAX_CYCLE_RISK:
                 log.info(f"  🛑 {abrev} bloqueado — risco ciclo {risco_ciclo*100:.0f}%+{pct_risco*100:.0f}% > teto")
                 continue
-            if fonte == "SCOUT" and scouts_enviados >= MAX_SCOUT_PER_CYCLE:
-                log.info(f"  🔵 {abrev} SCOUT bloqueado — limite {MAX_SCOUT_PER_CYCLE}/ciclo")
+            if fonte == "SCOUT_FLEX" and scouts_enviados >= MAX_SCOUT_PER_CYCLE:
+                log.info(f"  🔵 {abrev} SCOUT_FLEX bloqueado — limite {MAX_SCOUT_PER_CYCLE}/ciclo")
                 continue
             if eh_long and longs_enviados >= MAX_LONG_PER_CYCLE:
                 log.info(f"  📊 {abrev} LONG bloqueado — correlação ({MAX_LONG_PER_CYCLE}/ciclo)")
@@ -577,77 +580,6 @@ async def executar_ciclo(session, estado, tf, moedas):
             if _aber_falsa:
                 _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
 
-            # FLEX: qualidade equilibrada — aberto mas com DNA/Trendilo, RVOL, RSI e estrutura
-            if fonte == "FLEX" and FILTER_LEVEL >= 1:
-                _rsi_flex  = result.get("rsi", 50)
-                _rvol_flex = result.get("rvol", 0.0)
-                _adx_flex  = result.get("adx", 0)
-                _obv_bull  = result.get("obv_bull", False)
-                _obv_bear  = result.get("obv_bear", False)
-                _preco_f   = result.get("preco", 0)
-                _e50_f     = result.get("e50", 0)
-                _tbull     = result.get("tbull_loose", False)
-                _tbear     = result.get("tbear_loose", False)
-                _liq_t_f   = result.get("liq_topo", False)
-                _liq_f_f   = result.get("liq_fundo", False)
-                _bloq_flex = []
-                # Critérios comuns LONG e SHORT
-                if _rvol_flex < 1.5:
-                    _bloq_flex.append(f"RVOL {_rvol_flex:.2f}x<1.5")
-                if _adx_flex < 18:
-                    _bloq_flex.append(f"ADX {_adx_flex:.0f}<18")
-                if not _dna and not _trl:
-                    _bloq_flex.append("sem DNA Flow nem Trendilo")
-                if eh_long:
-                    # RSI 40–60, bloquear >65
-                    if not (40 <= _rsi_flex <= 60) or _rsi_flex > 65:
-                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 40-60 (LONG)")
-                    if _e50_f > 0 and _preco_f < _e50_f:
-                        _bloq_flex.append("preco abaixo MM50")
-                    if not _tbull:
-                        _bloq_flex.append("MM10>MM21>MM50 nao alinhada")
-                    if not _obv_bull:
-                        _bloq_flex.append("OBV nao positivo")
-                    if _liq_t_f:
-                        _bloq_flex.append("resistencia <1ATR (liq topo)")
-                else:
-                    # RSI 40–60, bloquear <35
-                    if not (40 <= _rsi_flex <= 60) or _rsi_flex < 35:
-                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 40-60 (SHORT)")
-                    if _e50_f > 0 and _preco_f > _e50_f:
-                        _bloq_flex.append("preco acima MM50")
-                    if not _tbear:
-                        _bloq_flex.append("MM10<MM21<MM50 nao alinhada")
-                    if not _obv_bear:
-                        _bloq_flex.append("OBV nao negativo")
-                    if _liq_f_f:
-                        _bloq_flex.append("suporte <1ATR (liq fundo)")
-                if _bloq_flex:
-                    log.info(f"  🚫 {abrev} FLEX bloqueado — {' | '.join(_bloq_flex)}")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"FLEX({_bloq_flex[0]})"))
-                    continue
-
-            # SURGE / BREAKOUT / PUMP: nível pesado — RVOL≥2.5x, RSI 45-65, DNA obrigatório
-            if fonte in ("SURGE", "BREAKOUT", "PUMP") and FILTER_LEVEL >= 1:
-                _rsi_exp   = result.get("rsi", 50)
-                _rvol_exp  = result.get("rvol", 0.0)
-                _adx_exp   = result.get("adx", 0)
-                _bloq_exp  = []
-                if _rvol_exp < 2.5:
-                    _bloq_exp.append(f"RVOL {_rvol_exp:.2f}x<2.5")
-                if _adx_exp < 22:
-                    _bloq_exp.append(f"ADX {_adx_exp:.0f}<22")
-                if not (45 <= _rsi_exp <= 65):
-                    _bloq_exp.append(f"RSI {_rsi_exp:.0f} fora 45-65")
-                if not _dna:
-                    _bloq_exp.append("DNA Flow ausente")
-                if _bloq_exp:
-                    log.info(f"  🚫 {abrev} {fonte} bloqueado — {' | '.join(_bloq_exp)}")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"{fonte}({_bloq_exp[0]})"))
-                    continue
-
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
                 "rvol":         _rvol,
@@ -660,6 +592,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                 "funding_rate": result.get("funding_rate"),
                 "oi_change":    oi_change.get(sym),
                 "armadilha":    _armadilha,
+                "confianca":    result.get("confianca", 0),
+                "scout_score":  result.get("scout_score_long" if eh_long else "scout_score_short", 0),
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],
@@ -672,7 +606,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                 estado[chave_any] = agora
                 salvar_estado(estado)
                 risco_ciclo   += pct_risco
-                scouts_enviados += 1 if fonte == "SCOUT" else 0
+                scouts_enviados += 1 if fonte == "SCOUT_FLEX" else 0
                 longs_enviados  += 1 if eh_long else 0
                 shorts_enviados += 0 if eh_long else 1
                 enviados += 1
