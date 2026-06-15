@@ -200,7 +200,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     final = preco + risco * r_final if eh_long else preco - risco * r_final
 
     # ── Tamanho da posição ────────────────────────────────────────────────────
-    pct_risco    = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
+    if fonte == "PREMIUM":
+        pct_risco = 0.03 if grade == "S+" else 0.02 if grade == "S" else 0.01
+    elif fonte == "SCOUT":
+        pct_risco = RISK_SCOUT
+    else:
+        pct_risco = RISK_BY_GRADE.get(grade, RISK_PCT)
     if fonte in ("SURGE", "PUMP", "DUMP"):
         pct_risco = min(pct_risco, 0.02)
     valor_risco  = CAPITAL * pct_risco
@@ -214,7 +219,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     elif score_inst < 55:  _lev -= 2   # institucional fraco
     if rvol_val >= 1.5:    _lev += 1   # volume muito acima da média
     elif rvol_val < 0.80:  _lev -= 1   # volume fraco
-    if fonte == "SCOUT":                 _lev = min(_lev, 5)   # sinal secundário: teto 5x
+    if fonte == "PREMIUM":               _lev = min(_lev, 15)  # institucional: risco menor, cap 15x
+    elif fonte == "SCOUT":               _lev = min(_lev, 5)   # sinal secundário: teto 5x
     elif fonte == "MOMENTUM":           _lev = min(_lev, 10)  # momentum rápido: teto 10x
     elif fonte == "SURGE":              _lev = min(_lev, 12)  # breakout explosivo: teto 12x
     elif fonte in ("BREAKOUT", "PUMP"): _lev = min(_lev, 10)  # breakout nascente: teto 10x
@@ -228,6 +234,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     # ── Labels de modo ────────────────────────────────────────────────────────
     tf_lbl = _label_tf(tf)
     modos = {
+        "PREMIUM":   "🏆 PREMIUM INSTITUCIONAL",
         "CORE":      "🏛 DNA CORE",
         "BREAKOUT":  "🔥 BREAKOUT INICIAL",
         "PUMP":      "🌋 PUMP DETECTADO",

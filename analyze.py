@@ -347,6 +347,8 @@ def calcular_indicadores(candles):
     raw_c48 = [c["c"] for c in candles[-50:-1]]
     nao_overext_long  = (preco - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.50
     nao_overext_short = (max(raw_c48) - preco) / max(max(raw_c48), 1e-10) < 0.50
+    nao_pump8 = (preco - min(raw_c48)) / max(min(raw_c48), 1e-10) < 0.08
+    nao_dump8 = (max(raw_c48) - preco) / max(max(raw_c48), 1e-10) < 0.08
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
@@ -442,7 +444,7 @@ def calcular_indicadores(candles):
         "pdi": pdi, "mdi": mdi, "adx_long_ok": adx_long_ok, "adx_short_ok": adx_short_ok,
         "adx_p": adx_p, "adx_subindo": adx > adx_p,
         # Volume
-        "rvol": rvol, "rvol_tier": rvol_tier, "rvol_tier_max2": rvol_tier_max2, "rvol_label": rvol_label,
+        "rvol": rvol, "rvol_max2": rvol_max2, "rvol_tier": rvol_tier, "rvol_tier_max2": rvol_tier_max2, "rvol_label": rvol_label,
         "v_bom": v_bom, "v_forte": v_forte, "v_inst": v_inst, "v_forte2": v_forte2,
         "vol_ma": vol_ma, "volumes": volumes, "vol_nao_fade": vol_nao_fade,
         "flex_vol_ok": flex_vol_ok, "flex_vol_ok_s": flex_vol_ok_s,
@@ -480,6 +482,7 @@ def calcular_indicadores(candles):
         "nao_ext_long": nao_ext_long, "nao_ext_short": nao_ext_short,
         "nao_ext_long_tight": nao_ext_long_tight, "nao_ext_short_tight": nao_ext_short_tight,
         "nao_overext_long": nao_overext_long, "nao_overext_short": nao_overext_short,
+        "nao_pump8": nao_pump8, "nao_dump8": nao_dump8,
         # Cruzamentos
         "algum_cross_bull": algum_cross_bull, "algum_cross_bear": algum_cross_bear,
         "label_cross": label_cross,
@@ -510,6 +513,32 @@ def calcular_indicadores(candles):
 def detectar_sinais(ind):
     """Aplica toda a lógica de sinais sobre os indicadores calculados. Retorna (sinal, fonte)."""
     i = ind  # alias curto
+
+    # ── PREMIUM — Alta qualidade institucional, sem sufoco ───────────────────
+    # Score inst ≥ 70, ADX ≥ 25, RVOL ≥ 2x, tendência completa, fluxo+SM+OBV, RSI 45-60
+    _prem_atr_ok  = i["atr"] / max(i["preco"], 1e-10) < 0.06
+    _prem_sm_long  = i["sm_bull"] or (i["liq_fundo_hist10"] and i["absorb_bull"])
+    _prem_sm_short = i["sm_bear"] or (i["liq_topo_hist10"]  and i["absorb_bear"])
+    long_premium = (
+        i["score_inst_long"] >= 70 and
+        i["adx"] >= 25 and i["rvol_max2"] >= 2.0 and _prem_atr_ok and
+        i["e10"] > i["e21"] and i["e21"] > i["e50"] and
+        i["preco"] > i["e50"] and i["preco"] > i["e200"] and
+        i["kalman_subindo"] and i["trendilo_long"] and
+        i["dna_flow_bull"] and _prem_sm_long and i["obv_bull"] and
+        45 <= i["rsi"] <= 60 and
+        not i["liq_topo"] and i["nao_pump8"] and i["seguro_long"]
+    )
+    short_premium = (
+        i["score_inst_short"] >= 70 and
+        i["adx"] >= 25 and i["rvol_max2"] >= 2.0 and _prem_atr_ok and
+        i["e10"] < i["e21"] and i["e21"] < i["e50"] and
+        i["preco"] < i["e50"] and i["preco"] < i["e200"] and
+        not i["kalman_subindo"] and i["trendilo_short"] and
+        i["dna_flow_bear"] and _prem_sm_short and i["obv_bear"] and
+        40 <= i["rsi"] <= 55 and
+        not i["liq_fundo"] and i["nao_dump8"] and i["seguro_short"]
+    )
 
     # ── ELITE ────────────────────────────────────────────────────────────────
     long_elite = (i["tendencia_forte"] and i["tendencia_bull"] and i["alinhado_bull"] and
@@ -801,6 +830,8 @@ def detectar_sinais(ind):
         elif short_elite or early_short: sinal = "SHORT"; fonte = "ELITE"
     else:
         ordem = [
+            (long_premium,    "LONG",  "PREMIUM"),
+            (short_premium,   "SHORT", "PREMIUM"),
             (long_pullback,  "LONG",  "PULLBACK"),
             (short_pullback, "SHORT", "PULLBACK"),
             (long_core,       "LONG",  "CORE"),
