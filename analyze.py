@@ -111,8 +111,8 @@ def calcular_indicadores(candles):
         stoch_rsi = (_r14[-1] - _rmin) / (_rmax - _rmin) if _rmax > _rmin else 0.5
     else:
         stoch_rsi = 0.5
-    stoch_esticado_up   = stoch_rsi > 0.80 and rsi > 58   # só bloqueia LONG quando RSI também está elevado
-    stoch_esticado_down = stoch_rsi < 0.05 and rsi < 42   # só bloqueia SHORT quando RSI também está deprimido
+    stoch_esticado_up   = stoch_rsi > 0.95                 # bloqueia apenas extremo absoluto
+    stoch_esticado_down = stoch_rsi < 0.05 and rsi < 30   # bloqueia apenas extremo + RSI fundo
 
     # DMI / ADX
     pdi, mdi, adx, adx_p = calcular_adx(candles[-60:])
@@ -216,6 +216,9 @@ def calcular_indicadores(candles):
     sombra_inf = (min(aberturas[-1], preco) - minimas[-1]) / max(range_vela, 1e-10)
     exaustao_topo = sombra_sup > 0.40 and preco < (maximas[-1] - bb_range * 0.02)
     exaustao_fund = sombra_inf > 0.40 and preco > (minimas[-1] + bb_range * 0.02)
+    # Exaustão EXTREMA: só bloqueia quando a combinação completa está presente
+    exaustao_ext_long  = exaustao_topo and rsi > 75 and stoch_rsi > 0.95 and ext_acima_e21
+    exaustao_ext_short = exaustao_fund and rsi < 25 and stoch_rsi < 0.05 and ext_abaixo_e21
 
     bulls_5 = sum(1 for i in range(-5, 0) if fechamentos[i] > e21_arr[i])
     tend_consistente_bull = bulls_5 >= 4
@@ -308,17 +311,16 @@ def calcular_indicadores(candles):
     tbear_loose = e10 < e21 and e21 < e50
 
     # Filtros de segurança compostos
-    # Anti-pump: RSI disparou >15 pts em 3 velas E já está rente ao teto de 55 — não perseguir
-    # (apenas para LONG — o SHORT oposto não se aplica: RSI caindo de 65→47 É um bom SHORT)
-    pump_rsi_spike_long  = (rsi - rsi_ant) > 15 and rsi > 54
-    dump_rsi_spike_short = (rsi_ant - rsi) > 15 and rsi < 41  # apenas caso extremo já próximo do piso 40
+    # Anti-pump extremo: RSI disparou >20 pts E já está em zona avançada — não perseguir rally extremo
+    pump_rsi_spike_long  = (rsi - rsi_ant) > 20 and rsi > 68
+    dump_rsi_spike_short = (rsi_ant - rsi) > 20 and rsi < 30  # apenas dump extremo
 
-    rsi_nao_topo   = rsi < 70
-    rsi_nao_fundo  = rsi > 27
-    seguro_long  = (not perto_bb_topo and not ext_acima_e21 and not vol_secando and
-                    not exaustao_topo and rsi_nao_topo and not stoch_esticado_up and
-                    not pump_rsi_spike_long)
-    seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and
+    rsi_nao_topo   = rsi < 75
+    rsi_nao_fundo  = rsi > 25
+    # FLEX PRO: seguro só bloqueia extremos reais, não correções normais
+    seguro_long  = (not exaustao_ext_long and rsi_nao_topo and
+                    not stoch_esticado_up and not pump_rsi_spike_long)
+    seguro_short = (not exaustao_ext_short and rsi_nao_fundo and
                     not stoch_esticado_down)
 
     # Volume FLEX
@@ -348,11 +350,9 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI zona de entrada — corte rígido sem exceção, aplicado a todos os tipos de sinal
-    # LONG: RSI < 55 (não comprar topo — restaurado 14/06)
-    # SHORT: RSI > 40 (não vender fundo)
-    rsi_zona_long  = rsi < 55
-    rsi_zona_short = rsi > 40
+    # RSI zona de entrada — FLEX PRO: bloqueia apenas extremos (>75 LONG, <25 SHORT)
+    rsi_zona_long  = rsi < 75
+    rsi_zona_short = rsi > 25
     rsi_entrada_long  = rsi >= 45   # RSI mínimo para entrar LONG (diagnóstico)
     rsi_entrada_short = rsi <= 55   # RSI máximo para entrar SHORT (diagnóstico)
 
@@ -476,6 +476,7 @@ def calcular_indicadores(candles):
         "sm_bull": sm_bull, "sm_bear": sm_bear,
         "absorb_bull": absorb_bull, "absorb_bear": absorb_bear,
         "exaustao_topo": exaustao_topo, "exaustao_fund": exaustao_fund,
+        "exaustao_ext_long": exaustao_ext_long, "exaustao_ext_short": exaustao_ext_short,
         "nao_ext_long": nao_ext_long, "nao_ext_short": nao_ext_short,
         "nao_ext_long_tight": nao_ext_long_tight, "nao_ext_short_tight": nao_ext_short_tight,
         "nao_overext_long": nao_overext_long, "nao_overext_short": nao_overext_short,
@@ -538,19 +539,19 @@ def detectar_sinais(ind):
     # ── FLEX — pullback ───────────────────────────────────────────────────────
     tbull_r = i["tbull_r"]; tbear_r = i["tbear_r"]
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
-                      i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
+                      i["dna_flex_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
                       i["rsi_zona_long"] and i["score_inst_long"] >= 50 and
                       i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"])
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
-                      i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
+                      i["dna_flex_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
                       i["rsi_zona_short"] and i["score_inst_short"] >= 50 and
                       i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"])
 
     # ── Cross ─────────────────────────────────────────────────────────────────
-    long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
+    long_cross  = (i["algum_cross_bull"] and i["dna_flex_bull"] and i["adx_long_ok"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]))
-    short_cross = (i["algum_cross_bear"] and i["dna_flow_bear"] and i["adx_short_ok"] and
+    short_cross = (i["algum_cross_bear"] and i["dna_flex_bear"] and i["adx_short_ok"] and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
@@ -708,13 +709,13 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
+    long_flex  = (i["score"] >= 40 and i["adx"] >= 18 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
-    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
+    short_flex = (i["score"] <= -40 and i["adx"] >= 18 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
@@ -722,19 +723,19 @@ def detectar_sinais(ind):
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
-    long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > 18 and
-                   i["obv_bull"] and i["v_bom"] and i["acima_vwap"] and not i["lateralizado"] and
+    long_setup  = (i["score"] > 50 and i["macd_recuperando"] and i["adx"] > 18 and
+                   i["obv_bull"] and i["v_bom"] and not i["lateralizado"] and
                    i["nao_ext_long_tight"] and i["seguro_long"] and (i["liq_long"] or i["liq_fundo"]) and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"])
-    short_setup = (i["score"] < -50 and i["ha_bear2"] and i["macd_esgotando"] and i["adx"] > 18 and
-                   i["obv_bear"] and i["v_bom"] and i["abaixo_vwap"] and not i["lateralizado"] and
+    short_setup = (i["score"] < -50 and i["macd_esgotando"] and i["adx"] > 18 and
+                   i["obv_bear"] and i["v_bom"] and not i["lateralizado"] and
                    i["nao_ext_short_tight"] and i["seguro_short"] and (i["liq_short"] or i["liq_topo"]) and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"])
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
     # FL=3: critérios institucionais rígidos — cada gate abaixo é obrigatório
     _sc_min  = 25 if _FLV <= 0 else 40
-    _adx_min = 10 if _FLV <= 0 else (25 if _FLV >= 3 else 15)   # FL=3: ADX>=25
+    _adx_min = 10 if _FLV <= 0 else (25 if _FLV >= 3 else 18)   # FL=3: ADX>=25; FL=1-2: ADX>=18
     _rvol_scout = 2.0 if _FLV >= 3 else 0.0                      # FL=3: RVOL>=2.0 (VSTRONG)
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
@@ -754,14 +755,14 @@ def detectar_sinais(ind):
     # FL=3: filtro baleia — liquidez histórica de fundo/topo
     _whale_l = (i["liq_fundo_hist10"] or not i["liq_topo_hist5"]) if _FLV >= 3 else True
     _whale_s = (i["liq_topo_hist10"] or not i["liq_fundo_hist5"]) if _FLV >= 3 else True
-    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
+    long_scout  = (i["score"] >= _sc_min and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and _scout_rsi_l and _no_liq_topo and
                    i["rvol"] >= _rvol_scout and _scout_trend_l and _scout_qual_l and
                    _scout_dist_l and _whale_l and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
-    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
+    short_scout = (i["score"] <= -_sc_min and i["adx"] >= _adx_min and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and _scout_rsi_s and _no_liq_fund and
@@ -924,13 +925,10 @@ def analisar(simbolo, candles, funding_rate=None):
             if ind["lateralizado"]:     b.append("lateral")
             if not ind["seguro_long"]:
                 _sg = []
-                if ind["perto_bb_topo"]:       _sg.append("bb_topo")
-                if ind["ext_acima_e21"]:        _sg.append("ext_e21")
-                if ind["vol_secando"]:          _sg.append("vol_sec")
-                if ind.get("exaustao_topo"):    _sg.append("exaustao")
-                if ind["rsi"] >= 70:            _sg.append(f"rsi={ind['rsi']:.0f}")
-                if ind["stoch_esticado_up"]:    _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
-                if ind.get("pump_rsi_spike_long"): _sg.append(f"pump_rsi(+{ind['rsi']-ind['rsi_ant']:.0f}pt)")
+                if ind.get("exaustao_ext_long"):   _sg.append("exaustao_ext")
+                if ind["rsi"] >= 75:               _sg.append(f"rsi={ind['rsi']:.0f}")
+                if ind["stoch_esticado_up"]:       _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                if ind.get("pump_rsi_spike_long"):  _sg.append(f"pump_rsi(+{ind['rsi']-ind['rsi_ant']:.0f}pt)")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
             if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
@@ -944,11 +942,9 @@ def analisar(simbolo, candles, funding_rate=None):
             if ind["lateralizado"]:      b.append("lateral")
             if not ind["seguro_short"]:
                 _sg = []
-                if ind["vol_secando"]:          _sg.append("vol_sec")
-                if ind.get("exaustao_fund"):     _sg.append("exaustao")
-                if ind["rsi"] <= 27:            _sg.append(f"rsi={ind['rsi']:.0f}")
-                if ind["stoch_esticado_down"]:  _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
-                if ind.get("dump_rsi_spike_short"): _sg.append(f"dump_rsi(-{ind['rsi_ant']-ind['rsi']:.0f}pt)")
+                if ind.get("exaustao_ext_short"):  _sg.append("exaustao_ext")
+                if ind["rsi"] <= 25:               _sg.append(f"rsi={ind['rsi']:.0f}")
+                if ind["stoch_esticado_down"]:      _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
                 b.append(f"seguro=F({','.join(_sg) or '?'})")
             if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])

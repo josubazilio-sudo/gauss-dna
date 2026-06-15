@@ -28,22 +28,21 @@
 **Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.**
 
 ### LONG (compra):
-- RSI deve ser **< 55** no momento do sinal *(restaurado 14/06 — era 60 desde 10/06)*
-- Objetivo: entrar com espaço para subir, longe de sobrecomprado
+- RSI deve ser **< 75** no momento do sinal *(FLEX PRO — autorizado 15/06)*
+- Objetivo: bloquear apenas extremo sobrecomprado (>75), permite entradas em tendência 55-74
 
 ### SHORT (venda):
-- RSI deve ser **> 40** no momento do sinal *(autorizado 10/06 — era 45)*
-- Objetivo: entrar com espaço para cair (40 captura sinais fracos pós-dump)
+- RSI deve ser **> 25** no momento do sinal *(FLEX PRO — autorizado 15/06)*
+- Objetivo: bloquear apenas extremo sobrevendido (<25), permite entradas em correção 26-40
 
 ### Aplicação:
 - Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP, SURGE, MOMENTUM, REVERSAL, REBOUND, **CORE** (própria janela: 45-58 L / 42-55 S)
-- Exceções já existentes: REVERSAL (RSI < 30 LONG / > 70 SHORT), MOMENTUM (janela rsi_fresh 65/42), SURGE (cap 22/78 — breakouts movem RSI junto)
 - Implementado em `analyze.py` como `rsi_zona_long` e `rsi_zona_short`
 
 ```python
-# analyze.py — restaurado 14/06 (era 60 LONG, 40 SHORT — rsi_zona_long < 55)
-rsi_zona_long  = rsi < 55
-rsi_zona_short = rsi > 40
+# analyze.py — FLEX PRO 15/06 (bloqueia apenas extremos absolutos)
+rsi_zona_long  = rsi < 75
+rsi_zona_short = rsi > 25
 ```
 
 ---
