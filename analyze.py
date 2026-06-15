@@ -35,7 +35,6 @@ def calcular_indicadores(candles):
     aberturas   = [c["o"] for c in ha]
     volumes          = [c["v"] for c in candles]   # volume real
     fechamentos_reais = [c["c"] for c in candles]  # closes reais (para OBV)
-    aberturas_reais  = [c["o"] for c in candles]
     preco            = candles[-1]["c"]             # preço real para stops e entradas
 
     # EMAs com valores anteriores para detectar cruzamentos
@@ -363,45 +362,6 @@ def calcular_indicadores(candles):
     surge_break_h   = preco > max(maximas[-11:-1])
     surge_break_l   = preco < min(minimas[-11:-1])
 
-    # Anti-FOMO
-    tres_bull_exp = (
-        aberturas_reais[-3] < fechamentos_reais[-3] and fechamentos_reais[-3] - aberturas_reais[-3] > atr * 0.35 and
-        aberturas_reais[-2] < fechamentos_reais[-2] and fechamentos_reais[-2] - aberturas_reais[-2] > atr * 0.35 and
-        aberturas_reais[-1] < fechamentos_reais[-1] and fechamentos_reais[-1] - aberturas_reais[-1] > atr * 0.35
-    ) if n >= 4 else False
-    tres_bear_exp = (
-        aberturas_reais[-3] > fechamentos_reais[-3] and aberturas_reais[-3] - fechamentos_reais[-3] > atr * 0.35 and
-        aberturas_reais[-2] > fechamentos_reais[-2] and aberturas_reais[-2] - fechamentos_reais[-2] > atr * 0.35 and
-        aberturas_reais[-1] > fechamentos_reais[-1] and aberturas_reais[-1] - fechamentos_reais[-1] > atr * 0.35
-    ) if n >= 4 else False
-    preco_longe_e21_up   = preco > e21 * 1.05
-    preco_longe_e21_down = preco < e21 * 0.95
-    vol_crescente = volumes[-1] > volumes[-2] if n >= 2 else False
-
-    # Scout FLEX score (5 de 8 itens)
-    _rompimento_rec_l = surge_break_h
-    _rompimento_rec_s = surge_break_l
-    scout_score_long = sum([
-        dna_flow_bull,               # 1. Fluxo institucional positivo
-        obv_bull,                    # 2. OBV positivo
-        e10 > e21,                   # 3. MM10 acima de MM21
-        e21 > e50,                   # 4. MM21 acima de MM50
-        volumes[-1] > vol_ma * 0.8,  # 5. Volume crescente
-        tbull_r,                     # 6. Estrutura de alta preservada
-        _rompimento_rec_l,           # 7. Rompimento recente
-        ha_bull,                     # 8. HA Bull
-    ])
-    scout_score_short = sum([
-        dna_flow_bear,               # 1. Fluxo institucional negativo
-        obv_bear,                    # 2. OBV negativo
-        e10 < e21,                   # 3. MM10 abaixo de MM21
-        e21 < e50,                   # 4. MM21 abaixo de MM50
-        volumes[-1] > vol_ma * 0.8,  # 5. Volume crescente
-        tbear_r,                     # 6. Estrutura de baixa preservada
-        _rompimento_rec_s,           # 7. Rompimento recente
-        ha_bear,                     # 8. HA Bear
-    ])
-
     # Score de mercado (-145 a +145)
     score = (
         (35 if tendencia_bull else -35 if tendencia_bear else 0) +
@@ -483,13 +443,11 @@ def calcular_indicadores(candles):
         "adx_p": adx_p, "adx_subindo": adx > adx_p,
         # Volume
         "rvol": rvol, "rvol_tier": rvol_tier, "rvol_tier_max2": rvol_tier_max2, "rvol_label": rvol_label,
-        "rvol_max2": rvol_max2,
         "v_bom": v_bom, "v_forte": v_forte, "v_inst": v_inst, "v_forte2": v_forte2,
         "vol_ma": vol_ma, "volumes": volumes, "vol_nao_fade": vol_nao_fade,
         "flex_vol_ok": flex_vol_ok, "flex_vol_ok_s": flex_vol_ok_s,
         # Flow
         "f_bull": f_bull, "f_bear": f_bear, "f_forte": f_forte,
-        "pressao_bull": pressao_bull, "pressao_bear": pressao_bear,
         "dna_flow_bull": dna_flow_bull, "dna_flow_bear": dna_flow_bear,
         "dna_flex_bull": dna_flex_bull, "dna_flex_bear": dna_flex_bear,
         # HA
@@ -536,11 +494,6 @@ def calcular_indicadores(candles):
         # Surge
         "candle_bull_pct": candle_bull_pct, "candle_bear_pct": candle_bear_pct,
         "surge_break_h": surge_break_h, "surge_break_l": surge_break_l,
-        # Anti-FOMO / Scout FLEX
-        "tres_bull_exp": tres_bull_exp, "tres_bear_exp": tres_bear_exp,
-        "preco_longe_e21_up": preco_longe_e21_up, "preco_longe_e21_down": preco_longe_e21_down,
-        "vol_crescente": vol_crescente,
-        "scout_score_long": scout_score_long, "scout_score_short": scout_score_short,
         # Institucional
         "score_inst_long": score_inst_long, "score_inst_short": score_inst_short,
         "cls_inst_long": _cls_inst(score_inst_long), "cls_inst_short": _cls_inst(score_inst_short),
@@ -555,73 +508,333 @@ def calcular_indicadores(candles):
 
 def detectar_sinais(ind):
     """Aplica toda a lógica de sinais sobre os indicadores calculados. Retorna (sinal, fonte)."""
-    i = ind
+    i = ind  # alias curto
 
-    _fluxo_inst_l = i["dna_flow_bull"] or (i["f_bull"] and i["pressao_bull"])
-    _fluxo_inst_s = i["dna_flow_bear"] or (i["f_bear"] and i["pressao_bear"])
+    # ── ELITE ────────────────────────────────────────────────────────────────
+    long_elite = (i["tendencia_forte"] and i["tendencia_bull"] and i["alinhado_bull"] and
+                  i["e200_subindo"] and i["macd_bull3"] and i["ha_bull3"] and
+                  i["f_bull"] and i["f_forte"] and i["adx_long_ok"] and
+                  i["rsi_bull_elite"] and (i["v_forte2"] or i["obv_bull"]) and i["nao_ext_long"] and
+                  i["kalman_accel_up"] and i["acima_vwap"] and i["tend_consistente_bull"] and
+                  (i["impulso_bull"] or i["liq_long"]) and i["score"] > 65 and i["seguro_long"])
 
-    # ── PREMIUM ───────────────────────────────────────────────────────────────
-    long_premium  = (i["score_inst_long"] >= 70 and
-                     45 <= i["rsi"] <= 65 and
-                     i["rvol_max2"] >= 1.8 and
-                     i["e10"] > i["e21"] and i["e21"] > i["e50"] and
-                     i["preco"] > i["e50"] and
-                     i["obv_bull"] and
-                     i["adx"] > 20 and
-                     _fluxo_inst_l and
-                     i["ha_bull"] and
-                     i["vol_crescente"] and
-                     not i["liq_topo"] and
-                     not i["lateralizado"] and
-                     not i["tres_bull_exp"] and
-                     not i["preco_longe_e21_up"])
+    short_elite = (i["tendencia_forte"] and i["tendencia_bear"] and i["alinhado_bear"] and
+                   i["e200_descendo"] and i["macd_bear3"] and i["ha_bear3"] and
+                   i["f_bear"] and i["f_forte"] and i["adx_short_ok"] and
+                   i["rsi_bear_elite"] and (i["v_forte2"] or i["obv_bear"]) and i["nao_ext_short"] and
+                   i["kalman_accel_down"] and i["abaixo_vwap"] and i["tend_consistente_bear"] and
+                   (i["impulso_bear"] or i["liq_short"]) and i["score"] < -65 and i["seguro_short"])
 
-    short_premium = (i["score_inst_short"] >= 70 and
-                     35 <= i["rsi"] <= 55 and
-                     i["rvol_max2"] >= 1.8 and
-                     i["e10"] < i["e21"] and i["e21"] < i["e50"] and
-                     i["preco"] < i["e50"] and
-                     i["obv_bear"] and
-                     i["adx"] > 20 and
-                     _fluxo_inst_s and
-                     i["ha_bear"] and
-                     i["vol_crescente"] and
-                     not i["liq_fundo"] and
-                     not i["lateralizado"] and
-                     not i["tres_bear_exp"] and
-                     not i["preco_longe_e21_down"])
+    early_long  = (i["adx_long_ok"] and (i["v_forte"] or i["obv_bull"]) and i["exaustao_venda"] and
+                   i["liq_long"] and i["absorb_bull"] and i["f_bull"] and i["tendencia_bull"] and
+                   i["e200_subindo"] and i["kalman_subindo"] and i["acima_vwap"] and
+                   i["macd_recuperando"] and i["seguro_long"])
 
-    # ── SCOUT FLEX ────────────────────────────────────────────────────────────
-    long_scout_flex  = (i["score_inst_long"] >= 60 and
-                        40 <= i["rsi"] <= 75 and
-                        i["rvol_max2"] >= 1.2 and
-                        i["adx"] > 15 and
-                        not i["lateralizado"] and
-                        not i["tres_bull_exp"] and
-                        not i["preco_longe_e21_up"] and
-                        not i["liq_topo"] and
-                        i["scout_score_long"] >= 5)
+    early_short = (i["adx_short_ok"] and (i["v_forte"] or i["obv_bear"]) and i["exaustao_compra"] and
+                   i["liq_short"] and i["absorb_bear"] and i["f_bear"] and i["tendencia_bear"] and
+                   i["e200_descendo"] and i["kalman_descendo"] and i["abaixo_vwap"] and
+                   i["macd_esgotando"] and i["seguro_short"])
 
-    short_scout_flex = (i["score_inst_short"] >= 60 and
-                        25 <= i["rsi"] <= 60 and
-                        i["rvol_max2"] >= 1.2 and
-                        i["adx"] > 15 and
-                        not i["lateralizado"] and
-                        not i["tres_bear_exp"] and
-                        not i["preco_longe_e21_down"] and
-                        not i["liq_fundo"] and
-                        i["scout_score_short"] >= 5)
+    # ── FLEX — pullback ───────────────────────────────────────────────────────
+    tbull_r = i["tbull_r"]; tbear_r = i["tbear_r"]
+    long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
+                      i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
+                      i["rsi_zona_long"] and i["score_inst_long"] >= 50 and
+                      i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"])
+    short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
+                      i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
+                      i["rsi_zona_short"] and i["score_inst_short"] >= 50 and
+                      i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"])
 
-    # ── Prioridade ────────────────────────────────────────────────────────────
+    # ── Cross ─────────────────────────────────────────────────────────────────
+    long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
+                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
+                   i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]))
+    short_cross = (i["algum_cross_bear"] and i["dna_flow_bear"] and i["adx_short_ok"] and
+                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
+                   i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
+
+    # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
+    _fluxo_min   = 0 if _FLV <= 0 else (1 if _FLV == 1 else 2)
+    _adx_sub_ok  = i["adx_subindo"] if _FLV >= 2 else True
+    _no_liq_topo = (not i["liq_topo"])  if _FLV >= 3 else True
+    _no_liq_fund = (not i["liq_fundo"]) if _FLV >= 3 else True
+
+    # ── BB Breakout ───────────────────────────────────────────────────────────
+    _rvol_bb      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
+    long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
+                      i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
+                      _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
+                      i["obv_bull"] and _no_liq_topo and
+                      i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
+    short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
+                      i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
+                      _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
+                      i["obv_bear"] and _no_liq_fund and
+                      i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
+
+    # ── Smart Money ───────────────────────────────────────────────────────────
+    long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi_zona_long"] and
+                i["preco"] > i["e200"] and i["score_inst_long"] >= 60)
+    short_sm = (i["sm_bear"] and i["rsi_zona_short"] and i["rsi"] < 75 and
+                i["preco"] < i["e200"] and i["score_inst_short"] >= 60)
+
+    # ── DUMP — SHORT após pump explosivo (blow-off top) ──────────────────────
+    # Captura reversão de moedas que subiram muito rápido: SIREN, memecoins etc.
+    # Diferença do REVERSAL: NÃO exige preco < e200*1.04 — pump afasta da e200.
+    # rsi_spike_long = RSI esteve >65 nas últimas barras (detecta histórico do pump)
+    _dump_hist = i["rsi_spike_long"] or i["rvol_tier_max2"] >= 3  # evidência de pump recente
+    # RSI caindo da zona de euforia (≥65): pega a virada logo após o pico do pump
+    _dump_rsi_cross = i["rsi_ant"] >= 65 and i["rsi"] < 65 and i["rsi_caindo"]
+    short_dump = (
+        _dump_hist and
+        _dump_rsi_cross and                              # cruzando abaixo de 65
+        i["ha_bear_1"] and                               # HA virou bearish
+        (i["exaustao_topo"] or i["liq_topo"] or i["absorb_bear"]) and  # formação de topo
+        not i["vol_secando"] and                         # ainda tem volume (não escapou todo)
+        i["adx"] > 10 and                               # algum momentum direcional
+        (i["dna_flow_bear"] or i["obv_bear"] or i["f_bear"])  # fluxo confirmando queda
+    )
+    # DUMP só existe SHORT (reversa de pump — o equivalente LONG é REVERSAL rsi<30)
+
+    # ── Reversão extrema ──────────────────────────────────────────────────────
+    long_reversal  = (i["rsi"] < 30 and i["ha_bull"] and i["v_forte"] and
+                      (i["liq_fundo"] or i["absorb_bull"]) and i["macd_recuperando"] and
+                      i["adx"] > 12 and i["preco"] > i["e200"] * 0.96 and
+                      (i["dna_flow_bull"] or i["obv_bull"]))
+    short_reversal = (i["rsi"] > 70 and i["ha_bear"] and i["v_forte"] and
+                      (i["liq_topo"] or i["absorb_bear"]) and i["macd_esgotando"] and
+                      i["adx"] > 12 and i["preco"] < i["e200"] * 1.04 and
+                      (i["dna_flow_bear"] or i["obv_bear"]))
+
+    # ── PUMP — spike súbito: RVOL 3x+ + rompimento nascente (1.5%+) ──────────
+    # Captura moedas que disparam do nada antes do RSI estourar.
+    # Threshold de preço menor que SURGE (3%) — detecção mais cedo.
+    _pump_vol = i["rvol_tier_max2"] >= 3  # vol 3x+ na vela atual ou anterior
+    long_pump = (
+        _pump_vol and i["surge_break_h"] and
+        i["candle_bull_pct"] > 0.015 and        # candle ≥1.5% (SURGE usa 3%)
+        35 < i["rsi"] < 72 and
+        (i["kalman_subindo"] or i["k_short_subindo"]) and
+        i["ha_bull_1"] and not i["exaustao_topo"] and not i["perto_bb_topo"] and
+        i["dist_e21_long"]
+    )
+    short_pump = (
+        _pump_vol and i["surge_break_l"] and
+        i["candle_bear_pct"] > 0.015 and
+        22 < i["rsi"] < 65 and
+        (i["kalman_descendo"] or i["k_short_descendo"]) and
+        i["ha_bear_1"] and not i["exaustao_fund"] and not i["perto_bb_fund"]
+    )
+
+    # ── Surge ─────────────────────────────────────────────────────────────────
+    # SURGE — breakout/breakdown explosivo com volume VSTRONG (3x+)
+    # surge_break_h/l JÁ implica liq_topo/fundo (rompe máxima/mínima recente),
+    # por isso não usar not liq_topo/fundo aqui — seria contradição direta.
+    # Usa melhor das 2 últimas velas p/ RVOL (pega sinal da vela anterior).
+    _surge_vol_ok  = i["rvol_tier_max2"] >= 3
+    long_surge  = (_surge_vol_ok and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
+                   not i["exaustao_topo"] and (i["kalman_subindo"] or i["k_short_subindo"]) and i["ha_bull"] and
+                   i["rsi"] < 78 and i["score_inst_long"] >= 50)
+    short_surge = (_surge_vol_ok and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
+                   not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
+                   i["rsi"] > 22 and i["score_inst_short"] >= 50)
+
+    # ── BREAKOUT — rompimento nascente identificado no início ─────────────────
+    # Segunda regra: captura moedas que valem a pena ANTES do RSI estourar.
+    # Condições: nova máxima de 10 barras + RVOL ≥ 1.5x + momentum alinhado.
+    # RSI 48-67 LONG (espaço para subir mas com momentum iniciando).
+    # RSI 33-52 SHORT (espaço para cair mas com momentum de baixa iniciando).
+    _brk_vol = i["v_forte"] and not i["vol_secando"]  # RVOL >= 1.5x e não secando
+    long_breakout = (
+        45 <= i["rsi"] <= 62 and i["rsi_subindo"] and
+        i["adx"] >= 20 and i["adx_subindo"] and
+        _brk_vol and i["kalman_subindo"] and i["trendilo_long"] and
+        i["ha_bull_1"] and i["surge_break_h"] and
+        i["preco"] > i["e50"] and not i["liq_topo"] and
+        not i["exaustao_topo"] and not i["perto_bb_topo"] and
+        i["dist_e21_long"] and
+        (i["liq_fundo_hist10"] or not i["liq_topo_hist5"])
+    )
+    short_breakout = (
+        33 <= i["rsi"] <= 52 and i["rsi_caindo"] and
+        i["adx"] >= 20 and i["adx_subindo"] and
+        _brk_vol and not i["kalman_subindo"] and i["trendilo_short"] and
+        i["ha_bear_1"] and i["surge_break_l"] and
+        i["preco"] < i["e50"] and not i["liq_fundo"] and
+        not i["exaustao_fund"] and not i["perto_bb_fund"] and
+        i["dist_e21_short"] and
+        (i["liq_topo_hist10"] or not i["liq_fundo_hist5"])
+    )
+
+    # ── Momentum RSI ──────────────────────────────────────────────────────────
+    rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
+    rsi_fresh_short = i["rsi_ant"] > 42 >= i["rsi"] > 30
+    # Exaustão de curtíssimo prazo (sem checagem de teto de RSI — o MOMENTUM entra
+    # propositalmente na faixa 65-73, então só barra se já estiver esticado/exausto)
+    mom_seguro_long  = (not i["perto_bb_topo"] and not i["ext_acima_e21"] and not i["vol_secando"] and
+                        not i["exaustao_topo"] and not i["stoch_esticado_up"])
+    mom_seguro_short = (not i["perto_bb_fund"] and not i["ext_abaixo_e21"] and not i["vol_secando"] and
+                        not i["exaustao_fund"] and not i["stoch_esticado_down"])
+    long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
+                      i["adx"] > 22 and i["v_forte"] and
+                      (i["trendilo_long"]  or i["score_inst_long"]  >= 75) and
+                      i["score_inst_long"]  >= 60 and mom_seguro_long)
+    short_momentum = (rsi_fresh_short and i["ha_bear"] and i["dna_flow_bear"] and not i["liq_fundo"] and
+                      i["adx"] > 22 and i["v_forte"] and
+                      (i["trendilo_short"] or i["score_inst_short"] >= 75) and
+                      i["score_inst_short"] >= 60 and mom_seguro_short)
+
+    # ── Rebound RSI ───────────────────────────────────────────────────────────
+    long_rebound  = (i["rsi_spike_long"]  and i["rsi_rebound_long"]  and i["ha_bull"] and
+                     i["dna_flow_bull"] and i["trendilo_long"]  and i["adx"] > 20 and
+                     i["v_bom"] and i["kalman_subindo"]  and not i["lateralizado"] and
+                     i["seguro_long"]  and i["nao_ext_long_tight"])
+    short_rebound = (i["rsi_dip_short"]   and i["rsi_rebound_short"] and i["ha_bear"] and
+                     i["dna_flow_bear"] and i["trendilo_short"] and i["adx"] > 20 and
+                     i["v_bom"] and not i["kalman_subindo"] and not i["lateralizado"] and
+                     i["seguro_short"] and (i["e21"] - i["preco"]) / i["atr"] < 2.5)
+
+    # ── Divergência RSI ───────────────────────────────────────────────────────
+    # Sem piso de ADX nem checagem de lateralização, "divergência" é só ruído de
+    # RSI oscilando num range — por isso exige tendência mínima e mercado fora de squeeze
+    long_div  = (i["rsi_div_bull"] and i["ha_bull"] and i["v_bom"] and
+                 i["rsi"] > 25 and i["rsi_zona_long"] and not i["exaustao_topo"] and
+                 i["adx"] > 15 and not i["lateralizado"] and i["preco"] > i["e200"] and
+                 i["score_inst_long"] >= 55)
+    short_div = (i["rsi_div_bear"] and i["ha_bear"] and i["v_bom"] and
+                 i["rsi_zona_short"] and i["rsi"] < 70 and i["preco"] < i["e200"] and
+                 not i["exaustao_fund"] and i["adx"] > 15 and not i["lateralizado"] and
+                 i["score_inst_short"] >= 55)
+
+    # ── FLEX geral ────────────────────────────────────────────────────────────
+    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 14 and
+                  not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
+                  i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
+                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
+                  (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
+                  (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
+    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 14 and
+                  not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
+                  i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
+                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
+                  (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
+                  (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
+
+    # ── Setup (acumulação antecipada) ─────────────────────────────────────────
+    long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > 18 and
+                   i["obv_bull"] and i["v_bom"] and i["acima_vwap"] and not i["lateralizado"] and
+                   i["nao_ext_long_tight"] and i["seguro_long"] and (i["liq_long"] or i["liq_fundo"]) and
+                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"])
+    short_setup = (i["score"] < -50 and i["ha_bear2"] and i["macd_esgotando"] and i["adx"] > 18 and
+                   i["obv_bear"] and i["v_bom"] and i["abaixo_vwap"] and not i["lateralizado"] and
+                   i["nao_ext_short_tight"] and i["seguro_short"] and (i["liq_short"] or i["liq_topo"]) and
+                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"])
+
+    # ── Scout (sinal secundário) ──────────────────────────────────────────────
+    # FL=3: critérios institucionais rígidos — cada gate abaixo é obrigatório
+    _sc_min  = 25 if _FLV <= 0 else 40
+    _adx_min = 10 if _FLV <= 0 else (25 if _FLV >= 3 else 15)   # FL=3: ADX>=25
+    _rvol_scout = 2.0 if _FLV >= 3 else 0.0                      # FL=3: RVOL>=2.0 (VSTRONG)
+    _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
+    _seg_s   = i["seguro_short"] if _FLV >= 1 else True
+    # FL=3: RSI LONG restrito 35–52 (entrada antecipada — quanto menor melhor)
+    _scout_rsi_l = (35 <= i["rsi"] <= 52) if _FLV >= 3 else i["rsi_zona_long"]
+    # FL=3: RSI SHORT restrito 35–50 (acima de 50 ainda tem espaço para subir)
+    _scout_rsi_s = (35 <= i["rsi"] <= 50) if _FLV >= 3 else i["rsi_zona_short"]
+    # FL=3: exige DNA Flow OU Trendilo — bloqueia SCOUTs com só f_bull+kalman (noise)
+    _scout_qual_l = (i["dna_flow_bull"] or i["trendilo_long"])  if _FLV >= 3 else True
+    _scout_qual_s = (i["dna_flow_bear"] or i["trendilo_short"]) if _FLV >= 3 else True
+    # FL=3: preço deve confirmar a tendência (acima MM50+MM200 LONG / abaixo SHORT)
+    _scout_trend_l = (i["preco"] > i["e50"] and i["preco"] > i["e200"]) if _FLV >= 3 else True
+    _scout_trend_s = (i["preco"] < i["e50"] and i["preco"] < i["e200"]) if _FLV >= 3 else True
+    # FL=3: distância da EMA21 (não entrar longe da EMA21)
+    _scout_dist_l = i["dist_e21_long"]  if _FLV >= 3 else True
+    _scout_dist_s = i["dist_e21_short"] if _FLV >= 3 else True
+    # FL=3: filtro baleia — liquidez histórica de fundo/topo
+    _whale_l = (i["liq_fundo_hist10"] or not i["liq_topo_hist5"]) if _FLV >= 3 else True
+    _whale_s = (i["liq_topo_hist10"] or not i["liq_fundo_hist5"]) if _FLV >= 3 else True
+    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
+                   _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
+                   _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
+                   i["rsi_nao_chasing_long"] and _scout_rsi_l and _no_liq_topo and
+                   i["rvol"] >= _rvol_scout and _scout_trend_l and _scout_qual_l and
+                   _scout_dist_l and _whale_l and
+                   sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
+    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
+                   _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
+                   _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
+                   i["rsi_nao_chasing_short"] and _scout_rsi_s and _no_liq_fund and
+                   i["rvol"] >= _rvol_scout and _scout_trend_s and _scout_qual_s and
+                   _scout_dist_s and _whale_s and
+                   sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
+
+    # ── DNA CORE — 11 critérios essenciais do operador ────────────────────────
+    # Dispara quando TODOS estão confirmados. Sem filtros adicionais.
+    # LONG: RSI 45-58 subindo | ADX≥18 | RVOL≥80% | Kalman+ | Trendilo+ |
+    #        EMA alinhada | HA bull | sem liq_topo | acima EMA200 | dist EMA21≤2%
+    _core_vol = i["vol_nao_fade"] and not i["vol_secando"]
+    long_core = (
+        42 <= i["rsi"] <= 55 and i["rsi_subindo"] and
+        i["adx"] >= 18 and _core_vol and
+        i["kalman_subindo"] and i["trendilo_long"] and
+        i["tbull_loose"] and i["ha_bull"] and
+        not i["liq_topo"] and i["preco"] > i["e200"] and
+        i["preco"] <= i["e21"] * 1.02
+    )
+    # SHORT: RSI 42-55 caindo | ADX≥18 | RVOL≥80% | Kalman- | Trendilo- |
+    #         EMA alinhada bear | HA bear | sem liq_fundo | abaixo EMA200 | dist EMA21≤2%
+    short_core = (
+        42 <= i["rsi"] <= 55 and i["rsi_caindo"] and
+        i["adx"] >= 18 and _core_vol and
+        not i["kalman_subindo"] and i["trendilo_short"] and
+        i["tbear_loose"] and i["ha_bear"] and
+        not i["liq_fundo"] and i["preco"] < i["e200"] and
+        i["preco"] >= i["e21"] * 0.98
+    )
+
+    # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
-    for condição, dir_, src in [
-        (long_premium,     "LONG",  "PREMIUM"),
-        (short_premium,    "SHORT", "PREMIUM"),
-        (long_scout_flex,  "LONG",  "SCOUT_FLEX"),
-        (short_scout_flex, "SHORT", "SCOUT_FLEX"),
-    ]:
-        if condição:
-            sinal = dir_; fonte = src; break
+    if SIGNAL_MODE == "ELITE":
+        if long_elite or early_long:   sinal = "LONG";  fonte = "ELITE"
+        elif short_elite or early_short: sinal = "SHORT"; fonte = "ELITE"
+    else:
+        ordem = [
+            (long_pullback,  "LONG",  "PULLBACK"),
+            (short_pullback, "SHORT", "PULLBACK"),
+            (long_core,       "LONG",  "CORE"),
+            (short_core,      "SHORT", "CORE"),
+            (long_breakout,   "LONG",  "BREAKOUT"),
+            (short_breakout,  "SHORT", "BREAKOUT"),
+            (long_cross,      "LONG",  f"CROSS:{i['label_cross']}"),
+            (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
+            (long_bb_break,  "LONG",  "BB_BREAK"),
+            (short_bb_break, "SHORT", "BB_BREAK"),
+            (long_sm,        "LONG",  "SM_SWEEP"),
+            (short_sm,       "SHORT", "SM_SWEEP"),
+            (short_dump,     "SHORT", "DUMP"),
+            (long_reversal,  "LONG",  "REVERSAL"),
+            (short_reversal, "SHORT", "REVERSAL"),
+            (long_pump,      "LONG",  "PUMP"),
+            (short_pump,     "SHORT", "PUMP"),
+            (long_surge,     "LONG",  "SURGE"),
+            (short_surge,    "SHORT", "SURGE"),
+            (long_momentum,  "LONG",  "MOMENTUM"),
+            (short_momentum, "SHORT", "MOMENTUM"),
+            (long_rebound,   "LONG",  "REBOUND"),
+            (short_rebound,  "SHORT", "REBOUND"),
+            (long_div,       "LONG",  "DIV"),
+            (short_div,      "SHORT", "DIV"),
+            (long_flex,      "LONG",  "FLEX"),
+            (short_flex,     "SHORT", "FLEX"),
+            (long_setup,     "LONG",  "SETUP"),
+            (short_setup,    "SHORT", "SETUP"),
+            (long_scout,     "LONG",  "SCOUT"),
+            (short_scout,    "SHORT", "SCOUT"),
+        ]
+        for condição, dir_, src in ordem:
+            if condição:
+                sinal = dir_; fonte = src; break
 
     return sinal, fonte
 
@@ -700,53 +913,47 @@ def analisar(simbolo, candles, funding_rate=None):
     sinal, fonte = detectar_sinais(ind)
     grade, pts   = graduar_sinal(ind, sinal)
 
-    # Confiança 0-100
-    if not sinal:
-        confianca = 0
-    else:
-        _si = ind["score_inst_long"] if sinal == "LONG" else ind["score_inst_short"]
-        if fonte == "PREMIUM":
-            _rv_bonus = 5 if ind["rvol_max2"] >= 2.5 else 2 if ind["rvol_max2"] >= 1.8 else 0
-            _adx_bonus = 3 if ind["adx"] > 30 else 1
-            confianca = min(100, _si + _rv_bonus + _adx_bonus)
-        else:
-            _sc_fl = ind["scout_score_long"] if sinal == "LONG" else ind["scout_score_short"]
-            confianca = min(85, 60 + (_sc_fl - 5) * 8)
-
     # Log de diagnóstico quando há score mas sem sinal
     if not sinal:
         sc = ind["score"]
-        if abs(sc) > 25:
+        if sc > 25:
             b = []
-            eh_l = sc > 0
-            _si = ind["score_inst_long"] if eh_l else ind["score_inst_short"]
-            _rsi = ind["rsi"]
-            if eh_l:
-                if _si < 60:       b.append(f"inst={_si:.0f}<60")
-                if not (40 <= _rsi <= 75): b.append(f"rsi={_rsi:.0f}(fora 40-75)")
-                if ind["rvol_max2"] < 1.2: b.append(f"rvol={ind['rvol_max2']:.2f}<1.2")
-                if ind["adx"] <= 15:       b.append(f"adx={ind['adx']:.1f}<=15")
-                if ind["lateralizado"]:    b.append("lateral")
-                if ind["tres_bull_exp"]:   b.append("3velas_exp")
-                if ind["preco_longe_e21_up"]: b.append("ext_e21>5%")
-                if ind.get("liq_topo"):    b.append("liq_topo")
-                sc_fl = ind["scout_score_long"]
-                if sc_fl < 5:              b.append(f"scout={sc_fl}/8<5")
-                if not ind["ha_bull_1"]:   b.append("ha=F")
-            else:
-                if _si < 60:       b.append(f"inst={_si:.0f}<60")
-                if not (25 <= _rsi <= 60): b.append(f"rsi={_rsi:.0f}(fora 25-60)")
-                if ind["rvol_max2"] < 1.2: b.append(f"rvol={ind['rvol_max2']:.2f}<1.2")
-                if ind["adx"] <= 15:       b.append(f"adx={ind['adx']:.1f}<=15")
-                if ind["lateralizado"]:    b.append("lateral")
-                if ind["tres_bear_exp"]:   b.append("3velas_exp")
-                if ind["preco_longe_e21_down"]: b.append("ext_e21<-5%")
-                if ind.get("liq_fundo"):   b.append("liq_fundo")
-                sc_fl = ind["scout_score_short"]
-                if sc_fl < 5:              b.append(f"scout={sc_fl}/8<5")
-                if not ind["ha_bear_1"]:   b.append("ha=F")
-            dir_ = "LONG-BLOQ" if eh_l else "SHORT-BLOQ"
-            log.info(f"  {dir_} {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
+            if not ind["macd_bull_r"]:  b.append("macd_r=F")
+            if not ind["ha_bull_1"]:    b.append("ha1=F")
+            if ind["adx"] < 15:         b.append(f"adx={ind['adx']:.1f}<15")
+            if ind["lateralizado"]:     b.append("lateral")
+            if not ind["seguro_long"]:
+                _sg = []
+                if ind["perto_bb_topo"]:       _sg.append("bb_topo")
+                if ind["ext_acima_e21"]:        _sg.append("ext_e21")
+                if ind["vol_secando"]:          _sg.append("vol_sec")
+                if ind.get("exaustao_topo"):    _sg.append("exaustao")
+                if ind["rsi"] >= 70:            _sg.append(f"rsi={ind['rsi']:.0f}")
+                if ind["stoch_esticado_up"]:    _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                if ind.get("pump_rsi_spike_long"): _sg.append(f"pump_rsi(+{ind['rsi']-ind['rsi_ant']:.0f}pt)")
+                b.append(f"seguro=F({','.join(_sg) or '?'})")
+            if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
+            fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
+            if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
+            log.info(f"  LONG-BLOQ {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
+        elif sc < -25:
+            b = []
+            if not ind["macd_bear_r"]:   b.append("macd_r=F")
+            if not ind["ha_bear_1"]:     b.append("ha1=F")
+            if ind["adx"] < 15:          b.append(f"adx={ind['adx']:.1f}<15")
+            if ind["lateralizado"]:      b.append("lateral")
+            if not ind["seguro_short"]:
+                _sg = []
+                if ind["vol_secando"]:          _sg.append("vol_sec")
+                if ind.get("exaustao_fund"):     _sg.append("exaustao")
+                if ind["rsi"] <= 27:            _sg.append(f"rsi={ind['rsi']:.0f}")
+                if ind["stoch_esticado_down"]:  _sg.append(f"stoch={ind['stoch_rsi']:.2f}")
+                if ind.get("dump_rsi_spike_short"): _sg.append(f"dump_rsi(-{ind['rsi_ant']-ind['rsi']:.0f}pt)")
+                b.append(f"seguro=F({','.join(_sg) or '?'})")
+            if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
+            fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
+            if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
+            log.info(f"  SHORT-BLOQ {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
         else:
             log.info(f"  sem-sinal {simbolo}: score={sc:+d} insuficiente")
 
@@ -764,7 +971,6 @@ def analisar(simbolo, candles, funding_rate=None):
         "swing_high":   ind["swing_high"],
         "grade":        grade,
         "pts_grade":    pts,
-        "confianca":    confianca,
         # Indicadores para ciclo e envio
         "ha_bull":      ind["ha_bull"],  "ha_bear":   ind["ha_bear"],
         "ha_bull_1":    ind["ha_bull_1"], "ha_bear_1": ind["ha_bear_1"],
@@ -776,7 +982,6 @@ def analisar(simbolo, candles, funding_rate=None):
         "rvol_label":    ind["rvol_label"],
         "rvol_tier":     ind["rvol_tier"],
         "rvol_tier_max2": ind["rvol_tier_max2"],
-        "rvol_max2":     ind["rvol_max2"],
         "tbull_r":      ind["tbull_r"],
         "tbear_r":      ind["tbear_r"],
         "tbull_loose":  ind["tbull_loose"],
@@ -844,12 +1049,4 @@ def analisar(simbolo, candles, funding_rate=None):
         "ha_bear2":          ind["ha_bear2"],
         "flex_vol_ok":       ind["flex_vol_ok"],
         "flex_vol_ok_s":     ind["flex_vol_ok_s"],
-        # PRO V2 — Anti-FOMO / Scout FLEX
-        "tres_bull_exp":     ind["tres_bull_exp"],
-        "tres_bear_exp":     ind["tres_bear_exp"],
-        "preco_longe_e21_up":  ind["preco_longe_e21_up"],
-        "preco_longe_e21_down": ind["preco_longe_e21_down"],
-        "vol_crescente":     ind["vol_crescente"],
-        "scout_score_long":  ind["scout_score_long"],
-        "scout_score_short": ind["scout_score_short"],
     }
