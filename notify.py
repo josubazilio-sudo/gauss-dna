@@ -228,8 +228,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     alavancagem = max(3, min(20, _lev))              # clamp 3x–20x
 
     pos_alav     = valor_pos / alavancagem
-    ganho_tp1    = valor_risco * r1 * 0.5
-    ganho_total  = valor_risco * (r1 + r_final) * 0.5
+    ganho_tp1    = valor_risco * r1 * 0.5       # 50% fechado em TP1
+    ganho_total  = valor_risco * r_final * 0.5  # 50% restante fechado em TP2
 
     # ── Labels de modo ────────────────────────────────────────────────────────
     tf_lbl = _label_tf(tf)
