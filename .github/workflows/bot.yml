@@ -20,7 +20,7 @@ on:
       timeframes:
         description: 'Timeframes a analisar (ex: 5m,15m,1h  ou  30m,1h,4h)'
         required: false
-        default: '15m,1h,4h'
+        default: '15m'
       filter_level:
         description: 'Nivel de filtros: 0=debug(force), 1=minimo, 2=moderado, 3=completo (padrao)'
         required: false
@@ -76,7 +76,7 @@ jobs:
         env:
           TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
-          CAPITAL: ${{ vars.CAPITAL || '87' }}
+          CAPITAL: ${{ vars.CAPITAL || '80' }}
           FILTER_LEVEL: '1'
           TIMEFRAMES: '15m'
           SIGNAL_MODE: 'FLEX'
@@ -89,15 +89,15 @@ jobs:
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
           WA_PHONE: ${{ secrets.WA_PHONE }}
           WA_APIKEY: ${{ secrets.WA_APIKEY }}
-          TIMEFRAMES: ${{ github.event.inputs.timeframes || '15m,1h,4h' }}
+          TIMEFRAMES: ${{ github.event.inputs.timeframes || '15m' }}
           FILTER_LEVEL: ${{ github.event.inputs.filter_level || '1' }}
           CYCLE_INTERVAL: '300'
           SIGNAL_MODE: 'FLEX'
           DYNAMIC_SCAN: 'true'
-          SCANNER_TOP: '200'
+          SCANNER_TOP: '300'
           LOOP_MODE: ${{ github.event.inputs.test_mode == 'true' && 'false' || 'true' }}
           TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
-          CAPITAL: ${{ vars.CAPITAL || '87' }}
+          CAPITAL: ${{ vars.CAPITAL || '80' }}
           RISK_PCT: '0.03'
         run: python bot_actions.py
 
