@@ -274,9 +274,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     agora    = datetime.now().strftime("%H:%M — %d/%m/%Y")
     k_str    = "↑" if kalman_subindo else "↓"
     linha_cross = f"📉 Cruzamento: {_escapar(info_cross)}\n" if info_cross else ""
-    linha_rvol  = f"📊 RVOL: `{_bruto(f'{rvol_val:.2f}')}x` {_escapar(rvol_lbl)}" if rvol_lbl else ""
-    linha_flow  = ("✅" if dna_flow_ok else "—") + " DNA Flow"
-    linha_trl   = ("✅" if trendilo_ok else "—") + " Trendilo"
+
+    _confianca = max(40, min(95, score_inst * 3 // 4))
+    _fluxo_ico = "🟢" if (dna_flow_ok and trendilo_ok) else ("🟡" if (dna_flow_ok or trendilo_ok) else "🔴")
+    _fluxo_str = "Completo" if (dna_flow_ok and trendilo_ok) else ("Parcial" if (dna_flow_ok or trendilo_ok) else "Ausente")
+    _grade_ico = {"S+": "💎", "S": "🏆", "A+": "🔥", "A": "⭐", "B": "📊"}.get(grade, "📊")
+
     if funding_rate is not None:
         fr_pct = funding_rate * 100
         if eh_long:
@@ -292,31 +295,45 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         linha_oi = f"📊 OI: {oi_ico} `{_bruto(f'{oi_change:+.1f}')}%`"
     else:
         linha_oi = ""
-    linha_inst  = f"\n🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar(cls_inst)}" if score_inst else ""
-    linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
-    aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
+
+    if fonte == "SCOUT":
+        _aviso = f"\n⚠️ _DNA SCOUT — risco reduzido \\({int(pct_risco*100)}%\\) — semi\\-agressivo_"
+    elif fonte == "PREMIUM":
+        _aviso = f"\n🏆 _PREMIUM — qualidade institucional máxima_"
+    else:
+        _aviso = ""
+
+    linha_liq    = f"🔍 SM: {_escapar(evento_liq)}\n" if evento_liq else ""
+    rvol_lbl_str = f" {_escapar(rvol_lbl)}" if rvol_lbl else ""
 
     texto = (
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
-        f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 Gráfico: *{_escapar(tf_lbl)}*\n"
+        f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 *{_escapar(tf_lbl)}*\n"
         f"{linha_cross}"
-        f"{_escapar(label_grade)} \\| RSI {_escapar(f'{rsi:.0f}')} \\| RVOL {_escapar(f'{rvol_val:.2f}')}x{_escapar(' '+rvol_lbl if rvol_lbl else '')}{linha_inst}{linha_liq}{aviso_scout}\n\n"
+        f"\n"
+        f"{_escapar(_grade_ico)} GRADE: *{_escapar(grade)}*\n"
+        f"🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar('— ' + cls_inst)}\n"
+        f"🎯 Confiança: *{_escapar(str(_confianca))}%*\n"
+        f"{linha_liq}"
+        f"\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
-        f"🛑 Stop: `${_bruto(_fmt(stop))}` \\({_escapar(label_stop)}\\)\n"
-        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
-        f"🏆 TP Final \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n\n"
-        f"📐 *Gestão de risco \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
-        f"  Risco: `${_bruto(f'{valor_risco:.2f}')}`\n"
-        f"  💵 Entrada na operação: `${_bruto(f'{valor_pos:.2f}')} USDT` \\({_escapar(f'{contratos:.4f}')} {_escapar(abrev)}\\)\n"
-        f"  Alavancagem {_escapar(str(alavancagem))}x: `${_bruto(f'{pos_alav:.2f}')}` colateral\n"
-        f"💸 Ganho: TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| Total \\+`${_bruto(f'{ganho_total:.2f}')}`\n\n"
-        f"📊 Score: *{_escapar(score)}/145* \\| ADX: {_escapar(f'{adx:.0f}')}\n"
-        + (f"{linha_rvol}\n" if linha_rvol else "")
+        f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}`\n"
+        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ trailing\n"
+        f"🎯 TP2 \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n"
+        f"\n"
+        f"📊 RSI: {_escapar(f'{rsi:.0f}')}\n"
+        f"📈 RVOL: `{_bruto(f'{rvol_val:.2f}')}x`{rvol_lbl_str}\n"
+        f"📉 ADX: {_escapar(f'{adx:.0f}')}\n"
+        f"📦 Fluxo: {_escapar(_fluxo_ico)} {_escapar(_fluxo_str)} \\| Kalman: {_escapar(k_str)}\n"
+        f"📍 Tendência: {_escapar(tendencia)}"
+        + _aviso
+        + f"\n\n"
+        f"📐 *Gestão \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
+        f"  Risco: `${_bruto(f'{valor_risco:.2f}')}` \\| Pos: `${_bruto(f'{valor_pos:.2f}')}` \\| {_escapar(str(alavancagem))}x\n"
+        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| TP2 \\+`${_bruto(f'{ganho_total:.2f}')}`\n"
         + (f"{linha_funding}\n" if linha_funding else "")
         + (f"{linha_oi}\n" if linha_oi else "")
-        + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
-        + f"📈 Tendência: {_escapar(tendencia)} \\| Kalman: {_escapar(k_str)}\n"
-        f"⏰ {_escapar(agora)}"
+        + f"⏰ {_escapar(agora)}"
     )
 
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
@@ -340,7 +357,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     f"Entrada: ${formatar_preco(preco)}\n"
                     f"Stop: ${_fmt(stop)} ({label_stop})\n"
                     f"TP1 ({r1}R): ${_fmt(tp1)}\n"
-                    f"TP Final ({r_final}R): ${_fmt(final)}\n\n"
+                    f"TP2 ({r_final}R): ${_fmt(final)}\n\n"
                     f"Risco ${valor_risco:.2f} | {alavancagem}x ${pos_alav:.2f} colateral\n"
                     f"RSI {rsi:.0f} | ADX {adx:.0f} | "
                     + (f"RVOL {rvol_val:.2f}x {rvol_lbl} | " if rvol_lbl else "")
