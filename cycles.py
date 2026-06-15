@@ -480,6 +480,49 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], f"H4 oposto (inst={score_inst})"))
                 continue
 
+            # ── Filtros ANTI-TOPO para sinais LONG ───────────────────────────
+            if eh_long_ and FILTER_LEVEL >= 1:
+                _rsi_l  = result.get("rsi", 50)
+                _rvol_l = result.get("rvol", 1.0)
+                _liq_t  = result.get("liq_topo", False)
+                _adx_l  = result.get("adx", 0)
+                _longe  = result.get("preco_longe_e21_up", False)
+                _acima  = result.get("preco_acima_e21", True)
+                _bloq_topo = []
+                # 1. RSI > 70 E RVOL < 1.0x
+                if _rsi_l > 70 and _rvol_l < 1.0:
+                    _bloq_topo.append(f"RSI {_rsi_l:.0f}>70+RVOL {_rvol_l:.2f}x<1.0")
+                # 2. Score Inst >= 80 E RVOL < 0.8x (pump sem convicção)
+                if score_inst >= 80 and _rvol_l < 0.8:
+                    _bloq_topo.append(f"inst={score_inst}≥80+RVOL {_rvol_l:.2f}x<0.8")
+                # 3. LIQ_TOPO E RSI > 65
+                if _liq_t and _rsi_l > 65:
+                    _bloq_topo.append(f"LIQ_TOPO+RSI {_rsi_l:.0f}>65")
+                # 4. Preço >5% acima da MM21
+                if _longe:
+                    _bloq_topo.append("preço >5% acima MM21")
+                # 5. ADX > 35 E RSI > 70 E RVOL < 1.2x (exaustão de tendência)
+                if _adx_l > 35 and _rsi_l > 70 and _rvol_l < 1.2:
+                    _bloq_topo.append(f"ADX {_adx_l:.0f}>35+RSI {_rsi_l:.0f}>70+RVOL<1.2")
+                # 6+8. Combo extremo: RSI>70 + RVOL<1.0 + LIQ_TOPO
+                if _rsi_l > 70 and _rvol_l < 1.0 and _liq_t:
+                    _bloq_topo.insert(0, f"COMBO: RSI {_rsi_l:.0f}>70+RVOL {_rvol_l:.2f}<1.0+LIQ_TOPO")
+                # 7. SCOUT LONG: RSI 45-68, RVOL >= 1.0x, preço > MM21, sem LIQ_TOPO
+                if fonte == "SCOUT":
+                    if not (45 <= _rsi_l <= 68):
+                        _bloq_topo.append(f"SCOUT RSI {_rsi_l:.0f} fora 45-68")
+                    if _rvol_l < 1.0:
+                        _bloq_topo.append(f"SCOUT RVOL {_rvol_l:.2f}x<1.0")
+                    if not _acima:
+                        _bloq_topo.append("SCOUT preço abaixo MM21")
+                    if _liq_t:
+                        _bloq_topo.append("SCOUT LIQ_TOPO")
+                if _bloq_topo:
+                    log.info(f"  🚫 {abrev} [{tf}] LONG anti-topo — {_bloq_topo[0]}")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"anti-topo({_bloq_topo[0]})"))
+                    continue
+
             # BTC no TF atual: BREAKOUT, SURGE, SCOUT obrigam alinhamento direcional com BTC
             if fonte in ("BREAKOUT", "SURGE", "SCOUT"):
                 if eh_long_ and not _btc15_bull:

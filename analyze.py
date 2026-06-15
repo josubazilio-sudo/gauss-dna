@@ -260,6 +260,8 @@ def calcular_indicadores(candles):
     # Distância da EMA21 — gate de qualidade
     dist_e21_long  = preco <= e21 * 1.03   # LONG: preço até 3% acima da EMA21
     dist_e21_short = preco >= e21 * 0.97   # SHORT: preço até 3% abaixo da EMA21
+    preco_longe_e21_up = preco > e21 * 1.05  # preço >5% acima da MM21 (anti-topo)
+    preco_acima_e21    = preco > e21          # acima da MM21 (filtro SCOUT)
 
     crange = maximas[-1] - minimas[-1]
     lwick  = min(aberturas[-1], preco) - minimas[-1]
@@ -474,6 +476,7 @@ def calcular_indicadores(candles):
         "liq_fundo_hist10": liq_fundo_hist10, "liq_topo_hist10": liq_topo_hist10,
         "liq_fundo_hist5": liq_fundo_hist5, "liq_topo_hist5": liq_topo_hist5,
         "dist_e21_long": dist_e21_long, "dist_e21_short": dist_e21_short,
+        "preco_longe_e21_up": preco_longe_e21_up, "preco_acima_e21": preco_acima_e21,
         "sombra_sup": sombra_sup, "sombra_inf": sombra_inf,
         "sm_bull": sm_bull, "sm_bear": sm_bear,
         "absorb_bull": absorb_bull, "absorb_bear": absorb_bear,
@@ -1027,6 +1030,8 @@ def analisar(simbolo, candles, funding_rate=None):
         "liq_topo_hist5":   ind["liq_topo_hist5"],
         "dist_e21_long":    ind["dist_e21_long"],
         "dist_e21_short":   ind["dist_e21_short"],
+        "preco_longe_e21_up": ind["preco_longe_e21_up"],
+        "preco_acima_e21":    ind["preco_acima_e21"],
         "sombra_sup":   ind["sombra_sup"],
         "sombra_inf":   ind["sombra_inf"],
         "dna_flow_bull": ind["dna_flow_bull"],
