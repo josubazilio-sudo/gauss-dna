@@ -523,6 +523,30 @@ async def executar_ciclo(session, estado, tf, moedas):
                                        result["rsi"], result["adx"], f"anti-topo({_bloq_topo[0]})"))
                     continue
 
+            # ── Filtros ANTI-FUNDO para sinais SHORT ─────────────────────────
+            if not eh_long_ and FILTER_LEVEL >= 1:
+                _rsi_s  = result.get("rsi", 50)
+                _rvol_s = result.get("rvol", 1.0)
+                _df_s   = result.get("dna_flow_bear", False)
+                _trl_s  = result.get("trendilo_short", False)
+                _conf_s = max(40, min(95, score_inst * 3 // 4))
+                _fluxo_forte = _df_s and _trl_s
+                _bloq_fundo = []
+                if _rvol_s < 1.0:
+                    _bloq_fundo.append(f"RVOL {_rvol_s:.2f}x<1.0")
+                if _rsi_s < 40:
+                    _bloq_fundo.append(f"RSI {_rsi_s:.0f}<40 (sobrevendido)")
+                if _conf_s < 60:
+                    _bloq_fundo.append(f"confiança {_conf_s}%<60% (inst={score_inst})")
+                if not _fluxo_forte:
+                    _fluxo_desc = "Ausente" if not (_df_s or _trl_s) else "Parcial"
+                    _bloq_fundo.append(f"fluxo={_fluxo_desc} (precisa Completo)")
+                if _bloq_fundo:
+                    log.info(f"  🚫 {abrev} [{tf}] SHORT anti-fundo — {_bloq_fundo[0]}")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"anti-fundo({_bloq_fundo[0]})"))
+                    continue
+
             # BTC no TF atual: BREAKOUT, SURGE, SCOUT obrigam alinhamento direcional com BTC
             if fonte in ("BREAKOUT", "SURGE", "SCOUT"):
                 if eh_long_ and not _btc15_bull:
