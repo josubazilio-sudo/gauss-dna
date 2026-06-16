@@ -83,11 +83,15 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("score baixo")
         return motivos
 
-    # RSI zona
-    if eh_long_cand and rsi >= 55:
-        motivos.append(f"RSI {rsi:.0f} >= 55 (LONG bloqueado)")
-    elif not eh_long_cand and rsi <= 40:
-        motivos.append(f"RSI {rsi:.0f} <= 40 (SHORT bloqueado)")
+    # RSI zona (rsi_zona_long=38-70, rsi_zona_short=30-62)
+    if eh_long_cand and rsi > 70:
+        motivos.append(f"RSI {rsi:.0f} > 70 (LONG bloqueado)")
+    elif eh_long_cand and rsi < 38:
+        motivos.append(f"RSI {rsi:.0f} < 38 (LONG bloqueado)")
+    elif not eh_long_cand and rsi < 30:
+        motivos.append(f"RSI {rsi:.0f} < 30 (SHORT bloqueado)")
+    elif not eh_long_cand and rsi > 62:
+        motivos.append(f"RSI {rsi:.0f} > 62 (SHORT bloqueado)")
 
     if adx < _adx_min:
         motivos.append(f"ADX {adx:.1f} < {_adx_min}")
@@ -506,10 +510,12 @@ async def executar_ciclo(session, estado, tf, moedas):
                     _prev_c = _conf_global
                     _conf_global = max(40, _conf_global - 15)
                     log.info(f"  ⚠️ {abrev} [{tf}] anti-topo soft: RSI {_rsi_at:.0f}>70 + preço>EMA21+2ATR → conf {_prev_c}→{_conf_global}%")
-            if FILTER_LEVEL >= 1 and _conf_global < 55 and fonte not in {"REVERSAL", "SM_SWEEP", "EXTREME"}:
-                log.info(f"  ⚠️ {abrev} bloqueado — confiança {_conf_global}% < 55% (inst={score_inst})")
+            # CORE/SCOUT/DIV/REBOUND: gate próprio de condições, conf não é filtro primário
+            _conf_exc = {"REVERSAL", "SM_SWEEP", "EXTREME", "CORE", "SCOUT", "DIV", "REBOUND"}
+            if FILTER_LEVEL >= 1 and _conf_global < 48 and fonte not in _conf_exc:
+                log.info(f"  ⚠️ {abrev} bloqueado — confiança {_conf_global}% < 48% (inst={score_inst})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"conf<55%({_conf_global}%)"))
+                                   result["rsi"], result["adx"], f"conf<48%({_conf_global}%)"))
                 continue
 
             # ── PROTEÇÃO TOPO/FUNDO REAL: apenas extremo absoluto (5 condições simultâneas) ──
