@@ -260,6 +260,16 @@ def calcular_indicadores(candles):
          (maximas[i] - fechamentos[i]) > _atr_liq)
         for i in range(-5, -1)
     )
+    liq_topo_hist3 = liq_topo or any(
+        (maximas[i] > maximas[i-1] and fechamentos[i] < maximas[i-1] and
+         (maximas[i] - fechamentos[i]) > _atr_liq)
+        for i in range(-3, -1)
+    )
+    liq_fundo_hist3 = liq_fundo or any(
+        (minimas[i] < minimas[i-1] and fechamentos[i] > minimas[i-1] and
+         (fechamentos[i] - minimas[i]) > _atr_liq)
+        for i in range(-3, -1)
+    )
     # Distância da EMA21 — gate de qualidade
     dist_e21_long  = preco <= e21 * 1.03   # LONG: preço até 3% acima da EMA21
     dist_e21_short = preco >= e21 * 0.97   # SHORT: preço até 3% abaixo da EMA21
@@ -487,6 +497,7 @@ def calcular_indicadores(candles):
         "liq_topo": liq_topo, "liq_fundo": liq_fundo,
         "liq_fundo_hist10": liq_fundo_hist10, "liq_topo_hist10": liq_topo_hist10,
         "liq_fundo_hist5": liq_fundo_hist5, "liq_topo_hist5": liq_topo_hist5,
+        "liq_fundo_hist3": liq_fundo_hist3, "liq_topo_hist3": liq_topo_hist3,
         "dist_e21_long": dist_e21_long, "dist_e21_short": dist_e21_short,
         "preco_longe_e21_up": preco_longe_e21_up, "preco_acima_e21": preco_acima_e21,
         "sombra_sup": sombra_sup, "sombra_inf": sombra_inf,
@@ -534,7 +545,7 @@ def detectar_sinais(ind):
     i = ind  # alias curto
 
     # ── PREMIUM — Alta qualidade institucional, sem sufoco ───────────────────
-    # Score inst ≥ 70, ADX ≥ 25, RVOL ≥ 2x, tendência completa, fluxo+SM+OBV, RSI 45-60
+    # Score inst ≥ 75, ADX ≥ 25, RVOL ≥ 2x, tendência completa, fluxo+SM+OBV, RSI 55-68
     _prem_atr_ok  = i["atr"] / max(i["preco"], 1e-10) < 0.06
     _prem_sm_long  = i["sm_bull"] or (i["liq_fundo_hist10"] and i["absorb_bull"])
     _prem_sm_short = i["sm_bear"] or (i["liq_topo_hist10"]  and i["absorb_bear"])
@@ -542,11 +553,11 @@ def detectar_sinais(ind):
         i["score_inst_long"] >= 75 and
         i["adx"] >= 25 and i["rvol_max2"] >= 2.0 and _prem_atr_ok and
         i["e10"] > i["e21"] and i["e21"] > i["e50"] and
-        i["preco"] > i["e50"] and i["preco"] > i["e200"] and
+        i["preco"] > i["e21"] and i["preco"] > i["e50"] and i["preco"] > i["e200"] and
         i["kalman_subindo"] and i["trendilo_long"] and i["ha_bull_1"] and
         i["dna_flow_bull"] and _prem_sm_long and i["obv_bull"] and
-        45 <= i["rsi"] <= 65 and
-        not i["liq_topo"] and i["nao_pump8"] and i["seguro_long"]
+        55 <= i["rsi"] <= 68 and
+        not i["liq_topo_hist3"] and i["nao_pump8"] and i["seguro_long"]
     )
     short_premium = (
         i["score_inst_short"] >= 75 and
@@ -1091,6 +1102,8 @@ def analisar(simbolo, candles, funding_rate=None):
         "liq_topo_hist10":  ind["liq_topo_hist10"],
         "liq_fundo_hist5":  ind["liq_fundo_hist5"],
         "liq_topo_hist5":   ind["liq_topo_hist5"],
+        "liq_fundo_hist3":  ind["liq_fundo_hist3"],
+        "liq_topo_hist3":   ind["liq_topo_hist3"],
         "dist_e21_long":    ind["dist_e21_long"],
         "dist_e21_short":   ind["dist_e21_short"],
         "preco_longe_e21_up": ind["preco_longe_e21_up"],

@@ -496,6 +496,16 @@ async def executar_ciclo(session, estado, tf, moedas):
             _conf_global = max(40, min(95, score_inst * 3 // 4))
             if _h4_penalty:
                 _conf_global = max(40, _conf_global - 10)   # H4 oposto: -10% confiança
+            # Anti-topo soft: RSI > 70 + preço > EMA21 + 2×ATR → confiança -15%
+            if eh_long_ and fonte not in {"EXTREME", "REVERSAL", "SM_SWEEP"}:
+                _rsi_at  = result.get("rsi", 50)
+                _e21_at  = result.get("e21", 0)
+                _atr_at  = result.get("atr", 0)
+                _preco_at = result.get("preco", 0)
+                if _rsi_at > 70 and _e21_at > 0 and _atr_at > 0 and _preco_at > _e21_at + 2 * _atr_at:
+                    _prev_c = _conf_global
+                    _conf_global = max(40, _conf_global - 15)
+                    log.info(f"  ⚠️ {abrev} [{tf}] anti-topo soft: RSI {_rsi_at:.0f}>70 + preço>EMA21+2ATR → conf {_prev_c}→{_conf_global}%")
             if FILTER_LEVEL >= 1 and _conf_global < 55 and fonte not in {"REVERSAL", "SM_SWEEP", "EXTREME"}:
                 log.info(f"  ⚠️ {abrev} bloqueado — confiança {_conf_global}% < 55% (inst={score_inst})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
