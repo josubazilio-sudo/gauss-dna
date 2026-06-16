@@ -143,9 +143,9 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         label_stop = f"{mult_atr:.1f} ATR"
 
     risco = abs(preco - stop)
-    # Rede de segurança: mínimo 0.5% para não gerar TP acima do fill do usuário
+    # Rede de segurança: mínimo 0.5% (cobre risco=0 e stops ultra-apertados)
     _risco_min = preco * 0.005
-    if 0 < risco < _risco_min:
+    if risco < _risco_min:
         risco = _risco_min
         stop = preco - risco if eh_long else preco + risco
         label_stop = "Min 0.5%"
@@ -213,7 +213,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         pct_risco = RISK_SCOUT
     else:
         pct_risco = RISK_BY_GRADE.get(grade, RISK_PCT)
-    if fonte in ("SURGE", "PUMP", "DUMP"):
+    if fonte in ("SURGE", "BREAKOUT", "PUMP", "DUMP"):
         pct_risco = min(pct_risco, 0.02)
     valor_risco  = CAPITAL * pct_risco
     contratos    = valor_risco / risco if risco > 0 else 0

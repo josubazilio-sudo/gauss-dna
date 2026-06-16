@@ -72,7 +72,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     rsi_ent_l = result.get("rsi_entrada_long", True)
     rsi_ent_s = result.get("rsi_entrada_short", True)
 
-    _sc_min   = 25 if FILTER_LEVEL <= 0 else 30
+    _sc_min   = 25 if FILTER_LEVEL <= 0 else 40
     _adx_min  = 10 if FILTER_LEVEL <= 0 else 18
     _fluxo_min = 0 if FILTER_LEVEL <= 0 else 1
 
@@ -454,13 +454,15 @@ async def executar_ciclo(session, estado, tf, moedas):
             # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
             _inst_min = (0   if FILTER_LEVEL <= 0 else
                          70  if fonte == "PREMIUM" else
-                         35  if fonte == "CORE" else
+                         25  if fonte == "CORE" else
                          40  if fonte == "DUMP" else
-                         50  if fonte in ("REVERSAL", "DIV") else
-                         55  if fonte == "BB_BREAK" else
-                         65  if fonte in ("FLEX", "SM_SWEEP", "MOMENTUM") else
-                         75  if fonte in ("SCOUT", "SURGE", "BREAKOUT", "PUMP") else
-                         55)  # SETUP, PULLBACK, CROSS, REBOUND
+                         45  if fonte == "REVERSAL" else
+                         50  if fonte in ("SM_SWEEP", "DIV", "SCOUT") else
+                         55  if fonte in ("FLEX", "SETUP", "PULLBACK", "CROSS",
+                                          "BB_BREAK", "SURGE", "BREAKOUT",
+                                          "REBOUND", "PUMP") else
+                         60  if fonte == "MOMENTUM" else
+                         55)
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = min(_inst_min + 10, 70)   # sessão perigosa: +10 pts (cap 70)
             # Ajuste profissional: funding rate e OI alinhados confirmam smart money
@@ -546,7 +548,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _conf_s = max(40, min(95, score_inst * 3 // 4))
                 _fluxo_forte = _df_s and _trl_s
                 _bloq_fundo = []
-                if _rvol_s < 1.0:
+                _sinais_rvol_flex = {"REVERSAL", "SM_SWEEP", "CORE", "DIV"}
+                if _rvol_s < 1.0 and fonte not in _sinais_rvol_flex:
                     _bloq_fundo.append(f"RVOL {_rvol_s:.2f}x<1.0")
                 if _rsi_s < 40:
                     _bloq_fundo.append(f"RSI {_rsi_s:.0f}<40 (sobrevendido)")
@@ -695,9 +698,9 @@ async def executar_ciclo(session, estado, tf, moedas):
                 if not _dna and not _trl:
                     _bloq_flex.append("sem DNA Flow nem Trendilo")
                 if eh_long:
-                    # RSI 40–60, bloquear >65
-                    if not (40 <= _rsi_flex <= 60) or _rsi_flex > 65:
-                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 40-60 (LONG)")
+                    # RSI 40–65 para LONG
+                    if not (40 <= _rsi_flex <= 65):
+                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 40-65 (LONG)")
                     if _e50_f > 0 and _preco_f < _e50_f:
                         _bloq_flex.append("preco abaixo MM50")
                     if not _tbull:
@@ -707,9 +710,9 @@ async def executar_ciclo(session, estado, tf, moedas):
                     if _liq_t_f:
                         _bloq_flex.append("resistencia <1ATR (liq topo)")
                 else:
-                    # RSI 40–60, bloquear <35
-                    if not (40 <= _rsi_flex <= 60) or _rsi_flex < 35:
-                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 40-60 (SHORT)")
+                    # RSI 35–60 para SHORT
+                    if not (35 <= _rsi_flex <= 60):
+                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 35-60 (SHORT)")
                     if _e50_f > 0 and _preco_f > _e50_f:
                         _bloq_flex.append("preco acima MM50")
                     if not _tbear:
@@ -921,7 +924,7 @@ async def executar_ciclo_mtf(session, estado, moedas):
                 extra = {
                     "rvol_label":   result.get("rvol_label", ""),
                     "rvol":         result.get("rvol", 0.0),
-                    "inst_score":   r4h.get("score_inst_long" if eh_long else "score_inst_short", 0),
+                    "inst_score":   result.get("score_inst_long" if eh_long else "score_inst_short", 0),
                     "inst_cls":     r4h.get("cls_inst_long"   if eh_long else "cls_inst_short",   ""),
                     "dna_flow":     result.get("dna_flow_bull" if eh_long else "dna_flow_bear", False),
                     "trendilo_dir": result.get("trendilo_long" if eh_long else "trendilo_short", False),

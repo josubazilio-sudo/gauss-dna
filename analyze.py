@@ -573,11 +573,13 @@ def detectar_sinais(ind):
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
                       i["dna_flex_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
                       i["rsi_zona_long"] and i["score_inst_long"] >= 50 and
-                      i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"])
+                      i["seguro_long"] and i["trendilo_long"] and
+                      not i["liq_topo"] and not i["liq_topo_hist5"])
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
                       i["dna_flex_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
                       i["rsi_zona_short"] and i["score_inst_short"] >= 50 and
-                      i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"])
+                      i["seguro_short"] and i["trendilo_short"] and
+                      not i["liq_fundo"] and not i["liq_fundo_hist5"])
 
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flex_bull"] and i["adx_long_ok"] and
@@ -808,7 +810,7 @@ def detectar_sinais(ind):
     #        EMA alinhada | HA bull | sem liq_topo | acima EMA200 | dist EMA21≤2%
     _core_vol = i["vol_nao_fade"] and not i["vol_secando"]
     long_core = (
-        42 <= i["rsi"] <= 55 and i["rsi_subindo"] and
+        45 <= i["rsi"] <= 58 and i["rsi_subindo"] and
         i["adx"] >= 18 and _core_vol and
         i["kalman_subindo"] and i["trendilo_long"] and
         i["tbull_loose"] and i["ha_bull"] and
