@@ -808,6 +808,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                 "armadilha":    _armadilha,
                 "e21":          result.get("e21", 0),
                 "e50":          result.get("e50", 0),
+                "high_atual":   result.get("high_atual", 0),
+                "low_atual":    result.get("low_atual", 0),
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],
@@ -981,6 +983,8 @@ async def executar_ciclo_mtf(session, estado, moedas):
                                      "LIQ TOPO ↓"  if r4h.get("liq_topo")  else ""),
                     "e21":          result.get("e21", 0),
                     "e50":          result.get("e50", 0),
+                    "high_atual":   result.get("high_atual", 0),
+                    "low_atual":    result.get("low_atual", 0),
                 }
                 ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                         result["preco"], result["atr"], r4h["score"],
@@ -1037,6 +1041,8 @@ async def executar_teste(session):
             "oi_change":    None,
             "e21":          result.get("e21", 0),
             "e50":          result.get("e50", 0),
+            "high_atual":   result.get("high_atual", 0),
+            "low_atual":    result.get("low_atual", 0),
         }
         await enviar_sinal(session, sym, label, abrev, sinal_forcado,
                            result["preco"], result["atr"], result["score"],

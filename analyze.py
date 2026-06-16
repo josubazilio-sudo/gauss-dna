@@ -495,6 +495,7 @@ def calcular_indicadores(candles):
         "dist_e21_pct": dist_e21_pct, "dist_e50_pct": dist_e50_pct,
         "close_abaixo_max_ant": close_abaixo_max_ant, "close_acima_min_ant": close_acima_min_ant,
         "pavio_sup_forte": pavio_sup_forte, "martelo": martelo,
+        "high_atual": maximas[-1], "low_atual": minimas[-1],
         "exaustao_topo": exaustao_topo, "exaustao_fund": exaustao_fund,
         "exaustao_ext_long": exaustao_ext_long, "exaustao_ext_short": exaustao_ext_short,
         "nao_ext_long": nao_ext_long, "nao_ext_short": nao_ext_short,
@@ -1152,4 +1153,6 @@ def analisar(simbolo, candles, funding_rate=None):
         "dist_e50_pct":      ind["dist_e50_pct"],
         "pavio_sup_forte":   ind["pavio_sup_forte"],
         "martelo":           ind["martelo"],
+        "high_atual":        ind["high_atual"],
+        "low_atual":         ind["low_atual"],
     }

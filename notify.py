@@ -142,9 +142,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         stop = stop_atr
         label_stop = f"{mult_atr:.1f} ATR"
 
-    # EXTREME: stop abaixo da mínima da liquidez (LONG) ou acima do topo (SHORT)
+    # EXTREME: stop abaixo da mínima da vela de sweep (LONG) ou acima do topo (SHORT)
+    # Usa high_atual/low_atual (vela corrente) pois liq_topo/fundo implica maximas[-1]>swing_high
     if fonte == "EXTREME":
-        stop = (swing_low - atr * 0.5) if eh_long else (swing_high + atr * 0.5)
+        _ha_ex = extra.get("high_atual", swing_high)
+        _la_ex = extra.get("low_atual",  swing_low)
+        stop = (_la_ex - atr * 0.5) if eh_long else (_ha_ex + atr * 0.5)
         label_stop = "Liq"
 
     risco = abs(preco - stop)
