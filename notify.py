@@ -257,6 +257,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     elif _conf_lev < 70: _lev = min(_lev, 10)
     elif _conf_lev < 80: _lev = min(_lev, 15)
     # conf>=80 (score>=107, impossível): cap 20x pelo clamp final
+    if extra.get("h4_penalty"):
+        _lev = int(_lev * 0.75)                      # H4 oposto: -25% alavancagem máxima
     alavancagem = max(3, min(20, _lev))              # clamp 3x–20x
 
     pos_alav     = valor_pos / alavancagem

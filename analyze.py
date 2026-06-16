@@ -364,8 +364,8 @@ def calcular_indicadores(candles):
 
     # RSI zona de entrada — zona estrita 40-68 LONG / 32-60 SHORT
     # REVERSAL e DUMP não usam rsi_zona (condições próprias); SM_SWEEP usa rsi_zona_flex
-    rsi_zona_long  = 40 <= rsi <= 68
-    rsi_zona_short = 32 <= rsi <= 60
+    rsi_zona_long  = 38 <= rsi <= 70
+    rsi_zona_short = 30 <= rsi <= 62
     rsi_zona_flex   = rsi < 75    # zona ampla — para SM_SWEEP e exceções
     rsi_zona_flex_s = rsi > 25
     rsi_entrada_long  = rsi >= 45   # RSI mínimo para entrar LONG (diagnóstico)
@@ -539,23 +539,23 @@ def detectar_sinais(ind):
     _prem_sm_long  = i["sm_bull"] or (i["liq_fundo_hist10"] and i["absorb_bull"])
     _prem_sm_short = i["sm_bear"] or (i["liq_topo_hist10"]  and i["absorb_bear"])
     long_premium = (
-        i["score_inst_long"] >= 70 and
+        i["score_inst_long"] >= 75 and
         i["adx"] >= 25 and i["rvol_max2"] >= 2.0 and _prem_atr_ok and
         i["e10"] > i["e21"] and i["e21"] > i["e50"] and
         i["preco"] > i["e50"] and i["preco"] > i["e200"] and
-        i["kalman_subindo"] and i["trendilo_long"] and
+        i["kalman_subindo"] and i["trendilo_long"] and i["ha_bull_1"] and
         i["dna_flow_bull"] and _prem_sm_long and i["obv_bull"] and
-        45 <= i["rsi"] <= 60 and
+        45 <= i["rsi"] <= 65 and
         not i["liq_topo"] and i["nao_pump8"] and i["seguro_long"]
     )
     short_premium = (
-        i["score_inst_short"] >= 70 and
+        i["score_inst_short"] >= 75 and
         i["adx"] >= 25 and i["rvol_max2"] >= 2.0 and _prem_atr_ok and
         i["e10"] < i["e21"] and i["e21"] < i["e50"] and
         i["preco"] < i["e50"] and i["preco"] < i["e200"] and
-        not i["kalman_subindo"] and i["trendilo_short"] and
+        not i["kalman_subindo"] and i["trendilo_short"] and i["ha_bear_1"] and
         i["dna_flow_bear"] and _prem_sm_short and i["obv_bear"] and
-        40 <= i["rsi"] <= 55 and
+        40 <= i["rsi"] <= 60 and
         not i["liq_fundo"] and i["nao_dump8"] and i["seguro_short"]
     )
 
@@ -613,21 +613,21 @@ def detectar_sinais(ind):
 
     # ── BB Breakout — critérios completos institucionais ──────────────────────
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["ha_bull_1"] and
-                      48 <= i["rsi"] <= 60 and i["adx"] >= 25 and i["adx_subindo"] and
-                      i["rvol"] >= 1.50 and i["obv_bull"] and i["dna_flow_bull"] and
+                      45 <= i["rsi"] <= 65 and i["adx"] >= 22 and i["adx_subindo"] and
+                      i["rvol"] >= 1.30 and i["obv_bull"] and i["dna_flow_bull"] and
                       i["trendilo_long"] and i["kalman_subindo"] and
-                      i["preco"] > i["e50"] and i["preco"] <= i["e21"] * 1.03 and
+                      i["preco"] > i["e50"] and i["preco"] <= i["e21"] * 1.05 and
                       not i["liq_topo"] and not i["exaustao_topo"] and
                       not i["perto_bb_topo"] and not i["lateralizado"] and
-                      i["score_inst_long"] >= 65)
+                      i["score_inst_long"] >= 60)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["ha_bear_1"] and
-                      40 <= i["rsi"] <= 55 and i["adx"] >= 25 and i["adx_subindo"] and
-                      i["rvol"] >= 1.50 and i["obv_bear"] and i["dna_flow_bear"] and
+                      38 <= i["rsi"] <= 60 and i["adx"] >= 22 and i["adx_subindo"] and
+                      i["rvol"] >= 1.30 and i["obv_bear"] and i["dna_flow_bear"] and
                       i["trendilo_short"] and not i["kalman_subindo"] and
-                      i["preco"] < i["e50"] and i["preco"] >= i["e21"] * 0.97 and
+                      i["preco"] < i["e50"] and i["preco"] >= i["e21"] * 0.95 and
                       not i["liq_fundo"] and not i["exaustao_fund"] and
                       not i["perto_bb_fund"] and not i["lateralizado"] and
-                      i["score_inst_short"] >= 65)
+                      i["score_inst_short"] >= 60)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
     long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi_zona_flex"] and
@@ -725,30 +725,30 @@ def detectar_sinais(ind):
     # Condições: nova máxima de 10 barras + RVOL ≥ 1.5x + momentum alinhado.
     # RSI 48-67 LONG (espaço para subir mas com momentum iniciando).
     # RSI 33-52 SHORT (espaço para cair mas com momentum de baixa iniciando).
-    _brk_vol = i["v_forte"] and not i["vol_secando"]  # RVOL >= 1.5x e não secando
+    _brk_vol = i["rvol"] >= 1.3 and not i["vol_secando"]  # RVOL >= 1.3x e não secando
     long_breakout = (
-        45 <= i["rsi"] <= 62 and i["rsi_subindo"] and
+        45 <= i["rsi"] <= 68 and i["rsi_subindo"] and
         i["adx"] >= 20 and i["adx_subindo"] and
         _brk_vol and i["kalman_subindo"] and i["trendilo_long"] and
         i["ha_bull_1"] and i["surge_break_h"] and
         i["preco"] > i["e50"] and not i["liq_topo"] and
         not i["exaustao_topo"] and not i["perto_bb_topo"] and
-        i["dist_e21_long"] and
+        i["preco"] <= i["e21"] * 1.05 and
         (i["liq_fundo_hist10"] or not i["liq_topo_hist5"])
     )
     short_breakout = (
-        33 <= i["rsi"] <= 52 and i["rsi_caindo"] and
+        30 <= i["rsi"] <= 55 and i["rsi_caindo"] and
         i["adx"] >= 20 and i["adx_subindo"] and
         _brk_vol and not i["kalman_subindo"] and i["trendilo_short"] and
         i["ha_bear_1"] and i["surge_break_l"] and
         i["preco"] < i["e50"] and not i["liq_fundo"] and
         not i["exaustao_fund"] and not i["perto_bb_fund"] and
-        i["dist_e21_short"] and
+        i["preco"] >= i["e21"] * 0.95 and
         (i["liq_topo_hist10"] or not i["liq_fundo_hist5"])
     )
 
     # ── Momentum RSI ──────────────────────────────────────────────────────────
-    rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
+    rsi_fresh_long  = i["rsi_ant"] < 60 <= i["rsi"] < 75
     rsi_fresh_short = i["rsi_ant"] > 42 >= i["rsi"] > 30
     # Exaustão de curtíssimo prazo (sem checagem de teto de RSI — o MOMENTUM entra
     # propositalmente na faixa 65-73, então só barra se já estiver esticado/exausto)
@@ -788,13 +788,13 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55)
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    long_flex  = (i["score"] >= 40 and i["adx"] >= 18 and
+    long_flex  = (i["score"] >= 35 and i["adx"] >= 16 and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 0.5 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
-    short_flex = (i["score"] <= -40 and i["adx"] >= 18 and
+    short_flex = (i["score"] <= -35 and i["adx"] >= 16 and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 0.5 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
@@ -815,7 +815,7 @@ def detectar_sinais(ind):
     # FL=3: critérios institucionais rígidos — cada gate abaixo é obrigatório
     _sc_min  = 25 if _FLV <= 0 else 40
     _adx_min = 10 if _FLV <= 0 else 20                            # FL>=1: ADX>=20
-    _rvol_scout = 2.0 if _FLV >= 3 else 1.0                      # FL>=1: RVOL>=1.0, FL=3: RVOL>=2.0
+    _rvol_scout = 2.0 if _FLV >= 3 else 0.8                       # FL>=1: RVOL>=0.8x, FL=3: RVOL>=2.0
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
     # FL=3: RSI LONG restrito 35–52 (entrada antecipada — quanto menor melhor)
@@ -974,11 +974,11 @@ def graduar_sinal(ind, sinal):
         _conf_g    = max(40, min(95, score_inst * 3 // 4))
         _dna_g     = i["dna_flow_bull"]  if sinal == "LONG" else i["dna_flow_bear"]
         _trl_g     = i["trendilo_long"]  if sinal == "LONG" else i["trendilo_short"]
-        rsi_esticado = (sinal == "LONG" and i["rsi"] > 60) or (sinal == "SHORT" and i["rsi"] < 40)
+        rsi_esticado = (sinal == "LONG" and i["rsi"] > 68) or (sinal == "SHORT" and i["rsi"] < 40)
         ha_fraco = (sinal == "LONG"  and i["ha_bull_1"] and not i["ha_bull"]) or \
                    (sinal == "SHORT" and i["ha_bear_1"] and not i["ha_bear"])
         if (score_inst < 80 or rsi_esticado or ha_fraco or
-                i["rvol"] < 1.5 or i["adx"] < 25 or
+                i["rvol"] < 1.3 or i["adx"] < 22 or
                 not (_dna_g and _trl_g) or _conf_g < 70):
             grade = "A"
 
