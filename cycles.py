@@ -433,7 +433,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                 continue
 
             # Sinais de reversão extrema têm piso de score menor (mercado em pânico/euforia)
-            _score_min = 60 if fonte == "PREMIUM" else 20 if fonte == "DUMP" else 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV", "CORE") else 35 if fonte in ("BREAKOUT", "PUMP") else 40
+            _score_min = 60 if fonte == "PREMIUM" else 20 if fonte == "DUMP" else 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV", "CORE") else 35 if fonte in ("BREAKOUT", "PUMP", "FLEX", "SCOUT", "MOMENTUM", "REBOUND", "PULLBACK", "CROSS", "BB_BREAK", "SURGE") else 35
             if abs(result["score"]) < _score_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {_score_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -793,12 +793,15 @@ async def executar_ciclo(session, estado, tf, moedas):
             if fonte in ("SURGE", "BREAKOUT", "PUMP") and FILTER_LEVEL >= 1:
                 _rsi_exp   = result.get("rsi", 50)
                 _rvol_exp  = result.get("rvol", 0.0)
+                _rvol_exp_max2 = result.get("rvol_tier_max2", 0)  # usa max 2 velas (igual analyze.py)
                 _adx_exp   = result.get("adx", 0)
                 _bloq_exp  = []
                 _rvol_min  = 1.3 if fonte == "BREAKOUT" else 2.5  # BREAKOUT: 1.3x; SURGE/PUMP: 2.5x
                 _rsi_max   = 68  if fonte == "BREAKOUT" else 65   # BREAKOUT: RSI até 68
-                if _rvol_exp < _rvol_min:
-                    _bloq_exp.append(f"RVOL {_rvol_exp:.2f}x<{_rvol_min}")
+                # SURGE/PUMP: alinha com analyze.py que usa rvol_tier_max2 >= 3 (= 2.0x na vela melhor)
+                _rvol_check = _rvol_exp if fonte == "BREAKOUT" else max(_rvol_exp, result.get("rvol_max2", _rvol_exp))
+                if _rvol_check < _rvol_min:
+                    _bloq_exp.append(f"RVOL {_rvol_check:.2f}x<{_rvol_min}")
                 if _adx_exp < 22:
                     _bloq_exp.append(f"ADX {_adx_exp:.0f}<22")
                 if not (45 <= _rsi_exp <= _rsi_max):

@@ -567,7 +567,7 @@ def detectar_sinais(ind):
         not i["kalman_subindo"] and i["trendilo_short"] and i["ha_bear_1"] and
         i["dna_flow_bear"] and _prem_sm_short and i["obv_bear"] and
         40 <= i["rsi"] <= 60 and
-        not i["liq_fundo"] and i["nao_dump8"] and i["seguro_short"]
+        not i["liq_fundo_hist3"] and i["nao_dump8"] and i["seguro_short"]
     )
 
     # ── ELITE ────────────────────────────────────────────────────────────────
@@ -985,7 +985,7 @@ def graduar_sinal(ind, sinal):
         _conf_g    = max(40, min(95, score_inst * 3 // 4))
         _dna_g     = i["dna_flow_bull"]  if sinal == "LONG" else i["dna_flow_bear"]
         _trl_g     = i["trendilo_long"]  if sinal == "LONG" else i["trendilo_short"]
-        rsi_esticado = (sinal == "LONG" and i["rsi"] > 68) or (sinal == "SHORT" and i["rsi"] < 40)
+        rsi_esticado = (sinal == "LONG" and i["rsi"] > 70) or (sinal == "SHORT" and i["rsi"] < 31)
         ha_fraco = (sinal == "LONG"  and i["ha_bull_1"] and not i["ha_bull"]) or \
                    (sinal == "SHORT" and i["ha_bear_1"] and not i["ha_bear"])
         if (score_inst < 80 or rsi_esticado or ha_fraco or
