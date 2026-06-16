@@ -1060,6 +1060,7 @@ def analisar(simbolo, candles, funding_rate=None):
         "rsi_ant":        ind["rsi_ant"],
         "rsi_subindo":    ind["rsi_subindo"],
         "rsi_caindo":     ind["rsi_caindo"],
+        "e10":            ind["e10"],
         "e21":            ind["e21"],
         "adx_subindo":    ind["adx_subindo"],
         "f_bull":         ind["f_bull"],

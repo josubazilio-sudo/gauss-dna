@@ -497,6 +497,35 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], f"H4 oposto (inst={score_inst})"))
                 continue
 
+            # ── Gate qualidade LONG — condições obrigatórias ─────────────────
+            if eh_long_ and FILTER_LEVEL >= 1 and fonte not in {"REVERSAL", "SM_SWEEP"}:
+                _e10_g   = result.get("e10", 0)
+                _e21_g   = result.get("e21", 0)
+                _adx_g   = result.get("adx", 0)
+                _rvol_g  = result.get("rvol", 0)
+                _preco_g = result.get("preco", 0)
+                _atr_g   = result.get("atr", 0)
+                _sh_g    = result.get("swing_high", float("inf"))
+                _bloq_gate = []
+                # Resistência mais urgente — verifica primeiro
+                if _sh_g > 0 and _preco_g > 0 and _preco_g > _sh_g * 0.995:
+                    _bloq_gate.append(f"ENTRANDO EM RESISTENCIA (preco>{_sh_g:.6f}*0.995)")
+                if _e10_g > 0 and _e21_g > 0 and _e10_g <= _e21_g:
+                    _bloq_gate.append(f"EMA10 {_e10_g:.4f} <= EMA21 {_e21_g:.4f}")
+                if _adx_g <= 20:
+                    _bloq_gate.append(f"ADX {_adx_g:.0f}<=20")
+                if _rvol_g < 2.0:
+                    _bloq_gate.append(f"RVOL {_rvol_g:.2f}x<2.0")
+                if _e21_g > 0 and _preco_g > _e21_g * 1.02:
+                    _bloq_gate.append(f"preco {_preco_g:.4f} > EMA21*1.02")
+                if _sh_g < float("inf") and _preco_g > 0 and _atr_g > 0 and (_sh_g - _preco_g) <= _atr_g:
+                    _bloq_gate.append(f"resistencia <1ATR (dist={(_sh_g-_preco_g)/_atr_g:.2f}ATR)")
+                if _bloq_gate:
+                    log.info(f"  🚫 {abrev} [{tf}] LONG gate — {_bloq_gate[0]}")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"gate({_bloq_gate[0]})"))
+                    continue
+
             # ── Filtros ANTI-TOPO para sinais LONG ───────────────────────────
             if eh_long_ and FILTER_LEVEL >= 1:
                 _rsi_l   = result.get("rsi", 50)
