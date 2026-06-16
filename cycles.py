@@ -454,6 +454,7 @@ async def executar_ciclo(session, estado, tf, moedas):
             # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
             _inst_min = (0   if FILTER_LEVEL <= 0 else
                          70  if fonte == "PREMIUM" else
+                         15  if fonte == "EXTREME" else
                          25  if fonte == "CORE" else
                          40  if fonte == "DUMP" else
                          45  if fonte == "REVERSAL" else
@@ -485,7 +486,7 @@ async def executar_ciclo(session, estado, tf, moedas):
 
             # Confiança mínima 55% para qualquer sinal (exceto REVERSAL e SM_SWEEP)
             _conf_global = max(40, min(95, score_inst * 3 // 4))
-            if FILTER_LEVEL >= 1 and _conf_global < 55 and fonte not in {"REVERSAL", "SM_SWEEP"}:
+            if FILTER_LEVEL >= 1 and _conf_global < 55 and fonte not in {"REVERSAL", "SM_SWEEP", "EXTREME"}:
                 log.info(f"  ⚠️ {abrev} bloqueado — confiança {_conf_global}% < 55% (inst={score_inst})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"conf<55%({_conf_global}%)"))
@@ -497,8 +498,26 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], f"H4 oposto (inst={score_inst})"))
                 continue
 
+            # ── BLOQUEIO: não comprar topo extremo / não vender fundo extremo ──
+            if FILTER_LEVEL >= 1 and fonte not in {"EXTREME", "REVERSAL", "SM_SWEEP"}:
+                _rsi_blq   = result.get("rsi", 50)
+                _preco_blq = result.get("preco", 0)
+                _e21_blq   = result.get("e21", 0)
+                if _e21_blq > 0:
+                    _dist_blq = (_preco_blq - _e21_blq) / _e21_blq
+                    if eh_long_ and _rsi_blq > 75 and _dist_blq > 0.06:
+                        log.info(f"  🚫 {abrev} [{tf}] LONG bloqueado — topo extremo RSI {_rsi_blq:.0f}>75 + dist {_dist_blq*100:.1f}%>EMA21*1.06")
+                        candidatos.append((abs(result["score"]), abrev, result["score"],
+                                           result["rsi"], result["adx"], f"bloq-topo-extremo(RSI{_rsi_blq:.0f})"))
+                        continue
+                    if not eh_long_ and _rsi_blq < 25 and _dist_blq < -0.06:
+                        log.info(f"  🚫 {abrev} [{tf}] SHORT bloqueado — fundo extremo RSI {_rsi_blq:.0f}<25 + dist {_dist_blq*100:.1f}%<EMA21*0.94")
+                        candidatos.append((abs(result["score"]), abrev, result["score"],
+                                           result["rsi"], result["adx"], f"bloq-fundo-extremo(RSI{_rsi_blq:.0f})"))
+                        continue
+
             # ── Gate qualidade LONG — condições obrigatórias ─────────────────
-            if eh_long_ and FILTER_LEVEL >= 1 and fonte not in {"REVERSAL", "SM_SWEEP"}:
+            if eh_long_ and FILTER_LEVEL >= 1 and fonte not in {"REVERSAL", "SM_SWEEP", "EXTREME"}:
                 _e10_g   = result.get("e10", 0)
                 _e21_g   = result.get("e21", 0)
                 _adx_g   = result.get("adx", 0)
@@ -787,6 +806,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                 "funding_rate": result.get("funding_rate"),
                 "oi_change":    oi_change.get(sym),
                 "armadilha":    _armadilha,
+                "e21":          result.get("e21", 0),
+                "e50":          result.get("e50", 0),
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],
@@ -958,6 +979,8 @@ async def executar_ciclo_mtf(session, estado, moedas):
                     "trendilo_dir": result.get("trendilo_long" if eh_long else "trendilo_short", False),
                     "liq_event":    ("LIQ FUNDO ↑" if r4h.get("liq_fundo") else
                                      "LIQ TOPO ↓"  if r4h.get("liq_topo")  else ""),
+                    "e21":          result.get("e21", 0),
+                    "e50":          result.get("e50", 0),
                 }
                 ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                         result["preco"], result["atr"], r4h["score"],
@@ -1012,6 +1035,8 @@ async def executar_teste(session):
                              "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
             "funding_rate": result.get("funding_rate"),
             "oi_change":    None,
+            "e21":          result.get("e21", 0),
+            "e50":          result.get("e50", 0),
         }
         await enviar_sinal(session, sym, label, abrev, sinal_forcado,
                            result["preco"], result["atr"], result["score"],

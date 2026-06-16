@@ -142,6 +142,11 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         stop = stop_atr
         label_stop = f"{mult_atr:.1f} ATR"
 
+    # EXTREME: stop abaixo da mínima da liquidez (LONG) ou acima do topo (SHORT)
+    if fonte == "EXTREME":
+        stop = (swing_low - atr * 0.5) if eh_long else (swing_high + atr * 0.5)
+        label_stop = "Liq"
+
     risco = abs(preco - stop)
     # Rede de segurança: mínimo 0.5% (cobre risco=0 e stops ultra-apertados)
     _risco_min = preco * 0.005
@@ -205,6 +210,16 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
 
     tp1   = preco + risco * r1      if eh_long else preco - risco * r1
     final = preco + risco * r_final if eh_long else preco - risco * r_final
+
+    # EXTREME: alvos = EMA21 (TP1) e EMA50 (TP2) — retorno às médias após extensão extrema
+    if fonte == "EXTREME" and risco > 0:
+        _e21_ex = extra.get("e21", 0)
+        _e50_ex = extra.get("e50", 0)
+        if _e21_ex > 0 and _e50_ex > 0:
+            tp1   = _e21_ex
+            final = _e50_ex
+            r1      = max(0.5, round(abs(preco - tp1)   / risco, 1))
+            r_final = max(1.0, round(abs(preco - final) / risco, 1))
 
     # ── Tamanho da posição ────────────────────────────────────────────────────
     if fonte == "PREMIUM":

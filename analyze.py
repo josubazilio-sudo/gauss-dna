@@ -214,6 +214,9 @@ def calcular_indicadores(candles):
     range_vela = maximas[-1] - minimas[-1]
     sombra_sup = (maximas[-1] - max(aberturas[-1], preco)) / max(range_vela, 1e-10)
     sombra_inf = (min(aberturas[-1], preco) - minimas[-1]) / max(range_vela, 1e-10)
+    _corpo_pct      = abs(preco - aberturas[-1]) / max(range_vela, 1e-10)
+    pavio_sup_forte = range_vela > 0 and sombra_sup > _corpo_pct   # wick > body (rejeição)
+    martelo         = range_vela > 0 and sombra_inf > _corpo_pct and preco > aberturas[-1]
     exaustao_topo = sombra_sup > 0.40 and preco < (maximas[-1] - bb_range * 0.02)
     exaustao_fund = sombra_inf > 0.40 and preco > (minimas[-1] + bb_range * 0.02)
     # Exaustão EXTREMA: só bloqueia quando a combinação completa está presente
@@ -262,6 +265,11 @@ def calcular_indicadores(candles):
     dist_e21_short = preco >= e21 * 0.97   # SHORT: preço até 3% abaixo da EMA21
     preco_longe_e21_up = preco > e21 * 1.05  # preço >5% acima da MM21 (anti-topo)
     preco_acima_e21    = preco > e21          # acima da MM21 (filtro SCOUT)
+    # Distância percentual real (para EXTREME)
+    dist_e21_pct         = (preco - e21) / max(e21, 1e-10)   # + = acima, - = abaixo
+    dist_e50_pct         = (preco - e50) / max(e50, 1e-10)
+    close_abaixo_max_ant = preco < maximas[-2]   # vela fechando abaixo da máxima anterior
+    close_acima_min_ant  = preco > minimas[-2]   # vela fechando acima da mínima anterior
 
     crange = maximas[-1] - minimas[-1]
     lwick  = min(aberturas[-1], preco) - minimas[-1]
@@ -484,6 +492,9 @@ def calcular_indicadores(candles):
         "sombra_sup": sombra_sup, "sombra_inf": sombra_inf,
         "sm_bull": sm_bull, "sm_bear": sm_bear,
         "absorb_bull": absorb_bull, "absorb_bear": absorb_bear,
+        "dist_e21_pct": dist_e21_pct, "dist_e50_pct": dist_e50_pct,
+        "close_abaixo_max_ant": close_abaixo_max_ant, "close_acima_min_ant": close_acima_min_ant,
+        "pavio_sup_forte": pavio_sup_forte, "martelo": martelo,
         "exaustao_topo": exaustao_topo, "exaustao_fund": exaustao_fund,
         "exaustao_ext_long": exaustao_ext_long, "exaustao_ext_short": exaustao_ext_short,
         "nao_ext_long": nao_ext_long, "nao_ext_short": nao_ext_short,
@@ -640,6 +651,30 @@ def detectar_sinais(ind):
         (i["dna_flow_bear"] or i["obv_bear"] or i["f_bear"])  # fluxo confirmando queda
     )
     # DUMP só existe SHORT (reversa de pump — o equivalente LONG é REVERSAL rsi<30)
+
+    # ── EXTREME REVERSAL — Topo/Fundo extremo após caça de liquidez ─────────────
+    short_extreme = (
+        i["rsi"] > 80 and
+        i["dist_e21_pct"] > 0.08 and          # >8% acima da EMA21
+        i["dist_e50_pct"] > 0.12 and          # >12% acima da EMA50
+        i["rvol"] >= 2.5 and
+        i["close_abaixo_max_ant"] and          # fechando abaixo da máxima anterior
+        i["liq_topo"] and                      # liquidity sweep confirmado no topo
+        i["ha_bear_1"] and                     # vela de reversão vendedora
+        i["adx"] >= 25 and
+        i["bb_break_long"]                     # preço acima da banda superior BB
+    )
+    long_extreme = (
+        i["rsi"] < 20 and
+        i["dist_e21_pct"] < -0.08 and         # >8% abaixo da EMA21
+        i["dist_e50_pct"] < -0.12 and         # >12% abaixo da EMA50
+        i["rvol"] >= 2.5 and
+        i["liq_fundo"] and                     # liquidity sweep confirmado no fundo
+        i["close_acima_min_ant"] and           # fechando acima da mínima anterior
+        i["absorb_bull"] and                   # absorção compradora forte
+        i["adx"] >= 25 and
+        i["bb_break_short"]                    # preço abaixo da banda inferior BB
+    )
 
     # ── Reversão extrema ──────────────────────────────────────────────────────
     long_reversal  = (i["rsi"] < 30 and i["ha_bull"] and i["v_forte"] and
@@ -859,6 +894,8 @@ def detectar_sinais(ind):
             (long_sm,        "LONG",  "SM_SWEEP"),
             (short_sm,       "SHORT", "SM_SWEEP"),
             (short_dump,     "SHORT", "DUMP"),
+            (long_extreme,   "LONG",  "EXTREME"),
+            (short_extreme,  "SHORT", "EXTREME"),
             (long_reversal,  "LONG",  "REVERSAL"),
             (short_reversal, "SHORT", "REVERSAL"),
             (long_pump,      "LONG",  "PUMP"),
@@ -962,6 +999,16 @@ def analisar(simbolo, candles, funding_rate=None):
 
     sinal, fonte = detectar_sinais(ind)
     grade, pts   = graduar_sinal(ind, sinal)
+
+    # EXTREME: grade baseada em bônus (0-30pts) em vez de tendência
+    if fonte == "EXTREME":
+        _obv_k = "obv_bear"       if sinal == "SHORT" else "obv_bull"
+        _dna_k = "dna_flow_bear"  if sinal == "SHORT" else "dna_flow_bull"
+        _pav_k = "pavio_sup_forte" if sinal == "SHORT" else "martelo"
+        _bonus = ((10 if ind.get(_pav_k) else 0) +
+                  (10 if ind[_obv_k] else 0) +
+                  (10 if ind[_dna_k] else 0))
+        grade = "S" if _bonus >= 30 else "A+" if _bonus >= 20 else "A" if _bonus >= 10 else "B"
 
     # Log de diagnóstico quando há score mas sem sinal
     if not sinal:
@@ -1100,4 +1147,9 @@ def analisar(simbolo, candles, funding_rate=None):
         "ha_bear2":          ind["ha_bear2"],
         "flex_vol_ok":       ind["flex_vol_ok"],
         "flex_vol_ok_s":     ind["flex_vol_ok_s"],
+        # EXTREME REVERSAL
+        "dist_e21_pct":      ind["dist_e21_pct"],
+        "dist_e50_pct":      ind["dist_e50_pct"],
+        "pavio_sup_forte":   ind["pavio_sup_forte"],
+        "martelo":           ind["martelo"],
     }
