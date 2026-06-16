@@ -589,23 +589,24 @@ def detectar_sinais(ind):
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
-    # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
+    # ── Variáveis de nível de filtro (usadas em SCOUT) ───────────────────────
     _fluxo_min   = 0 if _FLV <= 0 else (1 if _FLV == 1 else 2)
     _adx_sub_ok  = i["adx_subindo"] if _FLV >= 2 else True
     _no_liq_topo = (not i["liq_topo"])  if _FLV >= 3 else True
     _no_liq_fund = (not i["liq_fundo"]) if _FLV >= 3 else True
 
     # ── BB Breakout ───────────────────────────────────────────────────────────
+    # adx_subindo e liq_topo/fundo SEMPRE obrigatórios (REGRA #5 — sem exceção por FL)
     _rvol_bb      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
-                      i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
-                      _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
-                      i["obv_bull"] and _no_liq_topo and
+                      i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 18 and
+                      i["adx_subindo"] and not i["lateralizado"] and not i["ext_acima_e21"] and
+                      i["obv_bull"] and not i["liq_topo"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
-                      i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
-                      _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
-                      i["obv_bear"] and _no_liq_fund and
+                      i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 18 and
+                      i["adx_subindo"] and not i["lateralizado"] and not i["ext_abaixo_e21"] and
+                      i["obv_bear"] and not i["liq_fundo"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────

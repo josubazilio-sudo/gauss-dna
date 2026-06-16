@@ -505,7 +505,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                 # 3. LIQ_TOPO E RSI >= 65
                 if _liq_t and _rsi_l >= 65:
                     _bloq_topo.append(f"LIQ_TOPO+RSI {_rsi_l:.0f}>=65")
-                # BB_BREAK: exige fluxo COMPLETO e RSI < 65
+                # BB_BREAK: exige fluxo COMPLETO, RSI < 65 e funding não sobreaquecido
                 if fonte == "BB_BREAK":
                     _df_l  = result.get("dna_flow_bull", False)
                     _trl_l = result.get("trendilo_long", False)
@@ -514,6 +514,10 @@ async def executar_ciclo(session, estado, tf, moedas):
                         _bloq_topo.append(f"BB_BREAK fluxo {_fluxo_desc} (precisa Completo)")
                     if _rsi_l >= 65:
                         _bloq_topo.append(f"BB_BREAK RSI {_rsi_l:.0f}>=65")
+                    # Funding >0.03%: longs pagando demais = mercado sobreaquecido = armadilha
+                    _fr_bb = result.get("funding_rate") or 0
+                    if _fr_bb > 0.0003:
+                        _bloq_topo.append(f"BB_BREAK funding {_fr_bb*100:.4f}%>0.03% (sobreaquecido)")
                 # 4. Preço >5% acima da MM21
                 if _longe:
                     _bloq_topo.append("preço >5% acima MM21")

@@ -232,6 +232,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     elif fonte == "SURGE":              _lev = min(_lev, 12)  # breakout explosivo: teto 12x
     elif fonte in ("BREAKOUT", "PUMP"): _lev = min(_lev, 10)  # breakout nascente: teto 10x
     elif fonte == "DUMP":               _lev = min(_lev, 8)   # pós-pump: alta volatilidade, conservador
+    elif fonte == "BB_BREAK":           _lev = min(_lev, 8)   # rompimento BB: risco de falso break, cap 8x
     alavancagem = max(3, min(20, _lev))              # clamp 3x–20x
 
     pos_alav     = valor_pos / alavancagem
