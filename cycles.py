@@ -500,9 +500,18 @@ async def executar_ciclo(session, estado, tf, moedas):
                 # 2. Score Inst >= 80 E RVOL < 0.8x (pump sem convicção)
                 if score_inst >= 80 and _rvol_l < 0.8:
                     _bloq_topo.append(f"inst={score_inst}≥80+RVOL {_rvol_l:.2f}x<0.8")
-                # 3. LIQ_TOPO E RSI > 65
-                if _liq_t and _rsi_l > 65:
-                    _bloq_topo.append(f"LIQ_TOPO+RSI {_rsi_l:.0f}>65")
+                # 3. LIQ_TOPO E RSI >= 65
+                if _liq_t and _rsi_l >= 65:
+                    _bloq_topo.append(f"LIQ_TOPO+RSI {_rsi_l:.0f}>=65")
+                # BB_BREAK: exige fluxo COMPLETO e RSI < 65
+                if fonte == "BB_BREAK":
+                    _df_l  = result.get("dna_flow_bull", False)
+                    _trl_l = result.get("trendilo_long", False)
+                    if not (_df_l and _trl_l):
+                        _fluxo_desc = "Ausente" if not (_df_l or _trl_l) else "Parcial"
+                        _bloq_topo.append(f"BB_BREAK fluxo {_fluxo_desc} (precisa Completo)")
+                    if _rsi_l >= 65:
+                        _bloq_topo.append(f"BB_BREAK RSI {_rsi_l:.0f}>=65")
                 # 4. Preço >5% acima da MM21
                 if _longe:
                     _bloq_topo.append("preço >5% acima MM21")

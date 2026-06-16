@@ -922,7 +922,7 @@ def graduar_sinal(ind, sinal):
     # com Score Inst 65 MÉDIO e RSI 69 que reverteu na entrada)
     if grade in ("S", "S+"):
         score_inst = i["score_inst_long"] if sinal == "LONG" else i["score_inst_short"]
-        rsi_esticado = (sinal == "LONG" and i["rsi"] > 65) or (sinal == "SHORT" and i["rsi"] < 35)
+        rsi_esticado = (sinal == "LONG" and i["rsi"] >= 65) or (sinal == "SHORT" and i["rsi"] <= 35)
         # 1 vela HA sem confirmação na anterior não merece alavancagem S (exige ha_bull/ha_bear)
         ha_fraco = (sinal == "LONG"  and i["ha_bull_1"] and not i["ha_bull"]) or \
                    (sinal == "SHORT" and i["ha_bear_1"] and not i["ha_bear"])
