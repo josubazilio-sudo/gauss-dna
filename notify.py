@@ -233,6 +233,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     elif fonte in ("BREAKOUT", "PUMP"): _lev = min(_lev, 10)  # breakout nascente: teto 10x
     elif fonte == "DUMP":               _lev = min(_lev, 8)   # pós-pump: alta volatilidade, conservador
     elif fonte == "BB_BREAK":           _lev = min(_lev, 8)   # rompimento BB: risco de falso break, cap 8x
+    # Cap final por confiança (prevalece sobre grade)
+    _conf_lev = max(40, min(95, score_inst * 3 // 4))
+    if   _conf_lev < 60: _lev = min(_lev, 5)
+    elif _conf_lev < 70: _lev = min(_lev, 10)
+    elif _conf_lev < 80: _lev = min(_lev, 15)
+    # conf>=80 (score>=107, impossível): cap 20x pelo clamp final
     alavancagem = max(3, min(20, _lev))              # clamp 3x–20x
 
     pos_alav     = valor_pos / alavancagem

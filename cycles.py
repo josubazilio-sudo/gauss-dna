@@ -457,8 +457,10 @@ async def executar_ciclo(session, estado, tf, moedas):
                          25  if fonte == "CORE" else
                          40  if fonte == "DUMP" else
                          45  if fonte == "REVERSAL" else
-                         50  if fonte in ("SM_SWEEP", "DIV", "SCOUT") else
-                         55  if fonte in ("FLEX", "SETUP", "PULLBACK", "CROSS",
+                         50  if fonte in ("SM_SWEEP", "DIV") else
+                         55  if fonte == "SCOUT" else
+                         60  if fonte == "FLEX" else
+                         55  if fonte in ("SETUP", "PULLBACK", "CROSS",
                                           "BB_BREAK", "SURGE", "BREAKOUT",
                                           "REBOUND", "PUMP") else
                          60  if fonte == "MOMENTUM" else
@@ -481,6 +483,14 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue
 
+            # Confiança mínima 55% para qualquer sinal (exceto REVERSAL e SM_SWEEP)
+            _conf_global = max(40, min(95, score_inst * 3 // 4))
+            if FILTER_LEVEL >= 1 and _conf_global < 55 and fonte not in {"REVERSAL", "SM_SWEEP"}:
+                log.info(f"  ⚠️ {abrev} bloqueado — confiança {_conf_global}% < 55% (inst={score_inst})")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], f"conf<55%({_conf_global}%)"))
+                continue
+
             if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"], score_inst, result.get("rvol", 1.0)):
                 log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto (inst={score_inst} rvol={result.get('rvol',1):.1f})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -489,54 +499,37 @@ async def executar_ciclo(session, estado, tf, moedas):
 
             # ── Filtros ANTI-TOPO para sinais LONG ───────────────────────────
             if eh_long_ and FILTER_LEVEL >= 1:
-                _rsi_l  = result.get("rsi", 50)
-                _rvol_l = result.get("rvol", 1.0)
-                _liq_t  = result.get("liq_topo", False)
-                _adx_l  = result.get("adx", 0)
-                _longe  = result.get("preco_longe_e21_up", False)
-                _acima  = result.get("preco_acima_e21", True)
+                _rsi_l   = result.get("rsi", 50)
+                _rvol_l  = result.get("rvol", 1.0)
+                _liq_t   = result.get("liq_topo", False)
+                _stoch_l = result.get("stoch_rsi", 0.5)
+                _preco_l = result.get("preco", 0)
+                _e21_l   = result.get("e21", 0)
+                _acima   = result.get("preco_acima_e21", True)
                 _bloq_topo = []
-                # 1. RSI > 70 E RVOL < 1.0x
-                if _rsi_l > 70 and _rvol_l < 1.0:
-                    _bloq_topo.append(f"RSI {_rsi_l:.0f}>70+RVOL {_rvol_l:.2f}x<1.0")
-                # 2. Score Inst >= 80 E RVOL < 0.8x (pump sem convicção)
-                if score_inst >= 80 and _rvol_l < 0.8:
-                    _bloq_topo.append(f"inst={score_inst}≥80+RVOL {_rvol_l:.2f}x<0.8")
-                # 3. LIQ_TOPO E RSI >= 65
-                if _liq_t and _rsi_l >= 65:
-                    _bloq_topo.append(f"LIQ_TOPO+RSI {_rsi_l:.0f}>=65")
-                # BB_BREAK: exige fluxo COMPLETO, RSI < 65 e funding não sobreaquecido
+                # 1. RSI>60 E preço >EMA21*1.03
+                if _rsi_l > 60 and _e21_l > 0 and _preco_l > _e21_l * 1.03:
+                    _bloq_topo.append(f"RSI {_rsi_l:.0f}>60 + preco>EMA21*1.03")
+                # 2. RSI>65 (sobrecomprado)
+                if _rsi_l > 65:
+                    _bloq_topo.append(f"RSI {_rsi_l:.0f}>65")
+                # 3. LIQ_TOPO ativo
+                if _liq_t:
+                    _bloq_topo.append("LIQ_TOPO")
+                # 4. StochRSI > 0.85
+                if _stoch_l > 0.85:
+                    _bloq_topo.append(f"StochRSI {_stoch_l:.2f}>0.85")
+                # BB_BREAK: funding sobreaquecido
                 if fonte == "BB_BREAK":
-                    _df_l  = result.get("dna_flow_bull", False)
-                    _trl_l = result.get("trendilo_long", False)
-                    if not (_df_l and _trl_l):
-                        _fluxo_desc = "Ausente" if not (_df_l or _trl_l) else "Parcial"
-                        _bloq_topo.append(f"BB_BREAK fluxo {_fluxo_desc} (precisa Completo)")
-                    if _rsi_l >= 65:
-                        _bloq_topo.append(f"BB_BREAK RSI {_rsi_l:.0f}>=65")
-                    # Funding >0.03%: longs pagando demais = mercado sobreaquecido = armadilha
                     _fr_bb = result.get("funding_rate") or 0
                     if _fr_bb > 0.0003:
-                        _bloq_topo.append(f"BB_BREAK funding {_fr_bb*100:.4f}%>0.03% (sobreaquecido)")
-                # 4. Preço >5% acima da MM21
-                if _longe:
-                    _bloq_topo.append("preço >5% acima MM21")
-                # 5. ADX > 35 E RSI > 70 E RVOL < 1.2x (exaustão de tendência)
-                if _adx_l > 35 and _rsi_l > 70 and _rvol_l < 1.2:
-                    _bloq_topo.append(f"ADX {_adx_l:.0f}>35+RSI {_rsi_l:.0f}>70+RVOL<1.2")
-                # 6+8. Combo extremo: RSI>70 + RVOL<1.0 + LIQ_TOPO
-                if _rsi_l > 70 and _rvol_l < 1.0 and _liq_t:
-                    _bloq_topo.insert(0, f"COMBO: RSI {_rsi_l:.0f}>70+RVOL {_rvol_l:.2f}<1.0+LIQ_TOPO")
-                # 7. SCOUT LONG: RSI 45-68, RVOL >= 1.0x, preço > MM21, sem LIQ_TOPO
+                        _bloq_topo.append(f"BB_BREAK funding {_fr_bb*100:.4f}%>0.03%")
+                # SCOUT: RVOL mínimo e posição acima MM21
                 if fonte == "SCOUT":
-                    if not (45 <= _rsi_l <= 68):
-                        _bloq_topo.append(f"SCOUT RSI {_rsi_l:.0f} fora 45-68")
                     if _rvol_l < 1.0:
                         _bloq_topo.append(f"SCOUT RVOL {_rvol_l:.2f}x<1.0")
                     if not _acima:
                         _bloq_topo.append("SCOUT preço abaixo MM21")
-                    if _liq_t:
-                        _bloq_topo.append("SCOUT LIQ_TOPO")
                 if _bloq_topo:
                     log.info(f"  🚫 {abrev} [{tf}] LONG anti-topo — {_bloq_topo[0]}")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -545,23 +538,25 @@ async def executar_ciclo(session, estado, tf, moedas):
 
             # ── Filtros ANTI-FUNDO para sinais SHORT ─────────────────────────
             if not eh_long_ and FILTER_LEVEL >= 1:
-                _rsi_s  = result.get("rsi", 50)
-                _rvol_s = result.get("rvol", 1.0)
-                _df_s   = result.get("dna_flow_bear", False)
-                _trl_s  = result.get("trendilo_short", False)
-                _conf_s = max(40, min(95, score_inst * 3 // 4))
-                _fluxo_forte = _df_s and _trl_s
+                _rsi_s   = result.get("rsi", 50)
+                _rvol_s  = result.get("rvol", 1.0)
+                _liq_f   = result.get("liq_fundo", False)
+                _stoch_s = result.get("stoch_rsi", 0.5)
                 _bloq_fundo = []
-                _sinais_rvol_flex = {"REVERSAL", "SM_SWEEP", "CORE", "DIV"}
-                if _rvol_s < 1.0 and fonte not in _sinais_rvol_flex:
+                _exceto_fundo = {"REVERSAL", "SM_SWEEP", "DUMP"}
+                _exceto_rvol  = {"REVERSAL", "SM_SWEEP", "CORE", "DIV"}
+                # 1. RSI < 35 (sobrevendido)
+                if _rsi_s < 35 and fonte not in _exceto_fundo:
+                    _bloq_fundo.append(f"RSI {_rsi_s:.0f}<35 (sobrevendido)")
+                # 2. LIQ_FUNDO ativo
+                if _liq_f and fonte not in _exceto_fundo:
+                    _bloq_fundo.append("LIQ_FUNDO")
+                # 3. StochRSI < 0.10
+                if _stoch_s < 0.10 and fonte not in _exceto_fundo:
+                    _bloq_fundo.append(f"StochRSI {_stoch_s:.2f}<0.10")
+                # 4. RVOL < 1.0
+                if _rvol_s < 1.0 and fonte not in _exceto_rvol:
                     _bloq_fundo.append(f"RVOL {_rvol_s:.2f}x<1.0")
-                if _rsi_s < 40:
-                    _bloq_fundo.append(f"RSI {_rsi_s:.0f}<40 (sobrevendido)")
-                if _conf_s < 60:
-                    _bloq_fundo.append(f"confiança {_conf_s}%<60% (inst={score_inst})")
-                if not _fluxo_forte:
-                    _fluxo_desc = "Ausente" if not (_df_s or _trl_s) else "Parcial"
-                    _bloq_fundo.append(f"fluxo={_fluxo_desc} (precisa Completo)")
                 if _bloq_fundo:
                     log.info(f"  🚫 {abrev} [{tf}] SHORT anti-fundo — {_bloq_fundo[0]}")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -695,10 +690,10 @@ async def executar_ciclo(session, estado, tf, moedas):
                 _liq_f_f   = result.get("liq_fundo", False)
                 _bloq_flex = []
                 # Critérios comuns LONG e SHORT
-                if _rvol_flex < 1.5:
-                    _bloq_flex.append(f"RVOL {_rvol_flex:.2f}x<1.5")
-                if _adx_flex < 18:
-                    _bloq_flex.append(f"ADX {_adx_flex:.0f}<18")
+                if _rvol_flex < 1.0:
+                    _bloq_flex.append(f"RVOL {_rvol_flex:.2f}x<1.0")
+                if _adx_flex < 20:
+                    _bloq_flex.append(f"ADX {_adx_flex:.0f}<20")
                 if not _dna and not _trl:
                     _bloq_flex.append("sem DNA Flow nem Trendilo")
                 if eh_long:
