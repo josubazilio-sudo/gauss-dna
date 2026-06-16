@@ -13,6 +13,10 @@
 6. **Disparar o bot** e aguardar novo diagnóstico
 7. **Repetir** até aparecer sinal ou usuário dizer que apareceu
 
+### Após qualquer ajuste de código:
+- **Sempre disparar o bot automaticamente** via `mcp__github__actions_run_trigger` com `filter_level=3, timeframes=30m,1h`
+- Não pedir confirmação — o disparo pós-ajuste é autorizado permanentemente
+
 ### Parar somente quando:
 - Usuário disser explicitamente que o sinal chegou
 - Usuário mostrar screenshot do sinal com os dados
