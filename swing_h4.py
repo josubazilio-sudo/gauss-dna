@@ -232,11 +232,10 @@ async def main():
                     log.info(f"✅ {direcao} {abrev} | Grade {grade} | Inst {score_inst} | RSI {r4['rsi']:.0f} | ADX {r4['adx']:.0f} | RVOL {r4['rvol']:.2f}")
                     await asyncio.sleep(1)
                 else:
-                    bloq = "?" if r4["score"] > -20 and r4["score"] < 20 else (
-                        _h4_valido(r4, "LONG") or _h4_valido(r4, "SHORT") or "score_inst_baixo"
-                    )
+                    _dir_l = "LONG" if r4["score"] > 0 else "SHORT"
+                    bloq = _h4_valido(r4, _dir_l) or "score_inst_baixo"
                     if abs(r4["score"]) >= 60:
-                        log.info(f"  {abrev} | Score {r4['score']:+d} | RSI {r4['rsi']:.0f} | ADX {r4['adx']:.0f} | RVOL {r4['rvol']:.2f}x | bloqueado: {bloq}")
+                        log.info(f"  {abrev} | Score {r4['score']:+d} | RSI {r4['rsi']:.0f} | ADX {r4['adx']:.0f} | RVOL {r4['rvol']:.2f}x | {_dir_l} bloqueado: {bloq}")
 
             except Exception as e:
                 log.warning(f"{abrev}: {e}")
