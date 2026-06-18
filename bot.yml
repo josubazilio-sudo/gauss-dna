@@ -1,0 +1,48 @@
+name: GAUSS+DNA Bot de Sinais
+
+on:
+  schedule:
+    # Roda a cada 10 minutos, 24h por dia, 7 dias por semana
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Permite rodar manualmente também
+
+jobs:
+  scanner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install aiohttp
+
+      - name: Restaurar estado e journal
+        uses: actions/cache@v4
+        with:
+          path: |
+            last_signals.json
+            signals_log.csv
+          key: gauss-dna-state-${{ github.run_id }}
+          restore-keys: |
+            gauss-dna-state-
+
+      - name: Rodar scanner de sinais
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHATID: ${{ secrets.TG_CHATID }}
+          TIMEFRAMES: '30m,1h'
+          SIGNAL_MODE: 'ELITE'
+          LOOP_MODE: 'false'
+          CAPITAL: '97'
+          RISK_PCT: '0.03'
+          DYNAMIC_SCAN: 'false'
+          SCANNER_TOP: '50'
+          FILTER_LEVEL: '3'
+        run: python bot_actions.py
