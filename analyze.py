@@ -691,11 +691,11 @@ def detectar_sinais(ind):
     # ── Reversão extrema ──────────────────────────────────────────────────────
     long_reversal  = (i["rsi"] < 30 and i["ha_bull"] and i["v_forte"] and
                       (i["liq_fundo"] or i["absorb_bull"]) and i["macd_recuperando"] and
-                      i["adx"] > 12 and i["preco"] > i["e200"] * 0.96 and
+                      i["adx"] > 12 and i["preco"] > i["e200"] * 0.92 and
                       (i["dna_flow_bull"] or i["obv_bull"]))
     short_reversal = (i["rsi"] > 70 and i["ha_bear"] and i["v_forte"] and
                       (i["liq_topo"] or i["absorb_bear"]) and i["macd_esgotando"] and
-                      i["adx"] > 12 and i["preco"] < i["e200"] * 1.04 and
+                      i["adx"] > 12 and i["preco"] < i["e200"] * 1.08 and
                       (i["dna_flow_bear"] or i["obv_bear"]))
 
     # ── PUMP — spike súbito: RVOL 3x+ + rompimento nascente (1.5%+) ──────────

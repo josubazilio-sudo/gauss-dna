@@ -464,7 +464,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                          15  if fonte == "EXTREME" else
                          25  if fonte == "CORE" else
                          40  if fonte == "DUMP" else
-                         45  if fonte == "REVERSAL" else
+                          40  if fonte == "REVERSAL" else
                          50  if fonte in ("SM_SWEEP", "DIV") else
                          55  if fonte == "SCOUT" else
                          60  if fonte == "FLEX" else
@@ -496,12 +496,12 @@ async def executar_ciclo(session, estado, tf, moedas):
             # ── GLOBAL MINIMUMS: aplicam a TODOS os sinais (inclui CORE/DIV/REVERSAL) ──
             _adx_g  = result.get("adx", 0)
             _rvol_g = result.get("rvol", 0)
-            if _adx_g < 18:
+            if _adx_g < 18 and fonte not in {"REVERSAL", "DUMP", "EXTREME"}:
                 log.info(f"  ⚠️ {abrev} [{tf}] ADX {_adx_g:.1f} < 18 — mínimo global")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"adx<18({_adx_g:.1f})"))
                 continue
-            if _rvol_g < 0.80:
+            if _rvol_g < 0.80 and fonte not in {"REVERSAL", "DUMP", "EXTREME"}:
                 log.info(f"  ⚠️ {abrev} [{tf}] RVOL {_rvol_g:.2f} < 0.80x — mínimo global")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"rvol<0.8({_rvol_g:.2f})"))
