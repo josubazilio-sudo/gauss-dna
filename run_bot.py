@@ -19,7 +19,7 @@ TG_CHATID = ""          # ID do chat/canal          (obter com @userinfobot)
 CAPITAL    = "97"        # Capital total em USD
 RISK_PCT   = "0.03"      # Risco por trade: 0.03 = 3%
 TIMEFRAMES = "30m,1h"    # Timeframes: "30m,1h" | "15m" | "1h"
-SIGNAL_MODE = "FLEX"     # "FLEX" (mais sinais) | "ELITE" (poucos, precisos)
+SIGNAL_MODE = "ELITE"    # "FLEX" (mais sinais) | "ELITE" (poucos, precisos)
 LOOP_MODE   = "true"     # "true" = roda em loop continuo | "false" = executa 1x
 SCANNER_TOP = "50"       # Quantas moedas varrer (max 100)
 
