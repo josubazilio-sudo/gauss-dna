@@ -12,7 +12,7 @@ concurrency:
 jobs:
   swing:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -48,7 +48,7 @@ jobs:
         env:
           TG_TOKEN:  ${{ secrets.TG_TOKEN }}
           TG_CHATID: ${{ secrets.TG_CHATID }}
-          CAPITAL:   ${{ vars.CAPITAL || '87' }}
+          CAPITAL:   ${{ vars.CAPITAL || '100' }}
         run: python swing_h4.py
 
       - name: Salvar estado
