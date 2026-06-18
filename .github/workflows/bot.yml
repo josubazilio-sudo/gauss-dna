@@ -33,7 +33,7 @@ concurrency:
 jobs:
   scanner:
     runs-on: ubuntu-latest
-    timeout-minutes: 330
+    timeout-minutes: 360
 
     steps:
       - name: Checkout
@@ -76,7 +76,7 @@ jobs:
         env:
           TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
-          CAPITAL: ${{ vars.CAPITAL || '93' }}
+          CAPITAL: ${{ vars.CAPITAL || '100' }}
           FILTER_LEVEL: '1'
           TIMEFRAMES: '15m'
           SIGNAL_MODE: 'FLEX'
@@ -97,7 +97,7 @@ jobs:
           SCANNER_TOP: '200'
           LOOP_MODE: ${{ github.event.inputs.test_mode == 'true' && 'false' || 'true' }}
           TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
-          CAPITAL: ${{ vars.CAPITAL || '93' }}
+          CAPITAL: ${{ vars.CAPITAL || '100' }}
           RISK_PCT: '0.03'
         run: python bot_actions.py
 

@@ -1146,70 +1146,77 @@ async def main():
             ultimo_scan = 0
 
         while True:
-            ciclo += 1
-
-            if LOOP_MODE and ciclo > 1:
-                espera = segundos_ate_fechamento(tf_min_base)
-                if CYCLE_INTERVAL > 0:
-                    espera = min(espera, CYCLE_INTERVAL)
-                if espera > 3:
-                    log.info(f"⏳ Próximo ciclo em {espera:.0f}s ({espera/60:.1f}min)...")
-                    await asyncio.sleep(espera + 2)
-
-            if DYNAMIC_SCAN and ciclo > 1 and (ciclo - ultimo_scan) >= SCAN_EVERY:
-                resultado = await escanear_melhores_moedas(session, scan_tf, SCANNER_TOP)
-                if resultado:
-                    moedas_ativas = list(PRIORITY_WATCHLIST) + [c for c in resultado if c[0] not in _prio_syms]
-                ultimo_scan = ciclo
-
-            log.info(f"── Ciclo #{ciclo} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(moedas_ativas)} moedas ──")
-            total = 0
             try:
-                tem_mtf = (("4h" in TIMEFRAMES and "1h" in TIMEFRAMES) or
-                           ("1h" in TIMEFRAMES and ("30m" in TIMEFRAMES or "15m" in TIMEFRAMES)))
-                if tem_mtf:
-                    enviados_mtf = await executar_ciclo_mtf(session, estado, moedas_ativas)
-                    total += enviados_mtf
-            except Exception as e:
-                log.error(f"❌ MTF erro ciclo #{ciclo}: {e}")
+                ciclo += 1
 
-            try:
-                # Roda FLEX para cada TF que não é 4h (1h incluído — gera sinais diretos H1)
-                _tfs_flex = [tf for tf in TIMEFRAMES if tf != "4h"]
-                if not _tfs_flex:
-                    _tfs_flex = [TIMEFRAMES[0]]
-                for tf_base in _tfs_flex:
-                    enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas)
-                    total   += enviados
-                log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
-            except Exception as e:
-                log.error(f"❌ FLEX erro ciclo #{ciclo}: {e}")
-            finally:
-                salvar_estado(estado)
+                if LOOP_MODE and ciclo > 1:
+                    espera = segundos_ate_fechamento(tf_min_base)
+                    if CYCLE_INTERVAL > 0:
+                        espera = min(espera, CYCLE_INTERVAL)
+                    if espera > 3:
+                        log.info(f"⏳ Próximo ciclo em {espera:.0f}s ({espera/60:.1f}min)...")
+                        await asyncio.sleep(espera + 2)
 
-            if LOOP_MODE and ciclo % 5 == 0:
-                log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
+                if DYNAMIC_SCAN and ciclo > 1 and (ciclo - ultimo_scan) >= SCAN_EVERY:
+                    resultado = await escanear_melhores_moedas(session, scan_tf, SCANNER_TOP)
+                    if resultado:
+                        moedas_ativas = list(PRIORITY_WATCHLIST) + [c for c in resultado if c[0] not in _prio_syms]
+                    ultimo_scan = ciclo
 
-            # Near-miss: após 90min sem sinal, avisa candidatos mais próximos
-            _agora_d = time.time()
-            if total > 0:
-                _diag_buffer["ultimo_sinal"] = _agora_d
-                _nearmiss_buffer.clear()
-            _sem_sinal_min = (_agora_d - _diag_buffer["ultimo_sinal"]) / 60
-            if _sem_sinal_min >= 90 and _agora_d - _diag_buffer.get("ultimo_envio", 0) >= 5400:
-                if _nearmiss_buffer:
-                    # Ordena por score_inst e pega os 5 mais próximos
-                    top_nm = sorted(_nearmiss_buffer, key=lambda x: x[0], reverse=True)[:5]
-                    linhas = [f"⏱ {int(_sem_sinal_min)}min sem sinal — candidatos mais próximos:\n"]
-                    for score_i, abrev_i, tf_i, bloq_i, rsi_i, fonte_i, dir_i in top_nm:
-                        seta = "↑" if dir_i == "LONG" else "↓"
-                        linhas.append(f"{seta} {abrev_i} [{tf_i}] {fonte_i} RSI{rsi_i:.0f} — falta: {bloq_i}")
-                    try:
-                        await notificar(session, "\n".join(linhas))
-                    except Exception:
-                        pass
-                _diag_buffer["ultimo_envio"] = _agora_d
-                _nearmiss_buffer.clear()
+                log.info(f"── Ciclo #{ciclo} | {datetime.now().strftime('%H:%M:%S %d/%m')} | {len(moedas_ativas)} moedas ──")
+                total = 0
+                try:
+                    tem_mtf = (("4h" in TIMEFRAMES and "1h" in TIMEFRAMES) or
+                               ("1h" in TIMEFRAMES and ("30m" in TIMEFRAMES or "15m" in TIMEFRAMES)))
+                    if tem_mtf:
+                        enviados_mtf = await executar_ciclo_mtf(session, estado, moedas_ativas)
+                        total += enviados_mtf
+                except Exception as e:
+                    log.error(f"❌ MTF erro ciclo #{ciclo}: {e}")
 
-            if not LOOP_MODE:
-                break
+                try:
+                    _tfs_flex = [tf for tf in TIMEFRAMES if tf != "4h"]
+                    if not _tfs_flex:
+                        _tfs_flex = [TIMEFRAMES[0]]
+                    for tf_base in _tfs_flex:
+                        enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas)
+                        total   += enviados
+                    log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
+                except Exception as e:
+                    log.error(f"❌ FLEX erro ciclo #{ciclo}: {e}")
+                finally:
+                    salvar_estado(estado)
+
+                if LOOP_MODE and ciclo % 5 == 0:
+                    log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
+
+                _agora_d = time.time()
+                if total > 0:
+                    _diag_buffer["ultimo_sinal"] = _agora_d
+                    _nearmiss_buffer.clear()
+                _sem_sinal_min = (_agora_d - _diag_buffer["ultimo_sinal"]) / 60
+                if _sem_sinal_min >= 90 and _agora_d - _diag_buffer.get("ultimo_envio", 0) >= 5400:
+                    if _nearmiss_buffer:
+                        top_nm = sorted(_nearmiss_buffer, key=lambda x: x[0], reverse=True)[:5]
+                        linhas = [f"⏱ {int(_sem_sinal_min)}min sem sinal — candidatos mais próximos:\n"]
+                        for score_i, abrev_i, tf_i, bloq_i, rsi_i, fonte_i, dir_i in top_nm:
+                            seta = "↑" if dir_i == "LONG" else "↓"
+                            linhas.append(f"{seta} {abrev_i} [{tf_i}] {fonte_i} RSI{rsi_i:.0f} — falta: {bloq_i}")
+                        try:
+                            await notificar(session, "\n".join(linhas))
+                        except Exception:
+                            pass
+                    _diag_buffer["ultimo_envio"] = _agora_d
+                    _nearmiss_buffer.clear()
+
+                if not LOOP_MODE:
+                    break
+            except Exception as _e_crash:
+                _elapsed = int((time.time() - _agora_ini) / 60)
+                log.error(f"💥 CRASH ciclo #{ciclo} aos {_elapsed}min: {_e_crash}")
+                log.info(f"🔄 Reiniciando ciclo em 30s...")
+                try:
+                    salvar_estado(estado)
+                except Exception:
+                    pass
+                await asyncio.sleep(30)
