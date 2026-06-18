@@ -395,7 +395,7 @@ async def executar_ciclo(session, estado, tf, moedas):
 
         atr_pct = (result["atr"] / result["preco"]) * 100 if result["preco"] else 0
         _fonte_pre  = result.get("fonte_sinal", "")
-        _atr_limite = 8.0 if _fonte_pre in ("SURGE", "BREAKOUT", "PUMP", "DUMP") else 6.0 if _fonte_pre == "PREMIUM" else 4.0
+        _atr_limite = 8.0
         if atr_pct > _atr_limite:
             log.info(f"[{tf}] {abrev:7s} | ATR {atr_pct:.1f}% > {_atr_limite:.0f}% — muito volátil, ignorando")
             continue
@@ -494,6 +494,20 @@ async def executar_ciclo(session, estado, tf, moedas):
                 log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}{_fr_str}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
+                continue
+
+            # ── GLOBAL MINIMUMS: aplicam a TODOS os sinais (inclui CORE/DIV/REVERSAL) ──
+            _adx_g  = result.get("adx", 0)
+            _rvol_g = result.get("rvol", 0)
+            if _adx_g < 18:
+                log.info(f"  ⚠️ {abrev} [{tf}] ADX {_adx_g:.1f} < 18 — mínimo global")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], f"adx<18({_adx_g:.1f})"))
+                continue
+            if _rvol_g < 0.80:
+                log.info(f"  ⚠️ {abrev} [{tf}] RVOL {_rvol_g:.2f} < 0.80x — mínimo global")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], f"rvol<0.8({_rvol_g:.2f})"))
                 continue
 
             # Confiança mínima 55% para qualquer sinal (exceto REVERSAL e SM_SWEEP)
