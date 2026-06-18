@@ -2,44 +2,28 @@ name: GAUSS+DNA Bot de Sinais
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
     inputs:
-      tg_token:
-        description: 'Token do bot (vazio = usa Secret)'
+      filter_level:
+        description: 'Nível de filtro (1-3)'
         required: false
-        default: ''
-      tg_chatid:
-        description: 'Chat ID do canal (vazio = usa Secret)'
-        required: false
-        default: ''
-      test_mode:
-        description: 'Forçar sinal de teste? (true/false)'
-        required: false
-        default: 'false'
+        default: '3'
       timeframes:
-        description: 'Timeframes a analisar (ex: 5m,15m,1h  ou  30m,1h,4h)'
+        description: 'Timeframes para analisar'
         required: false
         default: '30m,1h'
-      filter_level:
-        description: 'Nivel de filtros: 0=debug(force), 1=minimo, 2=moderado, 3=completo (padrao)'
-        required: false
-        default: '1'
-
-concurrency:
-  group: bot-sinais
-  cancel-in-progress: true
 
 jobs:
   scanner:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout
+      - name: Checkout repositório
         uses: actions/checkout@v4
 
-      - name: Python
+      - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -47,63 +31,26 @@ jobs:
       - name: Instalar dependências
         run: pip install aiohttp
 
-      - name: Restaurar cooldown entre runs
-        id: cache-restore
-        uses: actions/cache/restore@v4
+      - name: Restaurar estado e journal
+        uses: actions/cache@v4
         with:
-          path: last_signals.json
-          key: last-signals-${{ github.run_id }}
-          restore-keys: last-signals-
+          path: |
+            last_signals.json
+            signals_log.csv
+          key: gauss-dna-state-${{ github.run_id }}
+          restore-keys: |
+            gauss-dna-state-
 
-      - name: Verificar credenciais
+      - name: Rodar scanner de sinais
         env:
-          TG_TOKEN_INPUT: ${{ github.event.inputs.tg_token }}
-          TG_TOKEN_SECRET: ${{ secrets.TG_TOKEN }}
-          TG_CHATID_INPUT: ${{ github.event.inputs.tg_chatid }}
-          TG_CHATID_SECRET: ${{ secrets.TG_CHATID }}
-        run: |
-          TOKEN="${TG_TOKEN_INPUT:-$TG_TOKEN_SECRET}"
-          CHATID="${TG_CHATID_INPUT:-$TG_CHATID_SECRET}"
-          if [ -z "$TOKEN" ] || [ -z "$CHATID" ]; then
-            echo "❌ TG_TOKEN ou TG_CHATID não configurado!"
-            echo "   Preencha os campos ao rodar manualmente,"
-            echo "   ou configure em Settings → Secrets → Actions"
-            exit 1
-          fi
-          echo "✅ Credenciais OK — Token: ${TOKEN:0:8}... | Chat: $CHATID"
-
-      - name: Auto-review (testes de saude)
-        env:
-          TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
-          TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
-          CAPITAL: ${{ vars.CAPITAL || '100' }}
-          FILTER_LEVEL: '1'
-          TIMEFRAMES: '15m'
-          SIGNAL_MODE: 'FLEX'
-        run: python test_bot.py
-
-      - name: Rodar bot
-        timeout-minutes: 325
-        env:
-          TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
-          TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
-          WA_PHONE: ${{ secrets.WA_PHONE }}
-          WA_APIKEY: ${{ secrets.WA_APIKEY }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHATID: ${{ secrets.TG_CHATID }}
           TIMEFRAMES: ${{ github.event.inputs.timeframes || '30m,1h' }}
-          FILTER_LEVEL: ${{ github.event.inputs.filter_level || '1' }}
-          CYCLE_INTERVAL: '300'
-          SIGNAL_MODE: 'FLEX'
-          DYNAMIC_SCAN: 'true'
-          SCANNER_TOP: '200'
-          LOOP_MODE: ${{ github.event.inputs.test_mode == 'true' && 'false' || 'true' }}
-          TEST_MODE: ${{ github.event.inputs.test_mode || 'false' }}
-          CAPITAL: ${{ vars.CAPITAL || '100' }}
+          SIGNAL_MODE: 'ELITE'
+          LOOP_MODE: 'false'
+          CAPITAL: '97'
           RISK_PCT: '0.03'
+          DYNAMIC_SCAN: 'false'
+          SCANNER_TOP: '50'
+          FILTER_LEVEL: ${{ github.event.inputs.filter_level || '3' }}
         run: python bot_actions.py
-
-      - name: Salvar cooldown entre runs
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: last_signals.json
-          key: last-signals-${{ github.run_id }}
