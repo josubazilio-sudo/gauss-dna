@@ -886,10 +886,10 @@ def detectar_sinais(ind):
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
-    if SIGNAL_MODE == "ELITE":
-        if long_elite or early_long:   sinal = "LONG";  fonte = "ELITE"
-        elif short_elite or early_short: sinal = "SHORT"; fonte = "ELITE"
-    else:
+    # Tenta ELITE primeiro; se não houver, usa FLEX (todos os tipos)
+    if long_elite or early_long:   sinal = "LONG";  fonte = "ELITE"
+    elif short_elite or early_short: sinal = "SHORT"; fonte = "ELITE"
+    if not sinal:
         ordem = [
             (long_premium,    "LONG",  "PREMIUM"),
             (short_premium,   "SHORT", "PREMIUM"),
