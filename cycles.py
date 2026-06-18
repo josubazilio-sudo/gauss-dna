@@ -343,9 +343,6 @@ async def executar_ciclo(session, estado, tf, moedas):
 
     todos_candles = await _prefetch_lote(session, moedas, tf)
     todos_h4      = None
-    if tf in ("1h", "30m", "15m"):
-        log.info(f"[{tf}] Buscando H4 de {len(moedas)} moedas para filtro de direção...")
-        todos_h4 = await _prefetch_lote(session, moedas, "4h")
 
     # BTC macro H4 — direção global para bloquear SURGE noturno
     _btc_bull_flex = _btc_bear_flex = False
