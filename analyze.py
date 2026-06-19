@@ -97,8 +97,8 @@ def calcular_indicadores(candles):
     rsi_spike_long     = rsi_ant > 65 or rsi_6 > 65 or rsi_9 > 65
     rsi_rebound_long   = 54 <= rsi <= 62 and rsi < rsi_ant
 
-    rsi_div_bull = fechamentos[-1] < fechamentos[-4] and rsi > rsi_ant and rsi < 45
-    rsi_div_bear = fechamentos[-1] > fechamentos[-4] and rsi < rsi_ant and rsi > 55
+    rsi_div_bull = fechamentos[-1] < fechamentos[-4] and rsi > rsi_ant and rsi < 52
+    rsi_div_bear = fechamentos[-1] > fechamentos[-4] and rsi < rsi_ant and rsi > 48
     rsi_bull       = 50 < rsi < 65
     rsi_bear       = 35 < rsi < 50
     rsi_bull_elite = 48 < rsi < 65 and rsi_subindo
@@ -374,8 +374,8 @@ def calcular_indicadores(candles):
 
     # RSI zona de entrada — zona estrita 40-68 LONG / 32-60 SHORT
     # REVERSAL e DUMP não usam rsi_zona (condições próprias); SM_SWEEP usa rsi_zona_flex
-    rsi_zona_long  = 38 <= rsi <= 70
-    rsi_zona_short = 30 <= rsi <= 62
+    rsi_zona_long  = 35 <= rsi <= 73
+    rsi_zona_short = 27 <= rsi <= 65
     rsi_zona_flex   = rsi < 75    # zona ampla — para SM_SWEEP e exceções
     rsi_zona_flex_s = rsi > 25
     rsi_entrada_long  = rsi >= 45   # RSI mínimo para entrar LONG (diagnóstico)
@@ -609,10 +609,12 @@ def detectar_sinais(ind):
                       not i["liq_fundo"] and not i["liq_fundo_hist5"])
 
     # ── Cross ─────────────────────────────────────────────────────────────────
-    long_cross  = (i["algum_cross_bull"] and i["dna_flex_bull"] and i["adx_long_ok"] and
+    long_cross  = (i["algum_cross_bull"] and i["dna_flex_bull"] and
+                   i["adx"] >= 18 and i["pdi"] > i["mdi"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]))
-    short_cross = (i["algum_cross_bear"] and i["dna_flex_bear"] and i["adx_short_ok"] and
+    short_cross = (i["algum_cross_bear"] and i["dna_flex_bear"] and
+                   i["adx"] >= 18 and i["mdi"] > i["pdi"] and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]))
 
@@ -629,15 +631,15 @@ def detectar_sinais(ind):
                       i["trendilo_long"] and i["kalman_subindo"] and
                       i["preco"] > i["e50"] and i["preco"] <= i["e21"] * 1.05 and
                       not i["liq_topo"] and not i["exaustao_topo"] and
-                      not i["perto_bb_topo"] and not i["lateralizado"] and
-                      i["score_inst_long"] >= 60)
+                       not i["lateralizado"] and
+                       i["score_inst_long"] >= 60)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["ha_bear_1"] and
                       38 <= i["rsi"] <= 60 and i["adx"] >= 22 and i["adx_subindo"] and
                       i["rvol"] >= 1.30 and i["obv_bear"] and i["dna_flow_bear"] and
                       i["trendilo_short"] and not i["kalman_subindo"] and
                       i["preco"] < i["e50"] and i["preco"] >= i["e21"] * 0.95 and
                       not i["liq_fundo"] and not i["exaustao_fund"] and
-                      not i["perto_bb_fund"] and not i["lateralizado"] and
+                      not i["lateralizado"] and
                       i["score_inst_short"] >= 60)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
@@ -695,7 +697,7 @@ def detectar_sinais(ind):
                       (i["dna_flow_bull"] or i["obv_bull"]))
     short_reversal = (i["rsi"] > 70 and i["ha_bear"] and i["v_forte"] and
                       (i["liq_topo"] or i["absorb_bear"]) and i["macd_esgotando"] and
-                      i["adx"] > 12 and i["preco"] < i["e200"] * 1.08 and
+                      i["adx"] > 12 and i["preco"] < i["e200"] * 1.15 and
                       (i["dna_flow_bear"] or i["obv_bear"]))
 
     # ── PUMP — spike súbito: RVOL 3x+ + rompimento nascente (1.5%+) ──────────
@@ -768,13 +770,13 @@ def detectar_sinais(ind):
     mom_seguro_short = (not i["perto_bb_fund"] and not i["ext_abaixo_e21"] and not i["vol_secando"] and
                         not i["exaustao_fund"])
     long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
-                      i["adx"] > 22 and i["v_forte"] and
-                      (i["trendilo_long"]  or i["score_inst_long"]  >= 75) and
-                      i["score_inst_long"]  >= 60 and mom_seguro_long)
+                      i["adx"] >= 18 and i["v_forte"] and
+                      (i["trendilo_long"]  or i["score_inst_long"]  >= 60) and
+                      i["score_inst_long"]  >= 55 and mom_seguro_long)
     short_momentum = (rsi_fresh_short and i["ha_bear"] and i["dna_flow_bear"] and not i["liq_fundo"] and
-                      i["adx"] > 22 and i["v_forte"] and
-                      (i["trendilo_short"] or i["score_inst_short"] >= 75) and
-                      i["score_inst_short"] >= 60 and mom_seguro_short)
+                      i["adx"] >= 18 and i["v_forte"] and
+                      (i["trendilo_short"] or i["score_inst_short"] >= 60) and
+                      i["score_inst_short"] >= 55 and mom_seguro_short)
 
     # ── Rebound RSI ───────────────────────────────────────────────────────────
     long_rebound  = (i["rsi_spike_long"]  and i["rsi_rebound_long"]  and i["ha_bull"] and
