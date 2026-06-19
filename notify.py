@@ -120,24 +120,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     evento_liq  = extra.get("liq_event", "")
     funding_rate = extra.get("funding_rate")
     oi_change    = extra.get("oi_change")
+    armadilha    = extra.get("armadilha", [])
 
-    # ── Stop adaptativo por volatilidade (ADX-based) ───────────────────────────
-    mult_atr = (2.0 if fonte in ("SURGE", "DUMP")              else
-                1.2 if fonte == "SM_SWEEP"                   else
-                1.8 if fonte in ("FLEX", "SETUP")            else
-                1.5)
-    # ADX: stop +justo em tendência forte, +largo em mercado lateral/ranging
-    if adx >= 30:
-        mult_atr = round(mult_atr * 0.75, 1)
-    elif adx >= 25:
-        mult_atr = round(mult_atr * 0.85, 1)
-    elif adx >= 20:
-        pass
-    elif adx >= 15:
-        mult_atr = round(mult_atr * 1.25, 1)
-    else:
-        mult_atr = round(mult_atr * 1.50, 1)
-    mult_atr = max(1.0, min(3.0, mult_atr))
+    # ── Stop adaptativo ───────────────────────────────────────────────────────
+    mult_atr = (2.0 if fonte == "SURGE"    else
+                1.2 if fonte == "SM_SWEEP" else
+                1.8 if fonte in ("FLEX", "SETUP") else 1.5)
 
     stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
     stop_estrutural = swing_low - atr * 0.3 if eh_long else swing_high + atr * 0.3
@@ -154,35 +142,16 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         stop = stop_atr
         label_stop = f"{mult_atr:.1f} ATR"
 
-    # EXTREME: stop abaixo da mínima da vela de sweep (LONG) ou acima do topo (SHORT)
-    # Usa high_atual/low_atual (vela corrente) pois liq_topo/fundo implica maximas[-1]>swing_high
-    if fonte == "EXTREME":
-        _ha_ex = extra.get("high_atual", swing_high)
-        _la_ex = extra.get("low_atual",  swing_low)
-        stop = (_la_ex - atr * 0.5) if eh_long else (_ha_ex + atr * 0.5)
-        label_stop = "Liq"
-
     risco = abs(preco - stop)
-    # Rede de segurança: mínimo 0.5% (cobre risco=0 e stops ultra-apertados)
-    _risco_min = preco * 0.005
-    if risco < _risco_min:
-        risco = _risco_min
-        stop = preco - risco if eh_long else preco + risco
-        label_stop = "Min 0.5%"
     if risco <= 0:
         log.warning(f"⚠️ {abrev} risco=0 (stop={stop:.8f} == preco={preco:.8f}) — sinal ignorado")
         return False
-    _risco_pct = risco / preco * 100
 
-    # ── Alvos base por grade e tipo de sinal ─────────────────────────────────
+    # ── Alvos por grade e tipo de sinal ──────────────────────────────────────
     if fonte == "SCOUT":
         r1, r_final = 1.2, 2.0
-    elif grade == "S+":
-        r1, r_final = 2.5, 5.0
-    elif grade == "S":
+    elif grade in ("S+", "S"):
         r1, r_final = 2.2, 4.5
-    elif grade == "A+":
-        r1, r_final = 2.0, 4.0
     elif grade == "A":
         r1, r_final = 1.8, 3.5
     else:
@@ -194,19 +163,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     elif fonte == "DIV":
         r_final = max(2.5, r_final - 0.5)
 
-    # ── Amplificação por timeframe: TF maior = tendência com mais espaço ─────
-    # 15m: base | 30m: +10% | 1h: +30% | 4h: +60%
-    _tf_mult = {"15m": 1.0, "30m": 1.1, "1h": 1.3, "4h": 1.6}
-    _m = _tf_mult.get(tf.lower(), 1.0)
-    r1      = round(r1 * _m, 1)
-    r_final = round(r_final * _m, 1)
-
     # ── Calibração por fase de mercado (ADX) ─────────────────────────────────
     # ADX < 20: mercado lateral/oscilando — saída rápida antes da reversão
     # ADX 20-24: tendência moderada — alvos ligeiramente comprimidos
     # ADX >= 25: tendência forte — manter alvos originais
     if adx < 20:
-        r1      = max(1.0, round(r1 * 0.65, 1))
+        r1      = max(0.8, round(r1 * 0.65, 1))
         r_final = max(1.5, round(r_final * 0.75, 1))
     elif adx < 25:
         r1      = max(1.0, round(r1 * 0.85, 1))
@@ -217,74 +179,38 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         if eh_long and swing_high > preco:
             dist_r = (swing_high - preco) / risco
             if dist_r < r1:
-                r1 = max(1.0, round(dist_r * 0.92, 1))
+                r1 = max(0.8, round(dist_r * 0.92, 1))
         elif not eh_long and swing_low < preco:
             dist_r = (preco - swing_low) / risco
             if dist_r < r1:
-                r1 = max(1.0, round(dist_r * 0.92, 1))
+                r1 = max(0.8, round(dist_r * 0.92, 1))
 
     tp1   = preco + risco * r1      if eh_long else preco - risco * r1
     final = preco + risco * r_final if eh_long else preco - risco * r_final
 
-    # EXTREME: alvos = EMA21 (TP1) e EMA50 (TP2) — retorno às médias após extensão extrema
-    if fonte == "EXTREME" and risco > 0:
-        _e21_ex = extra.get("e21", 0)
-        _e50_ex = extra.get("e50", 0)
-        if _e21_ex > 0 and _e50_ex > 0:
-            tp1   = _e21_ex
-            final = _e50_ex
-            r1      = max(0.5, round(abs(preco - tp1)   / risco, 1))
-            r_final = max(1.0, round(abs(preco - final) / risco, 1))
-
     # ── Tamanho da posição ────────────────────────────────────────────────────
-    if fonte == "PREMIUM":
-        pct_risco = 0.03 if grade == "S+" else 0.02 if grade == "S" else 0.01
-    elif fonte == "SCOUT":
-        pct_risco = RISK_SCOUT
-    else:
-        pct_risco = RISK_BY_GRADE.get(grade, RISK_PCT)
-    if fonte in ("SURGE", "BREAKOUT", "PUMP", "DUMP"):
-        pct_risco = min(pct_risco, 0.02)
+    pct_risco    = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
     valor_risco  = CAPITAL * pct_risco
     contratos    = valor_risco / risco if risco > 0 else 0
     valor_pos    = contratos * preco
 
-    # Alavancagem dinâmica 3x–20x por qualidade do sinal
-    _lev = {"S+": 20, "S": 16, "A+": 13, "A": 10, "B": 7}.get(grade, 7)
-    if score_inst >= 80:   _lev += 2   # confirmação institucional forte
-    elif score_inst >= 70: _lev += 1   # institucional bom
-    elif score_inst < 55:  _lev -= 2   # institucional fraco
-    if rvol_val >= 1.5:    _lev += 1   # volume muito acima da média
-    elif rvol_val < 0.80:  _lev -= 1   # volume fraco
-    if fonte == "PREMIUM":               _lev = min(_lev, 15)  # institucional: risco menor, cap 15x
-    elif fonte == "SCOUT":               _lev = min(_lev, 5)   # sinal secundário: teto 5x
-    elif fonte == "MOMENTUM":           _lev = min(_lev, 10)  # momentum rápido: teto 10x
-    elif fonte == "SURGE":              _lev = min(_lev, 12)  # breakout explosivo: teto 12x
-    elif fonte in ("BREAKOUT", "PUMP"): _lev = min(_lev, 10)  # breakout nascente: teto 10x
-    elif fonte == "DUMP":               _lev = min(_lev, 8)   # pós-pump: alta volatilidade, conservador
-    elif fonte == "BB_BREAK":           _lev = min(_lev, 8)   # rompimento BB: risco de falso break, cap 8x
-    # Cap final por confiança (prevalece sobre grade)
-    _conf_lev = max(40, min(95, score_inst * 3 // 4))
-    if   _conf_lev < 60: _lev = min(_lev, 5)
-    elif _conf_lev < 70: _lev = min(_lev, 10)
-    elif _conf_lev < 80: _lev = min(_lev, 15)
-    # conf>=80 (score>=107, impossível): cap 20x pelo clamp final
-    if extra.get("h4_penalty"):
-        _lev = int(_lev * 0.75)                      # H4 oposto: -25% alavancagem máxima
-    alavancagem = max(3, min(20, _lev))              # clamp 3x–20x
+    # Alavancagem dinâmica 3x–10x por qualidade do sinal
+    _lev = {"S+": 10, "S": 9, "A+": 8, "A": 7, "B": 5}.get(grade, 5)
+    if score_inst >= 80:  _lev += 1   # confirmação institucional forte
+    elif score_inst < 45: _lev -= 1   # institucional fraco
+    if rvol_val >= 1.2:   _lev += 1   # volume acima da média
+    elif rvol_val < 0.80: _lev -= 1   # volume fraco
+    if armadilha:         _lev -= 2   # condições de armadilha detectadas
+    if fonte == "SCOUT":  _lev = min(_lev, 5)   # sinal secundário: teto 5x
+    alavancagem = max(3, min(10, _lev))          # clamp 3x–10x
 
     pos_alav     = valor_pos / alavancagem
-    ganho_tp1    = valor_risco * r1 * 0.5       # 50% fechado em TP1
-    ganho_total  = valor_risco * r_final * 0.5  # 50% restante fechado em TP2
+    ganho_tp1    = valor_risco * r1 * 0.5
+    ganho_total  = valor_risco * (r1 + r_final) * 0.5
 
     # ── Labels de modo ────────────────────────────────────────────────────────
     tf_lbl = _label_tf(tf)
     modos = {
-        "PREMIUM":   "🏆 PREMIUM INSTITUCIONAL",
-        "CORE":      "🏛 DNA CORE",
-        "BREAKOUT":  "🔥 BREAKOUT INICIAL",
-        "PUMP":      "🌋 PUMP DETECTADO",
-        "DUMP":      "💣 DUMP PÓS-PUMP",
         "PULLBACK":  "🎯 DNA PULLBACK",
         "SM_SWEEP":  "🏦 SMART MONEY SWEEP",
         "SURGE":     "⚡ DNA SURGE",
@@ -320,12 +246,9 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     agora    = datetime.now().strftime("%H:%M — %d/%m/%Y")
     k_str    = "↑" if kalman_subindo else "↓"
     linha_cross = f"📉 Cruzamento: {_escapar(info_cross)}\n" if info_cross else ""
-
-    _confianca = max(40, min(95, score_inst * 3 // 4))
-    _fluxo_ico = "🟢" if (dna_flow_ok and trendilo_ok) else ("🟡" if (dna_flow_ok or trendilo_ok) else "🔴")
-    _fluxo_str = "Completo" if (dna_flow_ok and trendilo_ok) else ("Parcial" if (dna_flow_ok or trendilo_ok) else "Ausente")
-    _grade_ico = {"S+": "💎", "S": "🏆", "A+": "🔥", "A": "⭐", "B": "📊"}.get(grade, "📊")
-
+    linha_rvol  = f"📊 RVOL: `{_bruto(f'{rvol_val:.2f}')}x` {_escapar(rvol_lbl)}" if rvol_lbl else ""
+    linha_flow  = ("✅" if dna_flow_ok else "—") + " DNA Flow"
+    linha_trl   = ("✅" if trendilo_ok else "—") + " Trendilo"
     if funding_rate is not None:
         fr_pct = funding_rate * 100
         if eh_long:
@@ -341,45 +264,36 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         linha_oi = f"📊 OI: {oi_ico} `{_bruto(f'{oi_change:+.1f}')}%`"
     else:
         linha_oi = ""
-
-    if fonte == "SCOUT":
-        _aviso = f"\n⚠️ _DNA SCOUT — risco reduzido \\({int(pct_risco*100)}%\\) — semi\\-agressivo_"
-    elif fonte == "PREMIUM":
-        _aviso = f"\n🏆 _PREMIUM — qualidade institucional máxima_"
+    linha_inst  = f"\n🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar(cls_inst)}" if score_inst else ""
+    linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
+    aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
+    if armadilha:
+        motivos = "; ".join(armadilha)
+        aviso_armadilha = f"\n🪤 *POSSÍVEL ARMADILHA:* _{_escapar(motivos)}_"
     else:
-        _aviso = ""
-
-    linha_liq    = f"🔍 SM: {_escapar(evento_liq)}\n" if evento_liq else ""
-    rvol_lbl_str = f" {_escapar(rvol_lbl)}" if rvol_lbl else ""
+        aviso_armadilha = ""
 
     texto = (
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
-        f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 *{_escapar(tf_lbl)}*\n"
+        f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 Gráfico: *{_escapar(tf_lbl)}*\n"
         f"{linha_cross}"
-        f"\n"
-        f"{_escapar(_grade_ico)} GRADE: *{_escapar(grade)}*\n"
-        f"🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar('— ' + cls_inst)}\n"
-        f"🎯 Confiança: *{_escapar(str(_confianca))}%*\n"
-        f"{linha_liq}"
-        f"\n"
+        f"{_escapar(label_grade)}{linha_inst}{linha_liq}{aviso_scout}{aviso_armadilha}\n\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
-        f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}` · R\\={_escapar(f'{_risco_pct:.1f}')}%\n"
-        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
-        f"🎯 TP2 \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n"
-        f"\n"
-        f"📊 RSI: {_escapar(f'{rsi:.0f}')}\n"
-        f"📈 RVOL: `{_bruto(f'{rvol_val:.2f}')}x`{rvol_lbl_str}\n"
-        f"📉 ADX: {_escapar(f'{adx:.0f}')}\n"
-        f"📦 Fluxo: {_escapar(_fluxo_ico)} {_escapar(_fluxo_str)} \\| Kalman: {_escapar(k_str)}\n"
-        f"📍 Tendência: {_escapar(tendencia)}"
-        + _aviso
-        + f"\n\n"
-        f"📐 *Gestão \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
-        f"  Risco: `${_bruto(f'{valor_risco:.2f}')}` \\| Pos: `${_bruto(f'{valor_pos:.2f}')}` \\| {_escapar(str(alavancagem))}x\n"
-        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| TP2 \\+`${_bruto(f'{ganho_total:.2f}')}`\n"
+        f"🛑 Stop: `${_bruto(_fmt(stop))}` \\({_escapar(label_stop)}\\)\n"
+        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
+        f"🏆 TP Final \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n\n"
+        f"📐 *Gestão de risco \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
+        f"  Risco: `${_bruto(f'{valor_risco:.2f}')}`\n"
+        f"  💵 Entrada na operação: `${_bruto(f'{valor_pos:.2f}')} USDT` \\({_escapar(f'{contratos:.4f}')} {_escapar(abrev)}\\)\n"
+        f"  Alavancagem {_escapar(str(alavancagem))}x: `${_bruto(f'{pos_alav:.2f}')}` colateral\n"
+        f"💸 Ganho: TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| Total \\+`${_bruto(f'{ganho_total:.2f}')}`\n\n"
+        f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
+        + (f"{linha_rvol}\n" if linha_rvol else "")
         + (f"{linha_funding}\n" if linha_funding else "")
         + (f"{linha_oi}\n" if linha_oi else "")
-        + f"⏰ {_escapar(agora)}"
+        + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
+        + f"📈 Tendência: {_escapar(tendencia)} \\| Kalman: {_escapar(k_str)}\n"
+        f"⏰ {_escapar(agora)}"
     )
 
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
@@ -403,7 +317,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     f"Entrada: ${formatar_preco(preco)}\n"
                     f"Stop: ${_fmt(stop)} ({label_stop})\n"
                     f"TP1 ({r1}R): ${_fmt(tp1)}\n"
-                    f"TP2 ({r_final}R): ${_fmt(final)}\n\n"
+                    f"TP Final ({r_final}R): ${_fmt(final)}\n\n"
                     f"Risco ${valor_risco:.2f} | {alavancagem}x ${pos_alav:.2f} colateral\n"
                     f"RSI {rsi:.0f} | ADX {adx:.0f} | "
                     + (f"RVOL {rvol_val:.2f}x {rvol_lbl} | " if rvol_lbl else "")
