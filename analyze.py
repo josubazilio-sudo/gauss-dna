@@ -764,9 +764,9 @@ def detectar_sinais(ind):
     # Exaustão de curtíssimo prazo (sem checagem de teto de RSI — o MOMENTUM entra
     # propositalmente na faixa 65-73, então só barra se já estiver esticado/exausto)
     mom_seguro_long  = (not i["perto_bb_topo"] and not i["ext_acima_e21"] and not i["vol_secando"] and
-                        not i["exaustao_topo"] and not i["stoch_esticado_up"])
+                        not i["exaustao_topo"])
     mom_seguro_short = (not i["perto_bb_fund"] and not i["ext_abaixo_e21"] and not i["vol_secando"] and
-                        not i["exaustao_fund"] and not i["stoch_esticado_down"])
+                        not i["exaustao_fund"])
     long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
                       i["adx"] > 22 and i["v_forte"] and
                       (i["trendilo_long"]  or i["score_inst_long"]  >= 75) and
@@ -780,11 +780,11 @@ def detectar_sinais(ind):
     long_rebound  = (i["rsi_spike_long"]  and i["rsi_rebound_long"]  and i["ha_bull"] and
                      i["dna_flow_bull"] and i["trendilo_long"]  and i["adx"] > 20 and
                      i["v_bom"] and i["kalman_subindo"]  and not i["lateralizado"] and
-                     i["seguro_long"]  and i["nao_ext_long_tight"])
+                     i["nao_ext_long_tight"])
     short_rebound = (i["rsi_dip_short"]   and i["rsi_rebound_short"] and i["ha_bear"] and
                      i["dna_flow_bear"] and i["trendilo_short"] and i["adx"] > 20 and
                      i["v_bom"] and not i["kalman_subindo"] and not i["lateralizado"] and
-                     i["seguro_short"] and (i["e21"] - i["preco"]) / i["atr"] < 2.5)
+                     (i["e21"] - i["preco"]) / i["atr"] < 2.5)
 
     # ── Divergência RSI ───────────────────────────────────────────────────────
     # Sem piso de ADX nem checagem de lateralização, "divergência" é só ruído de
