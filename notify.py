@@ -121,11 +121,23 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     funding_rate = extra.get("funding_rate")
     oi_change    = extra.get("oi_change")
 
-    # ── Stop adaptativo ───────────────────────────────────────────────────────
+    # ── Stop adaptativo por volatilidade (ADX-based) ───────────────────────────
     mult_atr = (2.0 if fonte in ("SURGE", "DUMP")              else
                 1.2 if fonte == "SM_SWEEP"                   else
                 1.8 if fonte in ("FLEX", "SETUP")            else
-                1.5 if fonte in ("CORE", "BREAKOUT", "PUMP") else 1.5)
+                1.5)
+    # ADX: stop +justo em tendência forte, +largo em mercado lateral/ranging
+    if adx >= 30:
+        mult_atr = round(mult_atr * 0.75, 1)
+    elif adx >= 25:
+        mult_atr = round(mult_atr * 0.85, 1)
+    elif adx >= 20:
+        pass
+    elif adx >= 15:
+        mult_atr = round(mult_atr * 1.25, 1)
+    else:
+        mult_atr = round(mult_atr * 1.50, 1)
+    mult_atr = max(1.0, min(3.0, mult_atr))
 
     stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
     stop_estrutural = swing_low - atr * 0.3 if eh_long else swing_high + atr * 0.3
