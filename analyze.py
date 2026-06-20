@@ -652,19 +652,19 @@ def detectar_sinais(ind):
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"])
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
-    # ADX >= 15: piso de 11 deixava passar tendência fraca/quase lateral (ex: ADX 12)
+    # RVOL>=1.2 e ADX>=25 (pedido 20/06 — mesmo piso do FLEX, caso TRUMP/USDT
+    # SCOUT BRONZE 1/5 com RVOL 0.24x passou pelo vol_nao_fade solto demais)
     _sc_min  = 25 if _FLV <= 0 else 40
-    _adx_min = 10 if _FLV <= 0 else 15
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
-    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= _adx_min and
+    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= 25 and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
-                   _seg_l and i["vol_nao_fade"] and i["nao_overext_long"] and
+                   _seg_l and i["vol_nao_fade"] and i["rvol"] >= 1.2 and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
-    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= _adx_min and
+    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 25 and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
-                   _seg_s and i["vol_nao_fade"] and i["nao_overext_short"] and
+                   _seg_s and i["vol_nao_fade"] and i["rvol"] >= 1.2 and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 
