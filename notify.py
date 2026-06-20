@@ -213,62 +213,63 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     else:
         tag_modo = modos.get(fonte, "⚡ DNA FLEX"); info_cross = ""
 
-    labels_grade = {
-        "S+": "💎 GRADE S+ — Setup institucional",
-        "S":  "🏆 GRADE S — Setup perfeito",
-        "A+": "🔥 GRADE A+ — Setup excelente",
-        "A":  "⭐ GRADE A — Setup sólido",
-        "B":  "📊 GRADE B — Setup básico",
-    }
-    label_grade = labels_grade.get(grade, f"📊 GRADE {grade}")
+    emoji_grade = {"S+": "💎", "S": "🏆", "A+": "🔥", "A": "⭐", "B": "📊"}.get(grade, "📊")
 
     # ── Montagem da mensagem ──────────────────────────────────────────────────
     agora    = datetime.now().strftime("%H:%M — %d/%m/%Y")
     k_str    = "↑" if kalman_subindo else "↓"
     linha_cross = f"📉 Cruzamento: {_escapar(info_cross)}\n" if info_cross else ""
-    linha_rvol  = f"📊 RVOL: `{_bruto(f'{rvol_val:.2f}')}x` {_escapar(rvol_lbl)}" if rvol_lbl else ""
-    linha_flow  = ("✅" if dna_flow_ok else "—") + " DNA Flow"
-    linha_trl   = ("✅" if trendilo_ok else "—") + " Trendilo"
+    linha_rvol  = f"📈 RVOL: `{_bruto(f'{rvol_val:.2f}')}x` {_escapar(rvol_lbl)}\n" if rvol_lbl else ""
     if funding_rate is not None:
         fr_pct = funding_rate * 100
         if eh_long:
             fr_ico = "✅" if funding_rate < -0.0001 else ("⚠️" if funding_rate > 0.0001 else "—")
         else:
             fr_ico = "✅" if funding_rate > 0.0001 else ("⚠️" if funding_rate < -0.0001 else "—")
-        linha_funding = f"💹 Funding: `{_bruto(f'{fr_pct:.4f}')}%` {fr_ico}"
+        linha_funding = f"💹 Funding: `{_bruto(f'{fr_pct:.4f}')}%` {fr_ico}\n"
     else:
         linha_funding = ""
 
     if oi_change is not None:
         oi_ico = ("📈" if oi_change > 3 else "📉" if oi_change < -3 else "—")
-        linha_oi = f"📊 OI: {oi_ico} `{_bruto(f'{oi_change:+.1f}')}%`"
+        linha_oi = f"📊 OI: {oi_ico} `{_bruto(f'{oi_change:+.1f}')}%`\n"
     else:
         linha_oi = ""
-    linha_inst  = f"\n🏛 Score Inst: *{_escapar(str(score_inst))}/100* {_escapar(cls_inst)}" if score_inst else ""
-    linha_conf  = f"\n🎯 Confiança: *{_escapar(str(_confianca))}%*"
-    linha_liq   = f"\n🔍 SM: {_escapar(evento_liq)}" if evento_liq else ""
-    aviso_scout = "\n⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_" if fonte == "SCOUT" else ""
+    linha_inst  = f"🏛 Score Inst: *{_escapar(str(score_inst))}/100* — {_escapar(cls_inst)}\n" if score_inst else ""
+    linha_liq   = f"🔍 SM: {_escapar(evento_liq)}\n" if evento_liq else ""
+    aviso_scout = "⚠️ _Sinal secundário — risco reduzido \\(1%\\) — semi\\-agressivo_\n" if fonte == "SCOUT" else ""
+
+    # Fluxo combinado (DNA Flow + Trendilo) num único selo bom/médio/ruim
+    if dna_flow_ok and trendilo_ok:
+        fluxo_emoji, fluxo_label = "🟢", "Confirmado"
+    elif dna_flow_ok or trendilo_ok:
+        fluxo_emoji, fluxo_label = "🟡", "Parcial"
+    else:
+        fluxo_emoji, fluxo_label = "🔴", "Fraco"
 
     texto = (
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
-        f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 Gráfico: *{_escapar(tf_lbl)}*\n"
-        f"{linha_cross}"
-        f"{_escapar(label_grade)}{linha_inst}{linha_conf}{linha_liq}{aviso_scout}\n\n"
+        f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 *{_escapar(tf_lbl)}*\n"
+        f"{linha_cross}\n"
+        f"{emoji_grade} *GRADE: {_escapar(grade)}*\n"
+        f"{linha_inst}"
+        f"🎯 Confiança: *{_escapar(str(_confianca))}%*\n"
+        f"{linha_liq}"
+        f"{aviso_scout}\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
-        f"🛑 Stop: `${_bruto(_fmt(stop))}` \\({_escapar(label_stop)}\\)\n"
-        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% \\+ mover stop → entrada\n"
-        f"🏆 TP Final \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n\n"
-        f"📐 *Gestão de risco \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
-        f"  Risco: `${_bruto(f'{valor_risco:.2f}')}`\n"
-        f"  💵 Entrada na operação: `${_bruto(f'{valor_pos:.2f}')} USDT` \\({_escapar(f'{contratos:.4f}')} {_escapar(abrev)}\\)\n"
-        f"  Alavancagem {_escapar(str(alavancagem))}x: `${_bruto(f'{pos_alav:.2f}')}` colateral\n"
-        f"💸 Ganho: TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| Total \\+`${_bruto(f'{ganho_total:.2f}')}`\n\n"
-        f"📊 Score: *{_escapar(score)}/145* \\| RSI: {_escapar(f'{rsi:.0f}')} \\| ADX: {_escapar(f'{adx:.0f}')}\n"
-        + (f"{linha_rvol}\n" if linha_rvol else "")
-        + (f"{linha_funding}\n" if linha_funding else "")
-        + (f"{linha_oi}\n" if linha_oi else "")
-        + f"🔬 {_escapar(linha_flow)} \\| {_escapar(linha_trl)}\n"
-        + f"📈 Tendência: {_escapar(tendencia)} \\| Kalman: {_escapar(k_str)}\n"
+        f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}` · R=`{_bruto(f'{risco_pct:.1f}')}%`\n"
+        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
+        f"🎯 TP2 \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n\n"
+        f"📊 RSI: {_escapar(f'{rsi:.0f}')}\n"
+        f"{linha_rvol}"
+        f"📉 ADX: {_escapar(f'{adx:.0f}')}\n"
+        f"📦 Fluxo: {fluxo_emoji} {_escapar(fluxo_label)} \\| Kalman: {_escapar(k_str)}\n"
+        f"📍 Tendência: {_escapar(tendencia)}\n\n"
+        f"📐 *Gestão \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
+        f"Risco: `${_bruto(f'{valor_risco:.2f}')}` \\| Pos: `${_bruto(f'{valor_pos:.2f}')}` \\| {_escapar(str(alavancagem))}x \\(`${_bruto(f'{pos_alav:.2f}')}` colateral\\)\n"
+        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| TP2 \\+`${_bruto(f'{ganho_total:.2f}')}`\n"
+        f"{linha_funding}"
+        f"{linha_oi}"
         f"⏰ {_escapar(agora)}"
     )
 
