@@ -1,1 +1,803 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bazilio - Portas</title>
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bazilio Portas">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root {
+    --gold: #c9a227;
+    --gold-dark: #a8841e;
+    --dark: #1a1a1a;
+    --bg: #f5f5f0;
+    --card-bg: #ffffff;
+    --border: #e0ddd5;
+    --text: #2a2a2a;
+    --text-light: #6b6b6b;
+    --danger: #c0392b;
+    --success: #27ae60;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  nav {
+    background: var(--dark);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  nav .nav-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    overflow-x: auto;
+  }
+  nav button {
+    background: none;
+    border: none;
+    color: #ccc;
+    padding: 14px 18px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+  }
+  nav button.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+    font-weight: 600;
+  }
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 0 0 16px; }
+  .subtitle { color: var(--text-light); font-size: 14px; margin-bottom: 20px; }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-card .label { font-size: 13px; color: var(--text-light); }
+  .stat-card .value { font-size: 24px; font-weight: 700; color: var(--gold-dark); margin-top: 4px; }
+  label { display: block; font-size: 13px; color: var(--text-light); margin-bottom: 4px; margin-top: 12px; }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    background: #fff;
+    color: var(--text);
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--gold); border-color: var(--gold); }
+  .btn-primary, .btn-secondary, .btn-danger {
+    display: inline-block;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 14px;
+    margin-right: 8px;
+  }
+  .btn-primary { background: var(--gold); color: #fff; }
+  .btn-primary:hover { background: var(--gold-dark); }
+  .btn-secondary { background: #eee; color: var(--text); }
+  .btn-secondary:hover { background: #ddd; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #962d22; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  th { color: var(--text-light); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  .row { display: flex; justify-content: space-between; align-items: center; }
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .tag-pendente { background: #fdf3d8; color: #92720a; }
+  .tag-pago { background: #d8f3e0; color: #1e7a44; }
+  .tag-ativo { background: #d8f3e0; color: #1e7a44; }
+  .tag-inativo { background: #eee; color: #888; }
+  .empty { color: var(--text-light); font-size: 14px; padding: 20px 0; text-align: center; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .toggle-group { display: flex; gap: 8px; margin-bottom: 16px; }
+  .toggle-group button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .toggle-group button.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+  .price-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .price-row:last-child { border-bottom: none; }
+  .price-row input { width: 100px; }
+  @media print {
+    nav, .no-print { display: none !important; }
+  }
+  .links { display: flex; gap: 14px; flex-wrap: wrap; }
+  .links a { color: var(--gold-dark); font-weight: 600; text-decoration: none; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <button data-section="inicio" class="active">Início</button>
+    <button data-section="lancamentos">Lançamentos</button>
+    <button data-section="prestadores">Prestadores</button>
+    <button data-section="resumos">Resumos</button>
+    <button data-section="folha">Folha de Pagamento</button>
+    <button data-section="config">Configurações</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- INICIO -->
+  <section id="inicio" class="section active">
+    <h1>Bazilio - Assentamento de Portas</h1>
+    <p class="subtitle">Controle de serviços, prestadores e pagamentos</p>
+    <div class="grid" id="dashboard-stats"></div>
+    <div class="card">
+      <h2>Acesso rápido</h2>
+      <div class="links">
+        <a data-go="lancamentos">+ Lançar serviço do dia</a>
+        <a data-go="prestadores">Gerenciar prestadores</a>
+        <a data-go="resumos">Ver resumos</a>
+        <a data-go="folha">Gerar folha de pagamento</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- LANCAMENTOS -->
+  <section id="lancamentos" class="section">
+    <h1>Lançar serviço do dia</h1>
+    <div class="card">
+      <label>Prestador</label>
+      <select id="lanc-prestador"></select>
+      <label>Data</label>
+      <input type="date" id="lanc-data">
+      <label>Portas instaladas</label>
+      <input type="number" id="lanc-portas" min="0" value="0">
+      <label>Maçanetas instaladas</label>
+      <input type="number" id="lanc-macanetas" min="0" value="0">
+      <label>Acabamento vista</label>
+      <input type="number" id="lanc-acabamento" min="0" value="0">
+      <label>Observação (opcional)</label>
+      <textarea id="lanc-obs" rows="2"></textarea>
+      <div class="card" style="background:#fafaf5; margin-top:14px;">
+        <div class="row"><span>Portas</span><strong id="prev-portas">R$ 0,00</strong></div>
+        <div class="row"><span>Maçanetas</span><strong id="prev-macanetas">R$ 0,00</strong></div>
+        <div class="row"><span>Acabamento vista</span><strong id="prev-acabamento">R$ 0,00</strong></div>
+        <hr>
+        <div class="row"><span><strong>Total</strong></span><strong id="prev-total" style="color:var(--gold-dark); font-size:18px;">R$ 0,00</strong></div>
+      </div>
+      <button class="btn-primary" id="btn-lancar">Lançar serviço</button>
+    </div>
+
+    <h2 style="margin-top:30px;">Lançamentos registrados</h2>
+    <label>Filtrar por prestador</label>
+    <select id="lanc-filtro-prestador"><option value="">Todos</option></select>
+    <div id="lista-lancamentos"></div>
+  </section>
+
+  <!-- PRESTADORES -->
+  <section id="prestadores" class="section">
+    <h1>Prestadores de serviço</h1>
+    <div class="card">
+      <h2>Adicionar prestador</h2>
+      <label>Nome</label>
+      <input type="text" id="prest-nome" placeholder="Nome">
+      <label>Telefone (opcional)</label>
+      <input type="text" id="prest-telefone" placeholder="Telefone">
+      <button class="btn-primary" id="btn-add-prestador">Adicionar</button>
+    </div>
+    <div id="lista-prestadores"></div>
+  </section>
+
+  <!-- RESUMOS -->
+  <section id="resumos" class="section">
+    <h1>Resumos</h1>
+    <div class="toggle-group">
+      <button data-tipo="semana" class="active">Semanal</button>
+      <button data-tipo="quinzena">Quinzenal</button>
+      <button data-tipo="mes">Mensal</button>
+    </div>
+    <label>Filtrar por prestador</label>
+    <select id="resumo-filtro-prestador"><option value="">Todos</option></select>
+    <div id="lista-resumos" style="margin-top:16px;"></div>
+  </section>
+
+  <!-- FOLHA DE PAGAMENTO -->
+  <section id="folha" class="section">
+    <h1>Folha de Pagamento</h1>
+    <div class="card">
+      <h2>Gerar fechamento</h2>
+      <label>Prestador</label>
+      <select id="folha-prestador"></select>
+      <label>Tipo de período</label>
+      <select id="folha-tipo">
+        <option value="semanal">Semanal</option>
+        <option value="quinzenal">Quinzenal</option>
+        <option value="mensal">Mensal</option>
+      </select>
+      <label>Data de referência</label>
+      <input type="date" id="folha-data-ref">
+      <button class="btn-primary" id="btn-gerar-folha">Gerar folha de pagamento</button>
+    </div>
+    <h2 style="margin-top:30px;">Folhas geradas</h2>
+    <div id="lista-folhas"></div>
+  </section>
+
+  <!-- FOLHA DETALHE (modal-like full screen) -->
+  <section id="folha-detalhe" class="section">
+    <button class="btn-secondary no-print" id="btn-voltar-folhas">&larr; Voltar</button>
+    <div id="folha-detalhe-content"></div>
+  </section>
+
+  <!-- CONFIGURACOES -->
+  <section id="config" class="section">
+    <h1>Configurações</h1>
+    <div class="card">
+      <h2>Valores unitários (base principal)</h2>
+      <p class="subtitle">Alterar aqui não modifica lançamentos já registrados.</p>
+      <div class="price-row">
+        <span>Assentamento de portas</span>
+        <input type="number" id="preco-porta" step="0.01">
+      </div>
+      <div class="price-row">
+        <span>Maçanetas</span>
+        <input type="number" id="preco-macaneta" step="0.01">
+      </div>
+      <div class="price-row">
+        <span>Acabamento vista</span>
+        <input type="number" id="preco-acabamento" step="0.01">
+      </div>
+      <button class="btn-primary" id="btn-salvar-precos">Salvar valores</button>
+    </div>
+    <div class="card no-print">
+      <h2>Dados</h2>
+      <p class="subtitle">Os dados ficam salvos neste navegador (localStorage). Use os botões abaixo pra fazer backup ou restaurar.</p>
+      <button class="btn-secondary" id="btn-exportar">Exportar backup (.json)</button>
+      <button class="btn-secondary" id="btn-importar-trigger">Importar backup</button>
+      <input type="file" id="btn-importar" accept=".json" style="display:none">
+      <button class="btn-danger" id="btn-limpar">Limpar todos os dados</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ---------- Storage ----------
+const DB_KEY = 'bazilio_db_v1';
+
+function loadDb() {
+  const raw = localStorage.getItem(DB_KEY);
+  if (raw) return JSON.parse(raw);
+  return {
+    precos: { porta: 11, macaneta: 7, acabamento_vista: 17 },
+    prestadores: [],
+    lancamentos: [],
+    fechamentos: [],
+    seq: { prestador: 1, lancamento: 1, fechamento: 1 }
+  };
+}
+function saveDb() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+let db = loadDb();
+
+function nextId(kind) {
+  const id = db.seq[kind]++;
+  return id;
+}
+
+// ---------- Date helpers ----------
+function toISO(d) {
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function parseISO(s) {
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function hoje() { return toISO(new Date()); }
+
+function getSemana(dataISO) {
+  const d = parseISO(dataISO);
+  const dow = (d.getDay() + 6) % 7; // 0 = Monday
+  const inicio = new Date(d); inicio.setDate(d.getDate() - dow);
+  const fim = new Date(inicio); fim.setDate(inicio.getDate() + 6);
+  return { chave: `semana_${toISO(inicio)}`, inicio: toISO(inicio), fim: toISO(fim), label: `${formatarData(toISO(inicio))} a ${formatarData(toISO(fim))}` };
+}
+function getQuinzena(dataISO) {
+  const d = parseISO(dataISO);
+  const y = d.getFullYear(), m = d.getMonth();
+  let inicio, fim;
+  if (d.getDate() <= 15) {
+    inicio = new Date(y, m, 1); fim = new Date(y, m, 15);
+  } else {
+    inicio = new Date(y, m, 16); fim = new Date(y, m+1, 0);
+  }
+  return { chave: `quinzena_${toISO(inicio)}`, inicio: toISO(inicio), fim: toISO(fim), label: `${formatarData(toISO(inicio))} a ${formatarData(toISO(fim))}` };
+}
+function getMes(dataISO) {
+  const d = parseISO(dataISO);
+  const y = d.getFullYear(), m = d.getMonth();
+  const inicio = new Date(y, m, 1), fim = new Date(y, m+1, 0);
+  const nomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return { chave: `mes_${y}-${String(m+1).padStart(2,'0')}`, inicio: toISO(inicio), fim: toISO(fim), label: `${nomes[m]} de ${y}` };
+}
+function formatarData(iso) {
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function formatarMoeda(v) {
+  return 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+}
+
+// ---------- Aggregation ----------
+function agruparPorPeriodo(lancamentos, tipo) {
+  const fn = tipo === 'semana' ? getSemana : tipo === 'quinzena' ? getQuinzena : getMes;
+  const grupos = {};
+  for (const l of lancamentos) {
+    const p = fn(l.data);
+    if (!grupos[p.chave]) {
+      grupos[p.chave] = { ...p, qtd_portas: 0, qtd_macanetas: 0, qtd_acabamento_vista: 0, valor_portas: 0, valor_macanetas: 0, valor_acabamento_vista: 0, valor_total: 0 };
+    }
+    const g = grupos[p.chave];
+    g.qtd_portas += l.qtd_portas;
+    g.qtd_macanetas += l.qtd_macanetas;
+    g.qtd_acabamento_vista += l.qtd_acabamento_vista;
+    g.valor_portas += l.valor_portas;
+    g.valor_macanetas += l.valor_macanetas;
+    g.valor_acabamento_vista += l.valor_acabamento_vista;
+    g.valor_total += l.valor_total;
+  }
+  return Object.values(grupos).sort((a,b) => b.inicio.localeCompare(a.inicio));
+}
+
+// ---------- Navigation ----------
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.section === id));
+  renderAll();
+}
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => showSection(b.dataset.section)));
+document.querySelectorAll('[data-go]').forEach(a => a.addEventListener('click', () => showSection(a.dataset.go)));
+
+// ---------- Render: dashboard ----------
+function renderDashboard() {
+  const ativos = db.prestadores.filter(p => p.ativo).length;
+  const todasData = hoje();
+  const totalHoje = db.lancamentos.filter(l => l.data === todasData).reduce((s,l) => s + l.valor_total, 0);
+  const mesAtual = getMes(hoje());
+  const totalMes = db.lancamentos.filter(l => l.data >= mesAtual.inicio && l.data <= mesAtual.fim).reduce((s,l) => s + l.valor_total, 0);
+  const pendentes = db.lancamentos.filter(l => !l.fechamento_id).length;
+
+  const stats = [
+    { label: 'Prestadores ativos', value: ativos },
+    { label: 'Total de hoje', value: formatarMoeda(totalHoje) },
+    { label: 'Total do mês', value: formatarMoeda(totalMes) },
+    { label: 'Lançamentos pendentes', value: pendentes },
+  ];
+  document.getElementById('dashboard-stats').innerHTML = stats.map(s => `
+    <div class="stat-card"><div class="label">${s.label}</div><div class="value">${s.value}</div></div>
+  `).join('');
+}
+
+// ---------- Render: prestadores ----------
+function fillPrestadorSelects() {
+  const ativos = db.prestadores.filter(p => p.ativo);
+  const opts = ativos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+  document.getElementById('lanc-prestador').innerHTML = opts || '<option value="">Nenhum prestador ativo</option>';
+  document.getElementById('folha-prestador').innerHTML = opts || '<option value="">Nenhum prestador ativo</option>';
+
+  const todosOpts = db.prestadores.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+  document.getElementById('lanc-filtro-prestador').innerHTML = '<option value="">Todos</option>' + todosOpts;
+  document.getElementById('resumo-filtro-prestador').innerHTML = '<option value="">Todos</option>' + todosOpts;
+}
+
+function renderPrestadores() {
+  if (db.prestadores.length === 0) {
+    document.getElementById('lista-prestadores').innerHTML = '<div class="empty">Nenhum prestador cadastrado ainda.</div>';
+    return;
+  }
+  document.getElementById('lista-prestadores').innerHTML = db.prestadores.map(p => `
+    <div class="card row">
+      <div>
+        <strong>${p.nome}</strong> <span class="tag ${p.ativo ? 'tag-ativo' : 'tag-inativo'}">${p.ativo ? 'Ativo' : 'Inativo'}</span>
+        ${p.telefone ? `<div class="subtitle" style="margin:2px 0 0;">${p.telefone}</div>` : ''}
+      </div>
+      <div>
+        <button class="btn-secondary btn-sm" data-toggle-prestador="${p.id}">${p.ativo ? 'Desativar' : 'Ativar'}</button>
+        <button class="btn-danger btn-sm" data-del-prestador="${p.id}">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('btn-add-prestador').addEventListener('click', () => {
+  const nome = document.getElementById('prest-nome').value.trim();
+  if (!nome) { alert('Informe o nome do prestador.'); return; }
+  const telefone = document.getElementById('prest-telefone').value.trim();
+  db.prestadores.push({ id: nextId('prestador'), nome, telefone, ativo: true, criado_em: new Date().toISOString() });
+  saveDb();
+  document.getElementById('prest-nome').value = '';
+  document.getElementById('prest-telefone').value = '';
+  renderAll();
+});
+
+document.getElementById('lista-prestadores').addEventListener('click', (e) => {
+  const toggleId = e.target.dataset.togglePrestador;
+  const delId = e.target.dataset.delPrestador;
+  if (toggleId) {
+    const p = db.prestadores.find(x => x.id == toggleId);
+    p.ativo = !p.ativo;
+    saveDb(); renderAll();
+  }
+  if (delId) {
+    const temLancamentos = db.lancamentos.some(l => l.prestador_id == delId);
+    if (temLancamentos) {
+      const p = db.prestadores.find(x => x.id == delId);
+      p.ativo = false;
+      alert('Este prestador tem lançamentos registrados, foi desativado em vez de excluído.');
+    } else {
+      if (!confirm('Excluir este prestador?')) return;
+      db.prestadores = db.prestadores.filter(x => x.id != delId);
+    }
+    saveDb(); renderAll();
+  }
+});
+
+// ---------- Render: lancamentos ----------
+function updatePreview() {
+  const portas = Number(document.getElementById('lanc-portas').value || 0);
+  const macanetas = Number(document.getElementById('lanc-macanetas').value || 0);
+  const acabamento = Number(document.getElementById('lanc-acabamento').value || 0);
+  const vPortas = portas * db.precos.porta;
+  const vMacanetas = macanetas * db.precos.macaneta;
+  const vAcabamento = acabamento * db.precos.acabamento_vista;
+  document.getElementById('prev-portas').textContent = formatarMoeda(vPortas);
+  document.getElementById('prev-macanetas').textContent = formatarMoeda(vMacanetas);
+  document.getElementById('prev-acabamento').textContent = formatarMoeda(vAcabamento);
+  document.getElementById('prev-total').textContent = formatarMoeda(vPortas + vMacanetas + vAcabamento);
+}
+['lanc-portas','lanc-macanetas','lanc-acabamento'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+
+document.getElementById('btn-lancar').addEventListener('click', () => {
+  const prestador_id = Number(document.getElementById('lanc-prestador').value);
+  const data = document.getElementById('lanc-data').value || hoje();
+  const portas = Number(document.getElementById('lanc-portas').value || 0);
+  const macanetas = Number(document.getElementById('lanc-macanetas').value || 0);
+  const acabamento = Number(document.getElementById('lanc-acabamento').value || 0);
+  const obs = document.getElementById('lanc-obs').value.trim();
+
+  if (!prestador_id) { alert('Selecione um prestador.'); return; }
+  if (portas <= 0 && macanetas <= 0 && acabamento <= 0) { alert('Informe ao menos uma quantidade maior que zero.'); return; }
+
+  const valor_portas = portas * db.precos.porta;
+  const valor_macanetas = macanetas * db.precos.macaneta;
+  const valor_acabamento_vista = acabamento * db.precos.acabamento_vista;
+
+  db.lancamentos.push({
+    id: nextId('lancamento'),
+    prestador_id, data,
+    qtd_portas: portas, qtd_macanetas: macanetas, qtd_acabamento_vista: acabamento,
+    valor_unit_porta: db.precos.porta, valor_unit_macaneta: db.precos.macaneta, valor_unit_acabamento: db.precos.acabamento_vista,
+    valor_portas, valor_macanetas, valor_acabamento_vista,
+    valor_total: valor_portas + valor_macanetas + valor_acabamento_vista,
+    observacao: obs, fechamento_id: null, criado_em: new Date().toISOString()
+  });
+  saveDb();
+
+  document.getElementById('lanc-portas').value = 0;
+  document.getElementById('lanc-macanetas').value = 0;
+  document.getElementById('lanc-acabamento').value = 0;
+  document.getElementById('lanc-obs').value = '';
+  updatePreview();
+  renderAll();
+});
+
+document.getElementById('lanc-filtro-prestador').addEventListener('change', renderListaLancamentos);
+
+function renderListaLancamentos() {
+  const filtro = document.getElementById('lanc-filtro-prestador').value;
+  let lista = [...db.lancamentos].sort((a,b) => b.data.localeCompare(a.data) || b.id - a.id);
+  if (filtro) lista = lista.filter(l => l.prestador_id == filtro);
+
+  if (lista.length === 0) {
+    document.getElementById('lista-lancamentos').innerHTML = '<div class="empty">Nenhum lançamento encontrado.</div>';
+    return;
+  }
+  document.getElementById('lista-lancamentos').innerHTML = lista.map(l => {
+    const prestador = db.prestadores.find(p => p.id === l.prestador_id);
+    const partes = [];
+    if (l.qtd_portas) partes.push(`${l.qtd_portas} porta(s)`);
+    if (l.qtd_macanetas) partes.push(`${l.qtd_macanetas} maçaneta(s)`);
+    if (l.qtd_acabamento_vista) partes.push(`${l.qtd_acabamento_vista} acabamento(s)`);
+    return `
+    <div class="card">
+      <div class="row">
+        <div>
+          <p class="font-medium" style="margin:0; font-weight:600;">${prestador ? prestador.nome : '—'} — ${formatarData(l.data)}</p>
+          <div class="subtitle" style="margin:4px 0 0;">${partes.join(', ')}${l.observacao ? ' · ' + l.observacao : ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700; color:var(--gold-dark);">${formatarMoeda(l.valor_total)}</div>
+          ${l.fechamento_id
+            ? '<span class="tag tag-pago" style="margin-top:6px; display:inline-block;">Já fechado</span>'
+            : `<button class="btn-danger btn-sm" data-del-lanc="${l.id}" style="margin-top:6px;">Excluir</button>`}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('lista-lancamentos').addEventListener('click', (e) => {
+  const id = e.target.dataset.delLanc;
+  if (id) {
+    if (!confirm('Excluir este lançamento?')) return;
+    db.lancamentos = db.lancamentos.filter(l => l.id != id);
+    saveDb(); renderAll();
+  }
+});
+
+// ---------- Render: resumos ----------
+let resumoTipo = 'semana';
+document.querySelectorAll('#resumos .toggle-group button').forEach(b => {
+  b.addEventListener('click', () => {
+    resumoTipo = b.dataset.tipo;
+    document.querySelectorAll('#resumos .toggle-group button').forEach(x => x.classList.toggle('active', x === b));
+    renderResumos();
+  });
+});
+document.getElementById('resumo-filtro-prestador').addEventListener('change', renderResumos);
+
+function renderResumos() {
+  const filtro = document.getElementById('resumo-filtro-prestador').value;
+  let lancs = [...db.lancamentos];
+  if (filtro) lancs = lancs.filter(l => l.prestador_id == filtro);
+  const grupos = agruparPorPeriodo(lancs, resumoTipo);
+
+  if (grupos.length === 0) {
+    document.getElementById('lista-resumos').innerHTML = '<div class="empty">Nenhum dado para esse período.</div>';
+    return;
+  }
+  document.getElementById('lista-resumos').innerHTML = grupos.map(g => `
+    <div class="card">
+      <div class="row"><strong>${g.label}</strong><strong style="color:var(--gold-dark);">${formatarMoeda(g.valor_total)}</strong></div>
+      <table>
+        <tr><th>Item</th><th>Qtd</th><th>Valor</th></tr>
+        <tr><td>Portas</td><td>${g.qtd_portas}</td><td>${formatarMoeda(g.valor_portas)}</td></tr>
+        <tr><td>Maçanetas</td><td>${g.qtd_macanetas}</td><td>${formatarMoeda(g.valor_macanetas)}</td></tr>
+        <tr><td>Acabamento vista</td><td>${g.qtd_acabamento_vista}</td><td>${formatarMoeda(g.valor_acabamento_vista)}</td></tr>
+      </table>
+    </div>
+  `).join('');
+}
+
+// ---------- Render: folha de pagamento ----------
+document.getElementById('btn-gerar-folha').addEventListener('click', () => {
+  const prestador_id = Number(document.getElementById('folha-prestador').value);
+  const tipo = document.getElementById('folha-tipo').value;
+  const dataRef = document.getElementById('folha-data-ref').value || hoje();
+  if (!prestador_id) { alert('Selecione um prestador.'); return; }
+
+  const fn = tipo === 'semanal' ? getSemana : tipo === 'quinzenal' ? getQuinzena : getMes;
+  const periodo = fn(dataRef);
+
+  const pendentes = db.lancamentos.filter(l =>
+    l.prestador_id === prestador_id && !l.fechamento_id && l.data >= periodo.inicio && l.data <= periodo.fim
+  );
+  if (pendentes.length === 0) { alert('Nenhum lançamento pendente encontrado nesse período pra esse prestador.'); return; }
+
+  const total = pendentes.reduce((s,l) => s + l.valor_total, 0);
+  const fechamento = {
+    id: nextId('fechamento'), prestador_id, tipo,
+    periodo_inicio: periodo.inicio, periodo_fim: periodo.fim,
+    total, status: 'pendente', criado_em: new Date().toISOString(), pago_em: null
+  };
+  db.fechamentos.push(fechamento);
+  pendentes.forEach(l => l.fechamento_id = fechamento.id);
+  saveDb();
+  renderAll();
+  alert('Folha de pagamento gerada com sucesso.');
+});
+
+function renderFolhas() {
+  if (db.fechamentos.length === 0) {
+    document.getElementById('lista-folhas').innerHTML = '<div class="empty">Nenhuma folha gerada ainda.</div>';
+    return;
+  }
+  const lista = [...db.fechamentos].sort((a,b) => b.id - a.id);
+  document.getElementById('lista-folhas').innerHTML = lista.map(f => {
+    const prestador = db.prestadores.find(p => p.id === f.prestador_id);
+    return `
+    <div class="card row">
+      <div>
+        <strong>${prestador ? prestador.nome : '—'}</strong>
+        <span class="tag ${f.status === 'pago' ? 'tag-pago' : 'tag-pendente'}">${f.status === 'pago' ? 'Pago' : 'Pendente'}</span>
+        <div class="subtitle" style="margin:4px 0 0;">${formatarData(f.periodo_inicio)} a ${formatarData(f.periodo_fim)} (${f.tipo})</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-weight:700; color:var(--gold-dark);">${formatarMoeda(f.total)}</div>
+        <a data-ver-folha="${f.id}" style="color:var(--gold-dark); cursor:pointer; font-size:13px;">ver folha</a>
+        ${f.status !== 'pago' ? ` · <a data-cancelar-folha="${f.id}" style="color:var(--danger); cursor:pointer; font-size:13px;">cancelar</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('lista-folhas').addEventListener('click', (e) => {
+  const verId = e.target.dataset.verFolha;
+  const cancelId = e.target.dataset.cancelarFolha;
+  if (verId) abrirFolhaDetalhe(Number(verId));
+  if (cancelId) {
+    const f = db.fechamentos.find(x => x.id == cancelId);
+    if (f.status === 'pago') { alert('Não é possível cancelar uma folha já paga.'); return; }
+    if (!confirm('Cancelar esta folha? Os lançamentos voltam a ficar pendentes.')) return;
+    db.lancamentos.filter(l => l.fechamento_id === f.id).forEach(l => l.fechamento_id = null);
+    db.fechamentos = db.fechamentos.filter(x => x.id != cancelId);
+    saveDb(); renderAll();
+  }
+});
+
+function abrirFolhaDetalhe(id) {
+  const f = db.fechamentos.find(x => x.id === id);
+  const prestador = db.prestadores.find(p => p.id === f.prestador_id);
+  const lancs = db.lancamentos.filter(l => l.fechamento_id === id).sort((a,b) => a.data.localeCompare(b.data));
+  const totais = lancs.reduce((acc,l) => {
+    acc.portas += l.qtd_portas; acc.macanetas += l.qtd_macanetas; acc.acabamento += l.qtd_acabamento_vista;
+    acc.vPortas += l.valor_portas; acc.vMacanetas += l.valor_macanetas; acc.vAcabamento += l.valor_acabamento_vista;
+    return acc;
+  }, { portas:0, macanetas:0, acabamento:0, vPortas:0, vMacanetas:0, vAcabamento:0 });
+
+  document.getElementById('folha-detalhe-content').innerHTML = `
+    <h1>Folha de pagamento</h1>
+    <div class="card">
+      <p><strong>Prestador:</strong> ${prestador ? prestador.nome : '—'} ${prestador && prestador.telefone ? '(' + prestador.telefone + ')' : ''}</p>
+      <p><strong>Período:</strong> ${formatarData(f.periodo_inicio)} a ${formatarData(f.periodo_fim)} (${f.tipo})</p>
+      <p><strong>Status:</strong> <span class="tag ${f.status === 'pago' ? 'tag-pago' : 'tag-pendente'}">${f.status === 'pago' ? 'Pago' : 'Pendente'}</span></p>
+      <table>
+        <tr><th>Data</th><th>Portas</th><th>Maçanetas</th><th>Acabamento</th><th>Total</th></tr>
+        ${lancs.map(l => `<tr><td>${formatarData(l.data)}</td><td>${l.qtd_portas}</td><td>${l.qtd_macanetas}</td><td>${l.qtd_acabamento_vista}</td><td>${formatarMoeda(l.valor_total)}</td></tr>`).join('')}
+      </table>
+      <hr>
+      <table>
+        <tr><th>Item</th><th>Qtd</th><th>Valor</th></tr>
+        <tr><td>Portas</td><td>${totais.portas}</td><td>${formatarMoeda(totais.vPortas)}</td></tr>
+        <tr><td>Maçanetas</td><td>${totais.macanetas}</td><td>${formatarMoeda(totais.vMacanetas)}</td></tr>
+        <tr><td>Acabamento vista</td><td>${totais.acabamento}</td><td>${formatarMoeda(totais.vAcabamento)}</td></tr>
+      </table>
+      <div class="row" style="margin-top:10px;"><strong>Total geral</strong><strong style="font-size:20px; color:var(--gold-dark);">${formatarMoeda(f.total)}</strong></div>
+      <div class="no-print">
+        <button class="btn-secondary" onclick="window.print()">Imprimir</button>
+        ${f.status !== 'pago' ? `<button class="btn-primary" id="btn-marcar-pago" data-id="${f.id}">Marcar como pago</button>` : ''}
+      </div>
+    </div>
+  `;
+  const btnPago = document.getElementById('btn-marcar-pago');
+  if (btnPago) btnPago.addEventListener('click', () => {
+    f.pago_em = new Date().toISOString();
+    f.status = 'pago';
+    saveDb();
+    abrirFolhaDetalhe(id);
+    renderFolhas();
+  });
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('folha-detalhe').classList.add('active');
+}
+document.getElementById('btn-voltar-folhas').addEventListener('click', () => showSection('folha'));
+
+// ---------- Render: config ----------
+function renderConfig() {
+  document.getElementById('preco-porta').value = db.precos.porta;
+  document.getElementById('preco-macaneta').value = db.precos.macaneta;
+  document.getElementById('preco-acabamento').value = db.precos.acabamento_vista;
+}
+document.getElementById('btn-salvar-precos').addEventListener('click', () => {
+  db.precos.porta = Number(document.getElementById('preco-porta').value) || 0;
+  db.precos.macaneta = Number(document.getElementById('preco-macaneta').value) || 0;
+  db.precos.acabamento_vista = Number(document.getElementById('preco-acabamento').value) || 0;
+  saveDb();
+  alert('Valores atualizados. Lançamentos já registrados não são afetados.');
+  updatePreview();
+});
+
+document.getElementById('btn-exportar').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `bazilio-backup-${hoje()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('btn-importar-trigger').addEventListener('click', () => document.getElementById('btn-importar').click());
+document.getElementById('btn-importar').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const novo = JSON.parse(reader.result);
+      if (!confirm('Importar vai substituir todos os dados atuais. Confirma?')) return;
+      db = novo;
+      saveDb();
+      renderAll();
+      alert('Backup importado com sucesso.');
+    } catch (err) {
+      alert('Arquivo inválido.');
+    }
+  };
+  reader.readAsText(file);
+});
+document.getElementById('btn-limpar').addEventListener('click', () => {
+  if (!confirm('Isso vai apagar TODOS os dados (prestadores, lançamentos, folhas). Confirma?')) return;
+  localStorage.removeItem(DB_KEY);
+  db = loadDb();
+  renderAll();
+});
+
+// ---------- Render all ----------
+function renderAll() {
+  fillPrestadorSelects();
+  renderDashboard();
+  renderPrestadores();
+  renderListaLancamentos();
+  renderResumos();
+  renderFolhas();
+  renderConfig();
+  updatePreview();
+}
+
+document.getElementById('lanc-data').value = hoje();
+document.getElementById('folha-data-ref').value = hoje();
+renderAll();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

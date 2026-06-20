@@ -1,1 +1,15 @@
-PLACEHOLDER
+{
+  "name": "Bazilio - Assentamento de Portas",
+  "short_name": "Bazilio Portas",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1417x1417",
+      "type": "image/png"
+    }
+  ]
+}
