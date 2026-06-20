@@ -44,6 +44,9 @@ O bot só envia 2 tipos de mensagem ao Telegram a partir de agora:
 - Limitação honesta: essa auditoria por mim só roda enquanto há uma sessão Claude Code ativa (não existe gatilho
   automático me chamando a cada hora sem sessão aberta). O que É garantidamente automático, mesmo sem sessão
   aberta, é o diagnóstico horário do próprio bot via Telegram (ponto 2 acima).
+- Desde 20/06 o diagnóstico horário (ponto 2) também inclui um resumo de **resultado real das últimas 24h**
+  (contagem por STOP/TP1_BE/TP2/EXPIRADO, winrate, R médio) — ver seção "RASTREAMENTO DE RESULTADO" abaixo.
+  Continua sendo só 2 tipos de mensagem, o resumo é anexado ao diagnóstico existente, não é mensagem nova.
 
 ---
 
@@ -330,3 +333,42 @@ SHORT = espelho (tendencia_bear, liq_topo, estrutura_baixa, preco<e21)
 - Gate pós-sinal (`cycles.py`) usa os thresholds padrão "demais" (score_min=40, inst_min=45) — a condição
   de entrada já exige muito mais que isso, então nunca é o fator limitante.
 - Fica bem mais raro que FLEX/SCOUT por desenho — não é bug se passar vários ciclos sem sinal nesse modo.
+
+---
+
+## RASTREAMENTO DE RESULTADO (autorizado 20/06 — "perde boas entradas, o que fazer")
+
+Motivado por relato do usuário de que sinais "sobem considerável mas perde boas entradas" — sem dado real
+de winrate, qualquer ajuste de stop/entrada seria às cegas (violaria a REGRA #1 de não alterar regras sem
+evidência). `signals_log.csv` é só write-only e nem persistia entre runs do GitHub Actions — não dava pra
+saber objetivamente se o problema é stop apertado, entrada tardia, ou se na real a maioria bate o alvo.
+
+### Como funciona
+- Toda vez que `enviar_sinal()` (`notify.py`) envia um sinal com sucesso, devolve um dict (não mais `True`
+  puro) com `stop/tp1/tp2/r1/r_final`. O chamador (`cycles.py`, em `executar_ciclo()` e
+  `executar_ciclo_mtf()`) usa esse dict pra registrar a posição via `registrar_posicao_aberta()`
+  (`state.py`), guardada em `estado["_posicoes_abertas"]` — dentro do mesmo dict já cacheado entre runs via
+  `last_signals.json`, sem precisar de arquivo de estado novo.
+- A cada ciclo (`cycles.py main()`, logo após "Ciclo concluído"), `_atualizar_resultados()` busca o preço
+  atual de cada símbolo em acompanhamento via `buscar_preco_atual()` (`scanner.py`, ticker simples MEXC,
+  sem klines) e chama `verificar_posicoes_abertas()` (`state.py`) pra resolver as que já bateram TP/STOP.
+- Taxonomia de resultado: `STOP` (bateu stop antes do TP1) | `TP1_BE` (bateu TP1, depois voltou ao preço de
+  entrada — fecha com 50% da posição em lucro parcial e 50% no zero) | `TP2` (bateu o alvo final) |
+  `EXPIRADO`/`EXPIRADO_SEM_DADO` (não resolveu em 72h — fica fora do cálculo de winrate, resultado incerto).
+- R realizado: `STOP=-1.0` | `TP1_BE = r1*0.5` | `TP2 = r1*0.5 + r_final*0.5` | expirado = sem R (não conta).
+- Cada posição fechada vai pro `resultados_log.csv` (novo, `;`-delimitado, mesmo estilo do `signals_log.csv`)
+  via `registrar_resultado()`. `resumo_resultados(horas=24)` agrega contagem por resultado, winrate e R
+  médio — esse resumo é anexado ao diagnóstico horário existente (`_enviar_diagnostico`), não cria mensagem
+  nova no Telegram (ver regra dos "2 tipos de mensagem" acima).
+- `bot.yml` cacheia `resultados_log.csv` junto com `last_signals.json` (`actions/cache/restore`/`save`),
+  senão os dados seriam perdidos a cada run isolado do GitHub Actions.
+
+### Limitações conhecidas
+- Não há registro retroativo — só sinais enviados a partir deste commit entram no rastreamento. Vai levar
+  algumas horas/dias até acumular dado suficiente pra winrate ser estatisticamente útil.
+- `EXPIRADO`/`EXPIRADO_SEM_DADO` ficam fora do winrate — se aparecerem com frequência alta, é sinal de que o
+  prazo de 72h (`_PRAZO_MAX_HORAS` em `state.py`) pode estar curto demais pro timeframe usado, ou que
+  `buscar_preco_atual` está falhando pra algum símbolo (ex: delistado, símbolo mudou na MEXC).
+- ⚠️ Não tomar nenhuma decisão de ajustar stop/entrada/TP **sem antes olhar esse resumo** — é exatamente o
+  dado que faltava pra distinguir "stop apertado de mais" de "mercado genuinamente contra" de "está tudo
+  bem, é variância normal".
