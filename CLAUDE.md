@@ -45,7 +45,8 @@
 - Objetivo: bloquear apenas extremo sobrevendido (<25), permite entradas em correção 26-40
 
 ### Aplicação:
-- Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP, SURGE, MOMENTUM, REVERSAL, REBOUND, **CORE** (própria janela: 45-58 L / 42-55 S)
+- Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP
+- REVERSAL, SURGE, MOMENTUM, REBOUND não usam `rsi_zona` — têm janela de RSI própria embutida na condição do sinal
 - Implementado em `analyze.py` como `rsi_zona_long` e `rsi_zona_short`
 
 ```python
@@ -58,8 +59,8 @@ rsi_zona_short = rsi > 25
 
 ## REGRA #2 — Volume mínimo para sinais
 
-- `vol_nao_fade` (SCOUT/CORE): `max(volumes[-1], volumes[-2]) >= vol_ma * 0.80` (FL=3)
-- BB_BREAK: RVOL ≥ 0.80 + OBV confirmado
+- `vol_nao_fade` (SCOUT): `max(volumes[-1], volumes[-2]) >= vol_ma * 0.80` (FL=3; 0.65 FL=2; 0.50 FL=1; 0.20 FL=0)
+- BB_BREAK: RVOL ≥ 0.80 (FL=3; mais baixo em FL menor) + OBV confirmado
 - SURGE: melhor das 2 últimas velas `rvol_tier_max2 >= 3` (3x+)
 - Rompimento sem volume = falso rompimento
 
@@ -80,7 +81,9 @@ rsi_zona_short = rsi > 25
   `liq_cap = 100 / (1.3 * risco_pct)` — em stops apertados (ATR baixo) permite chegar a 50x; em stops largos
   o teto efetivo cai bem abaixo disso automaticamente.
 - Clamp final: min 3x, máx 50x
-- Risco por trade já escalado por grade em `config.py` `RISK_BY_GRADE`: B=2%, A=3%, A+=4%, S=5%, S+=7% (SCOUT=1%)
+- Risco por trade em `config.py` `RISK_BY_GRADE`: B=0.5%, A=1%, S=2%, S+=3% (SCOUT=1%, fora da tabela)
+  - ⚠️ A grade "A+" é citada na fórmula de leverage (`notify.py` `_lev`) mas `graduar_sinal()` em `analyze.py`
+    **nunca produz A+** (só retorna S+/S/A/B) — essa entrada do dict de leverage é código morto hoje.
 
 ## REGRA #5 — Defesas SMC (Smart Money)
 
@@ -98,127 +101,56 @@ Commit: `96f3f20` — estado após correções estruturais do dia 10/06
 
 ---
 
-## SESSÃO 14/06/2026 — Melhorias aplicadas
+## SESSÃO 14/06/2026 — Melhorias aplicadas (⚠️ HISTÓRICO — superseded, ver MAPA COMPLETO no fim do arquivo)
 
 **Commit base de restauração:** `a7226d8` → refatorado em `de4f1a2` → `12c45b5` → atual
 
 ### Correções críticas (14/06):
-- RSI zona LONG: 60 → 55 (restaurado — não comprar topo)
-- `dump_rsi_spike_short`: removido de `seguro_short` (bloqueava SHORTs válidos como SiREM)
-- `pump_rsi_spike_long`: threshold elevado para >15pts E rsi>54 (menos agressivo)
+- RSI zona LONG: 60 → 55 (restaurado — não comprar topo) — *depois substituído pela FLEX PRO (REGRA #1)*
+- `dump_rsi_spike_short`: removido de `seguro_short`
+- `pump_rsi_spike_long`: ajustado — *removido por completo nas restaurações posteriores, não existe mais em `seguro_long`*
 - Score inst por tipo de sinal (não mais fixo 60 para todos)
 - Funding rate + OI: reduz inst_min em -5pts cada quando alinhados
-- **Sinal CORE adicionado** com 11 critérios do operador
+- Sinal CORE adicionado com 11 critérios do operador — **removido em restauração posterior (commit `9db2d4f`), não existe no `analyze.py` atual**
 
-### Score Inst por tipo (cycles.py):
-| Tipo | inst_min base | Com sessão perigosa |
-|------|--------------|---------------------|
-| CORE | 25 | 35 |
-| REVERSAL | 45 | 55 |
-| SCOUT, SM_SWEEP, DIV | 50 | 60 |
-| FLEX, SETUP, PULLBACK, CROSS, BB_BREAK, SURGE, REBOUND | 55 | 65 |
-| MOMENTUM | 60 | 70 |
+A tabela de `inst_min` por tipo que existia aqui ficou obsoleta — o gate real hoje é mais simples
+(ver "Gate de Score Institucional pós-sinal" no MAPA COMPLETO).
 
 ---
 
 ## MEMÓRIA INSTITUCIONAL — Mapa completo de bloqueadores
 
-### Score Institucional (0-100) — analyze.py `_score_inst()`
-```
-20 pts: tendencia_bull/bear (preço > e200 AND e10>e21>e50>e200)
-15 pts: adx_long/short_ok (adx > 22 AND pdi/mdi dominante AND adx subindo)
-15 pts: dna_flow OR (f_bull/bear AND pressao_bull/bear)
-10 pts: ha_bull_1 / ha_bear_1 (1 vela HA confirmada)
-10 pts: trendilo_long / trendilo_short
-10 pts: rsi_subindo / rsi_caindo
-10 pts: v_forte (RVOL >= 1.5x média)
- 5 pts: rsi_div_bull / rsi_div_bear
- 5 pts: sm_bull / sm_bear
-```
-**Score mínimo para CORE** = 30 (ha+trl+rsi sempre verdadeiros quando CORE dispara).
-**Por isso inst_min=25 para CORE** — garante que passa mas com margem para sessão perigosa.
-
-### Grade do sinal — analyze.py `graduar_sinal()`
-```
-pts = tendencia_bull/bear (3) + alinhado (2) + macd_bull3/bear3 (2) +
-      ha_bull/bear (2) + adx_ok (2) + obv (1) + vwap (1) + v_forte (1) +
-      kalman_accel (1) + e200_subindo (1) + f_forte (1) + tend_consist (1)
-
-S+: pts >= 17 | S: pts >= 14 | A: pts >= 11 | B: < 11
-Trava: S/S+ degradado para A se score_inst < 70 ou RSI > 65 ou HA fraco
-```
-
-### Prioridade de sinais (ordem de verificação):
-1. PULLBACK (tbull_r + pullback + dna_flow + adx_long_ok)
-2. **CORE** (11 critérios do operador — ver abaixo)
-3. CROSS (cruzamento de EMAs)
-4. BB_BREAK (Bollinger Band breakout)
-5. SM_SWEEP (Smart Money sweep + absorção)
-6. REVERSAL (RSI extremo + divergência)
-7. SURGE (breakout 3%+ de candle + rvol≥3x)
-8. MOMENTUM (RSI cruzando 65/35)
-9. REBOUND (RSI rebound de zona extrema)
-10. DIV (divergência RSI vs preço)
-11. FLEX (setup flexível)
-12. SETUP (setup completo com OBV + VWAP)
-13. SCOUT (sinal secundário)
-
----
-
-## SINAL CORE — 11 Critérios Institucionais (14/06/2026)
-
-```python
-long_core = (
-    45 <= rsi <= 58 and rsi_subindo and          # RSI zona momentum ascendente
-    adx >= 18 and vol_nao_fade and not vol_secando and  # Força + volume
-    kalman_subindo and trendilo_long and         # Momentum confirmado
-    tbull_loose and ha_bull and                  # Estrutura + candle
-    not liq_topo and preco > e200 and            # SMC + tendência macro
-    preco <= e21 * 1.02                          # Próximo da EMA21 (≤2%)
-)
-
-short_core = (
-    42 <= rsi <= 55 and rsi_caindo and
-    adx >= 18 and vol_nao_fade and not vol_secando and
-    not kalman_subindo and trendilo_short and
-    tbear_loose and ha_bear and
-    not liq_fundo and preco < e200 and
-    preco >= e21 * 0.98
-)
-```
-
-**inst_min = 25** (11 condições são o gate — score_inst será ≥30 sempre)
-**score_min = 30** (score geral: mesma faixa de REVERSAL/SM_SWEEP)
-**MTF inst_min = 40** (mais exigente em H4 confirmation)
-**Stop: 1.5 ATR** | **Leverage: por grade (sem cap adicional)**
+(Score Institucional, Grade e ordem de prioridade dos sinais → ver seção "MAPA COMPLETO DE CONDIÇÕES ATUAIS"
+no fim deste arquivo — é a versão auditada linha a linha com o código, esta aqui era a versão antiga.)
 
 ---
 
 ## BLOQUEADORES MAIS COMUNS — Diagnóstico rápido
 
-### "rsi_zona=F" → RSI fora da janela
-- LONG bloqueado: RSI >= 55 → mercado ja subiu, não perseguir
-- SHORT bloqueado: RSI <= 40 → mercado já caiu, não vender fundo
-- **Ação**: aguardar RSI voltar para janela OU ver se REVERSAL/MOMENTUM ativa
+### "rsi_zona=F" → RSI fora da janela (REGRA #1, real no código hoje)
+- LONG bloqueado: RSI >= 75 → extremo sobrecomprado
+- SHORT bloqueado: RSI <= 25 → extremo sobrevendido
+- **Ação**: aguardar RSI voltar para janela OU ver se REVERSAL/MOMENTUM/REBOUND ativa (têm janela própria)
 
 ### "seguro=F(bb_topo)" → Preço em topo das Bollinger Bands
 - Sinal: pos_bb > 0.97 (preço > 97% da amplitude BB)
 - **Ação**: normal — protege de comprar topo de band
 
 ### "seguro=F(stoch>0.xx)" → StochRSI esticado
-- stoch_rsi > 0.80 AND rsi > 58 → sobrecomprado no curto prazo
-- **Ação**: aguardar StochRSI cair para < 0.70
+- LONG: stoch_rsi > 0.80 AND rsi > 58 | SHORT: stoch_rsi < 0.05 AND rsi < 35
+- **Ação**: aguardar StochRSI sair da saturação OU RSI absoluto recuar
 
-### "seguro=F(pump_rsi(+Xpt))" → RSI subiu >15pts em 3 velas
-- Pump detectado — não perseguir rally já feito
-- **Ação**: aguardar RSI estabilizar
+### "inst<N" → Score institucional insuficiente (dois gates diferentes, não confundir)
+1. **Gate embutido no sinal** (`analyze.py`, dentro da própria condição booleana — sinal nem é detectado sem isso):
+   score_inst_long/short >= 50 (PULLBACK, CROSS, BB_BREAK, SURGE, FLEX, SETUP) | >= 60 (SM_SWEEP, MOMENTUM) |
+   >= 55 (DIV) | sem gate de score_inst (REVERSAL, REBOUND, SCOUT — SCOUT usa "fluxo" no lugar)
+2. **Gate pós-sinal** (`cycles.py` `executar_ciclo`, roda DEPOIS que o sinal já foi detectado):
+   `_inst_min` = 35 (SCOUT) | 40 (REVERSAL/SM_SWEEP/DIV) | 45 (demais) — sobe para `max(_inst_min, 60)`
+   em sessão perigosa (22h-08h UTC ou 08h/13h). MTF (H4→H1): score_min=40 e inst_min=40 fixos.
+- **Ação**: verificar qual dos 9 fatores do `_score_inst()` está faltando (tendencia_bull/bear = maior peso 20pts)
 
-### "inst<N" → Score institucional insuficiente
-- Min por tipo: CORE=25, SCOUT=50, outros=55, MOMENTUM=60
-- **Ação**: verificar qual dos 9 fatores está faltando (tendencia_bull/bear = maior peso 20pts)
-
-### "fluxo=X/4" → Fluxo direcional insuficiente
-- Soma de: dna_flow, f_bull/bear, trendilo, kalman < 2
+### "fluxo=X/4" → Fluxo direcional insuficiente (só SCOUT)
+- Soma de: dna_flow, f_bull/bear, trendilo, kalman < `_fluxo_min` (0 FL≤0, 1 FL=1, 2 FL≥2)
 - **Ação**: esperar MACD, DNA e Kalman alinharem
 
 ### "adx=X<15" → ADX muito baixo
@@ -274,3 +206,81 @@ short_core = (
 - OI +2%+ com preço subindo → novas posições LONG sendo abertas → sinal de alta válido
 - OI -2%- com preço caindo → fechamento de longs (liquidação) → pode ser oportunidade SHORT
 - OI crescendo contra a direção = smart money acumulando posição contrária ao movimento
+
+---
+
+## MAPA COMPLETO DE CONDIÇÕES ATUAIS (auditado 20/06/2026 — bate linha a linha com o código)
+
+Sempre que pedir um ajuste, comece por aqui antes de grepar o código. Pipeline:
+`analyze.py:calcular_indicadores()` → `detectar_sinais()` → `graduar_sinal()` → `cycles.py:executar_ciclo()`
+(filtra e envia) → `notify.py:enviar_sinal()` (monta stop/TP/leverage e manda pro Telegram).
+
+### Modo (`config.py SIGNAL_MODE`, padrão `FLEX`)
+- `FLEX`: roda a cascata de prioridade abaixo (1-12)
+- `ELITE`: só ELITE/EARLY (item 0) — bem mais raro e filtrado
+
+### Sinais — ordem de prioridade real em `detectar_sinais()` (primeiro que bater vence)
+
+| # | Sinal | Condição resumida LONG (SHORT é o espelho) |
+|---|-------|---------------------------------------------|
+| 0 | ELITE/EARLY (só modo ELITE) | `tendencia_forte`+`tendencia_bull`+`alinhado_bull`+`e200_subindo`+`macd_bull3`+`ha_bull3`+`f_forte`+`adx_long_ok`+`rsi_bull_elite`+(`v_forte2` ou `obv_bull`)+`nao_ext_long`+`kalman_accel_up`+`acima_vwap`+`tend_consistente_bull`+(`impulso_bull` ou `liq_long`)+`score>65`+`seguro_long`. EARLY = exaustão (`exaustao_venda`) + `liq_long` + `absorb_bull` + `macd_recuperando` |
+| 1 | PULLBACK | `pullback_bull`+`tbull_r`+`preco<e21*1.03`+`dna_flow_bull`+`adx>18`+`pdi>mdi`+`rsi_zona_long`+`score_inst_long>=50`+`seguro_long`+`trendilo_long`+`not liq_topo` |
+| 2 | CROSS | `algum_cross_bull`+`dna_flow_bull`+`adx_long_ok`+`preco>e200`+`score_inst_long>=50`+`rsi_zona_long`+`seguro_long`+(`trendilo_long` ou `kalman_subindo`) |
+| 3 | BB_BREAK | `bb_break_long`+`bb_expand`+`kalman_subindo`+`k_short_subindo`+`score>40`+`adx>=15`+`adx_subindo`(FL≥2)+`not lateralizado`+`not ext_acima_e21`+`obv_bull`+`not liq_topo`(FL≥3)+`rvol>=0.50-0.80`(por FL)+`rsi_zona_long`+`score_inst_long>=50` |
+| 4 | SM_SWEEP | `sm_bull`+`rsi>25`+`rsi_zona_long`+`preco>e200`+`score_inst_long>=60` |
+| 5 | REVERSAL | `rsi<30`+`ha_bull`+`v_forte`+(`liq_fundo` ou `absorb_bull`)+`macd_recuperando`+`adx>12`+`preco>e200*0.96`+(`dna_flow_bull` ou `obv_bull`) — sem gate de `score_inst` |
+| 6 | SURGE | `rvol_tier_max2>=3`(3x+)+`candle_bull_pct>0.03`+`surge_break_h`+`not exaustao_topo`+(`kalman_subindo` ou `k_short_subindo`)+`ha_bull`+`rsi<78`+`score_inst_long>=50` — **não** usa `not liq_topo` (contradição com `surge_break_h`) |
+| 7 | MOMENTUM | `rsi_ant<65<=rsi<73`+`ha_bull`+`dna_flow_bull`+`not liq_topo`+`adx>22`+`v_forte`+`trendilo_long`+`score_inst_long>=60`+`mom_seguro_long` (ignora `stoch_esticado_up` no teto de RSI, mas ainda bloqueia se já saturado) |
+| 8 | REBOUND | `rsi_spike_long`(rsi prévio>65)+`rsi_rebound_long`(54-62 e caindo do pico)+`ha_bull`+`dna_flow_bull`+`trendilo_long`+`adx>20`+`v_bom`+`kalman_subindo`+`not lateralizado`+`seguro_long`+`nao_ext_long_tight` |
+| 9 | DIV | `rsi_div_bull`+`ha_bull`+`v_bom`+`rsi>25`+`rsi_zona_long`+`not exaustao_topo`+`adx>15`+`not lateralizado`+`preco>e200`+`score_inst_long>=55` |
+| 10 | FLEX | `score>=40`+`ha_bull2`+`macd_bull_r`+`adx>=14`+`not lateralizado`+`nao_ext_long_tight`+`seguro_long`+`flex_vol_ok`+`rvol>=0.5`+`rsi_zona_long`+`nao_overext_long`+`rsi_nao_chasing_long`+`score_inst_long>=50`+(`liq_long` ou `liq_fundo` ou `trendilo_long`+`kalman_subindo`)+(`trendilo_long` ou `kalman_subindo` ou `dna_flex_bull`) |
+| 11 | SETUP | `score>50`+`ha_bull2`+`macd_recuperando`+`adx>18`+`obv_bull`+`v_bom`+`acima_vwap`+`not lateralizado`+`nao_ext_long_tight`+`seguro_long`+(`liq_long` ou `liq_fundo`)+`preco>e200`+`score_inst_long>=50`+`rsi_zona_long` |
+| 12 | SCOUT | `score>=_sc_min`(25 FL≤0/40 outros)+`ha_bull_1`+`macd_bull_r`+`adx>=_adx_min`(10 FL≤0/15 outros)+`adx_subindo`(FL≥2)+`not lateralizado`+`nao_ext_long_tight`+`seguro_long`(FL≥1)+`vol_nao_fade`+`nao_overext_long`+`rsi_nao_chasing_long`+`rsi_zona_long`+`not liq_topo`(FL≥3)+soma(`dna_flow_bull`,`f_bull`,`trendilo_long`,`kalman_subindo`)`>=_fluxo_min`(0/1/2 por FL) |
+
+`seguro_long` = `not perto_bb_topo` E `not ext_acima_e21` E `not vol_secando` E `not exaustao_topo` E `rsi<70` E `not stoch_esticado_up`.
+`seguro_short` = `not vol_secando` E `not exaustao_fund` E `rsi>27` E `not stoch_esticado_down`.
+
+⚠️ Não existe sinal **CORE** no código atual (removido na restauração `9db2d4f` de 19-20/06). As menções a CORE
+nas seções históricas acima são só registro do que já existiu.
+
+### Score Institucional (0-100) — `analyze.py _score_inst()`
+20pts tendência (preço>e200 e e10>e21>e50>e200) + 15pts ADX (>22, direção dominante, subindo) + 15pts flow
+(dna_flow ou f_bull/bear+pressão) + 10pts HA última vela + 10pts trendilo + 10pts RSI subindo/caindo + 10pts
+RVOL≥1.5x + 5pts divergência RSI + 5pts smart money sweep.
+
+### Grade — `analyze.py graduar_sinal()`
+pts 0-18: tendência(3) + alinhado(2) + MACD 3 barras ou normal(2/1) + HA(2) + ADX_ok ou ADX>15(2/1) + OBV(1) +
+VWAP(1) + RVOL forte(1) + Kalman acelerando(1) + EMA200 subindo(1) + flow forte(1) + tendência consistente(1).
+`S+`≥17 | `S`≥14 | `A`≥11 | `B`<11. Trava: S/S+ cai para A se `score_inst<70` ou RSI esticado (>65 LONG / <35 SHORT).
+Grade **A+ nunca é gerada** — só existe na tabela de leverage (código morto lá).
+
+### Gate pós-sinal — `cycles.py executar_ciclo()` (roda DEPOIS que o sinal já foi decidido acima)
+- Score mínimo: `30` (REVERSAL/SM_SWEEP/DIV) ou `40` (todos os outros tipos)
+- Score Inst mínimo (`_inst_min`): `35` SCOUT | `40` REVERSAL/SM_SWEEP/DIV | `45` demais — sobe para `max(.,60)`
+  em sessão perigosa (22h-08h UTC ou abertura 08h/13h UTC)
+- H4 confirma (quando tf é 1h/30m/15m): bloqueia LONG se H4 `score<-30` e H4 bear; bloqueia SHORT se H4
+  `score>30` e H4 bull
+- Cooldown: mesma direção = `tf_minutos*60s` (mínimo 2h); qualquer direção na mesma moeda/tf = 2h
+- ATR > 4% do preço → ignora (volátil demais)
+- Limites por ciclo: 3 sinais total, 2 SCOUT, 2 LONG, 2 SHORT (anti-correlação), 10% capital de risco acumulado
+- FLEX sem `dna_flow`/`trendilo` e tendência NEUTRO → bloqueado (TP1 improvável)
+
+### Ciclo MTF (H4→H1) — `cycles.py executar_ciclo_mtf()`, roda em paralelo quando TIMEFRAMES tem (4h+1h) ou (1h+30m/15m)
+- H4 precisa achar setup (`score>±15`, `tbull_r`/`tbear_r`, `adx>=13`, RSI<65-75/>43, volume confirmado)
+- Filtro BTC H4 macro (exceto na própria BTC/WBTC): bloqueia LONG se BTC H4 bear, bloqueia SHORT se BTC H4 bull;
+  bloqueia LONG se BTC RSI>72, bloqueia SHORT se BTC RSI<28
+- Entrada real busca a mesma cascata de sinais (1-12) em H1 via `analisar()` completo
+- Gate mais apertado que o ciclo normal: `score_min=40` e `inst_min=40` fixos
+- Cooldown 4h
+
+### Stop / TP — `notify.py enviar_sinal()`
+- `mult_atr` base: `2.0` SURGE | `1.2` SM_SWEEP | `1.8` FLEX/SETUP | `1.5` demais
+- Usa stop estrutural (swing low/high ±0.3 ATR) se a distância ficar entre 0.3-2.5 ATR e do lado certo do preço
+  — **exceto** SURGE/BB_BREAK/MOMENTUM (sempre ATR puro)
+- R múltiplos base por grade: SCOUT `1.2R/2.0R` | S+/S `2.2R/4.5R` | A `1.8R/3.5R` | B `1.5R/2.5R`
+- SURGE: r1-0.5 (min 1.5) / r_final-1.0 (min 3.0) | DIV: r_final-0.5 (min 2.5)
+- Calibração por ADX: `<20` → r1×0.65 (min 0.8) / r_final×0.75 (min 1.5) | `20-24` → r1×0.85 (min 1.0) / r_final×0.90 (min 2.0)
+- Teto estrutural: TP1 nunca passa de ~92% da distância até o próximo swing high/low
+
+### Risco e alavancagem — ver REGRA #4 (já corrigida nesta auditoria)
+`RISK_BY_GRADE` real: B=0.5% A=1% S=2% S+=3% (SCOUT=1%, fora da tabela) | `MAX_CYCLE_RISK`=10%/ciclo
