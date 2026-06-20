@@ -35,6 +35,11 @@ async def buscar_candles(session, simbolo, tf, limite=250):
                     if tentativa < 2: continue
                     return None
                 data = await r.json()
+            if isinstance(data, dict) and data.get("code") == -1121:
+                # símbolo inválido/delistado na MEXC — erro permanente, não vale retry
+                # nem warning (pedido 20/06 — SPCXUSDT/ALOUSDT poluindo o log a cada ciclo)
+                log.info(f"buscar_candles {simbolo} [{tf}]: símbolo inválido/delistado na MEXC, ignorando")
+                return None
             if not isinstance(data, list):
                 log.warning(f"buscar_candles {simbolo} [{tf}]: {str(data)[:80]}")
                 return None
