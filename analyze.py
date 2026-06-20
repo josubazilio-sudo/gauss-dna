@@ -362,10 +362,11 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI zona de entrada — zona estrita 40-68 LONG / 32-60 SHORT
-    # REVERSAL e DUMP não usam rsi_zona (condições próprias); SM_SWEEP usa rsi_zona_flex
-    rsi_zona_long  = 38 <= rsi <= 70
-    rsi_zona_short = 30 <= rsi <= 62
+    # RSI zona de entrada — FLEX PRO 15/06 (CLAUDE.md REGRA #1, autorizado):
+    # bloqueia apenas extremos absolutos (LONG>75 / SHORT<25)
+    # REVERSAL e DUMP não usam rsi_zona (condições próprias)
+    rsi_zona_long  = rsi < 75
+    rsi_zona_short = rsi > 25
     rsi_zona_flex   = rsi < 75    # zona ampla — para SM_SWEEP e exceções
     rsi_zona_flex_s = rsi > 25
     rsi_entrada_long  = rsi >= 45   # RSI mínimo para entrar LONG (diagnóstico)
