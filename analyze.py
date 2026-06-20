@@ -542,16 +542,20 @@ def detectar_sinais(ind):
     _no_liq_fund = (not i["liq_fundo"]) if _FLV >= 3 else True
 
     # ── BB Breakout ───────────────────────────────────────────────────────────
+    # preco vs e200 (pedido 20/06 — caso SPCXUSDT: short_bb_break disparou só com
+    # rompimento local de banda + Kalman curto, sem checar tendência de fundo, e
+    # foi pego por reversão violenta em ativo de baixa liquidez). Mesmo filtro que
+    # já existe no SM_SWEEP, evita romper banda contra a tendência maior.
     _rvol_bb      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
-                      i["obv_bull"] and _no_liq_topo and
+                      i["obv_bull"] and _no_liq_topo and i["preco"] > i["e200"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
-                      i["obv_bear"] and _no_liq_fund and
+                      i["obv_bear"] and _no_liq_fund and i["preco"] < i["e200"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
