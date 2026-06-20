@@ -58,49 +58,6 @@ async def enviar_whatsapp(session, texto):
 
 # ── Watchlist ─────────────────────────────────────────────────────────────────
 
-async def enviar_watchlist(session, tf, watchlist):
-    """Mensagem consolidada com moedas próximas de sinal — aviso, não sinal."""
-    if not TG_TOKEN or not TG_CHATID or not watchlist:
-        return False
-
-    tf_lbl = _label_tf(tf)
-    agora  = datetime.now().strftime("%H:%M - %d/%m/%Y")
-
-    def fmt_item(simbolo, score, rsi, adx, dna_flow, trendilo):
-        sinal = "+" if score >= 0 else "-"
-        dna   = "DNA✅" if dna_flow else "DNA-"
-        trl   = "Trl✅" if trendilo else "Trl-"
-        return f"• {simbolo} {sinal}{abs(score)} | RSI {rsi:.0f} | ADX {adx:.0f} | {dna} {trl}"
-
-    longs  = [(s,sc,rsi,adx,df,trl) for d,s,sc,rsi,adx,df,trl in watchlist if d == "LONG"]
-    shorts = [(s,sc,rsi,adx,df,trl) for d,s,sc,rsi,adx,df,trl in watchlist if d == "SHORT"]
-
-    linhas = [f"📡 SETUP EM FORMAÇÃO | {tf_lbl}\n"]
-    if longs:
-        linhas.append("🟢 Aguardando LONG:")
-        linhas += [fmt_item(*e) for e in longs[:5]]
-    if shorts:
-        if longs: linhas.append("")
-        linhas.append("🔴 Aguardando SHORT:")
-        linhas += [fmt_item(*e) for e in shorts[:5]]
-    linhas += ["", "⚠️ Aguardar confirmação — ainda não é sinal", f"⏰ {agora}"]
-
-    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-    try:
-        async with session.post(url, json={"chat_id": TG_CHATID, "text": "\n".join(linhas)},
-                                timeout=aiohttp.ClientTimeout(total=10)) as r:
-            data = await r.json()
-            if data.get("ok"):
-                nomes = ", ".join(s for _,s,*_ in watchlist[:6])
-                log.info(f"📡 Watchlist [{tf}]: {len(watchlist)} moedas — {nomes}")
-                return True
-            else:
-                log.warning(f"Watchlist erro API: {data.get('description','?')} — código {data.get('error_code','?')}")
-    except Exception as e:
-        log.warning(f"Watchlist erro: {e}")
-    return False
-
-
 # ── Telegram — sinal principal ────────────────────────────────────────────────
 
 async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, score,

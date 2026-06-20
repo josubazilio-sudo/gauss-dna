@@ -30,6 +30,21 @@
 ### Exceções válidas para não agir:
 - Mercado genuinamente em zona morta pós-dump (RSI médio < 32) E todos os candidatos têm 2+ bloqueadores de mercado (não de filtro) — neste caso, informar e aguardar 1 ciclo antes de agir novamente
 
+### Mensagens ao usuário (pedido 20/06 — única coisa que deve chegar via bot)
+O bot só envia 2 tipos de mensagem ao Telegram a partir de agora:
+1. **Sinal real** (`notify.py enviar_sinal()`)
+2. **Diagnóstico de ausência de sinal**, 1x por hora enquanto não houver sinal (`cycles.py _enviar_diagnostico()`,
+   intervalo de 3600s tanto pra elegibilidade quanto pro envio — ver `main()`)
+- Mensagem de "bot iniciado" e "watchlist/setup em formação" foram **removidas do Telegram** (ficam só no log) —
+  eram ruído extra que o usuário não pediu.
+- Sempre que eu (assistente) estiver numa sessão ativa e ler esse diagnóstico (colado pelo usuário, ou via log de
+  run), devo **auditar antes de aceitar como "mercado parado"**: distinguir bug/contradição de filtro (→ corrigir,
+  REGRA #0 acima) de condição genuína de mercado (→ só informar, sem inventar ajuste). Sinal nunca deve parar de
+  disparar por falha de código — só por condição real de mercado.
+- Limitação honesta: essa auditoria por mim só roda enquanto há uma sessão Claude Code ativa (não existe gatilho
+  automático me chamando a cada hora sem sessão aberta). O que É garantidamente automático, mesmo sem sessão
+  aberta, é o diagnóstico horário do próprio bot via Telegram (ponto 2 acima).
+
 ---
 
 ## REGRA #1 — RSI: ZONA DE ENTRADA (PRIORIDADE MÁXIMA)

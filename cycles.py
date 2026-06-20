@@ -19,7 +19,7 @@ from config import (
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
 from analyze import analisar, calcular_indicadores
-from notify import enviar_sinal, enviar_watchlist, notificar
+from notify import enviar_sinal, notificar
 from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_contract_data
 from state import carregar_estado, salvar_estado
 
@@ -378,12 +378,9 @@ async def executar_ciclo(session, estado, tf, moedas):
         if linhas:
             log.info(f"[{tf}] Sem sinais — " + " | ".join(linhas[:3]))
 
+    # Watchlist fica só no log — não envia Telegram (pedido 20/06: só sinal real
+    # e o diagnóstico horário de ausência de sinal chegam ao usuário)
     log.info(f"[{tf}] Watchlist: {len(watchlist)} moedas encontradas")
-    if watchlist:
-        chave_wl = f"_watchlist_{tf}"
-        if agora - estado.get(chave_wl, 0) >= 1800:
-            ok = await enviar_watchlist(session, tf, watchlist)
-            if ok: estado[chave_wl] = agora
 
     return enviados
 
@@ -588,14 +585,12 @@ async def main():
     _diag_buffer["ultimo_envio"] = _agora_ini
 
     async with aiohttp.ClientSession() as session:
-        agora_str    = datetime.now().strftime("%H:%M — %d/%m/%Y")
-        await notificar(session,
-            f"🤖 GAUSS+DNA iniciado\n"
-            f"⏰ {agora_str}\n"
-            f"📊 TFs: {', '.join(TIMEFRAMES)} | Moedas: {len(COINS)}\n"
-            f"🔄 Modo: {modo_str} | Ciclo: {CYCLE_INTERVAL}s\n"
-            f"🔧 Filtros nivel {FILTER_LEVEL}: {_flv_desc.get(FILTER_LEVEL, str(FILTER_LEVEL))}"
-        )
+        # Início do bot fica só no log — não envia Telegram (pedido 20/06: só
+        # sinal real e o diagnóstico horário de ausência de sinal chegam ao usuário)
+        agora_str = datetime.now().strftime("%H:%M — %d/%m/%Y")
+        log.info(f"🤖 GAUSS+DNA iniciado | {agora_str} | TFs: {', '.join(TIMEFRAMES)} | "
+                 f"Moedas: {len(COINS)} | Modo: {modo_str} | Ciclo: {CYCLE_INTERVAL}s | "
+                 f"Filtros nivel {FILTER_LEVEL}: {_flv_desc.get(FILTER_LEVEL, str(FILTER_LEVEL))}")
 
         # Teste de conectividade
         for url_teste, nome in [
@@ -661,7 +656,8 @@ async def main():
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
 
-            # Diagnóstico: varredura imediata no 1º ciclo, depois a cada 30 min sem sinais
+            # Diagnóstico: varredura imediata no 1º ciclo, depois a cada 1h sem sinais
+            # (única mensagem secundária enviada ao usuário, além do sinal — pedido 20/06)
             _agora_d    = time.time()
             _enviar_diag = False
             if ciclo == 1 and _diag_buffer["total_analisados"] > 0:
@@ -669,8 +665,8 @@ async def main():
             else:
                 if total > 0:
                     _diag_buffer["ultimo_sinal"] = _agora_d
-                _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 900
-                if _agora_d - _diag_buffer["ultimo_envio"] >= 1800 and _sem_sinal:
+                _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 3600
+                if _agora_d - _diag_buffer["ultimo_envio"] >= 3600 and _sem_sinal:
                     _enviar_diag = True
             if _enviar_diag:
                 try:
