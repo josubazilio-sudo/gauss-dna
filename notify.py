@@ -277,7 +277,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"{linha_liq}"
         f"{aviso_scout}\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
-        f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}` · R=`{_bruto(f'{risco_pct:.1f}')}%`\n"
+        f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}` · R\\=`{_bruto(f'{risco_pct:.1f}')}%`\n"
         f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
         f"🎯 TP2 \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n\n"
         f"📊 RSI: {_escapar(f'{rsi:.0f}')}\n"
