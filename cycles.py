@@ -273,8 +273,9 @@ async def _enviar_diagnostico(session) -> None:
             linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f}{marca} → {bloq_str}")
 
     linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
-    await notificar(session, "\n".join(linhas))
-    log.info(f"[DIAG] Diagnostico enviado — {len(blq)} bloqueadores, {len(cand)} candidatos")
+    _texto_diag = "\n".join(linhas)
+    log.info(f"[DIAG]\n{_texto_diag}")
+    await notificar(session, _texto_diag)
 
 
 # ── Filtro horário ────────────────────────────────────────────────────────────
