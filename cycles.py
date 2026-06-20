@@ -646,6 +646,16 @@ async def main():
 
     estado        = carregar_estado()
     ciclo         = 0
+    # DEBUG TEMPORARIO (20/06) — investigar 7x STOP / winrate 22% nas ultimas 24h
+    # (pedido do usuario). Remover apos analise. Ver state.py RESULTS_FILE.
+    try:
+        from config import RESULTS_FILE as _RF
+        if _RF.exists():
+            log.info(f"DEBUG resultados_log.csv:\n{_RF.read_text(encoding='utf-8')}")
+        else:
+            log.info("DEBUG resultados_log.csv: arquivo nao existe ainda")
+    except Exception as _e:
+        log.warning(f"DEBUG resultados_log.csv falhou: {_e}")
     # Priority coins sempre na frente, depois restante da lista estática (sem duplicatas)
     _prio_syms    = {s for s, _, _ in PRIORITY_WATCHLIST}
     moedas_ativas = list(PRIORITY_WATCHLIST) + [c for c in COINS if c[0] not in _prio_syms]
