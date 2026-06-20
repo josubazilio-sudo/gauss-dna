@@ -152,6 +152,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         r1, r_final = 1.2, 2.0
     elif grade in ("S+", "S"):
         r1, r_final = 2.2, 4.5
+    elif grade == "A+":
+        r1, r_final = 2.0, 4.0
     elif grade == "A":
         r1, r_final = 1.8, 3.5
     else:
@@ -241,6 +243,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         "SETUP":     "🔭 DNA SETUP",
         "SCOUT":     "🔵 DNA SCOUT",
         "BB_BREAK":  "💥 BB BREAKOUT",
+        "INSTITUCIONAL": "🏛 DNA INSTITUCIONAL",
     }
     if fonte.startswith("TESTE"):
         tag_modo = "🧪 TESTE — NÃO OPERAR"; info_cross = ""

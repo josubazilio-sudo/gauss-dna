@@ -269,6 +269,20 @@ def calcular_indicadores(candles):
     swing_low  = min(minimas[-13:-1])
     swing_high = max(maximas[-13:-1])
 
+    # Estrutura de swing (HH/HL = alta, LH/LL = baixa) via pivôs de 3 velas
+    # nos últimos 30 candles — usado pelo modo INSTITUCIONAL (filtro rígido)
+    def _pivots(lookback=30):
+        ph, pl = [], []
+        for k in range(-lookback, -1):
+            if maximas[k] > maximas[k-1] and maximas[k] > maximas[k+1]:
+                ph.append(maximas[k])
+            if minimas[k] < minimas[k-1] and minimas[k] < minimas[k+1]:
+                pl.append(minimas[k])
+        return ph, pl
+    _piv_h, _piv_l = _pivots()
+    estrutura_alta  = len(_piv_h) >= 2 and len(_piv_l) >= 2 and _piv_h[-1] > _piv_h[-2] and _piv_l[-1] > _piv_l[-2]
+    estrutura_baixa = len(_piv_h) >= 2 and len(_piv_l) >= 2 and _piv_h[-1] < _piv_h[-2] and _piv_l[-1] < _piv_l[-2]
+
     # Trendilo (ALMA do % de variação + bandas RMS)
     pch    = [0.0] + [(fechamentos[i]-fechamentos[i-1])/fechamentos[i]*100 for i in range(1, n)]
     avpch  = serie_alma(pch, 50, 0.85, 6)
@@ -370,6 +384,7 @@ def calcular_indicadores(candles):
         # Preço e estrutura
         "preco": preco, "atr": atr, "score": score, "rsi": rsi, "adx": adx,
         "swing_low": swing_low, "swing_high": swing_high,
+        "estrutura_alta": estrutura_alta, "estrutura_baixa": estrutura_baixa,
         # Tendência
         "tendencia_bull": tendencia_bull, "tendencia_bear": tendencia_bear,
         "alinhado_bull": alinhado_bull, "alinhado_bear": alinhado_bear,
@@ -640,11 +655,26 @@ def detectar_sinais(ind):
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 
+    # ── INSTITUCIONAL (modo opcional, filtro rígido — pedido 20/06) ───────────
+    # Tendência H1 + força + volume + sweep de liquidez + estrutura de swing
+    # confirmados juntos. Não usa FILTER_LEVEL (sempre no nível mais estrito) e
+    # não substitui FLEX/SCOUT — é um modo separado, escolhido via SIGNAL_MODE.
+    _esticado_h1 = abs(i["preco"] - i["e21"]) / i["preco"] > 0.04
+    long_institucional  = (i["tendencia_bull"] and i["adx"] > 25 and i["rvol"] > 1.8 and
+                            i["score_inst_long"] >= 70 and i["liq_fundo"] and
+                            i["preco"] > i["e21"] and i["estrutura_alta"] and not _esticado_h1)
+    short_institucional = (i["tendencia_bear"] and i["adx"] > 25 and i["rvol"] > 1.8 and
+                            i["score_inst_short"] >= 70 and i["liq_topo"] and
+                            i["preco"] < i["e21"] and i["estrutura_baixa"] and not _esticado_h1)
+
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
     if SIGNAL_MODE == "ELITE":
         if long_elite or early_long:   sinal = "LONG";  fonte = "ELITE"
         elif short_elite or early_short: sinal = "SHORT"; fonte = "ELITE"
+    elif SIGNAL_MODE == "INSTITUCIONAL":
+        if long_institucional:    sinal = "LONG";  fonte = "INSTITUCIONAL"
+        elif short_institucional: sinal = "SHORT"; fonte = "INSTITUCIONAL"
     else:
         ordem = [
             (long_pullback,  "LONG",  "PULLBACK"),
@@ -749,6 +779,12 @@ def analisar(simbolo, candles, funding_rate=None):
 
     sinal, fonte = detectar_sinais(ind)
     grade, pts   = graduar_sinal(ind, sinal)
+
+    # Modo INSTITUCIONAL classifica pela própria Score Inst (S>=90, A+>=80, A>=70)
+    # em vez da grade por pontos — é o critério pedido nesse modo rígido
+    if fonte == "INSTITUCIONAL" and sinal:
+        _si = ind["score_inst_long"] if sinal == "LONG" else ind["score_inst_short"]
+        grade = "S" if _si >= 90 else "A+" if _si >= 80 else "A"
 
     # Log de diagnóstico quando há score mas sem sinal
     if not sinal:

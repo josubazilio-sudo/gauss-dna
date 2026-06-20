@@ -283,4 +283,29 @@ Grade **A+ nunca é gerada** — só existe na tabela de leverage (código morto
 - Teto estrutural: TP1 nunca passa de ~92% da distância até o próximo swing high/low
 
 ### Risco e alavancagem — ver REGRA #4 (já corrigida nesta auditoria)
-`RISK_BY_GRADE` real: B=0.5% A=1% S=2% S+=3% (SCOUT=1%, fora da tabela) | `MAX_CYCLE_RISK`=10%/ciclo
+`RISK_BY_GRADE` real: B=0.5% A=1% A+=1.5% S=2% S+=3% (SCOUT=1%, fora da tabela) | `MAX_CYCLE_RISK`=10%/ciclo
+
+---
+
+## MODO INSTITUCIONAL (opcional, autorizado 20/06 — não substitui FLEX/SCOUT)
+
+`SIGNAL_MODE=INSTITUCIONAL` ativa um 3º modo (além de FLEX/ELITE), separado da cascata 1-12 — roda
+**em vez de**, não ao lado de FLEX (escolha de ciclo/run, igual ELITE). Filtro rígido, sem variação por
+FILTER_LEVEL, pedido pra reduzir frequência de sinal e exigir confluência total. Condição (`analyze.py`,
+`detectar_sinais()`):
+
+```
+LONG  = tendencia_bull + adx>25 + rvol>1.8 + score_inst_long>=70 + liq_fundo (sweep) +
+        preco>e21 + estrutura_alta (HH+HL) + not esticado (|preco-e21|/preco <= 4%)
+SHORT = espelho (tendencia_bear, liq_topo, estrutura_baixa, preco<e21)
+```
+
+- `estrutura_alta`/`estrutura_baixa` é indicador novo (não existia antes): pivôs de 3 velas nos últimos
+  30 candles, HH+HL (alta) ou LH+LL (baixa) nos 2 últimos pivôs de cada lado.
+- Grade não usa `graduar_sinal()` por pontos — usa a própria Score Inst: `S`>=90, `A+`>=80, `A`>=70
+  (faixa 70-100, já que a condição de entrada exige >=70). Grade **A+ passa a ser real só neste modo**
+  (em FLEX/ELITE continua código morto, `graduar_sinal()` nunca produz A+ ali).
+- `RISK_BY_GRADE["A+"]`=1.5% e targets A+ (`notify.py`) ficam entre A e S (r1=2.0/r_final=4.0).
+- Gate pós-sinal (`cycles.py`) usa os thresholds padrão "demais" (score_min=40, inst_min=45) — a condição
+  de entrada já exige muito mais que isso, então nunca é o fator limitante.
+- Fica bem mais raro que FLEX/SCOUT por desenho — não é bug se passar vários ciclos sem sinal nesse modo.

@@ -18,7 +18,7 @@ TIMEFRAME  = os.environ.get("TIMEFRAME", "15m")
 TIMEFRAMES = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",")]
 
 # ── Modo de operação ──────────────────────────────────────────────────────────
-SIGNAL_MODE    = os.environ.get("SIGNAL_MODE", "FLEX").upper()  # FLEX | ELITE
+SIGNAL_MODE    = os.environ.get("SIGNAL_MODE", "FLEX").upper()  # FLEX | ELITE | INSTITUCIONAL
 LOOP_MODE      = os.environ.get("LOOP_MODE", "false").lower() == "true"
 TEST_MODE      = os.environ.get("TEST_MODE",  "false").lower() == "true"
 CYCLE_INTERVAL = int(os.environ.get("CYCLE_INTERVAL", "0"))    # segundos (0 = aguarda vela)
@@ -32,7 +32,7 @@ SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "2"))     # rescan a cada N cicl
 CAPITAL   = float(os.environ.get("CAPITAL",  "100"))    # capital total em USD
 RISK_PCT  = float(os.environ.get("RISK_PCT", "0.03"))   # risco base por trade (3%)
 
-RISK_BY_GRADE = {"B": 0.005, "A": 0.01, "S": 0.02, "S+": 0.03}
+RISK_BY_GRADE = {"B": 0.005, "A": 0.01, "A+": 0.015, "S": 0.02, "S+": 0.03}
 RISK_SCOUT    = 0.01                                     # SCOUT = 1% (sinal secundário)
 
 MAX_CYCLE_RISK      = 0.10   # teto 10% de capital por ciclo
