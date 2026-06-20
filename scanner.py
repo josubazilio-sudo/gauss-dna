@@ -3,6 +3,7 @@ GAUSS+DNA — Scanner dinâmico de moedas
 Busca os melhores pares USDT no MEXC e ranqueia por potencial de sinal.
 """
 import asyncio
+import json
 import logging
 import aiohttp
 from coins import _EXCLUIR, _EXCLUIR_SUFIXO
@@ -33,9 +34,14 @@ async def _buscar_candles_futuros(session, simbolo, tf, limite):
     url = f"https://contract.mexc.com/api/v1/contract/kline/{par}?interval={intervalo}"
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
-            if r.status != 200:
-                return None
-            data = await r.json()
+            status = r.status
+            body = await r.text()
+        # DEBUG TEMPORÁRIO (20/06) — formato real da resposta ainda não confirmado,
+        # log completo pra inspecionar antes de assumir qualquer parsing.
+        log.info(f"_buscar_candles_futuros DEBUG {par} [{tf}]: status={status} body={body[:500]}")
+        if status != 200:
+            return None
+        data = json.loads(body)
         d = data.get("data") if isinstance(data, dict) else None
         if not d or not isinstance(d.get("close"), list) or len(d["close"]) < 60:
             return None
