@@ -109,8 +109,11 @@ def calcular_indicadores(candles):
         stoch_rsi = (_r14[-1] - _rmin) / (_rmax - _rmin) if _rmax > _rmin else 0.5
     else:
         stoch_rsi = 0.5
-    stoch_esticado_up   = stoch_rsi > 0.80
-    stoch_esticado_down = stoch_rsi < 0.05
+    # StochRSI normaliza pela faixa relativa dos últimos 14 períodos e satura em
+    # tendências fortes mesmo sem sobrecompra/sobrevenda real (ex: RSI 49 com stoch_rsi>0.95).
+    # Exige RSI absoluto elevado/baixo também, evitando bloquear LONG/SHORT válidos por saturação técnica.
+    stoch_esticado_up   = stoch_rsi > 0.80 and rsi > 58
+    stoch_esticado_down = stoch_rsi < 0.05 and rsi < 35
 
     # DMI / ADX
     pdi, mdi, adx, adx_p = calcular_adx(candles[-60:])
