@@ -48,15 +48,17 @@ PRIORITY_WATCHLIST = [
     ("OPGUSDT",   "OPG/USDT",   "OPG"),
     ("BEATUSDT",  "BEAT/USDT",  "BEAT"),
     ("GWEIUSDT",  "GWEI/USDT",  "GWEI"),
-    ("SPCXUSDT",  "SPCX/USDT",  "SPCX"),
+    ("SPACEX(PRE)USDT", "SPCX/USDT", "SPCX"),
     ("ALLOUSDT",  "ALLO/USDT",  "ALLO"),
     ("WLDUSDT",   "WLD/USDT",   "WLD"),
 ]
-# SPCXUSDT/ALOUSDT: erro -1121 no endpoint spot da MEXC era engano meu (20/06) —
-# o usuário confirmou com print real que SPCXUSDT negocia ativamente como
-# perpétuo na MEXC. Causa real: esses ativos só têm mercado de futuros, sem par
-# spot — corrigido com fallback para o endpoint de contratos em scanner.py,
-# em vez de remover da watchlist.
+# SPCXUSDT corrigido (20/06): a string "SPCXUSDT" nunca existiu na MEXC — causa
+# real do -1121 era simbolo errado em coins.py, nao falta de par spot (a tentativa
+# anterior de fallback pro endpoint de futuros tambem falhou pelo mesmo motivo,
+# removida). Simbolo real confirmado via log de execucao real: o scanner dinamico
+# buscou esse mesmo ativo com sucesso usando exatamente "SPACEX(PRE)USDT" (aparece
+# como "SPACEX(PRE)" nos logs de score). ALOUSDT ainda em investigacao — ver
+# sonda temporaria em scanner.py:buscar_top_pares_usdt.
 
 # Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
 _EXCLUIR = {
