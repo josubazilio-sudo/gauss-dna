@@ -16,12 +16,12 @@ import subprocess
 TG_TOKEN  = ""          # Token do seu bot Telegram  (obter com @BotFather)
 TG_CHATID = ""          # ID do chat/canal          (obter com @userinfobot)
 
-CAPITAL    = "180"       # Capital total em USD
+CAPITAL    = "97"        # Capital total em USD
 RISK_PCT   = "0.03"      # Risco por trade: 0.03 = 3%
-TIMEFRAMES = "15m"       # Timeframes: "15m" | "1h" | "15m,1h"
-SIGNAL_MODE = "FLEX"     # "FLEX" (mais sinais) | "ELITE" (poucos, precisos)
+TIMEFRAMES = "30m,1h"    # Timeframes: "30m,1h" | "15m" | "1h"
+SIGNAL_MODE = "ELITE"    # "FLEX" (mais sinais) | "ELITE" (poucos, precisos)
 LOOP_MODE   = "true"     # "true" = roda em loop continuo | "false" = executa 1x
-SCANNER_TOP = "30"       # Quantas moedas varrer (max 100)
+SCANNER_TOP = "50"       # Quantas moedas varrer (max 100)
 
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -53,7 +53,7 @@ def main():
         "TIMEFRAME":   TIMEFRAMES.split(",")[0],
         "SIGNAL_MODE": SIGNAL_MODE,
         "LOOP_MODE":   LOOP_MODE,
-        "DYNAMIC_SCAN":"true",
+        "DYNAMIC_SCAN":"false",
         "SCANNER_TOP": SCANNER_TOP,
         "TEST_MODE":   "false",
     })

@@ -39,20 +39,17 @@ _diag_buffer: dict = {
     "ultimo_envio":     0.0,
 }
 
-_nearmiss_buffer: list = []  # (score_inst, abrev, tf, bloq_str, rsi, fonte_potencial, direcao)
-
 
 def _detectar_bloqueadores_diag(result: dict) -> list:
     motivos = []
     sc_raw = result.get("score", 0)
     sc    = abs(sc_raw)
-    eh_long_cand = sc_raw > 0
+    eh_long_cand = sc_raw > 0   # usa score como proxy de direção (não kalman)
     rsi   = result.get("rsi", 50)
-    rsi_ant = result.get("rsi_ant", rsi)
     adx   = result.get("adx", 0)
     rvol  = result.get("rvol", 1.0)
     adx_s = result.get("adx_subindo", True)
-    lat   = result.get("lateralizado", False)
+    lat   = result.get("tendencia", "NEUTRO") == "NEUTRO"
     dna_b = result.get("dna_flow_bull", False)
     dna_s = result.get("dna_flow_bear", False)
     trl_l = result.get("trendilo_long", False)
@@ -63,21 +60,9 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     f_s   = result.get("f_bear", False)
     ha1_b = result.get("ha_bull_1", False)
     ha1_s = result.get("ha_bear_1", False)
-    preco   = result.get("preco", 0)
-    e200    = result.get("e200", 0)
-    tbull_l = result.get("tbull_loose", False)
-    tbear_l = result.get("tbear_loose", False)
-    rsi_sub = result.get("rsi_subindo", False)
-    rsi_cai = result.get("rsi_caindo", False)
-    rsi_ent_l = result.get("rsi_entrada_long", True)
-    rsi_ent_s = result.get("rsi_entrada_short", True)
 
-    _sc_min   = 25 if FILTER_LEVEL <= 0 else 40
-    _adx_min  = 10 if FILTER_LEVEL <= 0 else 18
-    _fluxo_min = 0 if FILTER_LEVEL <= 0 else 1
-
-    vnf    = result.get("vol_nao_fade", False)
-    kal_up = result.get("kalman_subindo", False)
+    _sc_min  = 25 if FILTER_LEVEL <= 0 else 40
+    _vol_thr = 0.20 if FILTER_LEVEL <= 0 else (0.50 if FILTER_LEVEL == 1 else (0.65 if FILTER_LEVEL == 2 else 0.80))
 
     if sc < _sc_min:
         motivos.append("score baixo")
@@ -85,130 +70,30 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
 
     # RSI zona — FLEX PRO 15/06 (CLAUDE.md REGRA #1): bloqueia só extremos absolutos
     if eh_long_cand and rsi >= 75:
-        motivos.append(f"RSI {rsi:.0f} >= 75 (LONG bloqueado)")
+        motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
     elif not eh_long_cand and rsi <= 25:
-        motivos.append(f"RSI {rsi:.0f} <= 25 (SHORT bloqueado)")
+        motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
 
-    if adx < _adx_min:
-        motivos.append(f"ADX {adx:.1f} < {_adx_min}")
+    if adx < (10 if FILTER_LEVEL <= 0 else 15):
+        motivos.append("ADX baixo")
     if FILTER_LEVEL >= 2 and not adx_s:
         motivos.append("ADX nao subindo")
     if lat:
-        motivos.append("BB squeeze lateral")
-
-    # Fluxo — calculado cedo porque o bypass de MACD depende dele
-    _fl_b = sum([dna_b, f_b, trl_l, kal_up])
-    _fl_s = sum([dna_s, f_s, trl_s, not kal_up])
-
-    # MACD — aplica mesmo bypass FL<=1 de analyze.py (fluxo>=1 substitui MACD)
-    _macd_b_eff = result.get("macd_bull_r", False) or (FILTER_LEVEL <= 1 and _fl_b >= 1)
-    _macd_s_eff = result.get("macd_bear_r", False) or (FILTER_LEVEL <= 1 and _fl_s >= 1)
-    if eh_long_cand and not _macd_b_eff:
-        motivos.append("MACD nao bull")
-    elif not eh_long_cand and not _macd_s_eff:
-        motivos.append("MACD nao bear")
-
-    # Volume: vol_nao_fade é o requisito mínimo de qualquer sinal (max das 2 últimas velas >= 80% MA)
-    if not vnf:
-        motivos.append(f"vol_nao_fade=F (rvol={rvol:.2f}x — max 2 velas < 80% media)")
-
-    # HA (SCOUT usa ha1, FLEX usa ha2)
-    ha2_b = result.get("ha_bull2", False)
-    ha2_s = result.get("ha_bear2", False)
+        motivos.append("mercado lateral")
+    if rvol < _vol_thr:
+        motivos.append(f"RVOL < {_vol_thr*100:.0f}%")
     if eh_long_cand and not ha1_b:
-        motivos.append("HA nao bull" + (" (FLEX ha2✓)" if ha2_b else ""))
+        motivos.append("HA nao bull")
     elif not eh_long_cand and not ha1_s:
-        motivos.append("HA nao bear" + (" (FLEX ha2✓)" if ha2_s else ""))
-
-    # Extensão de preço (pode bloquear SHORT após dump ou LONG após pump)
-    if eh_long_cand:
-        if not result.get("nao_ext_long_tight", True):
-            motivos.append("ext long bloq")
-        if not result.get("nao_overext_long", True):
-            motivos.append("overext long")
-    else:
-        if not result.get("nao_ext_short_tight", True):
-            motivos.append("ext short bloq")
-        if not result.get("nao_overext_short", True):
-            motivos.append("overext short")
-
-    # Seguro (StochRSI e outros filtros de segurança)
-    if FILTER_LEVEL >= 1:
-        seg_l = result.get("seguro_long", True)
-        seg_s = result.get("seguro_short", True)
-        if eh_long_cand and not seg_l:
-            _sg = []
-            if result.get("perto_bb_topo"):         _sg.append("bb_topo")
-            if result.get("ext_acima_e21"):          _sg.append("ext_e21")
-            if result.get("vol_secando"):            _sg.append("vol_sec")
-            if result.get("exaustao_topo"):          _sg.append("exaustao")
-            if result.get("stoch_esticado_up"):      _sg.append(f"stoch>{result.get('stoch_rsi',0):.2f}")
-            if result.get("pump_rsi_spike_long"):    _sg.append(f"pump_rsi(+{result.get('rsi',50)-result.get('rsi_ant',50):.0f}pt)")
-            motivos.append("seguro=F(" + (",".join(_sg) or "?") + ")")
-        elif not eh_long_cand and not seg_s:
-            _sg = []
-            if result.get("vol_secando"):            _sg.append("vol_sec")
-            if result.get("exaustao_fund"):          _sg.append("exaust_fund")
-            if result.get("stoch_esticado_down"):    _sg.append(f"stoch<{result.get('stoch_rsi',0):.2f}")
-            if result.get("dump_rsi_spike_short"):   _sg.append(f"dump_rsi(-{result.get('rsi_ant',50)-result.get('rsi',50):.0f}pt)")
-            motivos.append("seguro=F(" + (",".join(_sg) or "?") + ")")
-
-    # Fluxo
-    if FILTER_LEVEL >= 1:
-        if eh_long_cand and _fl_b < _fluxo_min:
-            motivos.append("sem fluxo LONG")
-        elif not eh_long_cand and _fl_s < _fluxo_min:
-            motivos.append("sem fluxo SHORT")
-
+        motivos.append("HA nao bear")
+    if eh_long_cand and not dna_b and not trl_l and not f_b:
+        motivos.append("sem fluxo LONG")
+    elif not eh_long_cand and not dna_s and not trl_s and not f_s:
+        motivos.append("sem fluxo SHORT")
     if FILTER_LEVEL >= 3 and eh_long_cand and liq_t:
         motivos.append("liq topo SMC")
     elif FILTER_LEVEL >= 3 and not eh_long_cand and liq_f:
         motivos.append("liq fundo SMC")
-
-    # Filtros de qualidade
-    e21         = result.get("e21", 0)
-    score_inst  = result.get("score_inst_long" if eh_long_cand else "score_inst_short", 0)
-    kal_up      = result.get("kalman_subindo", False)
-    rsi_sub_real = result.get("rsi_subindo", None)  # None = campo ausente (legado)
-    rsi_cai_real = result.get("rsi_caindo", None)
-    if eh_long_cand:
-        if not rsi_ent_l:
-            motivos.append(f"RSI entrada=F({rsi:.0f}<45)")
-        # RSI caindo: só mostra se o campo real está disponível E RSI caiu >= 0.3
-        if rsi_cai_real is True:
-            motivos.append(f"RSI caindo({rsi:.2f}<ant{rsi_ant:.2f})")
-        elif rsi_sub_real is False and rsi_cai_real is False:
-            motivos.append("RSI estavel (nao subindo)")
-        if not tbull_l:
-            motivos.append("EMA nao alinhada (long)")
-        if e200 > 0 and preco <= e200:
-            motivos.append(f"abaixo e200")
-        if not kal_up:
-            motivos.append("Kalman descendo (LONG bloq)")
-        _inst_diag = 35  # <35 bloqueia até CORE na sessão perigosa (25+10)
-        if score_inst < _inst_diag:
-            motivos.append(f"score_inst={score_inst}<{_inst_diag}")
-        if e21 > 0 and preco > e21 * 1.05:
-            motivos.append(f"preco>{e21*1.05:.4f} (acima e21+5%)")
-    else:
-        if not rsi_ent_s:
-            motivos.append(f"RSI entrada=F({rsi:.0f}>55)")
-        if rsi_sub_real is True:
-            motivos.append(f"RSI subindo({rsi:.2f}>ant{rsi_ant:.2f})")
-        elif rsi_sub_real is False and rsi_cai_real is False:
-            motivos.append("RSI estavel (nao caindo)")
-        if not tbear_l:
-            motivos.append("EMA nao alinhada (short)")
-        if e200 > 0 and preco >= e200:
-            motivos.append(f"acima e200")
-        if kal_up:
-            motivos.append("Kalman subindo (SHORT bloq)")
-        _inst_diag = 35  # <35 bloqueia até CORE na sessão perigosa (25+10)
-        if score_inst < _inst_diag:
-            motivos.append(f"score_inst={score_inst}<{_inst_diag}")
-        if e21 > 0 and preco < e21 * 0.95:
-            motivos.append(f"preco<{e21*0.95:.4f} (abaixo e21-5%)")
-
     if not motivos:
         motivos.append("HA/MACD pendente")
     return motivos
@@ -248,34 +133,24 @@ async def _enviar_diagnostico(session) -> None:
     else:
         linhas.append("Nenhum bloqueador detectado neste periodo")
 
-    # Prioridade: RSI na zona válida primeiro (mais perto de disparar), depois por score
-    def _sort_long(c):
-        rsi = c[3]; rsi_ok = 1 if rsi < 55 else 0
-        return (rsi_ok, c[0])
-    def _sort_short(c):
-        rsi = c[3]; rsi_ok = 1 if rsi > 45 else 0
-        return (rsi_ok, c[0])
-    top_long  = sorted([c for c in cand if c[2] > 0],  key=_sort_long,  reverse=True)[:6]
-    top_short = sorted([c for c in cand if c[2] < 0],  key=_sort_short, reverse=True)[:6]
+    top_long  = sorted([c for c in cand if c[2] > 0],  key=lambda x: x[0], reverse=True)[:4]
+    top_short = sorted([c for c in cand if c[2] < 0],  key=lambda x: x[0], reverse=True)[:4]
     if top_long or top_short:
         linhas.append("\nCandidatos (por que nao disparou):")
         for entry in top_long:
             _, sym, sc, rsi, adx, tf = entry[:6]
             bloqs = entry[6] if len(entry) > 6 else []
-            bloq_str = ", ".join(bloqs[:3]) if bloqs else "HA/MACD pendente"
-            marca = "✓" if rsi < 55 else "↑"
-            linhas.append(f"  LONG  {sym} {sc:+d} RSI{rsi:.0f}{marca} → {bloq_str}")
+            bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
+            linhas.append(f"  LONG  {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
         for entry in top_short:
             _, sym, sc, rsi, adx, tf = entry[:6]
             bloqs = entry[6] if len(entry) > 6 else []
-            bloq_str = ", ".join(bloqs[:3]) if bloqs else "HA/MACD pendente"
-            marca = "✓" if rsi > 40 else "↓"
-            linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f}{marca} → {bloq_str}")
+            bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
+            linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
 
     linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
-    _texto_diag = "\n".join(linhas)
-    log.info(f"[DIAG]\n{_texto_diag}")
-    await notificar(session, _texto_diag)
+    await notificar(session, "\n".join(linhas))
+    log.info(f"[DIAG] Diagnostico enviado — {len(blq)} bloqueadores, {len(cand)} candidatos")
 
 
 # ── Filtro horário ────────────────────────────────────────────────────────────
@@ -289,14 +164,8 @@ def dentro_horario_operacao():
 
 # ── Filtro H4 ─────────────────────────────────────────────────────────────────
 
-def _h4_confirma(candles_h4, direcao, score_inst=0, rvol=1.0):
-    """Retorna True se o sinal pode prosseguir considerando o H4.
-
-    Três níveis:
-    - H4 FORTE oposto (score<-40/>+40 + ADX>=20): bloqueia sempre
-    - H4 MODERADO oposto (score<-25/>+25 + ADX>=15): bloqueia se sinal FRACO (score_inst<65 ou rvol<1.2)
-    - H4 leve/neutro: não bloqueia
-    """
+def _h4_confirma(candles_h4, direcao):
+    """Retorna True se H4 confirma a direção do sinal. Sem H4 → não bloqueia."""
     if candles_h4 is None:
         return True
     r4 = calcular_indicadores(candles_h4)
@@ -305,24 +174,12 @@ def _h4_confirma(candles_h4, direcao, score_inst=0, rvol=1.0):
     h4_rsi  = r4["rsi"]
     h4_vol  = r4.get("v_forte", False) or r4.get("obv_bull", False)
     h4_vols = r4.get("v_forte", False) or r4.get("obv_bear", False)
-    sinal_forte = score_inst >= 65 and rvol >= 1.2
-
-    if direcao == "LONG":
-        h4_strong = (r4.get("tbear_r", False) and r4["adx"] >= 20 and
-                     h4_vols and r4["score"] < -40 and h4_rsi > 45)
-        h4_mild   = (r4.get("tbear_r", False) and r4["adx"] >= 15 and
-                     h4_vols and r4["score"] < -25 and h4_rsi > 43)
-        if h4_strong: return False
-        if h4_mild and not sinal_forte: return False
-
-    elif direcao == "SHORT":
-        h4_strong = (r4.get("tbull_r", False) and r4["adx"] >= 20 and
-                     h4_vol and r4["score"] > 40 and h4_rsi < 65)
-        h4_mild   = (r4.get("tbull_r", False) and r4["adx"] >= 15 and
-                     h4_vol and r4["score"] > 25 and h4_rsi < 68)
-        if h4_strong: return False
-        if h4_mild and not sinal_forte: return False
-
+    h4_bull = (r4["score"] > 15 and r4.get("tbull_r", False) and
+               r4["adx"] >= 13 and h4_rsi < (75 if r4["adx"] > 30 else 65) and h4_vol)
+    h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
+               h4_vols and r4["score"] < -15 and h4_rsi > 43)
+    if direcao == "LONG"  and h4_bear and r4["score"] < -30: return False
+    if direcao == "SHORT" and h4_bull and r4["score"] >  30: return False
     return True
 
 
@@ -343,29 +200,6 @@ async def executar_ciclo(session, estado, tf, moedas):
     if tf in ("1h", "30m", "15m"):
         log.info(f"[{tf}] Buscando H4 de {len(moedas)} moedas para filtro de direção...")
         todos_h4 = await _prefetch_lote(session, moedas, "4h")
-
-    # BTC macro H4 — direção global para bloquear SURGE noturno
-    _btc_bull_flex = _btc_bear_flex = False
-    btc_c4 = await buscar_candles(session, "BTCUSDT", "4h")
-    if btc_c4 and len(btc_c4) >= 50:
-        _bc = [c["c"] for c in btc_c4]
-        _be21 = serie_ema(_bc, 21)[-1]; _be50 = serie_ema(_bc, 50)[-1]
-        _be200 = serie_ema(_bc, 200)[-1]; _bp = _bc[-1]
-        _btc_bull_flex = _bp > _be21 > _be50 and _bp > _be200 * 0.98
-        _btc_bear_flex = _bp < _be21 < _be50 and _bp < _be200 * 1.02
-
-    # BTC no TF atual — filtro direcional obrigatório para BREAKOUT, SURGE, SCOUT
-    _btc15_bull = _btc15_bear = False
-    btc_ctf = await buscar_candles(session, "BTCUSDT", tf)
-    if btc_ctf and len(btc_ctf) >= 50:
-        _bc15 = [c["c"] for c in btc_ctf]
-        _be10_tf = serie_ema(_bc15, 10)[-1]
-        _be21_tf = serie_ema(_bc15, 21)[-1]
-        _be50_tf = serie_ema(_bc15, 50)[-1]
-        _bp15    = _bc15[-1]
-        _btc15_bull = _bp15 > _be50_tf and _be10_tf > _be21_tf
-        _btc15_bear = _bp15 < _be50_tf and _be10_tf < _be21_tf
-        log.info(f"[{tf}] BTC {tf}: {'BULL ↑' if _btc15_bull else 'BEAR ↓' if _btc15_bear else 'NEUTRO'} | ${_bp15:.0f}")
 
     funding_rates, oi_atual = await buscar_contract_data(session)
 
@@ -391,15 +225,8 @@ async def executar_ciclo(session, estado, tf, moedas):
         grade = result.get("grade", "B")
 
         atr_pct = (result["atr"] / result["preco"]) * 100 if result["preco"] else 0
-        _fonte_pre  = result.get("fonte_sinal", "")
-        _atr_limite = 8.0 if _fonte_pre in ("SURGE", "BREAKOUT", "PUMP", "DUMP") else 6.0 if _fonte_pre == "PREMIUM" else 4.0
-        if atr_pct > _atr_limite:
-            log.info(f"[{tf}] {abrev:7s} | ATR {atr_pct:.1f}% > {_atr_limite:.0f}% — muito volátil, ignorando")
-            continue
-        if FILTER_LEVEL >= 1 and atr_pct < 0.30:
-            log.info(f"[{tf}] {abrev:7s} | ATR {atr_pct:.2f}% < 0.30% — stop justo demais, TPs inválidos no fill")
-            candidatos.append((abs(result["score"]), abrev, result["score"],
-                               result["rsi"], result["adx"], f"ATR justo {atr_pct:.2f}%"))
+        if atr_pct > 4.0:
+            log.info(f"[{tf}] {abrev:7s} | ATR {atr_pct:.1f}% > 4% — muito volátil, ignorando")
             continue
 
         log.info(f"[{tf}] {abrev:7s} | Score {result['score']:+4d} | RSI {result['rsi']:5.1f} | "
@@ -418,19 +245,8 @@ async def executar_ciclo(session, estado, tf, moedas):
 
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
-
-            # Pump extremo: RVOL ≥3x (tier 4) → sinais normais bloqueados.
-            # Só especialistas operam em pump/dump: PUMP, DUMP, SURGE, BREAKOUT, REVERSAL, SM_SWEEP.
-            _pump_tier = result.get("rvol_tier_max2", 0)
-            _sinais_pump_veto = {"SCOUT", "FLEX", "SETUP", "DIV", "REBOUND", "CROSS"}
-            if _pump_tier >= 4 and fonte in _sinais_pump_veto:
-                log.info(f"  🚫 {abrev} [{tf}] {fonte} vetado — pump extremo (RVOL tier {_pump_tier}=3x+)")
-                candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"pump_veto({fonte})"))
-                continue
-
             # Sinais de reversão extrema têm piso de score menor (mercado em pânico/euforia)
-            _score_min = 60 if fonte == "PREMIUM" else 20 if fonte == "DUMP" else 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV", "CORE") else 35 if fonte in ("BREAKOUT", "PUMP") else 40
+            _score_min = 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 40
             if abs(result["score"]) < _score_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {_score_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -439,221 +255,25 @@ async def executar_ciclo(session, estado, tf, moedas):
 
             eh_long_ = result["sinal"] == "LONG"
             score_inst = result.get("score_inst_long" if eh_long_ else "score_inst_short", 0)
-
-            # Bloqueadores absolutos H1 Premium — ADX e RVOL mínimos.
-            # Contra-tendência (reversão/exaustão) fica de fora: opera justamente
-            # quando ADX/RVOL estão caindo (clímax de volume secando, ADX virando).
-            _exc_absoluto = {"REVERSAL", "SM_SWEEP", "EXTREME", "CORE", "DIV", "REBOUND", "PUMP", "DUMP"}
-            if FILTER_LEVEL >= 1 and fonte not in _exc_absoluto:
-                if result.get("adx", 0) < 20:
-                    log.info(f"  🚫 {abrev} [{tf}] bloqueado — ADX {result['adx']:.0f}<20 (absoluto H1 Premium)")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"adx<20(absoluto)"))
-                    continue
-                if result.get("rvol", 0) < 0.80:
-                    log.info(f"  🚫 {abrev} [{tf}] bloqueado — RVOL {result.get('rvol',0):.2f}x<0.80 (absoluto H1 Premium)")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"rvol<0.80(absoluto)"))
-                    continue
-
-            # Near-miss tracking: captura candidatos sérios com ≤2 bloqueadores
-            _bloqs_nm = _detectar_bloqueadores_diag(result)
-            if len(_bloqs_nm) <= 2 and score_inst >= 45:
-                _nearmiss_buffer.append((
-                    score_inst, abrev, tf,
-                    " + ".join(_bloqs_nm[:2]) if _bloqs_nm else "aguardando confirmacao",
-                    result["rsi"], result.get("fonte_sinal", "?"), result["sinal"]
-                ))
-
-            # H4 penalidade: não bloqueia, mas aumenta exigência (+5 inst, -10 conf, -25% lev)
-            _h4_penalty = (tf in ("1h", "15m", "30m") and
-                           not _h4_confirma(h4c, result["sinal"], score_inst, result.get("rvol", 1.0)))
-            if _h4_penalty:
-                log.info(f"  ⚠️ {abrev} [{tf}] {result['sinal']} H4 oposto — penalidade: inst+5, conf-10, lev-25%")
-
             _hora_c   = datetime.now(timezone.utc).hour
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
-            # Piso por tipo de sinal — qualidade exigida proporcional à robustez do setup
-            _inst_min = (0   if FILTER_LEVEL <= 0 else
-                         70  if fonte == "PREMIUM" else
-                         15  if fonte == "EXTREME" else
-                         25  if fonte == "CORE" else
-                         40  if fonte == "DUMP" else
-                         45  if fonte == "REVERSAL" else
-                         50  if fonte in ("SM_SWEEP", "DIV") else
-                         55  if fonte == "SCOUT" else
-                         60  if fonte == "FLEX" else
-                         55  if fonte in ("SETUP", "PULLBACK", "CROSS",
-                                          "BB_BREAK", "SURGE", "BREAKOUT",
-                                          "REBOUND", "PUMP") else
-                         60  if fonte == "MOMENTUM" else
-                         55)
+            _inst_min = (0  if FILTER_LEVEL <= 0 else
+                         35 if fonte == "SCOUT" else
+                         40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
-                _inst_min = min(_inst_min + 10, 70)   # sessão perigosa: +10 pts (cap 70)
-            if _h4_penalty:
-                _inst_min = min(_inst_min + 5, 70)    # H4 oposto: +5 pts (cap 70)
-            # Ajuste profissional: funding rate e OI alinhados confirmam smart money
-            _fr = result.get("funding_rate") or 0
-            _oi = oi_change.get(sym, 0) or 0
-            _eh_long_c = result["sinal"] == "LONG"
-            _fr_alinhado = (_fr > 0.0005 and not _eh_long_c) or (_fr < -0.0005 and _eh_long_c)
-            _oi_alinhado = _oi > 2.0  # OI cresceu >2% = posições novas sendo abertas
-            if FILTER_LEVEL >= 1:
-                if _fr_alinhado:   _inst_min = max(0, _inst_min - 5)   # funding confirma = -5 pts exigência
-                if _oi_alinhado:   _inst_min = max(0, _inst_min - 5)   # OI confirma = -5 pts exigência
+                _inst_min = max(_inst_min, 60)   # sessão perigosa: exige confirmação institucional forte
             if score_inst < _inst_min:
-                _fr_str = f" fr={_fr*100:.3f}%" if _fr else ""
-                log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}{_fr_str}")
+                log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue
 
-            # Confiança = score_inst − 10 (H1 Premium: Gate A=65%, S=75%)
-            _conf_global = max(40, min(95, score_inst - 10))
-            if _h4_penalty:
-                _conf_global = max(40, _conf_global - 10)   # H4 oposto: -10% confiança
-            # Anti-topo soft: RSI > 70 + preço > EMA21 + 2×ATR → confiança -15%
-            if eh_long_ and fonte not in {"EXTREME", "REVERSAL", "SM_SWEEP"}:
-                _rsi_at  = result.get("rsi", 50)
-                _e21_at  = result.get("e21", 0)
-                _atr_at  = result.get("atr", 0)
-                _preco_at = result.get("preco", 0)
-                if _rsi_at > 70 and _e21_at > 0 and _atr_at > 0 and _preco_at > _e21_at + 2 * _atr_at:
-                    _prev_c = _conf_global
-                    _conf_global = max(40, _conf_global - 15)
-                    log.info(f"  ⚠️ {abrev} [{tf}] anti-topo soft: RSI {_rsi_at:.0f}>70 + preço>EMA21+2ATR → conf {_prev_c}→{_conf_global}%")
-            # CORE/SCOUT/DIV/REBOUND: gate próprio de condições, conf não é filtro primário
-            _conf_exc = {"REVERSAL", "SM_SWEEP", "EXTREME", "CORE", "SCOUT", "DIV", "REBOUND"}
-            if FILTER_LEVEL >= 1 and _conf_global < 60 and fonte not in _conf_exc:
-                log.info(f"  ⚠️ {abrev} bloqueado — confiança {_conf_global}% < 60% (inst={score_inst})")
+            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"]):
+                log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"conf<60%({_conf_global}%)"))
+                                   result["rsi"], result["adx"], "H4 oposto"))
                 continue
-
-            # ── PROTEÇÃO TOPO/FUNDO REAL: apenas extremo absoluto (5 condições simultâneas) ──
-            if FILTER_LEVEL >= 1 and fonte not in {"EXTREME", "REVERSAL", "SM_SWEEP"}:
-                _rsi_blq   = result.get("rsi", 50)
-                _preco_blq = result.get("preco", 0)
-                _e21_blq   = result.get("e21", 0)
-                _stoch_blq = result.get("stoch_rsi", 0.5)
-                _vsec_blq  = result.get("vol_secando", False)
-                _liqt_blq  = result.get("liq_topo", False)
-                _liqf_blq  = result.get("liq_fundo", False)
-                if _e21_blq > 0:
-                    _dist_blq = (_preco_blq - _e21_blq) / _e21_blq
-                    if (eh_long_ and _rsi_blq > 75 and _dist_blq > 0.08 and
-                            _stoch_blq > 0.95 and _vsec_blq and _liqt_blq):
-                        log.info(f"  🚫 {abrev} [{tf}] LONG bloqueado — topo real (5 cond): RSI{_rsi_blq:.0f} +{_dist_blq*100:.1f}%>EMA21 StochRSI{_stoch_blq:.2f} vol_sec liq_topo")
-                        candidatos.append((abs(result["score"]), abrev, result["score"],
-                                           result["rsi"], result["adx"], f"prot-topo-real(RSI{_rsi_blq:.0f})"))
-                        continue
-                    if (not eh_long_ and _rsi_blq < 25 and _dist_blq < -0.08 and
-                            _stoch_blq < 0.05 and _vsec_blq and _liqf_blq):
-                        log.info(f"  🚫 {abrev} [{tf}] SHORT bloqueado — fundo real (5 cond): RSI{_rsi_blq:.0f} {_dist_blq*100:.1f}%<EMA21 StochRSI{_stoch_blq:.2f} vol_sec liq_fundo")
-                        candidatos.append((abs(result["score"]), abrev, result["score"],
-                                           result["rsi"], result["adx"], f"prot-fundo-real(RSI{_rsi_blq:.0f})"))
-                        continue
-
-            # ── Gate qualidade LONG — condições obrigatórias ─────────────────
-            if eh_long_ and FILTER_LEVEL >= 1 and fonte not in {"REVERSAL", "SM_SWEEP", "EXTREME"}:
-                _e10_g   = result.get("e10", 0)
-                _e21_g   = result.get("e21", 0)
-                _adx_g   = result.get("adx", 0)
-                _rvol_g  = result.get("rvol", 0)
-                _preco_g = result.get("preco", 0)
-                _atr_g   = result.get("atr", 0)
-                _sh_g    = result.get("swing_high", float("inf"))
-                _bloq_gate = []
-                # Resistência mais urgente — verifica primeiro
-                if _sh_g > 0 and _preco_g > 0 and _preco_g > _sh_g * 0.998:
-                    _bloq_gate.append(f"ENTRANDO EM RESISTENCIA (preco>{_sh_g:.6f}*0.998)")
-                _e50_g = result.get("e50", 0)
-                if _e10_g > 0 and _e21_g > 0 and _e10_g <= _e21_g:
-                    _bloq_gate.append(f"EMA10 {_e10_g:.4f} <= EMA21 {_e21_g:.4f}")
-                if _e21_g > 0 and _e50_g > 0 and _e21_g <= _e50_g:
-                    _bloq_gate.append(f"EMA21 {_e21_g:.4f} <= EMA50 {_e50_g:.4f}")
-                if _adx_g <= 19:
-                    _bloq_gate.append(f"ADX {_adx_g:.0f}<20")
-                if _rvol_g < 1.3:
-                    _bloq_gate.append(f"RVOL {_rvol_g:.2f}x<1.3")
-                if _e21_g > 0 and _preco_g > _e21_g * 1.04:
-                    _bloq_gate.append(f"preco {_preco_g:.4f} > EMA21*1.04")
-                if _sh_g < float("inf") and _preco_g > 0 and _atr_g > 0 and (_sh_g - _preco_g) <= _atr_g * 0.5:
-                    _bloq_gate.append(f"resistencia <0.5ATR (dist={(_sh_g-_preco_g)/_atr_g:.2f}ATR)")
-                if _bloq_gate:
-                    log.info(f"  🚫 {abrev} [{tf}] LONG gate — {_bloq_gate[0]}")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"gate({_bloq_gate[0]})"))
-                    continue
-
-            # ── Filtros ANTI-TOPO para sinais LONG ───────────────────────────
-            if eh_long_ and FILTER_LEVEL >= 1:
-                _rsi_l   = result.get("rsi", 50)
-                _rvol_l  = result.get("rvol", 1.0)
-                _liq_t   = result.get("liq_topo", False)
-                _stoch_l = result.get("stoch_rsi", 0.5)
-                _preco_l = result.get("preco", 0)
-                _e21_l   = result.get("e21", 0)
-                _acima   = result.get("preco_acima_e21", True)
-                _bloq_topo = []
-                # 1. RSI>68 E preço >EMA21*1.05
-                if _rsi_l > 68 and _e21_l > 0 and _preco_l > _e21_l * 1.05:
-                    _bloq_topo.append(f"RSI {_rsi_l:.0f}>68 + preco>EMA21*1.05")
-                # 2. RSI>72 (sobrecomprado)
-                if _rsi_l > 72:
-                    _bloq_topo.append(f"RSI {_rsi_l:.0f}>72")
-                # 3. LIQ_TOPO ativo
-                if _liq_t:
-                    _bloq_topo.append("LIQ_TOPO")
-                # 4. StochRSI > 0.90
-                if _stoch_l > 0.90:
-                    _bloq_topo.append(f"StochRSI {_stoch_l:.2f}>0.90")
-                if _bloq_topo:
-                    log.info(f"  🚫 {abrev} [{tf}] LONG anti-topo — {_bloq_topo[0]}")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"anti-topo({_bloq_topo[0]})"))
-                    continue
-
-            # ── Filtros ANTI-FUNDO para sinais SHORT ─────────────────────────
-            if not eh_long_ and FILTER_LEVEL >= 1:
-                _rsi_s   = result.get("rsi", 50)
-                _rvol_s  = result.get("rvol", 1.0)
-                _liq_f   = result.get("liq_fundo", False)
-                _stoch_s = result.get("stoch_rsi", 0.5)
-                _bloq_fundo = []
-                _exceto_fundo = {"REVERSAL", "SM_SWEEP", "DUMP"}
-                _exceto_rvol  = {"REVERSAL", "SM_SWEEP", "CORE", "DIV"}
-                # 1. RSI < 35 (sobrevendido)
-                if _rsi_s < 35 and fonte not in _exceto_fundo:
-                    _bloq_fundo.append(f"RSI {_rsi_s:.0f}<35 (sobrevendido)")
-                # 2. LIQ_FUNDO ativo
-                if _liq_f and fonte not in _exceto_fundo:
-                    _bloq_fundo.append("LIQ_FUNDO")
-                # 3. StochRSI < 0.10
-                if _stoch_s < 0.10 and fonte not in _exceto_fundo:
-                    _bloq_fundo.append(f"StochRSI {_stoch_s:.2f}<0.10")
-                # 4. RVOL < 1.0
-                if _rvol_s < 1.0 and fonte not in _exceto_rvol:
-                    _bloq_fundo.append(f"RVOL {_rvol_s:.2f}x<1.0")
-                if _bloq_fundo:
-                    log.info(f"  🚫 {abrev} [{tf}] SHORT anti-fundo — {_bloq_fundo[0]}")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"anti-fundo({_bloq_fundo[0]})"))
-                    continue
-
-            # BTC no TF atual: BREAKOUT, SURGE, SCOUT obrigam alinhamento direcional com BTC
-            if fonte in ("BREAKOUT", "SURGE", "SCOUT"):
-                if eh_long_ and not _btc15_bull:
-                    log.info(f"  🚫 {abrev} [{tf}] {fonte} LONG bloq — BTC {tf} não bull")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"BTC não bull"))
-                    continue
-                if not eh_long_ and not _btc15_bear:
-                    log.info(f"  🚫 {abrev} [{tf}] {fonte} SHORT bloq — BTC {tf} não bear")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"BTC não bear"))
-                    continue
 
             chave_dir = f"{sym}_{tf}_{result['sinal']}"
             chave_any = f"{sym}_{tf}"
@@ -662,43 +282,15 @@ async def executar_ciclo(session, estado, tf, moedas):
             if bloq_dir or bloq_flip:
                 if bloq_dir:
                     mins = int((cooldown - (agora - estado.get(chave_dir, 0))) / 60)
-                    log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
                 else:
                     mins = int((7200 - (agora - estado.get(chave_any, 0))) / 60)
-                    log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
+                log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "cooldown"))
                 continue
 
             eh_long  = result["sinal"] == "LONG"
-
-            # PREMIUM: grade por inst+ADX+RVOL; risco conservador (S+=3%, S=2%, A=1%)
-            if fonte == "PREMIUM":
-                _pi = result.get("score_inst_long" if eh_long else "score_inst_short", 0)
-                _pa = result.get("adx", 0)
-                _pr = result.get("rvol_tier_max2", 0)
-                if _pi >= 85 and _pa >= 30 and _pr >= 4:
-                    grade = "S+"
-                elif _pi >= 75:
-                    grade = "S"
-                else:
-                    grade = "A"
-                pct_risco = 0.03 if grade == "S+" else 0.02 if grade == "S" else 0.01
-            else:
-                pct_risco = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
-            # Sinais de alta volatilidade: capa risco em 2%
-            if fonte in ("SURGE", "BREAKOUT", "PUMP", "DUMP"):
-                pct_risco = min(pct_risco, 0.02)  # risco máx 2% — moves rápidos e violentos
-
-            # Grade B = qualidade insuficiente para H1 Premium (requer A ou S).
-            # Contra-tendência fica fora: grade genérica mede alinhamento de tendência,
-            # que é naturalmente fraco em setups de reversão/exaustão por desenho.
-            _exc_gradeB = {"REVERSAL", "SM_SWEEP", "CORE", "DIV", "REBOUND", "PUMP", "DUMP"}
-            if FILTER_LEVEL >= 1 and grade == "B" and fonte not in _exc_gradeB:
-                log.info(f"  ⚠️ {abrev} bloqueado — Grade B (Score Inst {score_inst})")
-                candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "gradeB"))
-                continue
+            pct_risco = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
 
             if risco_ciclo + pct_risco > MAX_CYCLE_RISK:
                 log.info(f"  🛑 {abrev} bloqueado — risco ciclo {risco_ciclo*100:.0f}%+{pct_risco*100:.0f}% > teto")
@@ -714,128 +306,16 @@ async def executar_ciclo(session, estado, tf, moedas):
                 continue
 
             _rvol      = result.get("rvol", 1.0)
-            _rsi       = result.get("rsi", 50)
             _dna       = result.get("dna_flow_bull" if eh_long else "dna_flow_bear", False)
             _trl       = result.get("trendilo_long" if eh_long else "trendilo_short", False)
             _tend      = result.get("tendencia", "NEUTRO")
-            _hora_utc  = datetime.now(timezone.utc).hour
-            _baixa_liq    = 22 <= _hora_utc or _hora_utc < 8    # Asian/madrugada UTC
-            _aber_falsa   = _hora_utc in (8, 13)               # abertura Londres/NY
 
-            # SURGE noturno: breakout falso em sessão de baixa liquidez sem BTC ALTA
-            if fonte == "SURGE" and _baixa_liq:
-                if eh_long and not _btc_bull_flex:
-                    log.info(f"  🚫 {abrev} SURGE LONG bloq — noturno ({_hora_utc:02d}h UTC) BTC não ALTA")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], "SURGE noturno"))
-                    continue
-                if not eh_long and not _btc_bear_flex:
-                    log.info(f"  🚫 {abrev} SURGE SHORT bloq — noturno ({_hora_utc:02d}h UTC) BTC não BAIXA")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], "SURGE noturno"))
-                    continue
-            _sombra_sup   = result.get("sombra_sup", 0.0)
-            _sombra_inf   = result.get("sombra_inf", 0.0)
-            _liq_topo_r   = result.get("liq_topo", False)
-            _liq_fundo_r  = result.get("liq_fundo", False)
-            _armadilha = []
-            if _rvol < 0.80:
-                _armadilha.append("volume fraco")
-            if fonte == "BB_BREAK" and _rvol < 1.0:
-                _armadilha.append("BB break sem volume")
-            if eh_long and _rsi >= 50:
-                _armadilha.append(f"RSI {_rsi:.0f} elevado para LONG")
-            if not eh_long and _rsi <= 50:
-                _armadilha.append(f"RSI {_rsi:.0f} baixo para SHORT")
-            if not _dna and not _trl:
-                _armadilha.append("fluxo não confirmado")
-            if _tend == "NEUTRO":
-                _armadilha.append("tendência lateral")
-            if eh_long and _sombra_sup > 0.35:
-                _armadilha.append("pavio de rejeição no topo")
-            if not eh_long and _sombra_inf > 0.35:
-                _armadilha.append("pavio de rejeição no fundo")
-            if eh_long and _liq_topo_r:
-                _armadilha.append("varredura de topo detectada")
-            if not eh_long and _liq_fundo_r:
-                _armadilha.append("varredura de fundo detectada")
-            if _baixa_liq:
-                _armadilha.append(f"sessão baixa liquidez ({_hora_utc:02d}h UTC)")
-            if _aber_falsa:
-                _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
-
-            # FLEX: qualidade equilibrada — aberto mas com DNA/Trendilo, RVOL, RSI e estrutura
-            if fonte == "FLEX" and FILTER_LEVEL >= 1:
-                _rsi_flex  = result.get("rsi", 50)
-                _rvol_flex = result.get("rvol", 0.0)
-                _adx_flex  = result.get("adx", 0)
-                _obv_bull  = result.get("obv_bull", False)
-                _obv_bear  = result.get("obv_bear", False)
-                _preco_f   = result.get("preco", 0)
-                _e50_f     = result.get("e50", 0)
-                _tbull     = result.get("tbull_loose", False)
-                _tbear     = result.get("tbear_loose", False)
-                _liq_t_f   = result.get("liq_topo", False)
-                _liq_f_f   = result.get("liq_fundo", False)
-                _bloq_flex = []
-                # Critérios comuns LONG e SHORT
-                if _rvol_flex < 0.8:
-                    _bloq_flex.append(f"RVOL {_rvol_flex:.2f}x<0.8")
-                if _adx_flex < 16:
-                    _bloq_flex.append(f"ADX {_adx_flex:.0f}<16")
-                if not _dna and not _trl:
-                    _bloq_flex.append("sem DNA Flow nem Trendilo")
-                if eh_long:
-                    # RSI 38–70 para LONG
-                    if not (38 <= _rsi_flex <= 70):
-                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 38-70 (LONG)")
-                    if _e50_f > 0 and _preco_f < _e50_f:
-                        _bloq_flex.append("preco abaixo MM50")
-                    if not _tbull:
-                        _bloq_flex.append("MM10>MM21>MM50 nao alinhada")
-                    if not _obv_bull:
-                        _bloq_flex.append("OBV nao positivo")
-                    if _liq_t_f:
-                        _bloq_flex.append("resistencia <1ATR (liq topo)")
-                else:
-                    # RSI 32–65 para SHORT
-                    if not (32 <= _rsi_flex <= 65):
-                        _bloq_flex.append(f"RSI {_rsi_flex:.0f} fora 32-65 (SHORT)")
-                    if _e50_f > 0 and _preco_f > _e50_f:
-                        _bloq_flex.append("preco acima MM50")
-                    if not _tbear:
-                        _bloq_flex.append("MM10<MM21<MM50 nao alinhada")
-                    if not _obv_bear:
-                        _bloq_flex.append("OBV nao negativo")
-                    if _liq_f_f:
-                        _bloq_flex.append("suporte <1ATR (liq fundo)")
-                if _bloq_flex:
-                    log.info(f"  🚫 {abrev} FLEX bloqueado — {' | '.join(_bloq_flex)}")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"FLEX({_bloq_flex[0]})"))
-                    continue
-
-            # SURGE / BREAKOUT / PUMP: filtros específicos por tipo
-            if fonte in ("SURGE", "BREAKOUT", "PUMP") and FILTER_LEVEL >= 1:
-                _rsi_exp   = result.get("rsi", 50)
-                _rvol_exp  = result.get("rvol", 0.0)
-                _adx_exp   = result.get("adx", 0)
-                _bloq_exp  = []
-                _rvol_min  = 1.3 if fonte == "BREAKOUT" else 2.5  # BREAKOUT: 1.3x; SURGE/PUMP: 2.5x
-                _rsi_max   = 68  if fonte == "BREAKOUT" else 65   # BREAKOUT: RSI até 68
-                if _rvol_exp < _rvol_min:
-                    _bloq_exp.append(f"RVOL {_rvol_exp:.2f}x<{_rvol_min}")
-                if _adx_exp < 22:
-                    _bloq_exp.append(f"ADX {_adx_exp:.0f}<22")
-                if not (45 <= _rsi_exp <= _rsi_max):
-                    _bloq_exp.append(f"RSI {_rsi_exp:.0f} fora 45-{_rsi_max}")
-                if not _dna:
-                    _bloq_exp.append("DNA Flow ausente")
-                if _bloq_exp:
-                    log.info(f"  🚫 {abrev} {fonte} bloqueado — {' | '.join(_bloq_exp)}")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], f"{fonte}({_bloq_exp[0]})"))
-                    continue
+            # FLEX sem fluxo direcional + mercado neutro = TP1 improvável (~50%)
+            if fonte == "FLEX" and not _dna and not _trl and _tend == "NEUTRO":
+                log.info(f"  🚫 {abrev} FLEX bloqueado — sem fluxo + tendência neutra")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], "FLEX sem fluxo+neutro"))
+                continue
 
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
@@ -848,12 +328,6 @@ async def executar_ciclo(session, estado, tf, moedas):
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
                 "funding_rate": result.get("funding_rate"),
                 "oi_change":    oi_change.get(sym),
-                "armadilha":    _armadilha,
-                "e21":          result.get("e21", 0),
-                "e50":          result.get("e50", 0),
-                "high_atual":   result.get("high_atual", 0),
-                "low_atual":    result.get("low_atual", 0),
-                "h4_penalty":   _h4_penalty,
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],
@@ -862,9 +336,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                                     result["swing_high"], result["fonte_sinal"], tf, grade, extra=extra)
             if ok:
                 _diag_buffer["ultimo_sinal"] = agora
-                estado[chave_dir] = agora
-                estado[chave_any] = agora
-                salvar_estado(estado)
+                estado[chave_dir] = agora; estado[chave_any] = agora
                 risco_ciclo   += pct_risco
                 scouts_enviados += 1 if fonte == "SCOUT" else 0
                 longs_enviados  += 1 if eh_long else 0
@@ -877,9 +349,9 @@ async def executar_ciclo(session, estado, tf, moedas):
             dfl = result.get("dna_flex_bull", False); dfs = result.get("dna_flex_bear", False)
             trl = result.get("trendilo_long", False);  trs = result.get("trendilo_short", False)
             kal = result.get("kalman_subindo", False)
-            if sc > 12  and rsi < 55 and adx >= 8 and (kal or trl or dfl or sc > 40):
+            if sc > 12  and rsi < 72 and adx >= 8 and (kal or trl or dfl or sc > 40):
                 watchlist.append(("LONG",  abrev, sc, rsi, adx, dfl, trl))
-            elif sc < -12 and rsi > 40 and adx >= 8 and (not kal or trs or dfs or sc < -40):
+            elif sc < -12 and rsi > 35 and adx >= 8 and (not kal or trs or dfs or sc < -40):
                 watchlist.append(("SHORT", abrev, sc, rsi, adx, dfs, trs))
 
     if enviados == 0 and candidatos:
@@ -905,8 +377,12 @@ async def executar_ciclo(session, estado, tf, moedas):
         if linhas:
             log.info(f"[{tf}] Sem sinais — " + " | ".join(linhas[:3]))
 
-    log.info(f"[{tf}] Watchlist: {len(watchlist)} moedas encontradas (envio desativado)")
-    # Watchlist desativada — apenas sinais LONG/SHORT são enviados ao Telegram
+    log.info(f"[{tf}] Watchlist: {len(watchlist)} moedas encontradas")
+    if watchlist:
+        chave_wl = f"_watchlist_{tf}"
+        if agora - estado.get(chave_wl, 0) >= 1800:
+            ok = await enviar_watchlist(session, tf, watchlist)
+            if ok: estado[chave_wl] = agora
 
     return enviados
 
@@ -998,8 +474,7 @@ async def executar_ciclo_mtf(session, estado, moedas):
                      f"{result['fonte_sinal']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
             eh_long_mtf = result["sinal"] == "LONG"
             score_inst_mtf = result.get("score_inst_long" if eh_long_mtf else "score_inst_short", 0)
-            _fonte_mtf = result.get("fonte_sinal", "")
-            _score_min_mtf = 40; _inst_min_mtf = 40 if _fonte_mtf == "CORE" else 60
+            _score_min_mtf = 40; _inst_min_mtf = 40
             if abs(result["score"]) < _score_min_mtf or score_inst_mtf < _inst_min_mtf:
                 motivo = (f"score {result['score']:+d}<{_score_min_mtf}" if abs(result["score"]) < _score_min_mtf
                           else f"Score Inst {score_inst_mtf}<{_inst_min_mtf}")
@@ -1007,28 +482,18 @@ async def executar_ciclo_mtf(session, estado, moedas):
                 log.info(f"[MTF] {abrev:7s} | bloqueado — {motivo}")
                 continue
 
-            chave        = f"{sym}_MTF"
-            chave_global = f"{sym}_GLOBAL"
-            if agora - estado.get(chave_global, 0) < 1800:
-                mins = int((1800 - (agora - estado.get(chave_global, 0))) / 60)
-                log.info(f"  ⏳ {abrev} [MTF] dedup global {mins}min")
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"dedup {mins}min"))
-                continue
+            chave = f"{sym}_MTF"
             if agora - estado.get(chave, 0) >= cooldown_mtf:
                 eh_long = result["sinal"] == "LONG"
                 extra = {
                     "rvol_label":   result.get("rvol_label", ""),
                     "rvol":         result.get("rvol", 0.0),
-                    "inst_score":   result.get("score_inst_long" if eh_long else "score_inst_short", 0),
+                    "inst_score":   r4h.get("score_inst_long" if eh_long else "score_inst_short", 0),
                     "inst_cls":     r4h.get("cls_inst_long"   if eh_long else "cls_inst_short",   ""),
                     "dna_flow":     result.get("dna_flow_bull" if eh_long else "dna_flow_bear", False),
                     "trendilo_dir": result.get("trendilo_long" if eh_long else "trendilo_short", False),
                     "liq_event":    ("LIQ FUNDO ↑" if r4h.get("liq_fundo") else
                                      "LIQ TOPO ↓"  if r4h.get("liq_topo")  else ""),
-                    "e21":          result.get("e21", 0),
-                    "e50":          result.get("e50", 0),
-                    "high_atual":   result.get("high_atual", 0),
-                    "low_atual":    result.get("low_atual", 0),
                 }
                 ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                         result["preco"], result["atr"], r4h["score"],
@@ -1036,10 +501,7 @@ async def executar_ciclo_mtf(session, estado, moedas):
                                         result["kalman_subindo"], result["swing_low"],
                                         result["swing_high"], result["fonte_sinal"], "1h", grade, extra=extra)
                 if ok:
-                    estado[chave] = agora
-                    estado[chave_global] = agora
-                    salvar_estado(estado)
-                    enviados += 1
+                    estado[chave] = agora; enviados += 1
             else:
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"cooldown {mins}min"))
@@ -1083,10 +545,6 @@ async def executar_teste(session):
                              "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
             "funding_rate": result.get("funding_rate"),
             "oi_change":    None,
-            "e21":          result.get("e21", 0),
-            "e50":          result.get("e50", 0),
-            "high_atual":   result.get("high_atual", 0),
-            "low_atual":    result.get("low_atual", 0),
         }
         await enviar_sinal(session, sym, label, abrev, sinal_forcado,
                            result["preco"], result["atr"], result["score"],
@@ -1186,10 +644,10 @@ async def main():
                 log.error(f"❌ MTF erro ciclo #{ciclo}: {e}")
 
             try:
-                # Roda FLEX para cada TF que não é 4h (1h incluído — gera sinais diretos H1)
-                _tfs_flex = [tf for tf in TIMEFRAMES if tf != "4h"]
+                # Roda FLEX para cada TF que não é coberto pelo caminho MTF (4h/1h)
+                _tfs_flex = [tf for tf in TIMEFRAMES if tf not in ("4h", "1h")]
                 if not _tfs_flex:
-                    _tfs_flex = [TIMEFRAMES[0]]
+                    _tfs_flex = [t for t in TIMEFRAMES if t != "4h"] or [TIMEFRAMES[0]]
                 for tf_base in _tfs_flex:
                     enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas)
                     total   += enviados
@@ -1202,43 +660,29 @@ async def main():
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
 
-            # Diagnóstico imediato no 1º ciclo sem sinal — visibilidade rápida ao reiniciar
-            # o bot, sem esperar 90min (nearmiss fica vazio quando nenhum sinal bruto dispara).
-            if ciclo == 1 and total == 0:
+            # Diagnóstico: varredura imediata no 1º ciclo, depois a cada 30 min sem sinais
+            _agora_d    = time.time()
+            _enviar_diag = False
+            if ciclo == 1 and _diag_buffer["total_analisados"] > 0:
+                _enviar_diag = True   # varredura imediata ao iniciar
+            else:
+                if total > 0:
+                    _diag_buffer["ultimo_sinal"] = _agora_d
+                _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 900
+                if _agora_d - _diag_buffer["ultimo_envio"] >= 1800 and _sem_sinal:
+                    _enviar_diag = True
+            if _enviar_diag:
                 try:
                     await _enviar_diagnostico(session)
-                    _diag_buffer["ultimo_envio"] = time.time()
-                except Exception:
-                    pass
-
-            # Near-miss: após 90min sem sinal, avisa candidatos mais próximos
-            _agora_d = time.time()
-            if total > 0:
-                _diag_buffer["ultimo_sinal"] = _agora_d
-                _nearmiss_buffer.clear()
-            _sem_sinal_min = (_agora_d - _diag_buffer["ultimo_sinal"]) / 60
-            if _sem_sinal_min >= 90 and _agora_d - _diag_buffer.get("ultimo_envio", 0) >= 5400:
-                if _nearmiss_buffer:
-                    # Ordena por score_inst e pega os 5 mais próximos
-                    top_nm = sorted(_nearmiss_buffer, key=lambda x: x[0], reverse=True)[:5]
-                    linhas = [f"⏱ {int(_sem_sinal_min)}min sem sinal — candidatos mais próximos:\n"]
-                    for score_i, abrev_i, tf_i, bloq_i, rsi_i, fonte_i, dir_i in top_nm:
-                        seta = "↑" if dir_i == "LONG" else "↓"
-                        linhas.append(f"{seta} {abrev_i} [{tf_i}] {fonte_i} RSI{rsi_i:.0f} — falta: {bloq_i}")
-                    try:
-                        await notificar(session, "\n".join(linhas))
-                    except Exception:
-                        pass
-                else:
-                    # Nenhum sinal bruto disparou em lugar nenhum (nearmiss fica vazio
-                    # pois só populamos dentro de "if result['sinal']:") — usa o relatório
-                    # completo de bloqueadores acumulado em _diag_buffer como fallback.
-                    try:
-                        await _enviar_diagnostico(session)
-                    except Exception:
-                        pass
-                _diag_buffer["ultimo_envio"] = _agora_d
-                _nearmiss_buffer.clear()
+                except Exception as _e:
+                    log.error(f"❌ Erro diagnostico: {_e}")
+                _diag_buffer.update({
+                    "ultimo_envio":     _agora_d,
+                    "bloqueadores":     {},
+                    "candidatos":       [],
+                    "total_analisados": 0,
+                    "ciclos":           0,
+                })
 
             if not LOOP_MODE:
                 break

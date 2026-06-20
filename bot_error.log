@@ -1,0 +1,1943 @@
+23:17:41 [INFO] \U0001f680 GAUSS+DNA v3 | ELITE | TFs: 30m,1h | Moedas: LISTA FIXA | LOOP CONTÍNUO
+23:17:41 [INFO] \u2705 Bot pronto — enviando apenas sinais reais ao Telegram
+23:17:51 [WARNING] \u26a0\ufe0f Notificação TG falhou: 
+23:17:51 [INFO] \u2705 MEXC 15m: 250 velas
+23:17:52 [INFO] \u2705 MEXC 60m: 250 velas
+23:17:52 [INFO] \u2500\u2500 Ciclo #1 | 23:17:52 17/06 | 303 moedas \u2500\u2500
+23:17:52 [INFO] [MTF] BTC H4: NEUTRO | RSI 45 | $64515
+23:17:52 [INFO] [MTF] Prefetch H4 (303 moedas)...
+23:17:52 [WARNING] buscar_candles TONUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:55 [WARNING] buscar_candles THETAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:55 [WARNING] buscar_candles FTMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:55 [WARNING] buscar_candles ZILLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:55 [WARNING] buscar_candles CTSIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:55 [WARNING] buscar_candles LSKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:55 [WARNING] buscar_candles POWRUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:55 [WARNING] buscar_candles BANDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles KLAYUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles XEMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles OSMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles MKRUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles OCEANUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles RENUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles OMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles ALPACAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:56 [WARNING] buscar_candles FXSUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:57 [WARNING] buscar_candles AGIXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:57 [WARNING] buscar_candles BONDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:57 [WARNING] buscar_candles GLMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:57 [WARNING] buscar_candles TRBUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:57 [WARNING] buscar_candles CTXCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:57 [WARNING] buscar_candles DYMAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:57 [WARNING] buscar_candles AUDIOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:57 [WARNING] buscar_candles ALTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles STPTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles AXLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles SXPUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles DARUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles PORTAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles OMNIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles VOXELUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles RDNTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles BRETTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles NEIROUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles GMTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles GALUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:58 [WARNING] buscar_candles ALPHAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:59 [WARNING] buscar_candles CVCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:59 [WARNING] buscar_candles NULSUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:59 [WARNING] buscar_candles TRUUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:59 [WARNING] buscar_candles MTLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:59 [WARNING] buscar_candles UXLINKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:17:59 [WARNING] buscar_candles KEYUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles WINGUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles KDAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles BAKEUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles EPXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles HARDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles MULTIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles ATAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles JITOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles IDEXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles CLVUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles DIAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles TVKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles ORNUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles LINAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles LTOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles MCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles KP3RUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles IRISUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles AMBUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:00 [WARNING] buscar_candles JUVUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:00 [WARNING] buscar_candles MDXUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:06 [WARNING] buscar_candles MDXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:06 [INFO] [MTF] BTC     | H4 sem setup | Score -110 RSI 44
+23:18:06 [INFO] [MTF] ETH     | H4 sem setup | Score -60 RSI 52
+23:18:06 [INFO] [MTF] BNB     | H4 sem setup | Score -125 RSI 41
+23:18:06 [INFO] [MTF] XRP     | H4 sem setup | Score -100 RSI 47
+23:18:06 [INFO] [MTF] TRX     | H4 sem setup | Score +65 RSI 66
+23:18:06 [INFO] [MTF] ADA     | H4 sem setup | Score -125 RSI 39
+23:18:06 [INFO] [MTF] SOL     | H4 sem setup | Score +0 RSI 54
+23:18:06 [INFO] [MTF] AVAX    | H4 sem setup | Score -90 RSI 48
+23:18:06 [INFO] [MTF] SUI     | H4 sem setup | Score -95 RSI 40
+23:18:06 [INFO] [MTF] APT     | H4 BAIXA \u2713BTC | Score -105 \u2192 buscando entrada H1...
+23:18:06 [INFO] [MTF] NEAR    | H4 sem setup | Score -15 RSI 42
+23:18:06 [INFO] [MTF] SEI     | H4 sem setup | Score -15 RSI 57
+23:18:06 [INFO] [MTF] TIA     | H4 ALTA \u2713BTC | Score +40 \u2192 buscando entrada H1...
+23:18:06 [INFO] [MTF] ALGO    | H4 sem setup | Score +75 RSI 72
+23:18:06 [INFO] [MTF] VET     | H4 sem setup | Score -75 RSI 45
+23:18:06 [INFO] [MTF] HBAR    | H4 sem setup | Score -5 RSI 54
+23:18:06 [INFO] [MTF] STX     | H4 sem setup | Score -70 RSI 47
+23:18:06 [INFO] [MTF] ICP     | H4 sem setup | Score -135 RSI 39
+23:18:06 [INFO] [MTF] XLM     | H4 sem setup | Score +140 RSI 71
+23:18:06 [INFO] [MTF] KAS     | H4 sem setup | Score -65 RSI 43
+23:18:06 [INFO] [MTF] EGLD    | H4 sem setup | Score -90 RSI 44
+23:18:06 [INFO] [MTF] FLOW    | H4 sem setup | Score +20 RSI 66
+23:18:06 [INFO] [MTF] CFX     | H4 sem setup | Score +45 RSI 73
+23:18:06 [INFO] [MTF] LINK    | H4 sem setup | Score -85 RSI 46
+23:18:06 [INFO] [MTF] INJ     | H4 sem setup | Score -40 RSI 49
+23:18:06 [INFO] [MTF] JUP     | H4 sem setup | Score +45 RSI 54
+23:18:06 [INFO] [MTF] ARB     | H4 sem setup | Score -25 RSI 53
+23:18:06 [INFO] [MTF] OP      | H4 sem setup | Score -15 RSI 58
+23:18:06 [INFO] [MTF] UNI     | H4 sem setup | Score +60 RSI 65
+23:18:06 [INFO] [MTF] AAVE    | H4 sem setup | Score -20 RSI 59
+23:18:06 [INFO] [MTF] ENA     | H4 sem setup | Score +95 RSI 77
+23:18:06 [INFO] [MTF] ONDO    | H4 sem setup | Score -80 RSI 47
+23:18:06 [INFO] [MTF] GRT     | H4 sem setup | Score -145 RSI 39
+23:18:06 [INFO] [MTF] LDO     | H4 sem setup | Score -45 RSI 54
+23:18:06 [INFO] [MTF] RUNE    | H4 sem setup | Score +70 RSI 61
+23:18:06 [INFO] [MTF] PENDLE  | H4 sem setup | Score +40 RSI 62
+23:18:06 [INFO] [MTF] CAKE    | H4 sem setup | Score -60 RSI 47
+23:18:06 [INFO] [MTF] CRV     | H4 sem setup | Score -10 RSI 38
+23:18:06 [INFO] [MTF] DYDX    | H4 BAIXA \u2713BTC | Score -115 \u2192 buscando entrada H1...
+23:18:07 [INFO] [MTF] SNX     | H4 sem setup | Score -25 RSI 54
+23:18:07 [INFO] [MTF] GMX     | H4 sem setup | Score -35 RSI 53
+23:18:07 [INFO] [MTF] COMP    | H4 sem setup | Score -75 RSI 44
+23:18:07 [INFO] [MTF] STG     | H4 sem setup | Score -40 RSI 41
+23:18:07 [INFO] [MTF] FET     | H4 sem setup | Score -135 RSI 39
+23:18:07 [INFO] [MTF] TAO     | H4 sem setup | Score -45 RSI 43
+23:18:07 [INFO] [MTF] RENDER  | H4 sem setup | Score -40 RSI 45
+23:18:07 [INFO] [MTF] WLD     | H4 sem setup | Score +90 RSI 67
+23:18:07 [INFO] [MTF] IMX     | H4 sem setup | Score -100 RSI 45
+23:18:07 [INFO] [MTF] EIGEN   | H4 sem setup | Score -5 RSI 46
+23:18:07 [INFO] [MTF] DOGE    | H4 sem setup | Score -125 RSI 43
+23:18:07 [INFO] [MTF] PEPE    | H4 sem setup | Score -55 RSI 54
+23:18:07 [INFO] [MTF] WIF     | H4 sem setup | Score -55 RSI 53
+23:18:07 [INFO] [MTF] SHIB    | H4 sem setup | Score -65 RSI 48
+23:18:07 [INFO] [MTF] FLOKI   | H4 sem setup | Score -20 RSI 54
+23:18:07 [INFO] [MTF] BONK    | H4 sem setup | Score -85 RSI 48
+23:18:07 [INFO] [MTF] NOT     | H4 sem setup | Score -75 RSI 40
+23:18:07 [INFO] [MTF] POPCAT  | H4 sem setup | Score -25 RSI 53
+23:18:07 [INFO] [MTF] DOGS    | H4 sem setup | Score -90 RSI 40
+23:18:07 [INFO] [MTF] TURBO   | H4 sem setup | Score -80 RSI 49
+23:18:07 [INFO] [MTF] MEW     | H4 sem setup | Score -15 RSI 52
+23:18:07 [INFO] [MTF] BOME    | H4 sem setup | Score -60 RSI 50
+23:18:07 [INFO] [MTF] DOT     | H4 sem setup | Score -80 RSI 50
+23:18:07 [INFO] [MTF] ATOM    | H4 sem setup | Score -55 RSI 35
+23:18:07 [INFO] [MTF] LTC     | H4 sem setup | Score -75 RSI 49
+23:18:07 [INFO] [MTF] FIL     | H4 sem setup | Score -50 RSI 53
+23:18:07 [INFO] [MTF] AR      | H4 sem setup | Score -80 RSI 41
+23:18:07 [INFO] [MTF] BCH     | H4 sem setup | Score -75 RSI 49
+23:18:07 [INFO] [MTF] ETC     | H4 sem setup | Score -30 RSI 54
+23:18:07 [INFO] [MTF] XTZ     | H4 sem setup | Score -10 RSI 53
+23:18:07 [INFO] [MTF] QNT     | H4 sem setup | Score +5 RSI 55
+23:18:07 [INFO] [MTF] BAT     | H4 sem setup | Score +15 RSI 55
+23:18:07 [INFO] [MTF] STRK    | H4 sem setup | Score -100 RSI 42
+23:18:07 [INFO] [MTF] ZETA    | H4 sem setup | Score -50 RSI 48
+23:18:07 [INFO] [MTF] PYTH    | H4 sem setup | Score -10 RSI 52
+23:18:07 [INFO] [MTF] W       | H4 sem setup | Score -25 RSI 51
+23:18:07 [INFO] [MTF] ZK      | H4 sem setup | Score -35 RSI 54
+23:18:07 [INFO] [MTF] MNT     | H4 sem setup | Score -110 RSI 37
+23:18:07 [INFO] [MTF] ZRO     | H4 sem setup | Score -40 RSI 48
+23:18:07 [INFO] [MTF] SAGA    | H4 sem setup | Score +45 RSI 56
+23:18:07 [INFO] [MTF] BLUR    | H4 sem setup | Score -100 RSI 40
+23:18:07 [INFO] [MTF] ORDI    | H4 sem setup | Score -100 RSI 35
+23:18:07 [INFO] [MTF] AXS     | H4 sem setup | Score -60 RSI 51
+23:18:07 [INFO] [MTF] SAND    | H4 sem setup | Score -130 RSI 48
+23:18:07 [INFO] [MTF] MANA    | H4 sem setup | Score -15 RSI 56
+23:18:07 [INFO] [MTF] GALA    | H4 sem setup | Score -95 RSI 48
+23:18:07 [INFO] [MTF] CHZ     | H4 sem setup | Score -90 RSI 37
+23:18:07 [INFO] [MTF] APE     | H4 sem setup | Score +65 RSI 63
+23:18:07 [INFO] [MTF] YGG     | H4 sem setup | Score -70 RSI 51
+23:18:07 [INFO] [MTF] MAGIC   | H4 BAIXA \u2713BTC | Score -130 \u2192 buscando entrada H1...
+23:18:07 [INFO] [MTF] IO      | H4 sem setup | Score -55 RSI 42
+23:18:07 [INFO] [MTF] ROSE    | H4 sem setup | Score -45 RSI 52
+23:18:07 [INFO] [MTF] IOTX    | H4 sem setup | Score -105 RSI 33
+23:18:07 [INFO] [MTF] CELO    | H4 sem setup | Score -70 RSI 52
+23:18:07 [INFO] [MTF] JASMY   | H4 sem setup | Score -110 RSI 45
+23:18:07 [INFO] [MTF] LPT     | H4 sem setup | Score -20 RSI 51
+23:18:07 [INFO] [MTF] AEVO    | H4 sem setup | Score -80 RSI 46
+23:18:07 [INFO] [MTF] BERA    | H4 sem setup | Score -140 RSI 41
+23:18:07 [INFO] [MTF] LISTA   | H4 sem setup | Score -90 RSI 46
+23:18:07 [INFO] [MTF] REZ     | H4 sem setup | Score -35 RSI 52
+23:18:07 [INFO] [MTF] KAVA    | H4 sem setup | Score +35 RSI 64
+23:18:07 [INFO] [MTF] ONT     | H4 sem setup | Score -100 RSI 41
+23:18:07 [INFO] [MTF] IOTA    | H4 sem setup | Score -45 RSI 51
+23:18:07 [INFO] [MTF] MINA    | H4 sem setup | Score -75 RSI 51
+23:18:07 [INFO] [MTF] MANTA   | H4 sem setup | Score +55 RSI 56
+23:18:07 [INFO] [MTF] KSM     | H4 sem setup | Score -20 RSI 52
+23:18:07 [INFO] [MTF] QTUM    | H4 sem setup | Score +15 RSI 58
+23:18:07 [INFO] [MTF] WAVES   | H4 sem setup | Score -80 RSI 49
+23:18:07 [INFO] [MTF] IOST    | H4 sem setup | Score -90 RSI 46
+23:18:07 [INFO] [MTF] NKN     | H4 sem setup | Score -55 RSI 45
+23:18:07 [INFO] [MTF] COTI    | H4 sem setup | Score -145 RSI 41
+23:18:07 [INFO] [MTF] ZEN     | H4 sem setup | Score -75 RSI 45
+23:18:07 [INFO] [MTF] SCRT    | H4 sem setup | Score -140 RSI 43
+23:18:07 [INFO] [MTF] ACA     | H4 sem setup | Score +45 RSI 58
+23:18:07 [INFO] [MTF] POL     | H4 sem setup | Score +0 RSI 53
+23:18:07 [INFO] [MTF] CKB     | H4 sem setup | Score -55 RSI 62
+23:18:07 [INFO] [MTF] XDC     | H4 sem setup | Score -105 RSI 37
+23:18:07 [INFO] [MTF] NEO     | H4 sem setup | Score -55 RSI 54
+23:18:07 [INFO] [MTF] WAXP    | H4 sem setup | Score -120 RSI 37
+23:18:07 [INFO] [MTF] HNT     | H4 sem setup | Score -100 RSI 35
+23:18:07 [INFO] [MTF] SUSHI   | H4 sem setup | Score +15 RSI 59
+23:18:07 [INFO] [MTF] BAL     | H4 sem setup | Score -105 RSI 31
+23:18:07 [INFO] [MTF] LRC     | H4 sem setup | Score -25 RSI 46
+23:18:07 [INFO] [MTF] ANKR    | H4 sem setup | Score -45 RSI 48
+23:18:07 [INFO] [MTF] CELR    | H4 sem setup | Score -25 RSI 52
+23:18:07 [INFO] [MTF] YFI     | H4 sem setup | Score -105 RSI 43
+23:18:07 [INFO] [MTF] KNC     | H4 sem setup | Score -70 RSI 50
+23:18:07 [INFO] [MTF] ZRX     | H4 sem setup | Score -60 RSI 50
+23:18:07 [INFO] [MTF] PERP    | H4 BAIXA \u2713BTC | Score -110 \u2192 buscando entrada H1...
+23:18:07 [INFO] [MTF] RSR     | H4 sem setup | Score -110 RSI 38
+23:18:07 [INFO] [MTF] ETHFI   | H4 sem setup | Score +130 RSI 82
+23:18:07 [INFO] [MTF] REQ     | H4 sem setup | Score -25 RSI 47
+23:18:07 [INFO] [MTF] ALICE   | H4 sem setup | Score -35 RSI 45
+23:18:07 [INFO] [MTF] SPELL   | H4 sem setup | Score -45 RSI 53
+23:18:07 [INFO] [MTF] CVX     | H4 sem setup | Score -95 RSI 43
+23:18:07 [INFO] [MTF] LIT     | H4 ALTA \u2713BTC | Score +30 \u2192 buscando entrada H1...
+23:18:07 [INFO] [MTF] AMP     | H4 sem setup | Score -25 RSI 50
+23:18:07 [INFO] [MTF] OXT     | H4 sem setup | Score -35 RSI 32
+23:18:07 [INFO] [MTF] FORTH   | H4 sem setup | Score -30 RSI 53
+23:18:07 [INFO] [MTF] AGLD    | H4 sem setup | Score -140 RSI 37
+23:18:07 [INFO] [MTF] RARE    | H4 sem setup | Score -95 RSI 45
+23:18:07 [INFO] [MTF] WOO     | H4 sem setup | Score -95 RSI 44
+23:18:07 [INFO] [MTF] BNT     | H4 sem setup | Score -95 RSI 47
+23:18:07 [INFO] [MTF] LQTY    | H4 sem setup | Score -20 RSI 51
+23:18:07 [INFO] [MTF] PHB     | H4 sem setup | Score -120 RSI 40
+23:18:07 [INFO] [MTF] ARKM    | H4 sem setup | Score -60 RSI 46
+23:18:07 [INFO] [MTF] NMR     | H4 sem setup | Score +100 RSI 67
+23:18:07 [INFO] [MTF] AI      | H4 sem setup | Score -85 RSI 38
+23:18:07 [INFO] [MTF] MOVR    | H4 sem setup | Score -85 RSI 45
+23:18:07 [INFO] [MTF] GLMR    | H4 BAIXA \u2713BTC | Score -110 \u2192 buscando entrada H1...
+23:18:07 [INFO] [MTF] ENS     | H4 sem setup | Score +20 RSI 61
+23:18:07 [INFO] [MTF] RIF     | H4 sem setup | Score -55 RSI 36
+23:18:07 [INFO] [MTF] METIS   | H4 sem setup | Score +0 RSI 66
+23:18:07 [INFO] [MTF] XAI     | H4 sem setup | Score -90 RSI 48
+23:18:07 [INFO] [MTF] BEAM    | H4 sem setup | Score -120 RSI 27
+23:18:07 [INFO] [MTF] POLYX   | H4 sem setup | Score -75 RSI 49
+23:18:07 [INFO] [MTF] ID      | H4 ALTA \u2713BTC | Score +85 \u2192 buscando entrada H1...
+23:18:07 [INFO] [MTF] SYN     | H4 sem setup | Score +145 RSI 79
+23:18:07 [INFO] [MTF] ASTR    | H4 sem setup | Score -5 RSI 59
+23:18:07 [INFO] [MTF] ILV     | H4 sem setup | Score -75 RSI 46
+23:18:07 [INFO] [MTF] RON     | H4 sem setup | Score +0 RSI 60
+23:18:07 [INFO] [MTF] PIXEL   | H4 sem setup | Score -100 RSI 45
+23:18:07 [INFO] [MTF] MBOX    | H4 sem setup | Score -120 RSI 28
+23:18:07 [INFO] [MTF] SLP     | H4 sem setup | Score -95 RSI 47
+23:18:07 [INFO] [MTF] TLM     | H4 sem setup | Score -90 RSI 42
+23:18:07 [INFO] [MTF] NFP     | H4 sem setup | Score +80 RSI 56
+23:18:07 [INFO] [MTF] HIGH    | H4 sem setup | Score -70 RSI 45
+23:18:07 [INFO] [MTF] WIN     | H4 sem setup | Score +90 RSI 80
+23:18:07 [INFO] [MTF] DEGO    | H4 sem setup | Score -65 RSI 47
+23:18:07 [INFO] [MTF] LAZIO   | H4 sem setup | Score -135 RSI 33
+23:18:08 [INFO] [MTF] SANTOS  | H4 sem setup | Score -30 RSI 51
+23:18:08 [INFO] [MTF] ATM     | H4 sem setup | Score +110 RSI 60
+23:18:08 [INFO] [MTF] CITY    | H4 sem setup | Score -70 RSI 44
+23:18:08 [INFO] [MTF] TRUMP   | H4 sem setup | Score -25 RSI 44
+23:18:08 [INFO] [MTF] MOODENG | H4 sem setup | Score -35 RSI 52
+23:18:08 [INFO] [MTF] CATI    | H4 sem setup | Score +115 RSI 73
+23:18:08 [INFO] [MTF] HMSTR   | H4 sem setup | Score -80 RSI 44
+23:18:08 [INFO] [MTF] ACT     | H4 sem setup | Score -100 RSI 41
+23:18:08 [INFO] [MTF] GOAT    | H4 sem setup | Score +10 RSI 52
+23:18:08 [INFO] [MTF] PNUT    | H4 sem setup | Score -80 RSI 48
+23:18:08 [INFO] [MTF] COW     | H4 ALTA \u2713BTC | Score +40 \u2192 buscando entrada H1...
+23:18:08 [INFO] [MTF] OGN     | H4 sem setup | Score -80 RSI 46
+23:18:08 [INFO] [MTF] PEOPLE  | H4 sem setup | Score -20 RSI 55
+23:18:08 [INFO] [MTF] LUNC    | H4 sem setup | Score -95 RSI 47
+23:18:08 [INFO] [MTF] USTC    | H4 sem setup | Score -65 RSI 50
+23:18:08 [INFO] [MTF] STORJ   | H4 sem setup | Score +5 RSI 54
+23:18:08 [INFO] [MTF] SC      | H4 sem setup | Score -80 RSI 45
+23:18:08 [INFO] [MTF] RVN     | H4 sem setup | Score -95 RSI 45
+23:18:08 [INFO] [MTF] HOT     | H4 sem setup | Score -95 RSI 46
+23:18:08 [INFO] [MTF] DUSK    | H4 sem setup | Score -140 RSI 42
+23:18:08 [INFO] [MTF] ENJ     | H4 sem setup | Score +85 RSI 70
+23:18:08 [INFO] [MTF] NEXO    | H4 sem setup | Score +40 RSI 56
+23:18:08 [INFO] [MTF] TFUEL   | H4 BAIXA \u2713BTC | Score -130 \u2192 buscando entrada H1...
+23:18:08 [INFO] [MTF] SUN     | H4 sem setup | Score +55 RSI 69
+23:18:08 [INFO] [MTF] FUN     | H4 sem setup | Score -10 RSI 41
+23:18:08 [INFO] [MTF] TWT     | H4 sem setup | Score -60 RSI 48
+23:18:08 [INFO] [MTF] DEXE    | H4 sem setup | Score -90 RSI 17
+23:18:08 [INFO] [MTF] HOOK    | H4 sem setup | Score +75 RSI 63
+23:18:08 [INFO] [MTF] ACH     | H4 sem setup | Score -135 RSI 41
+23:18:08 [INFO] [MTF] POND    | H4 sem setup | Score -40 RSI 50
+23:18:08 [INFO] [MTF] HYPE    | H4 ALTA \u2713BTC | Score +115 \u2192 buscando entrada H1...
+23:18:08 [INFO] [MTF] VIRTUAL | H4 sem setup | Score -80 RSI 42
+23:18:08 [INFO] [MTF] MOVE    | H4 sem setup | Score +0 RSI 51
+23:18:08 [INFO] [MTF] GRASS   | H4 sem setup | Score +10 RSI 47
+23:18:08 [INFO] [MTF] SOLV    | H4 BAIXA \u2713BTC | Score -130 \u2192 buscando entrada H1...
+23:18:08 [INFO] [MTF] KERNEL  | H4 sem setup | Score +5 RSI 62
+23:18:08 [INFO] [MTF] MLN     | H4 sem setup | Score -110 RSI 41
+23:18:08 [INFO] [MTF] BANANA  | H4 sem setup | Score -60 RSI 47
+23:18:08 [INFO] [MTF] SPEC    | H4 sem setup | Score -20 RSI 58
+23:18:08 [INFO] [MTF] ARPA    | H4 sem setup | Score -90 RSI 46
+23:18:08 [INFO] [MTF] STEEM   | H4 sem setup | Score -100 RSI 48
+23:18:08 [INFO] [MTF] SYS     | H4 sem setup | Score +50 RSI 63
+23:18:08 [INFO] [MTF] DODO    | H4 sem setup | Score -80 RSI 50
+23:18:08 [INFO] [MTF] XVS     | H4 sem setup | Score +75 RSI 75
+23:18:08 [INFO] [MTF] SFP     | H4 sem setup | Score -95 RSI 45
+23:18:08 [INFO] [MTF] PROS    | H4 sem setup | Score -65 RSI 40
+23:18:08 [INFO] [MTF] QUICK   | H4 sem setup | Score -105 RSI 41
+23:18:08 [INFO] [MTF] BICO    | H4 sem setup | Score -5 RSI 55
+23:18:08 [INFO] [MTF] REEF    | H4 sem setup | Score -45 RSI 44
+23:18:08 [INFO] [MTF] MBL     | H4 sem setup | Score -80 RSI 46
+23:18:08 [INFO] [MTF] GTC     | H4 sem setup | Score -65 RSI 48
+23:18:08 [INFO] [MTF] HIVE    | H4 sem setup | Score +5 RSI 52
+23:18:08 [INFO] [MTF] RAY     | H4 sem setup | Score -20 RSI 50
+23:18:08 [INFO] [MTF] ORCA    | H4 sem setup | Score +90 RSI 63
+23:18:08 [INFO] [MTF] WEMIX   | H4 sem setup | Score -125 RSI 13
+23:18:08 [INFO] [MTF] FIDA    | H4 ALTA \u2713BTC | Score +55 \u2192 buscando entrada H1...
+23:18:08 [INFO] [MTF] SWEAT   | H4 sem setup | Score -85 RSI 37
+23:18:08 [INFO] [MTF] UMA     | H4 sem setup | Score -30 RSI 47
+23:18:08 [INFO] [MTF] COS     | H4 sem setup | Score -105 RSI 33
+23:18:08 [INFO] [MTF] ACM     | H4 sem setup | Score -5 RSI 49
+23:18:08 [INFO] [MTF] JUV     | H4 BAIXA \u2713BTC | Score -90 \u2192 buscando entrada H1...
+23:18:08 [INFO] [MTF] FLM     | H4 sem setup | Score +5 RSI 60
+23:18:08 [INFO] [MTF] APEX    | H4 sem setup | Score +30 RSI 53
+23:18:08 [INFO] [MTF] BSV     | H4 sem setup | Score -110 RSI 42
+23:18:08 [INFO] [MTF] HFT     | H4 sem setup | Score -75 RSI 47
+23:18:08 [INFO] [MTF] IRYS    | H4 sem setup | Score -105 RSI 41
+23:18:08 [INFO] [MTF] ASTER   | H4 ALTA \u2713BTC | Score +80 \u2192 buscando entrada H1...
+23:18:08 [INFO] [MTF] PENGU   | H4 sem setup | Score -105 RSI 46
+23:18:08 [INFO] [MTF] EPIC    | H4 sem setup | Score +110 RSI 76
+23:18:08 [INFO] [MTF] HOME    | H4 sem setup | Score +65 RSI 60
+23:18:08 [INFO] [MTF] Prefetch H1 (15 moedas com setup H4)...
+23:18:08 [INFO]   SHORT-BLOQUEADO APTUSDT: score=-30 | ha=F
+23:18:08 [INFO] [MTF] APT     | H1 sem entrada (não está no pullback)
+23:18:08 [INFO]   sem-sinal TIAUSDT: score=-20 insuficiente
+23:18:08 [INFO] [MTF] TIA     | H1 sem entrada (não está no pullback)
+23:18:08 [INFO]   SHORT-BLOQUEADO DYDXUSDT: score=-100 | ha=F; seguro_short=F(stoch=0.58)
+23:18:08 [INFO] [MTF] DYDX    | H1 sem entrada (não está no pullback)
+23:18:08 [INFO]   SHORT-BLOQUEADO MAGICUSDT: score=-55 | ha=F
+23:18:08 [INFO] [MTF] MAGIC   | H1 sem entrada (não está no pullback)
+23:18:08 [INFO]   SHORT-BLOQUEADO PERPUSDT: score=-145 | seguro_short=F(stoch=0.14)
+23:18:08 [INFO] [MTF] PERP    | H1 sem entrada (não está no pullback)
+23:18:08 [INFO]   SHORT-BLOQUEADO LITUSDT: score=-55 | adx=16.7<17; seguro_short=F(stoch=0.00)
+23:18:08 [INFO] [MTF] LIT     | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   LONG-BLOQUEADO GLMRUSDT: score=+75 | lateralizado; seguro_long=F(stoch=0.77)
+23:18:09 [INFO] [MTF] GLMR    | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   LONG-BLOQUEADO IDUSDT: score=+75 | seguro_long=F(stoch=0.76)
+23:18:09 [INFO] [MTF] ID      | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   SHORT-BLOQUEADO COWUSDT: score=-55 | ha=F; adx=12.5<17; seguro_short=F(stoch=0.10)
+23:18:09 [INFO] [MTF] COW     | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   sem-sinal TFUELUSDT: score=-20 insuficiente
+23:18:09 [INFO] [MTF] TFUEL   | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   LONG-BLOQUEADO HYPEUSDT: score=+45 | ha=F; seguro_long=F(stoch=0.38)
+23:18:09 [INFO] [MTF] HYPE    | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   SHORT-BLOQUEADO SOLVUSDT: score=-90 | ha=F; seguro_short=F(stoch=0.37)
+23:18:09 [INFO] [MTF] SOLV    | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   LONG-BLOQUEADO FIDAUSDT: score=+115 | seguro_long=F(stoch=0.97)
+23:18:09 [INFO] [MTF] FIDA    | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   SHORT-BLOQUEADO JUVUSDT: score=-45 | ha=F; adx=12.4<17
+23:18:09 [INFO] [MTF] JUV     | H1 sem entrada (não está no pullback)
+23:18:09 [INFO]   LONG-BLOQUEADO ASTERUSDT: score=+65 | macd_r=F; ha=F
+23:18:09 [INFO] [MTF] ASTER   | H1 sem entrada (não está no pullback)
+23:18:09 [INFO] [MTF] 15 setup(s) H4 ativos sem entrada H1
+23:18:09 [WARNING] buscar_candles TONUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:11 [WARNING] buscar_candles FTMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:11 [WARNING] buscar_candles ZILLUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles THETAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles BANDUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles LSKUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles CTSIUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles POWRUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles OSMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles XEMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles MKRUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:12 [WARNING] buscar_candles KLAYUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:13 [WARNING] buscar_candles OCEANUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:13 [WARNING] buscar_candles OMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:13 [WARNING] buscar_candles FXSUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:13 [WARNING] buscar_candles RENUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:13 [WARNING] buscar_candles ALPACAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:13 [WARNING] buscar_candles AGIXUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:13 [WARNING] buscar_candles GLMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:13 [WARNING] buscar_candles BONDUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles DYMAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles ALTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles AUDIOUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles CTXCUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles TRBUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles OMNIUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles DARUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles PORTAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles VOXELUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles SXPUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles AXLUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles STPTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles RDNTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:14 [WARNING] buscar_candles GMTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:15 [WARNING] buscar_candles NEIROUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:15 [WARNING] buscar_candles BRETTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:15 [WARNING] buscar_candles GALUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:15 [WARNING] buscar_candles ALPHAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:15 [WARNING] buscar_candles TRUUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:15 [WARNING] buscar_candles CVCUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:15 [WARNING] buscar_candles MTLUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:15 [WARNING] buscar_candles NULSUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles KEYUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles UXLINKUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles KDAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles HARDUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles WINGUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles BAKEUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles EPXUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles ATAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:16 [WARNING] buscar_candles MULTIUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:17 [WARNING] buscar_candles JITOUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:17 [WARNING] buscar_candles ORNUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:17 [WARNING] buscar_candles TVKUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:17 [WARNING] buscar_candles IDEXUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:17 [WARNING] buscar_candles CLVUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:17 [WARNING] buscar_candles LINAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:17 [WARNING] buscar_candles DIAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:17 [WARNING] buscar_candles LTOUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles COSUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles BSVUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles FLMUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles MDXUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles AMBUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles ACMUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles JUVUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles KP3RUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles IRYSUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles APEXUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles MCUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles ASTERUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles HFTUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:17 [WARNING] buscar_candles IRISUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:22 [WARNING] buscar_candles LTOUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:22 [WARNING] buscar_candles MDXUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:22 [WARNING] buscar_candles KP3RUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:22 [WARNING] buscar_candles MCUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:22 [WARNING] buscar_candles AMBUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:22 [WARNING] buscar_candles IRISUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:23 [INFO] [30m] Buscando H4 de 303 moedas para filtro de direção...
+23:18:24 [WARNING] buscar_candles TONUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:26 [WARNING] buscar_candles THETAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:26 [WARNING] buscar_candles FTMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:26 [WARNING] buscar_candles ZILLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles CTSIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles BANDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles LSKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles POWRUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles KLAYUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles MKRUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles OSMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles XEMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles OMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles OCEANUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles RENUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles FXSUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:27 [WARNING] buscar_candles ALPACAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:28 [WARNING] buscar_candles GLMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:28 [WARNING] buscar_candles AGIXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:28 [WARNING] buscar_candles BONDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles TRBUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles AUDIOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles ALTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles CTXCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles DYMAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles OMNIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles STPTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles AXLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles DARUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles VOXELUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles PORTAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles SXPUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles RDNTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles GMTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles BRETTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:29 [WARNING] buscar_candles NEIROUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:30 [WARNING] buscar_candles GALUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:30 [WARNING] buscar_candles ALPHAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:30 [WARNING] buscar_candles CVCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:30 [WARNING] buscar_candles TRUUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:30 [WARNING] buscar_candles MTLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:30 [WARNING] buscar_candles NULSUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles KEYUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles UXLINKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles WINGUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles BAKEUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles KDAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles HARDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles EPXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles MULTIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:31 [WARNING] buscar_candles ATAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles JITOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles IDEXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles ORNUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles CLVUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles TVKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles DIAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles LINAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles LTOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles KP3RUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles MDXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles AMBUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles IRYSUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:32 [WARNING] buscar_candles IRISUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:32 [WARNING] buscar_candles MCUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:32 [WARNING] buscar_candles FLMUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:18:37 [WARNING] buscar_candles MCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:18:38 [INFO]   SHORT-BLOQUEADO BTCUSDT: score=-80 | macd_r=F; ha=F
+23:18:38 [INFO] [30m] BTC     | Score  -80 | RSI  41.3 | ADX  29.6 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal ETHUSDT: score=-10 insuficiente
+23:18:38 [INFO] [30m] ETH     | Score  -10 | RSI  47.2 | ADX  21.8 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO BNBUSDT: score=-110 | sem detalhe
+23:18:38 [INFO] [30m] BNB     | Score -110 | RSI  46.3 | ADX  18.8 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal XRPUSDT: score=-15 insuficiente
+23:18:38 [INFO] [30m] XRP     | Score  -15 | RSI  43.5 | ADX  28.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO TRXUSDT: score=+95 | macd_r=F; ha=F; seguro_long=F(stoch=0.41)
+23:18:38 [INFO] [30m] TRX     | Score  +95 | RSI  60.7 | ADX  37.7 | K:UP | Grade:B | —
+23:18:38 [INFO]   sem-sinal ADAUSDT: score=-20 insuficiente
+23:18:38 [INFO] [30m] ADA     | Score  -20 | RSI  47.8 | ADX  40.1 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal SOLUSDT: score=-15 insuficiente
+23:18:38 [INFO] [30m] SOL     | Score  -15 | RSI  46.1 | ADX  25.2 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO AVAXUSDT: score=-45 | macd_r=F; ha=F
+23:18:38 [INFO] [30m] AVAX    | Score  -45 | RSI  42.2 | ADX  26.9 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO SUIUSDT: score=-90 | seguro_short=F(stoch=0.00)
+23:18:38 [INFO] [30m] SUI     | Score  -90 | RSI  27.5 | ADX  35.4 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO APTUSDT: score=-60 | lateralizado
+23:18:38 [INFO] [30m] APT     | Score  -60 | RSI  46.5 | ADX  17.6 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO NEARUSDT: score=-45 | ha=F; seguro_short=F(stoch=1.00)
+23:18:38 [INFO] [30m] NEAR    | Score  -45 | RSI  41.7 | ADX  32.1 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO SEIUSDT: score=-35 | ha=F; adx=12.7<17; lateralizado
+23:18:38 [INFO] [30m] SEI     | Score  -35 | RSI  46.2 | ADX  12.7 | K:UP | Grade:B | —
+23:18:38 [INFO]   sem-sinal TIAUSDT: score=-15 insuficiente
+23:18:38 [INFO] [30m] TIA     | Score  -15 | RSI  45.2 | ADX  18.7 | K:UP | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO ALGOUSDT: score=+135 | seguro_long=F(stoch=0.95)
+23:18:38 [INFO] [30m] ALGO    | Score +135 | RSI  67.8 | ADX  19.5 | K:UP | Grade:B | —
+23:18:38 [INFO]   sem-sinal VETUSDT: score=+10 insuficiente
+23:18:38 [INFO] [30m] VET     | Score  +10 | RSI  51.2 | ADX  35.2 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO HBARUSDT: score=+85 | adx=14.2<17; lateralizado; seguro_long=F(stoch=1.00)
+23:18:38 [INFO] [30m] HBAR    | Score  +85 | RSI  63.4 | ADX  14.2 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO STXUSDT: score=-100 | sem detalhe
+23:18:38 [INFO] [30m] STX     | Score -100 | RSI  36.5 | ADX  24.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO ICPUSDT: score=-80 | seguro_short=F(stoch=0.30)
+23:18:38 [INFO] [30m] ICP     | Score  -80 | RSI  30.0 | ADX  37.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO XLMUSDT: score=+145 | seguro_long=F(stoch=0.82)
+23:18:38 [INFO] [30m] XLM     | Score +145 | RSI  71.1 | ADX  22.6 | K:UP | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO KASUSDT: score=-120 | sem detalhe
+23:18:38 [INFO] [30m] KAS     | Score -120 | RSI  40.3 | ADX  18.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO EGLDUSDT: score=-70 | ha=F
+23:18:38 [INFO] [30m] EGLD    | Score  -70 | RSI  38.4 | ADX  30.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO FLOWUSDT: score=-55 | seguro_short=F(stoch=0.00)
+23:18:38 [INFO] [30m] FLOW    | Score  -55 | RSI  45.9 | ADX  25.5 | K:UP | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO CFXUSDT: score=-40 | seguro_short=F(stoch=0.08)
+23:18:38 [INFO] [30m] CFX     | Score  -40 | RSI  41.2 | ADX  26.4 | K:UP | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO LINKUSDT: score=-70 | macd_r=F
+23:18:38 [INFO] [30m] LINK    | Score  -70 | RSI  41.6 | ADX  27.8 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal INJUSDT: score=-10 insuficiente
+23:18:38 [INFO] [30m] INJ     | Score  -10 | RSI  47.5 | ADX  14.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO JUPUSDT: score=+30 | ha=F; seguro_long=F(stoch=0.94)
+23:18:38 [INFO] [30m] JUP     | Score  +30 | RSI  47.9 | ADX  23.5 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO ARBUSDT: score=+60 | seguro_long=F(stoch=0.95)
+23:18:38 [INFO] [30m] ARB     | Score  +60 | RSI  58.0 | ADX  18.6 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal OPUSDT: score=+15 insuficiente
+23:18:38 [INFO] [30m] OP      | Score  +15 | RSI  52.8 | ADX  17.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal UNIUSDT: score=+20 insuficiente
+23:18:38 [INFO] [30m] UNI     | Score  +20 | RSI  44.5 | ADX  20.4 | K:UP | Grade:B | —
+23:18:38 [INFO]   sem-sinal AAVEUSDT: score=+0 insuficiente
+23:18:38 [INFO] [30m] AAVE    | Score   +0 | RSI  45.8 | ADX  21.9 | K:UP | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO ENAUSDT: score=+145 | seguro_long=F(stoch=1.00)
+23:18:38 [INFO] [30m] ENA     | Score +145 | RSI  71.9 | ADX  34.8 | K:UP | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO ONDOUSDT: score=-55 | macd_r=F; ha=F
+23:18:38 [INFO] [30m] ONDO    | Score  -55 | RSI  45.2 | ADX  21.9 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO GRTUSDT: score=-85 | sem detalhe
+23:18:38 [INFO] [30m] GRT     | Score  -85 | RSI  36.3 | ADX  36.6 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal LDOUSDT: score=+20 insuficiente
+23:18:38 [INFO] [30m] LDO     | Score  +20 | RSI  48.5 | ADX  28.5 | K:UP | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO RUNEUSDT: score=-75 | adx=13.3<17; seguro_short=F(stoch=0.00)
+23:18:38 [INFO] [30m] RUNE    | Score  -75 | RSI  40.1 | ADX  13.3 | K:UP | Grade:B | —
+23:18:38 [INFO]   sem-sinal PENDLEUSDT: score=+25 insuficiente
+23:18:38 [INFO] [30m] PENDLE  | Score  +25 | RSI  44.9 | ADX  23.5 | K:UP | Grade:B | —
+23:18:38 [INFO]   sem-sinal CAKEUSDT: score=-25 insuficiente
+23:18:38 [INFO] [30m] CAKE    | Score  -25 | RSI  42.9 | ADX  22.6 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO CRVUSDT: score=-105 | seguro_short=F(stoch=0.00)
+23:18:38 [INFO] [30m] CRV     | Score -105 | RSI  19.7 | ADX  32.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal DYDXUSDT: score=-10 insuficiente
+23:18:38 [INFO] [30m] DYDX    | Score  -10 | RSI  49.8 | ADX  22.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal SNXUSDT: score=+0 insuficiente
+23:18:38 [INFO] [30m] SNX     | Score   +0 | RSI  45.6 | ADX  26.3 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO GMXUSDT: score=+75 | ha=F; seguro_long=F(stoch=0.95)
+23:18:38 [INFO] [30m] GMX     | Score  +75 | RSI  51.7 | ADX  27.9 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal COMPUSDT: score=-5 insuficiente
+23:18:38 [INFO] [30m] COMP    | Score   -5 | RSI  46.6 | ADX  32.6 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO STGUSDT: score=-45 | sem detalhe
+23:18:38 [INFO] [30m] STG     | Score  -45 | RSI  50.2 | ADX  17.8 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO FETUSDT: score=-90 | ha=F; seguro_short=F(stoch=0.88)
+23:18:38 [INFO] [30m] FET     | Score  -90 | RSI  37.8 | ADX  41.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO TAOUSDT: score=-50 | macd_r=F; ha=F
+23:18:38 [INFO] [30m] TAO     | Score  -50 | RSI  35.6 | ADX  28.9 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO RENDERUSDT: score=+35 | ha=F; seguro_long=F(stoch=0.83)
+23:18:38 [INFO] [30m] RENDER  | Score  +35 | RSI  54.3 | ADX  22.3 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO WLDUSDT: score=-40 | adx=12.0<17
+23:18:38 [INFO] [30m] WLD     | Score  -40 | RSI  43.5 | ADX  12.0 | K:UP | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO IMXUSDT: score=-65 | macd_r=F; ha=F
+23:18:38 [INFO] [30m] IMX     | Score  -65 | RSI  44.7 | ADX  28.4 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO EIGENUSDT: score=-55 | sem detalhe
+23:18:38 [INFO] [30m] EIGEN   | Score  -55 | RSI  33.4 | ADX  31.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO DOGEUSDT: score=-60 | macd_r=F; ha=F
+23:18:38 [INFO] [30m] DOGE    | Score  -60 | RSI  48.3 | ADX  25.9 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO PEPEUSDT: score=-45 | sem detalhe
+23:18:38 [INFO] [30m] PEPE    | Score  -45 | RSI  46.8 | ADX  20.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal WIFUSDT: score=+10 insuficiente
+23:18:38 [INFO] [30m] WIF     | Score  +10 | RSI  46.7 | ADX  21.4 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO SHIBUSDT: score=-145 | sem detalhe
+23:18:38 [INFO] [30m] SHIB    | Score -145 | RSI  43.8 | ADX  19.8 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal FLOKIUSDT: score=+15 insuficiente
+23:18:38 [INFO] [30m] FLOKI   | Score  +15 | RSI  52.6 | ADX  19.1 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO BONKUSDT: score=-45 | macd_r=F; ha=F; seguro_short=F(stoch=0.98)
+23:18:38 [INFO] [30m] BONK    | Score  -45 | RSI  42.4 | ADX  29.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal NOTUSDT: score=+25 insuficiente
+23:18:38 [INFO] [30m] NOT     | Score  +25 | RSI  60.8 | ADX  10.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO POPCATUSDT: score=+55 | ha=F
+23:18:38 [INFO] [30m] POPCAT  | Score  +55 | RSI  44.6 | ADX  24.3 | K:UP | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO DOGSUSDT: score=-125 | sem detalhe
+23:18:38 [INFO] [30m] DOGS    | Score -125 | RSI  39.1 | ADX  30.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO TURBOUSDT: score=-90 | sem detalhe
+23:18:38 [INFO] [30m] TURBO   | Score  -90 | RSI  40.8 | ADX  21.6 | K:DN | Grade:B | —
+23:18:38 [INFO]   LONG-BLOQUEADO MEWUSDT: score=+45 | ha=F; adx=13.4<17; lateralizado
+23:18:38 [INFO] [30m] MEW     | Score  +45 | RSI  55.1 | ADX  13.4 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal BOMEUSDT: score=-20 insuficiente
+23:18:38 [INFO] [30m] BOME    | Score  -20 | RSI  41.6 | ADX  28.5 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO DOTUSDT: score=-90 | sem detalhe
+23:18:38 [INFO] [30m] DOT     | Score  -90 | RSI  40.0 | ADX  23.9 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO ATOMUSDT: score=-105 | seguro_short=F(stoch=0.19)
+23:18:38 [INFO] [30m] ATOM    | Score -105 | RSI  18.3 | ADX  46.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO LTCUSDT: score=-50 | macd_r=F; ha=F
+23:18:38 [INFO] [30m] LTC     | Score  -50 | RSI  43.5 | ADX  30.9 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal FILUSDT: score=-15 insuficiente
+23:18:38 [INFO] [30m] FIL     | Score  -15 | RSI  46.2 | ADX  23.0 | K:DN | Grade:B | —
+23:18:38 [INFO]   SHORT-BLOQUEADO ARUSDT: score=-105 | sem detalhe
+23:18:38 [INFO] [30m] AR      | Score -105 | RSI  31.7 | ADX  35.7 | K:DN | Grade:B | —
+23:18:38 [INFO]   sem-sinal BCHUSDT: score=+5 insuficiente
+23:18:38 [INFO] [30m] BCH     | Score   +5 | RSI  52.9 | ADX  23.2 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO ETCUSDT: score=+65 | ha=F; seguro_long=F(stoch=0.98)
+23:18:39 [INFO] [30m] ETC     | Score  +65 | RSI  55.6 | ADX  21.2 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal XTZUSDT: score=+10 insuficiente
+23:18:39 [INFO] [30m] XTZ     | Score  +10 | RSI  46.4 | ADX  22.9 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO QNTUSDT: score=-50 | seguro_short=F(stoch=0.70)
+23:18:39 [INFO] [30m] QNT     | Score  -50 | RSI  43.2 | ADX  30.9 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO BATUSDT: score=+105 | ha=F; adx=13.0<17
+23:18:39 [INFO] [30m] BAT     | Score +105 | RSI  56.5 | ADX  13.0 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO STRKUSDT: score=-70 | macd_r=F; ha=F
+23:18:39 [INFO] [30m] STRK    | Score  -70 | RSI  40.1 | ADX  36.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ZETAUSDT: score=-70 | adx=15.3<17; lateralizado
+23:18:39 [INFO] [30m] ZETA    | Score  -70 | RSI  43.5 | ADX  15.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO PYTHUSDT: score=-90 | ha=F
+23:18:39 [INFO] [30m] PYTH    | Score  -90 | RSI  39.8 | ADX  19.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO WUSDT: score=-70 | ha=F
+23:18:39 [INFO] [30m] W       | Score  -70 | RSI  48.0 | ADX  19.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal ZKUSDT: score=+15 insuficiente
+23:18:39 [INFO] [30m] ZK      | Score  +15 | RSI  54.5 | ADX  13.5 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO MNTUSDT: score=-60 | macd_r=F; ha=F
+23:18:39 [INFO] [30m] MNT     | Score  -60 | RSI  41.5 | ADX  33.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal ZROUSDT: score=+10 insuficiente
+23:18:39 [INFO] [30m] ZRO     | Score  +10 | RSI  49.2 | ADX  15.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO SAGAUSDT: score=-35 | ha=F; adx=13.1<17; lateralizado
+23:18:39 [INFO] [30m] SAGA    | Score  -35 | RSI  42.3 | ADX  13.1 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO BLURUSDT: score=-135 | sem detalhe
+23:18:39 [INFO] [30m] BLUR    | Score -135 | RSI  33.0 | ADX  27.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ORDIUSDT: score=-75 | macd_r=F; seguro_short=F(stoch=0.71)
+23:18:39 [INFO] [30m] ORDI    | Score  -75 | RSI  23.6 | ADX  46.9 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal AXSUSDT: score=-15 insuficiente
+23:18:39 [INFO] [30m] AXS     | Score  -15 | RSI  42.3 | ADX  28.8 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO SANDUSDT: score=-75 | ha=F
+23:18:39 [INFO] [30m] SAND    | Score  -75 | RSI  45.2 | ADX  27.9 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal MANAUSDT: score=-25 insuficiente
+23:18:39 [INFO] [30m] MANA    | Score  -25 | RSI  46.2 | ADX  20.1 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO GALAUSDT: score=-90 | macd_r=F; ha=F; adx=16.4<17; lateralizado
+23:18:39 [INFO] [30m] GALA    | Score  -90 | RSI  44.6 | ADX  16.4 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO CHZUSDT: score=-35 | ha=F; adx=13.7<17; lateralizado
+23:18:39 [INFO] [30m] CHZ     | Score  -35 | RSI  52.5 | ADX  13.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO APEUSDT: score=+75 | ha=F; adx=12.1<17; seguro_long=F(stoch=0.52)
+23:18:39 [INFO] [30m] APE     | Score  +75 | RSI  56.9 | ADX  12.1 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO YGGUSDT: score=-90 | sem detalhe
+23:18:39 [INFO] [30m] YGG     | Score  -90 | RSI  38.2 | ADX  25.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO MAGICUSDT: score=-125 | sem detalhe
+23:18:39 [INFO] [30m] MAGIC   | Score -125 | RSI  41.4 | ADX  25.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO IOUSDT: score=-100 | sem detalhe
+23:18:39 [INFO] [30m] IO      | Score -100 | RSI  32.6 | ADX  29.5 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ROSEUSDT: score=-40 | ha=F
+23:18:39 [INFO] [30m] ROSE    | Score  -40 | RSI  37.0 | ADX  36.9 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO IOTXUSDT: score=-80 | ha=F; adx=16.1<17; lateralizado
+23:18:39 [INFO] [30m] IOTX    | Score  -80 | RSI  43.1 | ADX  16.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO CELOUSDT: score=-85 | sem detalhe
+23:18:39 [INFO] [30m] CELO    | Score  -85 | RSI  37.5 | ADX  28.6 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO JASMYUSDT: score=-80 | macd_r=F; ha=F
+23:18:39 [INFO] [30m] JASMY   | Score  -80 | RSI  39.6 | ADX  25.2 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO LPTUSDT: score=+75 | ha=F; seguro_long=F(stoch=0.97)
+23:18:39 [INFO] [30m] LPT     | Score  +75 | RSI  56.7 | ADX  20.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO AEVOUSDT: score=-55 | ha=F; seguro_short=F(stoch=0.69)
+23:18:39 [INFO] [30m] AEVO    | Score  -55 | RSI  44.7 | ADX  22.9 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO BERAUSDT: score=-75 | ha=F
+23:18:39 [INFO] [30m] BERA    | Score  -75 | RSI  37.7 | ADX  34.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO LISTAUSDT: score=-110 | sem detalhe
+23:18:39 [INFO] [30m] LISTA   | Score -110 | RSI  38.1 | ADX  18.2 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO REZUSDT: score=-45 | sem detalhe
+23:18:39 [INFO] [30m] REZ     | Score  -45 | RSI  39.1 | ADX  28.6 | K:UP | Grade:B | —
+23:18:39 [INFO]   sem-sinal KAVAUSDT: score=+0 insuficiente
+23:18:39 [INFO] [30m] KAVA    | Score   +0 | RSI  50.1 | ADX  20.4 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ONTUSDT: score=-65 | macd_r=F; ha=F
+23:18:39 [INFO] [30m] ONT     | Score  -65 | RSI  40.6 | ADX  27.2 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO IOTAUSDT: score=+70 | seguro_long=F(stoch=1.00)
+23:18:39 [INFO] [30m] IOTA    | Score  +70 | RSI  65.2 | ADX  24.4 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO MINAUSDT: score=-85 | seguro_short=F(stoch=0.04)
+23:18:39 [INFO] [30m] MINA    | Score  -85 | RSI  35.8 | ADX  25.1 | K:UP | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO MANTAUSDT: score=+85 | seguro_long=F(stoch=0.97)
+23:18:39 [INFO] [30m] MANTA   | Score  +85 | RSI  74.7 | ADX  37.2 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO KSMUSDT: score=-55 | ha=F; lateralizado
+23:18:39 [INFO] [30m] KSM     | Score  -55 | RSI  45.3 | ADX  17.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal QTUMUSDT: score=-5 insuficiente
+23:18:39 [INFO] [30m] QTUM    | Score   -5 | RSI  48.4 | ADX  18.8 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO WAVESUSDT: score=-135 | seguro_short=F(stoch=0.16)
+23:18:39 [INFO] [30m] WAVES   | Score -135 | RSI  32.2 | ADX  25.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO IOSTUSDT: score=-145 | adx=13.7<17; lateralizado
+23:18:39 [INFO] [30m] IOST    | Score -145 | RSI  39.6 | ADX  13.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal NKNUSDT: score=-15 insuficiente
+23:18:39 [INFO] [30m] NKN     | Score  -15 | RSI  37.7 | ADX  31.1 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO COTIUSDT: score=-105 | sem detalhe
+23:18:39 [INFO] [30m] COTI    | Score -105 | RSI  41.1 | ADX  32.6 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal ZENUSDT: score=-15 insuficiente
+23:18:39 [INFO] [30m] ZEN     | Score  -15 | RSI  48.5 | ADX  24.4 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO SCRTUSDT: score=-135 | sem detalhe
+23:18:39 [INFO] [30m] SCRT    | Score -135 | RSI  39.2 | ADX  23.9 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal ACAUSDT: score=+0 insuficiente
+23:18:39 [INFO] [30m] ACA     | Score   +0 | RSI  43.4 | ADX  17.0 | K:UP | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO POLUSDT: score=+75 | adx=14.4<17; lateralizado; seguro_long=F(stoch=1.00)
+23:18:39 [INFO] [30m] POL     | Score  +75 | RSI  58.3 | ADX  14.4 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO CKBUSDT: score=+65 | ha=F; seguro_long=F(stoch=0.54)
+23:18:39 [INFO] [30m] CKB     | Score  +65 | RSI  54.0 | ADX  25.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO XDCUSDT: score=-115 | seguro_short=F(stoch=0.56)
+23:18:39 [INFO] [30m] XDC     | Score -115 | RSI  40.5 | ADX  27.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO NEOUSDT: score=-65 | sem detalhe
+23:18:39 [INFO] [30m] NEO     | Score  -65 | RSI  42.1 | ADX  26.8 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO WAXPUSDT: score=-70 | ha=F
+23:18:39 [INFO] [30m] WAXP    | Score  -70 | RSI  46.7 | ADX  19.2 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO HNTUSDT: score=-100 | ha=F
+23:18:39 [INFO] [30m] HNT     | Score -100 | RSI  34.7 | ADX  19.4 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal SUSHIUSDT: score=-10 insuficiente
+23:18:39 [INFO] [30m] SUSHI   | Score  -10 | RSI  38.8 | ADX  21.7 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO BALUSDT: score=-70 | ha=F
+23:18:39 [INFO] [30m] BAL     | Score  -70 | RSI  40.8 | ADX  25.8 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal LRCUSDT: score=+10 insuficiente
+23:18:39 [INFO] [30m] LRC     | Score  +10 | RSI  53.2 | ADX  20.5 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ANKRUSDT: score=-130 | sem detalhe
+23:18:39 [INFO] [30m] ANKR    | Score -130 | RSI  43.0 | ADX  20.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal CELRUSDT: score=-20 insuficiente
+23:18:39 [INFO] [30m] CELR    | Score  -20 | RSI  46.4 | ADX  16.9 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO YFIUSDT: score=-80 | macd_r=F; ha=F
+23:18:39 [INFO] [30m] YFI     | Score  -80 | RSI  39.3 | ADX  29.6 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO KNCUSDT: score=-35 | adx=16.3<17; lateralizado
+23:18:39 [INFO] [30m] KNC     | Score  -35 | RSI  47.2 | ADX  16.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ZRXUSDT: score=-95 | adx=14.8<17; lateralizado; seguro_short=F(stoch=0.62)
+23:18:39 [INFO] [30m] ZRX     | Score  -95 | RSI  45.3 | ADX  14.8 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO PERPUSDT: score=-95 | seguro_short=F(stoch=0.00)
+23:18:39 [INFO] [30m] PERP    | Score  -95 | RSI  32.7 | ADX  24.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO RSRUSDT: score=-110 | sem detalhe
+23:18:39 [INFO] [30m] RSR     | Score -110 | RSI  39.1 | ADX  29.2 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal ETHFIUSDT: score=+25 insuficiente
+23:18:39 [INFO] [30m] ETHFI   | Score  +25 | RSI  52.2 | ADX  29.3 | K:UP | Grade:B | —
+23:18:39 [INFO]   sem-sinal REQUSDT: score=+20 insuficiente
+23:18:39 [INFO] [30m] REQ     | Score  +20 | RSI  54.3 | ADX  21.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ALICEUSDT: score=-80 | ha=F; adx=15.7<17; lateralizado
+23:18:39 [INFO] [30m] ALICE   | Score  -80 | RSI  50.0 | ADX  15.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal SPELLUSDT: score=+5 insuficiente
+23:18:39 [INFO] [30m] SPELL   | Score   +5 | RSI  46.0 | ADX  52.8 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO CVXUSDT: score=-105 | seguro_short=F(stoch=0.48)
+23:18:39 [INFO] [30m] CVX     | Score -105 | RSI  29.5 | ADX  39.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO LITUSDT: score=-65 | seguro_short=F(stoch=0.00)
+23:18:39 [INFO] [30m] LIT     | Score  -65 | RSI  30.8 | ADX  24.0 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO AMPUSDT: score=-55 | ha=F; adx=12.7<17
+23:18:39 [INFO] [30m] AMP     | Score  -55 | RSI  41.6 | ADX  12.7 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO OXTUSDT: score=-55 | macd_r=F
+23:18:39 [INFO] [30m] OXT     | Score  -55 | RSI  42.7 | ADX  28.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO FORTHUSDT: score=+75 | ha=F; seguro_long=F(stoch=0.99)
+23:18:39 [INFO] [30m] FORTH   | Score  +75 | RSI  59.8 | ADX  57.0 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO AGLDUSDT: score=-135 | sem detalhe
+23:18:39 [INFO] [30m] AGLD    | Score -135 | RSI  39.1 | ADX  25.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal RAREUSDT: score=-25 insuficiente
+23:18:39 [INFO] [30m] RARE    | Score  -25 | RSI  42.9 | ADX  29.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO WOOUSDT: score=-50 | macd_r=F; ha=F
+23:18:39 [INFO] [30m] WOO     | Score  -50 | RSI  37.3 | ADX  42.4 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO BNTUSDT: score=-80 | ha=F; lateralizado
+23:18:39 [INFO] [30m] BNT     | Score  -80 | RSI  42.7 | ADX  17.1 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO LQTYUSDT: score=+30 | seguro_long=F(stoch=1.00)
+23:18:39 [INFO] [30m] LQTY    | Score  +30 | RSI  44.9 | ADX  30.1 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO PHBUSDT: score=-70 | macd_r=F; ha=F; adx=13.0<17; lateralizado; seguro_short=F(stoch=0.45)
+23:18:39 [INFO] [30m] PHB     | Score  -70 | RSI  31.3 | ADX  13.0 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ARKMUSDT: score=-55 | sem detalhe
+23:18:39 [INFO] [30m] ARKM    | Score  -55 | RSI  32.6 | ADX  47.8 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO NMRUSDT: score=+100 | ha=F
+23:18:39 [INFO] [30m] NMR     | Score +100 | RSI  60.0 | ADX  22.2 | K:UP | Grade:B | —
+23:18:39 [INFO]   sem-sinal AIUSDT: score=+15 insuficiente
+23:18:39 [INFO] [30m] AI      | Score  +15 | RSI  58.8 | ADX  30.9 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal MOVRUSDT: score=-20 insuficiente
+23:18:39 [INFO] [30m] MOVR    | Score  -20 | RSI  46.8 | ADX  24.7 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal GLMRUSDT: score=+25 insuficiente
+23:18:39 [INFO] [30m] GLMR    | Score  +25 | RSI  56.8 | ADX  21.6 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO ENSUSDT: score=+90 | ha=F; seguro_long=F(stoch=0.96)
+23:18:39 [INFO] [30m] ENS     | Score  +90 | RSI  51.3 | ADX  22.2 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO RIFUSDT: score=-65 | macd_r=F; ha=F; seguro_short=F(stoch=0.70)
+23:18:39 [INFO] [30m] RIF     | Score  -65 | RSI  25.6 | ADX  30.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal METISUSDT: score=+0 insuficiente
+23:18:39 [INFO] [30m] METIS   | Score   +0 | RSI  47.8 | ADX   9.5 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO XAIUSDT: score=-120 | sem detalhe
+23:18:39 [INFO] [30m] XAI     | Score -120 | RSI  43.1 | ADX  20.6 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO BEAMUSDT: score=-75 | macd_r=F; ha=F; seguro_short=F(stoch=0.51)
+23:18:39 [INFO] [30m] BEAM    | Score  -75 | RSI  40.2 | ADX  44.5 | K:DN | Grade:B | —
+23:18:39 [INFO]   sem-sinal POLYXUSDT: score=-10 insuficiente
+23:18:39 [INFO] [30m] POLYX   | Score  -10 | RSI  42.2 | ADX  28.8 | K:DN | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO IDUSDT: score=+85 | ha=F; seguro_long=F(stoch=0.82)
+23:18:39 [INFO] [30m] ID      | Score  +85 | RSI  55.4 | ADX  23.6 | K:UP | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO SYNUSDT: score=+90 | macd_r=F; ha=F
+23:18:39 [INFO] [30m] SYN     | Score  +90 | RSI  63.5 | ADX  53.8 | K:UP | Grade:B | —
+23:18:39 [INFO]   LONG-BLOQUEADO ASTRUSDT: score=+90 | ha=F; seguro_long=F(stoch=0.40)
+23:18:39 [INFO] [30m] ASTR    | Score  +90 | RSI  55.4 | ADX  25.4 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO ILVUSDT: score=-95 | macd_r=F; ha=F
+23:18:39 [INFO] [30m] ILV     | Score  -95 | RSI  44.2 | ADX  19.3 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO RONUSDT: score=-65 | adx=12.9<17; seguro_short=F(stoch=0.00)
+23:18:39 [INFO] [30m] RON     | Score  -65 | RSI  39.8 | ADX  12.9 | K:UP | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO PIXELUSDT: score=-60 | ha=F
+23:18:39 [INFO] [30m] PIXEL   | Score  -60 | RSI  34.0 | ADX  32.9 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO MBOXUSDT: score=-85 | macd_r=F; ha=F; adx=16.8<17; lateralizado
+23:18:39 [INFO] [30m] MBOX    | Score  -85 | RSI  42.0 | ADX  16.8 | K:DN | Grade:B | —
+23:18:39 [INFO]   SHORT-BLOQUEADO SLPUSDT: score=-100 | sem detalhe
+23:18:39 [INFO] [30m] SLP     | Score -100 | RSI  43.3 | ADX  19.2 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO TLMUSDT: score=-135 | sem detalhe
+23:18:40 [INFO] [30m] TLM     | Score -135 | RSI  41.0 | ADX  23.8 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO NFPUSDT: score=+145 | sem detalhe
+23:18:40 [INFO] [30m] NFP     | Score +145 | RSI  60.8 | ADX  22.5 | K:UP | Grade:B | —
+23:18:40 [INFO]   sem-sinal HIGHUSDT: score=-20 insuficiente
+23:18:40 [INFO] [30m] HIGH    | Score  -20 | RSI  45.9 | ADX  24.1 | K:UP | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO WINUSDT: score=+110 | ha=F; seguro_long=F(stoch=0.70)
+23:18:40 [INFO] [30m] WIN     | Score +110 | RSI  55.9 | ADX  22.2 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO DEGOUSDT: score=-75 | seguro_short=F(stoch=0.01)
+23:18:40 [INFO] [30m] DEGO    | Score  -75 | RSI  39.3 | ADX  26.1 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO LAZIOUSDT: score=-70 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] LAZIO   | Score  -70 | RSI  38.8 | ADX  36.6 | K:DN | Grade:B | —
+23:18:40 [INFO]   sem-sinal SANTOSUSDT: score=-25 insuficiente
+23:18:40 [INFO] [30m] SANTOS  | Score  -25 | RSI  51.1 | ADX   8.7 | K:DN | Grade:B | —
+23:18:40 [INFO]   sem-sinal ATMUSDT: score=+20 insuficiente
+23:18:40 [INFO] [30m] ATM     | Score  +20 | RSI  50.0 | ADX  46.1 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO CITYUSDT: score=-70 | ha=F; adx=8.8<17; lateralizado
+23:18:40 [INFO] [30m] CITY    | Score  -70 | RSI  50.0 | ADX   8.8 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO TRUMPUSDT: score=-125 | adx=15.4<17; lateralizado
+23:18:40 [INFO] [30m] TRUMP   | Score -125 | RSI  44.3 | ADX  15.4 | K:DN | Grade:B | —
+23:18:40 [INFO]   sem-sinal MOODENGUSDT: score=+15 insuficiente
+23:18:40 [INFO] [30m] MOODENG | Score  +15 | RSI  49.4 | ADX  20.2 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO CATIUSDT: score=+115 | ha=F; adx=8.5<17
+23:18:40 [INFO] [30m] CATI    | Score +115 | RSI  54.5 | ADX   8.5 | K:UP | Grade:B | —
+23:18:40 [INFO]   sem-sinal HMSTRUSDT: score=-20 insuficiente
+23:18:40 [INFO] [30m] HMSTR   | Score  -20 | RSI  51.2 | ADX  21.8 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO ACTUSDT: score=-125 | sem detalhe
+23:18:40 [INFO] [30m] ACT     | Score -125 | RSI  40.9 | ADX  25.5 | K:DN | Grade:B | —
+23:18:40 [INFO]   sem-sinal GOATUSDT: score=-15 insuficiente
+23:18:40 [INFO] [30m] GOAT    | Score  -15 | RSI  46.5 | ADX  14.3 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO PNUTUSDT: score=-65 | macd_r=F; adx=16.0<17; lateralizado; seguro_short=F(stoch=0.77)
+23:18:40 [INFO] [30m] PNUT    | Score  -65 | RSI  41.4 | ADX  16.0 | K:DN | Grade:B | —
+23:18:40 [INFO]   sem-sinal COWUSDT: score=-20 insuficiente
+23:18:40 [INFO] [30m] COW     | Score  -20 | RSI  44.1 | ADX  19.4 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO OGNUSDT: score=-65 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] OGN     | Score  -65 | RSI  44.6 | ADX  26.7 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO PEOPLEUSDT: score=-65 | sem detalhe
+23:18:40 [INFO] [30m] PEOPLE  | Score  -65 | RSI  41.7 | ADX  25.5 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO LUNCUSDT: score=-45 | ha=F
+23:18:40 [INFO] [30m] LUNC    | Score  -45 | RSI  30.5 | ADX  26.6 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO USTCUSDT: score=-55 | sem detalhe
+23:18:40 [INFO] [30m] USTC    | Score  -55 | RSI  36.3 | ADX  25.6 | K:UP | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO STORJUSDT: score=+135 | ha=F; seguro_long=F(stoch=0.84)
+23:18:40 [INFO] [30m] STORJ   | Score +135 | RSI  56.0 | ADX  18.6 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO SCUSDT: score=-90 | adx=16.2<17; lateralizado; seguro_short=F(stoch=0.00)
+23:18:40 [INFO] [30m] SC      | Score  -90 | RSI  33.1 | ADX  16.2 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO RVNUSDT: score=-125 | sem detalhe
+23:18:40 [INFO] [30m] RVN     | Score -125 | RSI  41.7 | ADX  24.9 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO HOTUSDT: score=-75 | macd_r=F; ha=F; adx=8.7<17; lateralizado
+23:18:40 [INFO] [30m] HOT     | Score  -75 | RSI  43.5 | ADX   8.7 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO DUSKUSDT: score=-105 | seguro_short=F(stoch=0.33)
+23:18:40 [INFO] [30m] DUSK    | Score -105 | RSI  32.3 | ADX  43.0 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO ENJUSDT: score=+145 | seguro_long=F(stoch=0.86)
+23:18:40 [INFO] [30m] ENJ     | Score +145 | RSI  71.9 | ADX  33.2 | K:UP | Grade:B | —
+23:18:40 [INFO]   sem-sinal NEXOUSDT: score=-25 insuficiente
+23:18:40 [INFO] [30m] NEXO    | Score  -25 | RSI  40.4 | ADX  21.2 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO TFUELUSDT: score=-30 | macd_r=F; seguro_short=F(stoch=0.76)
+23:18:40 [INFO] [30m] TFUEL   | Score  -30 | RSI  41.5 | ADX  30.7 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO SUNUSDT: score=+95 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] SUN     | Score  +95 | RSI  62.5 | ADX  32.9 | K:UP | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO FUNUSDT: score=+100 | seguro_long=F(stoch=1.00)
+23:18:40 [INFO] [30m] FUN     | Score +100 | RSI  73.9 | ADX  20.7 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO TWTUSDT: score=-40 | seguro_short=F(stoch=0.75)
+23:18:40 [INFO] [30m] TWT     | Score  -40 | RSI  46.3 | ADX  33.1 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO DEXEUSDT: score=-125 | seguro_short=F(stoch=0.00)
+23:18:40 [INFO] [30m] DEXE    | Score -125 | RSI  15.2 | ADX  43.0 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO HOOKUSDT: score=+145 | ha=F; seguro_long=F(stoch=0.98)
+23:18:40 [INFO] [30m] HOOK    | Score +145 | RSI  64.6 | ADX  32.2 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO ACHUSDT: score=-95 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] ACH     | Score  -95 | RSI  38.1 | ADX  29.6 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO PONDUSDT: score=+75 | seguro_long=F(stoch=1.00)
+23:18:40 [INFO] [30m] POND    | Score  +75 | RSI  60.1 | ADX  19.3 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO HYPEUSDT: score=+55 | ha=F; seguro_long=F(stoch=0.71)
+23:18:40 [INFO] [30m] HYPE    | Score  +55 | RSI  49.1 | ADX  18.4 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO VIRTUALUSDT: score=-30 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] VIRTUAL | Score  -30 | RSI  44.3 | ADX  31.3 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO MOVEUSDT: score=-65 | adx=13.2<17; seguro_short=F(stoch=0.12)
+23:18:40 [INFO] [30m] MOVE    | Score  -65 | RSI  39.7 | ADX  13.2 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO GRASSUSDT: score=-45 | ha=F; seguro_short=F(stoch=0.49)
+23:18:40 [INFO] [30m] GRASS   | Score  -45 | RSI  26.5 | ADX  36.5 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO SOLVUSDT: score=-95 | sem detalhe
+23:18:40 [INFO] [30m] SOLV    | Score  -95 | RSI  42.4 | ADX  25.9 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO KERNELUSDT: score=+145 | seguro_long=F(stoch=1.00)
+23:18:40 [INFO] [30m] KERNEL  | Score +145 | RSI  67.0 | ADX  20.0 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO MLNUSDT: score=-35 | macd_r=F; ha=F; seguro_short=F(stoch=0.91)
+23:18:40 [INFO] [30m] MLN     | Score  -35 | RSI  46.4 | ADX  26.5 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO BANANAUSDT: score=-100 | sem detalhe
+23:18:40 [INFO] [30m] BANANA  | Score -100 | RSI  40.9 | ADX  25.9 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO SPECUSDT: score=+110 | seguro_long=F(stoch=1.00)
+23:18:40 [INFO] [30m] SPEC    | Score +110 | RSI  53.8 | ADX  25.8 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO ARPAUSDT: score=-75 | ha=F
+23:18:40 [INFO] [30m] ARPA    | Score  -75 | RSI  38.5 | ADX  19.6 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO STEEMUSDT: score=-85 | seguro_short=F(stoch=0.57)
+23:18:40 [INFO] [30m] STEEM   | Score  -85 | RSI  40.4 | ADX  25.5 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO SYSUSDT: score=+70 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] SYS     | Score  +70 | RSI  67.0 | ADX  19.3 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO DODOUSDT: score=-50 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] DODO    | Score  -50 | RSI  39.1 | ADX  28.8 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO XVSUSDT: score=-60 | adx=14.8<17; lateralizado; seguro_short=F(stoch=0.27)
+23:18:40 [INFO] [30m] XVS     | Score  -60 | RSI  43.9 | ADX  14.8 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO SFPUSDT: score=-90 | seguro_short=F(stoch=0.37)
+23:18:40 [INFO] [30m] SFP     | Score  -90 | RSI  33.9 | ADX  33.6 | K:DN | Grade:B | —
+23:18:40 [INFO]   sem-sinal PROSUSDT: score=+20 insuficiente
+23:18:40 [INFO] [30m] PROS    | Score  +20 | RSI  56.9 | ADX  22.8 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO QUICKUSDT: score=-60 | ha=F; adx=14.3<17
+23:18:40 [INFO] [30m] QUICK   | Score  -60 | RSI  47.2 | ADX  14.3 | K:DN | Grade:B | —
+23:18:40 [INFO]   sem-sinal BICOUSDT: score=-25 insuficiente
+23:18:40 [INFO] [30m] BICO    | Score  -25 | RSI  41.8 | ADX  23.5 | K:UP | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO REEFUSDT: score=+60 | adx=14.6<17; seguro_long=F(stoch=1.00)
+23:18:40 [INFO] [30m] REEF    | Score  +60 | RSI  65.0 | ADX  14.6 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO MBLUSDT: score=-125 | adx=11.5<17; lateralizado; seguro_short=F(stoch=0.38)
+23:18:40 [INFO] [30m] MBL     | Score -125 | RSI  39.1 | ADX  11.5 | K:DN | Grade:B | —
+23:18:40 [INFO]   sem-sinal GTCUSDT: score=-20 insuficiente
+23:18:40 [INFO] [30m] GTC     | Score  -20 | RSI  44.0 | ADX  23.6 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO HIVEUSDT: score=-65 | seguro_short=F(stoch=0.00)
+23:18:40 [INFO] [30m] HIVE    | Score  -65 | RSI  30.9 | ADX  25.5 | K:UP | Grade:B | —
+23:18:40 [INFO]   sem-sinal RAYUSDT: score=+10 insuficiente
+23:18:40 [INFO] [30m] RAY     | Score  +10 | RSI  48.7 | ADX  16.3 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO ORCAUSDT: score=+55 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] ORCA    | Score  +55 | RSI  47.3 | ADX  32.2 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO WEMIXUSDT: score=-45 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] WEMIX   | Score  -45 | RSI  30.2 | ADX  45.4 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO FIDAUSDT: score=+105 | ha=F
+23:18:40 [INFO] [30m] FIDA    | Score +105 | RSI  63.2 | ADX  32.3 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO SWEATUSDT: score=-60 | ha=F
+23:18:40 [INFO] [30m] SWEAT   | Score  -60 | RSI  46.1 | ADX  27.4 | K:UP | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO UMAUSDT: score=-70 | seguro_short=F(stoch=0.00)
+23:18:40 [INFO] [30m] UMA     | Score  -70 | RSI  24.5 | ADX  32.5 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO COSUSDT: score=-60 | macd_r=F; ha=F; adx=12.3<17; lateralizado
+23:18:40 [INFO] [30m] COS     | Score  -60 | RSI  44.0 | ADX  12.3 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO ACMUSDT: score=+40 | ha=F; adx=14.3<17; lateralizado; seguro_long=F(stoch=0.92)
+23:18:40 [INFO] [30m] ACM     | Score  +40 | RSI  48.8 | ADX  14.3 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO JUVUSDT: score=-35 | macd_r=F; ha=F
+23:18:40 [INFO] [30m] JUV     | Score  -35 | RSI  43.8 | ADX  27.8 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO FLMUSDT: score=+80 | ha=F; seguro_long=F(stoch=0.47)
+23:18:40 [INFO] [30m] FLM     | Score  +80 | RSI  52.6 | ADX  28.5 | K:UP | Grade:B | —
+23:18:40 [INFO]   sem-sinal APEXUSDT: score=+25 insuficiente
+23:18:40 [INFO] [30m] APEX    | Score  +25 | RSI  50.1 | ADX  12.2 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO BSVUSDT: score=-125 | sem detalhe
+23:18:40 [INFO] [30m] BSV     | Score -125 | RSI  34.6 | ADX  34.7 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO HFTUSDT: score=-100 | adx=14.8<17; lateralizado; seguro_short=F(stoch=0.05)
+23:18:40 [INFO] [30m] HFT     | Score -100 | RSI  37.4 | ADX  14.8 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO IRYSUSDT: score=-110 | sem detalhe
+23:18:40 [INFO] [30m] IRYS    | Score -110 | RSI  36.2 | ADX  27.5 | K:DN | Grade:B | —
+23:18:40 [INFO]   SHORT-BLOQUEADO ASTERUSDT: score=-55 | seguro_short=F(stoch=0.00)
+23:18:40 [INFO] [30m] ASTER   | Score  -55 | RSI  42.1 | ADX  26.5 | K:UP | Grade:B | —
+23:18:40 [INFO]   sem-sinal PENGUUSDT: score=-15 insuficiente
+23:18:40 [INFO] [30m] PENGU   | Score  -15 | RSI  41.6 | ADX  25.8 | K:DN | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO EPICUSDT: score=+135 | seguro_long=F(stoch=1.00)
+23:18:40 [INFO] [30m] EPIC    | Score +135 | RSI  63.9 | ADX  19.5 | K:UP | Grade:B | —
+23:18:40 [INFO]   LONG-BLOQUEADO HOMEUSDT: score=+130 | seguro_long=F(stoch=1.00)
+23:18:40 [INFO] [30m] HOME    | Score +130 | RSI  89.6 | ADX  48.0 | K:UP | Grade:B | —
+23:18:40 [INFO] [30m] Sem sinais — \U0001f4c8 LONG — \U0001f534 RSI sobrecomprado |   XLM: +145 | RSI 71 | ADX 23 |   ENA: +145 | RSI 72 | ADX 35
+23:18:40 [INFO] [30m] Watchlist: 170 moedas encontradas
+23:18:41 [INFO] \U0001f4e1 Watchlist [30m]: 170 moedas — BTC, BNB, XRP, TRX, ADA, SOL
+23:18:41 [INFO] \u2705 Ciclo #1 concluído. Sinais: 0
+23:18:41 [INFO] \u23f3 Próximo ciclo em 678s (11.3min)...
+23:30:02 [INFO] \u2500\u2500 Ciclo #2 | 23:30:02 17/06 | 303 moedas \u2500\u2500
+23:30:02 [INFO] [MTF] BTC H4: NEUTRO | RSI 47 | $64719
+23:30:02 [INFO] [MTF] Prefetch H4 (303 moedas)...
+23:30:02 [WARNING] buscar_candles TONUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:05 [WARNING] buscar_candles THETAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:05 [WARNING] buscar_candles ZILLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:05 [WARNING] buscar_candles FTMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:06 [WARNING] buscar_candles LSKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:06 [WARNING] buscar_candles BANDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:06 [WARNING] buscar_candles POWRUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:06 [WARNING] buscar_candles CTSIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:06 [WARNING] buscar_candles OSMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:06 [WARNING] buscar_candles KLAYUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:06 [WARNING] buscar_candles XEMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:06 [WARNING] buscar_candles MKRUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles FXSUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles OMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles ALPACAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles OCEANUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles RENUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles AGIXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles BONDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles GLMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles CTXCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles AUDIOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles TRBUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles ALTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:07 [WARNING] buscar_candles DYMAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles PORTAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles OMNIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles AXLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles STPTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles SXPUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles DARUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles VOXELUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles RDNTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles NEIROUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles BRETTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:08 [WARNING] buscar_candles GMTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:09 [WARNING] buscar_candles GALUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:09 [WARNING] buscar_candles ALPHAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:09 [WARNING] buscar_candles NULSUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:09 [WARNING] buscar_candles CVCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:09 [WARNING] buscar_candles TRUUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:09 [WARNING] buscar_candles MTLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:09 [WARNING] buscar_candles KEYUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:09 [WARNING] buscar_candles UXLINKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles ATAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles BAKEUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles WINGUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles EPXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles KDAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles HARDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles MULTIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles JITOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles CLVUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles DIAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles ORNUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles IDEXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles LINAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:10 [WARNING] buscar_candles TVKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:11 [WARNING] buscar_candles MCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:11 [WARNING] buscar_candles KP3RUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:11 [WARNING] buscar_candles MDXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:11 [WARNING] buscar_candles AMBUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:11 [WARNING] buscar_candles IRISUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:11 [WARNING] buscar_candles LTOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:11 [WARNING] buscar_candles ACMUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:16 [INFO] [MTF] BTC     | H4 sem setup | Score -100 RSI 44
+23:30:16 [INFO] [MTF] ETH     | H4 sem setup | Score -60 RSI 52
+23:30:16 [INFO] [MTF] BNB     | H4 sem setup | Score -125 RSI 42
+23:30:16 [INFO] [MTF] XRP     | H4 sem setup | Score -100 RSI 47
+23:30:16 [INFO] [MTF] TRX     | H4 sem setup | Score +65 RSI 66
+23:30:16 [INFO] [MTF] ADA     | H4 sem setup | Score -125 RSI 40
+23:30:16 [INFO] [MTF] SOL     | H4 sem setup | Score +0 RSI 54
+23:30:16 [INFO] [MTF] AVAX    | H4 sem setup | Score -80 RSI 48
+23:30:16 [INFO] [MTF] SUI     | H4 sem setup | Score -95 RSI 41
+23:30:16 [INFO] [MTF] APT     | H4 BAIXA \u2713BTC | Score -105 \u2192 buscando entrada H1...
+23:30:16 [INFO] [MTF] NEAR    | H4 sem setup | Score -15 RSI 42
+23:30:16 [INFO] [MTF] SEI     | H4 sem setup | Score +15 RSI 58
+23:30:16 [INFO] [MTF] TIA     | H4 ALTA \u2713BTC | Score +40 \u2192 buscando entrada H1...
+23:30:16 [INFO] [MTF] ALGO    | H4 sem setup | Score +75 RSI 72
+23:30:16 [INFO] [MTF] VET     | H4 sem setup | Score -75 RSI 45
+23:30:16 [INFO] [MTF] HBAR    | H4 sem setup | Score +5 RSI 54
+23:30:16 [INFO] [MTF] STX     | H4 sem setup | Score -60 RSI 48
+23:30:16 [INFO] [MTF] ICP     | H4 sem setup | Score -145 RSI 39
+23:30:17 [INFO] [MTF] XLM     | H4 sem setup | Score +140 RSI 71
+23:30:17 [INFO] [MTF] KAS     | H4 sem setup | Score -65 RSI 43
+23:30:17 [INFO] [MTF] EGLD    | H4 sem setup | Score -100 RSI 44
+23:30:17 [INFO] [MTF] FLOW    | H4 sem setup | Score +10 RSI 66
+23:30:17 [INFO] [MTF] CFX     | H4 sem setup | Score +45 RSI 73
+23:30:17 [INFO] [MTF] LINK    | H4 sem setup | Score -95 RSI 47
+23:30:17 [INFO] [MTF] INJ     | H4 sem setup | Score -40 RSI 49
+23:30:17 [INFO] [MTF] JUP     | H4 sem setup | Score +45 RSI 55
+23:30:17 [INFO] [MTF] ARB     | H4 sem setup | Score -25 RSI 54
+23:30:17 [INFO] [MTF] OP      | H4 sem setup | Score -5 RSI 59
+23:30:17 [INFO] [MTF] UNI     | H4 sem setup | Score +60 RSI 66
+23:30:17 [INFO] [MTF] AAVE    | H4 sem setup | Score -10 RSI 61
+23:30:17 [INFO] [MTF] ENA     | H4 sem setup | Score +95 RSI 78
+23:30:17 [INFO] [MTF] ONDO    | H4 sem setup | Score -65 RSI 47
+23:30:17 [INFO] [MTF] GRT     | H4 sem setup | Score -145 RSI 40
+23:30:17 [INFO] [MTF] LDO     | H4 sem setup | Score -35 RSI 55
+23:30:17 [INFO] [MTF] RUNE    | H4 sem setup | Score +70 RSI 62
+23:30:17 [INFO] [MTF] PENDLE  | H4 sem setup | Score +40 RSI 62
+23:30:17 [INFO] [MTF] CAKE    | H4 sem setup | Score -60 RSI 48
+23:30:17 [INFO] [MTF] CRV     | H4 sem setup | Score -10 RSI 39
+23:30:17 [INFO] [MTF] DYDX    | H4 BAIXA \u2713BTC | Score -115 \u2192 buscando entrada H1...
+23:30:17 [INFO] [MTF] SNX     | H4 sem setup | Score +15 RSI 54
+23:30:17 [INFO] [MTF] GMX     | H4 sem setup | Score -35 RSI 53
+23:30:17 [INFO] [MTF] COMP    | H4 sem setup | Score -65 RSI 44
+23:30:17 [INFO] [MTF] STG     | H4 sem setup | Score -20 RSI 41
+23:30:17 [INFO] [MTF] FET     | H4 sem setup | Score -135 RSI 40
+23:30:17 [INFO] [MTF] TAO     | H4 sem setup | Score -55 RSI 43
+23:30:17 [INFO] [MTF] RENDER  | H4 sem setup | Score -40 RSI 45
+23:30:17 [INFO] [MTF] WLD     | H4 sem setup | Score +90 RSI 67
+23:30:17 [INFO] [MTF] IMX     | H4 sem setup | Score -60 RSI 46
+23:30:17 [INFO] [MTF] EIGEN   | H4 sem setup | Score -5 RSI 47
+23:30:17 [INFO] [MTF] DOGE    | H4 BAIXA \u2713BTC | Score -125 \u2192 buscando entrada H1...
+23:30:17 [INFO] [MTF] PEPE    | H4 sem setup | Score -55 RSI 55
+23:30:17 [INFO] [MTF] WIF     | H4 sem setup | Score -55 RSI 54
+23:30:17 [INFO] [MTF] SHIB    | H4 sem setup | Score -65 RSI 49
+23:30:17 [INFO] [MTF] FLOKI   | H4 sem setup | Score -10 RSI 55
+23:30:17 [INFO] [MTF] BONK    | H4 sem setup | Score -75 RSI 49
+23:30:17 [INFO] [MTF] NOT     | H4 sem setup | Score -65 RSI 41
+23:30:17 [INFO] [MTF] POPCAT  | H4 sem setup | Score +15 RSI 54
+23:30:17 [INFO] [MTF] DOGS    | H4 sem setup | Score -90 RSI 41
+23:30:17 [INFO] [MTF] TURBO   | H4 sem setup | Score -80 RSI 49
+23:30:17 [INFO] [MTF] MEW     | H4 sem setup | Score -5 RSI 53
+23:30:17 [INFO] [MTF] BOME    | H4 sem setup | Score -40 RSI 51
+23:30:17 [INFO] [MTF] DOT     | H4 sem setup | Score -70 RSI 51
+23:30:17 [INFO] [MTF] ATOM    | H4 sem setup | Score -55 RSI 35
+23:30:17 [INFO] [MTF] LTC     | H4 sem setup | Score -65 RSI 50
+23:30:17 [INFO] [MTF] FIL     | H4 sem setup | Score -40 RSI 53
+23:30:17 [INFO] [MTF] AR      | H4 sem setup | Score -80 RSI 42
+23:30:17 [INFO] [MTF] BCH     | H4 sem setup | Score -55 RSI 50
+23:30:17 [INFO] [MTF] ETC     | H4 sem setup | Score -30 RSI 54
+23:30:17 [INFO] [MTF] XTZ     | H4 sem setup | Score -10 RSI 53
+23:30:17 [INFO] [MTF] QNT     | H4 sem setup | Score +5 RSI 56
+23:30:17 [INFO] [MTF] BAT     | H4 sem setup | Score +15 RSI 55
+23:30:17 [INFO] [MTF] STRK    | H4 sem setup | Score -110 RSI 42
+23:30:17 [INFO] [MTF] ZETA    | H4 sem setup | Score -50 RSI 49
+23:30:17 [INFO] [MTF] PYTH    | H4 sem setup | Score -10 RSI 52
+23:30:17 [INFO] [MTF] W       | H4 sem setup | Score -20 RSI 52
+23:30:17 [INFO] [MTF] ZK      | H4 sem setup | Score -25 RSI 55
+23:30:17 [INFO] [MTF] MNT     | H4 sem setup | Score -110 RSI 37
+23:30:17 [INFO] [MTF] ZRO     | H4 sem setup | Score -40 RSI 49
+23:30:17 [INFO] [MTF] SAGA    | H4 sem setup | Score +45 RSI 57
+23:30:17 [INFO] [MTF] BLUR    | H4 sem setup | Score -100 RSI 40
+23:30:17 [INFO] [MTF] ORDI    | H4 sem setup | Score -100 RSI 36
+23:30:17 [INFO] [MTF] AXS     | H4 sem setup | Score -70 RSI 52
+23:30:17 [INFO] [MTF] SAND    | H4 sem setup | Score -80 RSI 48
+23:30:17 [INFO] [MTF] MANA    | H4 sem setup | Score +15 RSI 57
+23:30:17 [INFO] [MTF] GALA    | H4 sem setup | Score -75 RSI 49
+23:30:17 [INFO] [MTF] CHZ     | H4 sem setup | Score -90 RSI 37
+23:30:17 [INFO] [MTF] APE     | H4 sem setup | Score +65 RSI 64
+23:30:17 [INFO] [MTF] YGG     | H4 sem setup | Score -60 RSI 52
+23:30:17 [INFO] [MTF] MAGIC   | H4 sem setup | Score -65 RSI 48
+23:30:17 [INFO] [MTF] IO      | H4 sem setup | Score -55 RSI 43
+23:30:17 [INFO] [MTF] ROSE    | H4 sem setup | Score -15 RSI 52
+23:30:17 [INFO] [MTF] IOTX    | H4 sem setup | Score -105 RSI 33
+23:30:17 [INFO] [MTF] CELO    | H4 sem setup | Score -40 RSI 52
+23:30:17 [INFO] [MTF] JASMY   | H4 sem setup | Score -80 RSI 46
+23:30:17 [INFO] [MTF] LPT     | H4 sem setup | Score +0 RSI 52
+23:30:17 [INFO] [MTF] AEVO    | H4 sem setup | Score -50 RSI 47
+23:30:17 [INFO] [MTF] BERA    | H4 sem setup | Score -140 RSI 41
+23:30:17 [INFO] [MTF] LISTA   | H4 sem setup | Score -60 RSI 47
+23:30:17 [INFO] [MTF] REZ     | H4 sem setup | Score -35 RSI 52
+23:30:17 [INFO] [MTF] KAVA    | H4 sem setup | Score +35 RSI 65
+23:30:17 [INFO] [MTF] ONT     | H4 sem setup | Score -100 RSI 42
+23:30:17 [INFO] [MTF] IOTA    | H4 sem setup | Score -30 RSI 51
+23:30:17 [INFO] [MTF] MINA    | H4 sem setup | Score -75 RSI 52
+23:30:17 [INFO] [MTF] MANTA   | H4 sem setup | Score +55 RSI 56
+23:30:17 [INFO] [MTF] KSM     | H4 sem setup | Score -10 RSI 54
+23:30:17 [INFO] [MTF] QTUM    | H4 sem setup | Score +35 RSI 58
+23:30:17 [INFO] [MTF] WAVES   | H4 sem setup | Score -80 RSI 49
+23:30:17 [INFO] [MTF] IOST    | H4 sem setup | Score -100 RSI 46
+23:30:17 [INFO] [MTF] NKN     | H4 sem setup | Score -85 RSI 44
+23:30:17 [INFO] [MTF] COTI    | H4 sem setup | Score -130 RSI 42
+23:30:17 [INFO] [MTF] ZEN     | H4 sem setup | Score -45 RSI 46
+23:30:17 [INFO] [MTF] SCRT    | H4 sem setup | Score -130 RSI 43
+23:30:17 [INFO] [MTF] ACA     | H4 sem setup | Score +35 RSI 57
+23:30:17 [INFO] [MTF] POL     | H4 sem setup | Score +0 RSI 53
+23:30:17 [INFO] [MTF] CKB     | H4 sem setup | Score -40 RSI 62
+23:30:17 [INFO] [MTF] XDC     | H4 sem setup | Score -105 RSI 38
+23:30:17 [INFO] [MTF] NEO     | H4 sem setup | Score -55 RSI 55
+23:30:17 [INFO] [MTF] WAXP    | H4 sem setup | Score -120 RSI 38
+23:30:17 [INFO] [MTF] HNT     | H4 sem setup | Score -100 RSI 35
+23:30:17 [INFO] [MTF] SUSHI   | H4 sem setup | Score +35 RSI 60
+23:30:17 [INFO] [MTF] BAL     | H4 sem setup | Score -105 RSI 31
+23:30:17 [INFO] [MTF] LRC     | H4 sem setup | Score -25 RSI 46
+23:30:17 [INFO] [MTF] ANKR    | H4 sem setup | Score -45 RSI 48
+23:30:17 [INFO] [MTF] CELR    | H4 sem setup | Score -35 RSI 53
+23:30:17 [INFO] [MTF] YFI     | H4 sem setup | Score -105 RSI 44
+23:30:17 [INFO] [MTF] KNC     | H4 sem setup | Score -50 RSI 51
+23:30:17 [INFO] [MTF] ZRX     | H4 sem setup | Score -35 RSI 51
+23:30:17 [INFO] [MTF] PERP    | H4 BAIXA \u2713BTC | Score -110 \u2192 buscando entrada H1...
+23:30:17 [INFO] [MTF] RSR     | H4 sem setup | Score -110 RSI 39
+23:30:17 [INFO] [MTF] ETHFI   | H4 sem setup | Score +130 RSI 83
+23:30:17 [INFO] [MTF] REQ     | H4 sem setup | Score -25 RSI 47
+23:30:17 [INFO] [MTF] ALICE   | H4 sem setup | Score -35 RSI 46
+23:30:17 [INFO] [MTF] SPELL   | H4 sem setup | Score -45 RSI 53
+23:30:17 [INFO] [MTF] CVX     | H4 sem setup | Score -95 RSI 44
+23:30:17 [INFO] [MTF] LIT     | H4 ALTA \u2713BTC | Score +30 \u2192 buscando entrada H1...
+23:30:17 [INFO] [MTF] AMP     | H4 sem setup | Score -15 RSI 50
+23:30:17 [INFO] [MTF] OXT     | H4 sem setup | Score -35 RSI 32
+23:30:17 [INFO] [MTF] FORTH   | H4 sem setup | Score -30 RSI 51
+23:30:17 [INFO] [MTF] AGLD    | H4 sem setup | Score -110 RSI 38
+23:30:17 [INFO] [MTF] RARE    | H4 sem setup | Score -65 RSI 45
+23:30:17 [INFO] [MTF] WOO     | H4 sem setup | Score -95 RSI 44
+23:30:17 [INFO] [MTF] BNT     | H4 sem setup | Score -65 RSI 48
+23:30:17 [INFO] [MTF] LQTY    | H4 sem setup | Score +15 RSI 52
+23:30:17 [INFO] [MTF] PHB     | H4 sem setup | Score -120 RSI 40
+23:30:17 [INFO] [MTF] ARKM    | H4 sem setup | Score -60 RSI 46
+23:30:17 [INFO] [MTF] NMR     | H4 sem setup | Score +100 RSI 67
+23:30:17 [INFO] [MTF] AI      | H4 sem setup | Score -85 RSI 37
+23:30:17 [INFO] [MTF] MOVR    | H4 sem setup | Score -85 RSI 46
+23:30:17 [INFO] [MTF] GLMR    | H4 BAIXA \u2713BTC | Score -110 \u2192 buscando entrada H1...
+23:30:17 [INFO] [MTF] ENS     | H4 sem setup | Score +30 RSI 62
+23:30:17 [INFO] [MTF] RIF     | H4 sem setup | Score -55 RSI 36
+23:30:17 [INFO] [MTF] METIS   | H4 sem setup | Score +0 RSI 67
+23:30:17 [INFO] [MTF] XAI     | H4 sem setup | Score -60 RSI 49
+23:30:17 [INFO] [MTF] BEAM    | H4 sem setup | Score -120 RSI 27
+23:30:17 [INFO] [MTF] POLYX   | H4 sem setup | Score -75 RSI 49
+23:30:17 [INFO] [MTF] ID      | H4 ALTA \u2713BTC | Score +85 \u2192 buscando entrada H1...
+23:30:17 [INFO] [MTF] SYN     | H4 sem setup | Score +145 RSI 78
+23:30:17 [INFO] [MTF] ASTR    | H4 sem setup | Score +5 RSI 59
+23:30:17 [INFO] [MTF] ILV     | H4 sem setup | Score -75 RSI 47
+23:30:17 [INFO] [MTF] RON     | H4 sem setup | Score +15 RSI 60
+23:30:17 [INFO] [MTF] PIXEL   | H4 sem setup | Score -70 RSI 46
+23:30:17 [INFO] [MTF] MBOX    | H4 sem setup | Score -120 RSI 28
+23:30:17 [INFO] [MTF] SLP     | H4 sem setup | Score -95 RSI 48
+23:30:17 [INFO] [MTF] TLM     | H4 sem setup | Score -90 RSI 43
+23:30:17 [INFO] [MTF] NFP     | H4 sem setup | Score +80 RSI 57
+23:30:17 [INFO] [MTF] HIGH    | H4 sem setup | Score -70 RSI 45
+23:30:17 [INFO] [MTF] WIN     | H4 sem setup | Score +90 RSI 80
+23:30:17 [INFO] [MTF] DEGO    | H4 sem setup | Score -65 RSI 47
+23:30:17 [INFO] [MTF] LAZIO   | H4 sem setup | Score -145 RSI 33
+23:30:17 [INFO] [MTF] SANTOS  | H4 sem setup | Score +0 RSI 51
+23:30:17 [INFO] [MTF] ATM     | H4 sem setup | Score +120 RSI 60
+23:30:17 [INFO] [MTF] CITY    | H4 sem setup | Score -50 RSI 44
+23:30:17 [INFO] [MTF] TRUMP   | H4 sem setup | Score -25 RSI 44
+23:30:17 [INFO] [MTF] MOODENG | H4 sem setup | Score -5 RSI 52
+23:30:17 [INFO] [MTF] CATI    | H4 sem setup | Score +115 RSI 73
+23:30:17 [INFO] [MTF] HMSTR   | H4 sem setup | Score -70 RSI 44
+23:30:17 [INFO] [MTF] ACT     | H4 sem setup | Score -80 RSI 42
+23:30:18 [INFO] [MTF] GOAT    | H4 sem setup | Score +20 RSI 53
+23:30:18 [INFO] [MTF] PNUT    | H4 sem setup | Score -80 RSI 49
+23:30:18 [INFO] [MTF] COW     | H4 ALTA \u2713BTC | Score +30 \u2192 buscando entrada H1...
+23:30:18 [INFO] [MTF] OGN     | H4 sem setup | Score -50 RSI 47
+23:30:18 [INFO] [MTF] PEOPLE  | H4 sem setup | Score -10 RSI 56
+23:30:18 [INFO] [MTF] LUNC    | H4 sem setup | Score -95 RSI 47
+23:30:18 [INFO] [MTF] USTC    | H4 sem setup | Score -40 RSI 50
+23:30:18 [INFO] [MTF] STORJ   | H4 sem setup | Score +5 RSI 55
+23:30:18 [INFO] [MTF] SC      | H4 sem setup | Score -90 RSI 46
+23:30:18 [INFO] [MTF] RVN     | H4 sem setup | Score -95 RSI 46
+23:30:18 [INFO] [MTF] HOT     | H4 sem setup | Score -95 RSI 46
+23:30:18 [INFO] [MTF] DUSK    | H4 sem setup | Score -140 RSI 42
+23:30:18 [INFO] [MTF] ENJ     | H4 sem setup | Score +85 RSI 70
+23:30:18 [INFO] [MTF] NEXO    | H4 sem setup | Score +40 RSI 56
+23:30:18 [INFO] [MTF] TFUEL   | H4 BAIXA \u2713BTC | Score -130 \u2192 buscando entrada H1...
+23:30:18 [INFO] [MTF] SUN     | H4 sem setup | Score +65 RSI 69
+23:30:18 [INFO] [MTF] FUN     | H4 sem setup | Score -10 RSI 41
+23:30:18 [INFO] [MTF] TWT     | H4 sem setup | Score -70 RSI 49
+23:30:18 [INFO] [MTF] DEXE    | H4 sem setup | Score -90 RSI 17
+23:30:18 [INFO] [MTF] HOOK    | H4 sem setup | Score +85 RSI 63
+23:30:18 [INFO] [MTF] ACH     | H4 sem setup | Score -145 RSI 41
+23:30:18 [INFO] [MTF] POND    | H4 sem setup | Score -40 RSI 50
+23:30:18 [INFO] [MTF] HYPE    | H4 ALTA \u2713BTC | Score +115 \u2192 buscando entrada H1...
+23:30:18 [INFO] [MTF] VIRTUAL | H4 sem setup | Score -80 RSI 43
+23:30:18 [INFO] [MTF] MOVE    | H4 sem setup | Score +0 RSI 52
+23:30:18 [INFO] [MTF] GRASS   | H4 sem setup | Score +10 RSI 47
+23:30:18 [INFO] [MTF] SOLV    | H4 BAIXA \u2713BTC | Score -130 \u2192 buscando entrada H1...
+23:30:18 [INFO] [MTF] KERNEL  | H4 sem setup | Score +5 RSI 62
+23:30:18 [INFO] [MTF] MLN     | H4 sem setup | Score -110 RSI 41
+23:30:18 [INFO] [MTF] BANANA  | H4 sem setup | Score -60 RSI 48
+23:30:18 [INFO] [MTF] SPEC    | H4 sem setup | Score -20 RSI 57
+23:30:18 [INFO] [MTF] ARPA    | H4 sem setup | Score -70 RSI 46
+23:30:18 [INFO] [MTF] STEEM   | H4 sem setup | Score -60 RSI 49
+23:30:18 [INFO] [MTF] SYS     | H4 sem setup | Score +50 RSI 63
+23:30:18 [INFO] [MTF] DODO    | H4 sem setup | Score -80 RSI 50
+23:30:18 [INFO] [MTF] XVS     | H4 sem setup | Score +75 RSI 76
+23:30:18 [INFO] [MTF] SFP     | H4 sem setup | Score -95 RSI 44
+23:30:18 [INFO] [MTF] PROS    | H4 sem setup | Score -65 RSI 40
+23:30:18 [INFO] [MTF] QUICK   | H4 sem setup | Score -105 RSI 41
+23:30:18 [INFO] [MTF] BICO    | H4 sem setup | Score +25 RSI 56
+23:30:18 [INFO] [MTF] REEF    | H4 sem setup | Score -45 RSI 44
+23:30:18 [INFO] [MTF] MBL     | H4 sem setup | Score -90 RSI 46
+23:30:18 [INFO] [MTF] GTC     | H4 sem setup | Score -15 RSI 49
+23:30:18 [INFO] [MTF] HIVE    | H4 sem setup | Score +5 RSI 52
+23:30:18 [INFO] [MTF] RAY     | H4 sem setup | Score +10 RSI 51
+23:30:18 [INFO] [MTF] ORCA    | H4 sem setup | Score +90 RSI 64
+23:30:18 [INFO] [MTF] WEMIX   | H4 sem setup | Score -125 RSI 13
+23:30:18 [INFO] [MTF] FIDA    | H4 ALTA \u2713BTC | Score +55 \u2192 buscando entrada H1...
+23:30:18 [INFO] [MTF] SWEAT   | H4 sem setup | Score -70 RSI 38
+23:30:18 [INFO] [MTF] UMA     | H4 sem setup | Score -30 RSI 48
+23:30:18 [INFO] [MTF] COS     | H4 sem setup | Score -115 RSI 36
+23:30:18 [INFO] [MTF] ACM     | H4 sem setup | Score -5 RSI 50
+23:30:18 [INFO] [MTF] JUV     | H4 BAIXA \u2713BTC | Score -120 \u2192 buscando entrada H1...
+23:30:18 [INFO] [MTF] FLM     | H4 sem setup | Score -5 RSI 60
+23:30:18 [INFO] [MTF] APEX    | H4 sem setup | Score +30 RSI 53
+23:30:18 [INFO] [MTF] BSV     | H4 sem setup | Score -110 RSI 43
+23:30:18 [INFO] [MTF] HFT     | H4 sem setup | Score -75 RSI 48
+23:30:18 [INFO] [MTF] IRYS    | H4 sem setup | Score -105 RSI 41
+23:30:18 [INFO] [MTF] ASTER   | H4 ALTA \u2713BTC | Score +90 \u2192 buscando entrada H1...
+23:30:18 [INFO] [MTF] PENGU   | H4 sem setup | Score -90 RSI 47
+23:30:18 [INFO] [MTF] EPIC    | H4 sem setup | Score +110 RSI 76
+23:30:18 [INFO] [MTF] HOME    | H4 sem setup | Score +65 RSI 61
+23:30:18 [INFO] [MTF] Prefetch H1 (15 moedas com setup H4)...
+23:30:18 [INFO]   SHORT-BLOQUEADO APTUSDT: score=-30 | ha=F; seguro_short=F(stoch=0.22)
+23:30:18 [INFO] [MTF] APT     | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   sem-sinal TIAUSDT: score=-20 insuficiente
+23:30:18 [INFO] [MTF] TIA     | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   SHORT-BLOQUEADO DYDXUSDT: score=-100 | ha=F; seguro_short=F(stoch=0.63)
+23:30:18 [INFO] [MTF] DYDX    | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   SHORT-BLOQUEADO DOGEUSDT: score=-30 | macd_r=F; ha=F
+23:30:18 [INFO] [MTF] DOGE    | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   SHORT-BLOQUEADO PERPUSDT: score=-145 | seguro_short=F(stoch=0.14)
+23:30:18 [INFO] [MTF] PERP    | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   SHORT-BLOQUEADO LITUSDT: score=-65 | adx=16.7<17; seguro_short=F(stoch=0.00)
+23:30:18 [INFO] [MTF] LIT     | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   LONG-BLOQUEADO GLMRUSDT: score=+75 | lateralizado
+23:30:18 [INFO] [MTF] GLMR    | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   LONG-BLOQUEADO IDUSDT: score=+75 | seguro_long=F(stoch=0.74)
+23:30:18 [INFO] [MTF] ID      | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   SHORT-BLOQUEADO COWUSDT: score=-35 | ha=F; adx=12.5<17; seguro_short=F(stoch=0.16)
+23:30:18 [INFO] [MTF] COW     | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   SHORT-BLOQUEADO TFUELUSDT: score=-35 | ha=F; seguro_short=F(stoch=0.23)
+23:30:18 [INFO] [MTF] TFUEL   | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   LONG-BLOQUEADO HYPEUSDT: score=+40 | seguro_long=F(stoch=0.40)
+23:30:18 [INFO] [MTF] HYPE    | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   SHORT-BLOQUEADO SOLVUSDT: score=-90 | ha=F; seguro_short=F(stoch=0.38)
+23:30:18 [INFO] [MTF] SOLV    | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   LONG-BLOQUEADO FIDAUSDT: score=+115 | seguro_long=F(stoch=1.00)
+23:30:18 [INFO] [MTF] FIDA    | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   SHORT-BLOQUEADO JUVUSDT: score=-45 | ha=F; adx=12.4<17
+23:30:18 [INFO] [MTF] JUV     | H1 sem entrada (não está no pullback)
+23:30:18 [INFO]   LONG-BLOQUEADO ASTERUSDT: score=+65 | macd_r=F; ha=F
+23:30:18 [INFO] [MTF] ASTER   | H1 sem entrada (não está no pullback)
+23:30:18 [INFO] [MTF] 15 setup(s) H4 ativos sem entrada H1
+23:30:19 [WARNING] buscar_candles TONUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:21 [WARNING] buscar_candles THETAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:21 [WARNING] buscar_candles FTMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:21 [WARNING] buscar_candles ZILLUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:22 [WARNING] buscar_candles LSKUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:22 [WARNING] buscar_candles BANDUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:22 [WARNING] buscar_candles CTSIUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:22 [WARNING] buscar_candles POWRUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:22 [WARNING] buscar_candles XEMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:22 [WARNING] buscar_candles KLAYUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:22 [WARNING] buscar_candles MKRUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:22 [WARNING] buscar_candles OSMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:23 [WARNING] buscar_candles OCEANUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:23 [WARNING] buscar_candles ALPACAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:23 [WARNING] buscar_candles OMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:23 [WARNING] buscar_candles FXSUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:23 [WARNING] buscar_candles RENUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:23 [WARNING] buscar_candles GLMUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:23 [WARNING] buscar_candles AGIXUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:23 [WARNING] buscar_candles BONDUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles CTXCUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles TRBUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles AUDIOUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles DYMAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles ALTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles PORTAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles STPTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles AXLUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles OMNIUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles VOXELUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles DARUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:24 [WARNING] buscar_candles SXPUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles RDNTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles NEIROUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles BRETTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles GMTUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles GALUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles ALPHAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles NULSUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles CVCUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles MTLUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:25 [WARNING] buscar_candles TRUUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles KEYUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles UXLINKUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles WINGUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles EPXUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles MULTIUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles HARDUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles KDAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles BAKEUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:26 [WARNING] buscar_candles ATAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:27 [WARNING] buscar_candles CLVUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:27 [WARNING] buscar_candles DIAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:27 [WARNING] buscar_candles ORNUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:27 [WARNING] buscar_candles IDEXUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:27 [WARNING] buscar_candles TVKUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:27 [WARNING] buscar_candles JITOUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:27 [WARNING] buscar_candles LINAUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:27 [WARNING] buscar_candles ACMUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles FLMUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles KP3RUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles LTOUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles MCUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles BSVUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles ASTERUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles IRYSUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles AMBUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles COSUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles IRISUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles APEXUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles JUVUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles MDXUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:27 [WARNING] buscar_candles HFTUSDT [30m]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:32 [WARNING] buscar_candles KP3RUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:32 [WARNING] buscar_candles LTOUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:32 [WARNING] buscar_candles MCUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:32 [WARNING] buscar_candles AMBUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:32 [WARNING] buscar_candles IRISUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:32 [WARNING] buscar_candles MDXUSDT [30m]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:33 [INFO] [30m] Buscando H4 de 303 moedas para filtro de direção...
+23:30:33 [WARNING] buscar_candles TONUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles THETAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles ZILLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles FTMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles BANDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles LSKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles POWRUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles CTSIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles OSMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles XEMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles MKRUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:36 [WARNING] buscar_candles KLAYUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:37 [WARNING] buscar_candles ALPACAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:37 [WARNING] buscar_candles OCEANUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:37 [WARNING] buscar_candles FXSUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:37 [WARNING] buscar_candles RENUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:37 [WARNING] buscar_candles OMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:37 [WARNING] buscar_candles GLMUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:37 [WARNING] buscar_candles AGIXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:37 [WARNING] buscar_candles BONDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles TRBUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles AUDIOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles CTXCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles ALTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles DYMAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles OMNIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles PORTAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles STPTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles AXLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles SXPUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles VOXELUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles DARUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles RDNTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles GMTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles NEIROUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:38 [WARNING] buscar_candles BRETTUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:39 [WARNING] buscar_candles GALUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:39 [WARNING] buscar_candles ALPHAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:39 [WARNING] buscar_candles CVCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:39 [WARNING] buscar_candles TRUUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:39 [WARNING] buscar_candles NULSUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:39 [WARNING] buscar_candles MTLUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles KEYUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles UXLINKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles WINGUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles BAKEUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles KDAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles HARDUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles MULTIUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles ATAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles EPXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles JITOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles IDEXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles DIAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles LINAUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles TVKUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:40 [WARNING] buscar_candles WEMIXUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:40 [WARNING] buscar_candles CLVUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:40 [WARNING] buscar_candles ORNUSDT [4h]: HTTP 429 — limite de requisições, aguardando 5s (tentativa 1/3)
+23:30:46 [WARNING] buscar_candles TVKUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:46 [WARNING] buscar_candles ORNUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:46 [WARNING] buscar_candles LTOUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:46 [WARNING] buscar_candles KP3RUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:46 [WARNING] buscar_candles IRISUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:46 [WARNING] buscar_candles MCUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:46 [WARNING] buscar_candles AMBUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:46 [WARNING] buscar_candles MDXUSDT [4h]: {'msg': 'Invalid symbol.', 'code': -1121, '_extend': None}
+23:30:47 [INFO]   sem-sinal BTCUSDT: score=-10 insuficiente
+23:30:47 [INFO] [30m] BTC     | Score  -10 | RSI  45.9 | ADX  29.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO ETHUSDT: score=+30 | ha=F; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] ETH     | Score  +30 | RSI  49.9 | ADX  21.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal BNBUSDT: score=-25 insuficiente
+23:30:47 [INFO] [30m] BNB     | Score  -25 | RSI  51.3 | ADX  18.4 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal XRPUSDT: score=+0 insuficiente
+23:30:47 [INFO] [30m] XRP     | Score   +0 | RSI  44.3 | ADX  28.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO TRXUSDT: score=+90 | macd_r=F; ha=F; seguro_long=F(stoch=0.42)
+23:30:47 [INFO] [30m] TRX     | Score  +90 | RSI  63.5 | ADX  38.2 | K:UP | Grade:B | —
+23:30:47 [INFO]   sem-sinal ADAUSDT: score=+20 insuficiente
+23:30:47 [INFO] [30m] ADA     | Score  +20 | RSI  52.4 | ADX  37.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO SOLUSDT: score=+80 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] SOL     | Score  +80 | RSI  51.9 | ADX  23.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal AVAXUSDT: score=-25 insuficiente
+23:30:47 [INFO] [30m] AVAX    | Score  -25 | RSI  46.0 | ADX  26.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO SUIUSDT: score=-70 | ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] SUI     | Score  -70 | RSI  37.0 | ADX  36.2 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO APTUSDT: score=-65 | ha=F; lateralizado; seguro_short=F(stoch=0.68)
+23:30:47 [INFO] [30m] APT     | Score  -65 | RSI  47.2 | ADX  17.1 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal NEARUSDT: score=-15 insuficiente
+23:30:47 [INFO] [30m] NEAR    | Score  -15 | RSI  45.1 | ADX  30.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal SEIUSDT: score=+0 insuficiente
+23:30:47 [INFO] [30m] SEI     | Score   +0 | RSI  49.2 | ADX  12.0 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO TIAUSDT: score=+35 | ha=F; seguro_long=F(stoch=0.83)
+23:30:47 [INFO] [30m] TIA     | Score  +35 | RSI  46.4 | ADX  18.3 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO ALGOUSDT: score=+135 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] ALGO    | Score +135 | RSI  69.4 | ADX  21.3 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO VETUSDT: score=+65 | ha=F; seguro_long=F(stoch=0.95)
+23:30:47 [INFO] [30m] VET     | Score  +65 | RSI  52.5 | ADX  33.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO HBARUSDT: score=+105 | adx=14.5<17; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] HBAR    | Score +105 | RSI  64.5 | ADX  14.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO STXUSDT: score=-70 | ha=F; seguro_short=F(stoch=0.97)
+23:30:47 [INFO] [30m] STX     | Score  -70 | RSI  41.5 | ADX  25.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO ICPUSDT: score=-75 | ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] ICP     | Score  -75 | RSI  36.3 | ADX  38.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO XLMUSDT: score=+85 | ha=F; seguro_long=F(stoch=0.70)
+23:30:47 [INFO] [30m] XLM     | Score  +85 | RSI  66.4 | ADX  24.1 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO KASUSDT: score=-110 | ha=F; lateralizado; seguro_short=F(stoch=0.69)
+23:30:47 [INFO] [30m] KAS     | Score -110 | RSI  42.4 | ADX  17.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO EGLDUSDT: score=-45 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] EGLD    | Score  -45 | RSI  40.3 | ADX  29.7 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal FLOWUSDT: score=-25 insuficiente
+23:30:47 [INFO] [30m] FLOW    | Score  -25 | RSI  46.1 | ADX  24.2 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO CFXUSDT: score=-40 | seguro_short=F(stoch=0.00)
+23:30:47 [INFO] [30m] CFX     | Score  -40 | RSI  38.0 | ADX  26.0 | K:UP | Grade:B | —
+23:30:47 [INFO]   sem-sinal LINKUSDT: score=-10 insuficiente
+23:30:47 [INFO] [30m] LINK    | Score  -10 | RSI  46.7 | ADX  27.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO INJUSDT: score=+35 | ha=F; adx=12.7<17; seguro_long=F(stoch=0.92)
+23:30:47 [INFO] [30m] INJ     | Score  +35 | RSI  51.1 | ADX  12.7 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO JUPUSDT: score=+70 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] JUP     | Score  +70 | RSI  53.2 | ADX  21.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO ARBUSDT: score=+80 | lateralizado; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] ARB     | Score  +80 | RSI  61.4 | ADX  17.5 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO OPUSDT: score=+80 | adx=17.0<17; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] OP      | Score  +80 | RSI  57.9 | ADX  17.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO UNIUSDT: score=+70 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] UNI     | Score  +70 | RSI  51.8 | ADX  18.3 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO AAVEUSDT: score=+80 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] AAVE    | Score  +80 | RSI  55.4 | ADX  20.1 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO ENAUSDT: score=+145 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] ENA     | Score +145 | RSI  75.1 | ADX  37.0 | K:UP | Grade:B | —
+23:30:47 [INFO]   sem-sinal ONDOUSDT: score=+25 insuficiente
+23:30:47 [INFO] [30m] ONDO    | Score  +25 | RSI  49.8 | ADX  21.2 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO GRTUSDT: score=-45 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] GRT     | Score  -45 | RSI  40.6 | ADX  36.7 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO LDOUSDT: score=+100 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] LDO     | Score +100 | RSI  51.8 | ADX  26.6 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO RUNEUSDT: score=-65 | ha=F; adx=13.8<17; lateralizado; seguro_short=F(stoch=0.08)
+23:30:47 [INFO] [30m] RUNE    | Score  -65 | RSI  40.8 | ADX  13.8 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO PENDLEUSDT: score=+45 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] PENDLE  | Score  +45 | RSI  49.8 | ADX  22.5 | K:UP | Grade:B | —
+23:30:47 [INFO]   sem-sinal CAKEUSDT: score=-20 insuficiente
+23:30:47 [INFO] [30m] CAKE    | Score  -20 | RSI  47.1 | ADX  21.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO CRVUSDT: score=-95 | ha=F; seguro_short=F(stoch=0.49)
+23:30:47 [INFO] [30m] CRV     | Score  -95 | RSI  23.7 | ADX  33.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO DYDXUSDT: score=+55 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] DYDX    | Score  +55 | RSI  53.8 | ADX  21.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO SNXUSDT: score=+55 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] SNX     | Score  +55 | RSI  49.9 | ADX  26.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO GMXUSDT: score=+95 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] GMX     | Score  +95 | RSI  56.2 | ADX  26.1 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO COMPUSDT: score=+40 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] COMP    | Score  +40 | RSI  50.8 | ADX  31.1 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO STGUSDT: score=-35 | ha=F; adx=17.0<17; seguro_short=F(stoch=0.73)
+23:30:47 [INFO] [30m] STG     | Score  -35 | RSI  51.1 | ADX  17.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO FETUSDT: score=-55 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] FET     | Score  -55 | RSI  44.3 | ADX  41.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO TAOUSDT: score=-35 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] TAO     | Score  -35 | RSI  43.1 | ADX  29.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO RENDERUSDT: score=+40 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] RENDER  | Score  +40 | RSI  59.5 | ADX  21.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO WLDUSDT: score=+90 | ha=F; adx=11.7<17; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] WLD     | Score  +90 | RSI  53.2 | ADX  11.7 | K:UP | Grade:B | —
+23:30:47 [INFO]   sem-sinal IMXUSDT: score=+20 insuficiente
+23:30:47 [INFO] [30m] IMX     | Score  +20 | RSI  50.8 | ADX  27.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO EIGENUSDT: score=-70 | ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] EIGEN   | Score  -70 | RSI  41.8 | ADX  32.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal DOGEUSDT: score=+5 insuficiente
+23:30:47 [INFO] [30m] DOGE    | Score   +5 | RSI  50.3 | ADX  25.2 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO PEPEUSDT: score=+35 | ha=F; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] PEPE    | Score  +35 | RSI  50.1 | ADX  20.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO WIFUSDT: score=+60 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] WIF     | Score  +60 | RSI  52.7 | ADX  20.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO SHIBUSDT: score=-90 | macd_r=F; ha=F; seguro_short=F(stoch=0.89)
+23:30:47 [INFO] [30m] SHIB    | Score  -90 | RSI  48.2 | ADX  19.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO FLOKIUSDT: score=+75 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] FLOKI   | Score  +75 | RSI  57.2 | ADX  18.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO BONKUSDT: score=+50 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] BONK    | Score  +50 | RSI  51.2 | ADX  26.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO NOTUSDT: score=+75 | adx=12.3<17; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] NOT     | Score  +75 | RSI  64.4 | ADX  12.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO POPCATUSDT: score=+75 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] POPCAT  | Score  +75 | RSI  49.1 | ADX  23.4 | K:UP | Grade:B | —
+23:30:47 [INFO]   sem-sinal DOGSUSDT: score=-15 insuficiente
+23:30:47 [INFO] [30m] DOGS    | Score  -15 | RSI  46.4 | ADX  29.2 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO TURBOUSDT: score=-30 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] TURBO   | Score  -30 | RSI  45.9 | ADX  20.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO MEWUSDT: score=+85 | adx=13.5<17; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] MEW     | Score  +85 | RSI  61.2 | ADX  13.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO BOMEUSDT: score=+55 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] BOME    | Score  +55 | RSI  50.0 | ADX  28.4 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO DOTUSDT: score=-30 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] DOT     | Score  -30 | RSI  45.8 | ADX  24.1 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO ATOMUSDT: score=-105 | seguro_short=F(stoch=0.20)
+23:30:47 [INFO] [30m] ATOM    | Score -105 | RSI  17.6 | ADX  47.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal LTCUSDT: score=+20 insuficiente
+23:30:47 [INFO] [30m] LTC     | Score  +20 | RSI  47.6 | ADX  31.7 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO FILUSDT: score=+75 | ha=F; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] FIL     | Score  +75 | RSI  51.1 | ADX  22.1 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO ARUSDT: score=-85 | macd_r=F; ha=F; seguro_short=F(stoch=0.87)
+23:30:47 [INFO] [30m] AR      | Score  -85 | RSI  36.0 | ADX  36.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO BCHUSDT: score=+85 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] BCH     | Score  +85 | RSI  58.7 | ADX  25.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO ETCUSDT: score=+75 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] ETC     | Score  +75 | RSI  57.6 | ADX  19.2 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO XTZUSDT: score=+50 | ha=F; seguro_long=F(stoch=0.91)
+23:30:47 [INFO] [30m] XTZ     | Score  +50 | RSI  47.9 | ADX  22.6 | K:UP | Grade:B | —
+23:30:47 [INFO]   sem-sinal QNTUSDT: score=+10 insuficiente
+23:30:47 [INFO] [30m] QNT     | Score  +10 | RSI  48.7 | ADX  29.7 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO BATUSDT: score=+65 | ha=F; adx=12.3<17; seguro_long=F(stoch=0.71)
+23:30:47 [INFO] [30m] BAT     | Score  +65 | RSI  53.2 | ADX  12.3 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO STRKUSDT: score=-70 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] STRK    | Score  -70 | RSI  47.2 | ADX  35.4 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO ZETAUSDT: score=-45 | macd_r=F; ha=F; adx=13.8<17; lateralizado; seguro_short=F(stoch=0.80)
+23:30:47 [INFO] [30m] ZETA    | Score  -45 | RSI  46.5 | ADX  13.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO PYTHUSDT: score=-80 | ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] PYTH    | Score  -80 | RSI  47.3 | ADX  18.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO WUSDT: score=+40 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] W       | Score  +40 | RSI  52.8 | ADX  18.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO ZKUSDT: score=+120 | adx=13.1<17; lateralizado; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] ZK      | Score +120 | RSI  60.0 | ADX  13.1 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO MNTUSDT: score=-50 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] MNT     | Score  -50 | RSI  46.0 | ADX  31.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO ZROUSDT: score=+45 | ha=F; adx=14.2<17; lateralizado; seguro_long=F(stoch=0.94)
+23:30:47 [INFO] [30m] ZRO     | Score  +45 | RSI  50.8 | ADX  14.2 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO SAGAUSDT: score=+30 | adx=12.8<17; lateralizado; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] SAGA    | Score  +30 | RSI  47.1 | ADX  12.8 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO BLURUSDT: score=-115 | ha=F; seguro_short=F(stoch=0.73)
+23:30:47 [INFO] [30m] BLUR    | Score -115 | RSI  35.1 | ADX  27.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO ORDIUSDT: score=-75 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] ORDI    | Score  -75 | RSI  29.3 | ADX  45.1 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal AXSUSDT: score=+15 insuficiente
+23:30:47 [INFO] [30m] AXS     | Score  +15 | RSI  47.7 | ADX  28.4 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal SANDUSDT: score=+25 insuficiente
+23:30:47 [INFO] [30m] SAND    | Score  +25 | RSI  51.0 | ADX  27.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO MANAUSDT: score=+90 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] MANA    | Score  +90 | RSI  51.7 | ADX  20.1 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO GALAUSDT: score=-60 | macd_r=F; ha=F; adx=15.4<17; lateralizado; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] GALA    | Score  -60 | RSI  48.9 | ADX  15.4 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal CHZUSDT: score=-5 insuficiente
+23:30:47 [INFO] [30m] CHZ     | Score   -5 | RSI  54.3 | ADX  12.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO APEUSDT: score=+120 | adx=11.6<17; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] APE     | Score +120 | RSI  65.6 | ADX  11.6 | K:UP | Grade:B | —
+23:30:47 [INFO]   sem-sinal YGGUSDT: score=-10 insuficiente
+23:30:47 [INFO] [30m] YGG     | Score  -10 | RSI  44.2 | ADX  26.2 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO MAGICUSDT: score=-30 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] MAGIC   | Score  -30 | RSI  48.7 | ADX  25.7 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO IOUSDT: score=-85 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] IO      | Score  -85 | RSI  42.4 | ADX  29.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal ROSEUSDT: score=+25 insuficiente
+23:30:47 [INFO] [30m] ROSE    | Score  +25 | RSI  40.6 | ADX  35.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO IOTXUSDT: score=-30 | macd_r=F; ha=F; adx=14.7<17; lateralizado; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] IOTX    | Score  -30 | RSI  47.1 | ADX  14.7 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO CELOUSDT: score=-60 | ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] CELO    | Score  -60 | RSI  42.2 | ADX  28.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO JASMYUSDT: score=-45 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] JASMY   | Score  -45 | RSI  49.7 | ADX  22.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO LPTUSDT: score=+85 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] LPT     | Score  +85 | RSI  60.8 | ADX  19.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal AEVOUSDT: score=+0 insuficiente
+23:30:47 [INFO] [30m] AEVO    | Score   +0 | RSI  51.0 | ADX  22.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO BERAUSDT: score=-85 | seguro_short=F(stoch=0.66)
+23:30:47 [INFO] [30m] BERA    | Score  -85 | RSI  35.6 | ADX  34.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO LISTAUSDT: score=-90 | ha=F; seguro_short=F(stoch=0.77)
+23:30:47 [INFO] [30m] LISTA   | Score  -90 | RSI  43.0 | ADX  18.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO REZUSDT: score=-35 | ha=F; seguro_short=F(stoch=0.61)
+23:30:47 [INFO] [30m] REZ     | Score  -35 | RSI  40.9 | ADX  29.2 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO KAVAUSDT: score=+95 | ha=F; seguro_long=F(stoch=0.67)
+23:30:47 [INFO] [30m] KAVA    | Score  +95 | RSI  53.7 | ADX  20.9 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO ONTUSDT: score=-45 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] ONT     | Score  -45 | RSI  43.9 | ADX  27.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO IOTAUSDT: score=+85 | seguro_long=F(stoch=0.96)
+23:30:47 [INFO] [30m] IOTA    | Score  +85 | RSI  64.0 | ADX  24.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO MINAUSDT: score=-45 | ha=F; seguro_short=F(stoch=0.51)
+23:30:47 [INFO] [30m] MINA    | Score  -45 | RSI  40.4 | ADX  25.4 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO MANTAUSDT: score=+75 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] MANTA   | Score  +75 | RSI  76.2 | ADX  38.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO KSMUSDT: score=+70 | adx=15.6<17; lateralizado; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] KSM     | Score  +70 | RSI  53.7 | ADX  15.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO QTUMUSDT: score=+80 | ha=F; seguro_long=F(stoch=0.97)
+23:30:47 [INFO] [30m] QTUM    | Score  +80 | RSI  51.4 | ADX  18.4 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO WAVESUSDT: score=-105 | ha=F; seguro_short=F(stoch=0.27)
+23:30:47 [INFO] [30m] WAVES   | Score -105 | RSI  33.4 | ADX  25.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO IOSTUSDT: score=-95 | ha=F; adx=14.1<17; lateralizado; seguro_short=F(stoch=0.67)
+23:30:47 [INFO] [30m] IOST    | Score  -95 | RSI  41.4 | ADX  14.1 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO NKNUSDT: score=-45 | ha=F; seguro_short=F(stoch=0.15)
+23:30:47 [INFO] [30m] NKN     | Score  -45 | RSI  36.7 | ADX  29.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO COTIUSDT: score=-60 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] COTI    | Score  -60 | RSI  46.7 | ADX  32.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO ZENUSDT: score=+30 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] ZEN     | Score  +30 | RSI  51.8 | ADX  22.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO SCRTUSDT: score=-115 | ha=F; seguro_short=F(stoch=0.61)
+23:30:47 [INFO] [30m] SCRT    | Score -115 | RSI  41.3 | ADX  24.4 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal ACAUSDT: score=+0 insuficiente
+23:30:47 [INFO] [30m] ACA     | Score   +0 | RSI  42.3 | ADX  16.4 | K:UP | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO POLUSDT: score=+65 | ha=F; adx=13.5<17; lateralizado; seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] POL     | Score  +65 | RSI  58.0 | ADX  13.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO CKBUSDT: score=+50 | ha=F; seguro_long=F(stoch=0.57)
+23:30:47 [INFO] [30m] CKB     | Score  +50 | RSI  54.9 | ADX  26.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO XDCUSDT: score=-70 | macd_r=F; ha=F; seguro_short=F(stoch=0.86)
+23:30:47 [INFO] [30m] XDC     | Score  -70 | RSI  44.4 | ADX  30.0 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal NEOUSDT: score=-25 insuficiente
+23:30:47 [INFO] [30m] NEO     | Score  -25 | RSI  45.1 | ADX  26.7 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal WAXPUSDT: score=+10 insuficiente
+23:30:47 [INFO] [30m] WAXP    | Score  +10 | RSI  52.1 | ADX  18.4 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO HNTUSDT: score=-115 | ha=F; seguro_short=F(stoch=0.60)
+23:30:47 [INFO] [30m] HNT     | Score -115 | RSI  33.6 | ADX  18.9 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO SUSHIUSDT: score=+55 | ha=F; seguro_long=F(stoch=0.86)
+23:30:47 [INFO] [30m] SUSHI   | Score  +55 | RSI  42.4 | ADX  22.0 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO BALUSDT: score=-60 | ha=F; seguro_short=F(stoch=0.91)
+23:30:47 [INFO] [30m] BAL     | Score  -60 | RSI  40.7 | ADX  25.6 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO LRCUSDT: score=+55 | seguro_long=F(stoch=1.00)
+23:30:47 [INFO] [30m] LRC     | Score  +55 | RSI  55.8 | ADX  20.3 | K:DN | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO ANKRUSDT: score=-50 | macd_r=F; ha=F; seguro_short=F(stoch=0.89)
+23:30:47 [INFO] [30m] ANKR    | Score  -50 | RSI  46.3 | ADX  20.8 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal CELRUSDT: score=+5 insuficiente
+23:30:47 [INFO] [30m] CELR    | Score   +5 | RSI  49.5 | ADX  16.9 | K:UP | Grade:B | —
+23:30:47 [INFO]   SHORT-BLOQUEADO YFIUSDT: score=-30 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:47 [INFO] [30m] YFI     | Score  -30 | RSI  46.8 | ADX  28.5 | K:DN | Grade:B | —
+23:30:47 [INFO]   LONG-BLOQUEADO KNCUSDT: score=+35 | ha=F; adx=15.4<17; lateralizado; seguro_long=F(stoch=0.96)
+23:30:47 [INFO] [30m] KNC     | Score  +35 | RSI  50.2 | ADX  15.4 | K:DN | Grade:B | —
+23:30:47 [INFO]   sem-sinal ZRXUSDT: score=+0 insuficiente
+23:30:47 [INFO] [30m] ZRX     | Score   +0 | RSI  50.9 | ADX  14.2 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO PERPUSDT: score=-105 | seguro_short=F(stoch=0.00)
+23:30:48 [INFO] [30m] PERP    | Score -105 | RSI  31.7 | ADX  36.3 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO RSRUSDT: score=-55 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] RSR     | Score  -55 | RSI  43.4 | ADX  29.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO ETHFIUSDT: score=+35 | macd_r=F; ha=F; seguro_long=F(stoch=0.13)
+23:30:48 [INFO] [30m] ETHFI   | Score  +35 | RSI  55.5 | ADX  27.5 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO REQUSDT: score=+55 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] REQ     | Score  +55 | RSI  55.9 | ADX  20.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO ALICEUSDT: score=+55 | adx=15.2<17; lateralizado; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] ALICE   | Score  +55 | RSI  54.7 | ADX  15.2 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO SPELLUSDT: score=+35 | ha=F; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] SPELL   | Score  +35 | RSI  47.9 | ADX  52.1 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO CVXUSDT: score=-45 | macd_r=F; ha=F; seguro_short=F(stoch=0.87)
+23:30:48 [INFO] [30m] CVX     | Score  -45 | RSI  33.1 | ADX  40.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO LITUSDT: score=-75 | seguro_short=F(stoch=0.00)
+23:30:48 [INFO] [30m] LIT     | Score  -75 | RSI  29.4 | ADX  24.6 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO AMPUSDT: score=-30 | ha=F; adx=11.9<17; lateralizado; seguro_short=F(stoch=0.33)
+23:30:48 [INFO] [30m] AMP     | Score  -30 | RSI  42.3 | ADX  11.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO OXTUSDT: score=-75 | macd_r=F; ha=F; seguro_short=F(stoch=0.25)
+23:30:48 [INFO] [30m] OXT     | Score  -75 | RSI  42.3 | ADX  27.4 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO FORTHUSDT: score=+45 | ha=F; seguro_long=F(stoch=0.84)
+23:30:48 [INFO] [30m] FORTH   | Score  +45 | RSI  56.9 | ADX  58.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO AGLDUSDT: score=-115 | ha=F; seguro_short=F(stoch=0.81)
+23:30:48 [INFO] [30m] AGLD    | Score -115 | RSI  43.0 | ADX  26.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal RAREUSDT: score=+10 insuficiente
+23:30:48 [INFO] [30m] RARE    | Score  +10 | RSI  46.5 | ADX  28.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO WOOUSDT: score=-55 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] WOO     | Score  -55 | RSI  39.3 | ADX  42.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal BNTUSDT: score=-15 insuficiente
+23:30:48 [INFO] [30m] BNT     | Score  -15 | RSI  47.3 | ADX  16.3 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO LQTYUSDT: score=+75 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] LQTY    | Score  +75 | RSI  49.2 | ADX  27.8 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO PHBUSDT: score=-50 | macd_r=F; ha=F; adx=13.2<17; seguro_short=F(stoch=0.97)
+23:30:48 [INFO] [30m] PHB     | Score  -50 | RSI  35.5 | ADX  13.2 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO ARKMUSDT: score=-40 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] ARKM    | Score  -40 | RSI  38.8 | ADX  47.3 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO NMRUSDT: score=+95 | ha=F; seguro_long=F(stoch=0.65)
+23:30:48 [INFO] [30m] NMR     | Score  +95 | RSI  62.5 | ADX  22.6 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal AIUSDT: score=+5 insuficiente
+23:30:48 [INFO] [30m] AI      | Score   +5 | RSI  58.5 | ADX  28.7 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal MOVRUSDT: score=+15 insuficiente
+23:30:48 [INFO] [30m] MOVR    | Score  +15 | RSI  49.3 | ADX  23.3 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO GLMRUSDT: score=+55 | seguro_long=F(stoch=0.92)
+23:30:48 [INFO] [30m] GLMR    | Score  +55 | RSI  56.4 | ADX  20.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO ENSUSDT: score=+110 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] ENS     | Score +110 | RSI  55.9 | ADX  21.1 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO RIFUSDT: score=-50 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] RIF     | Score  -50 | RSI  30.3 | ADX  31.7 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO METISUSDT: score=+75 | ha=F; adx=9.5<17; lateralizado; seguro_long=F(stoch=0.36)
+23:30:48 [INFO] [30m] METIS   | Score  +75 | RSI  51.9 | ADX   9.5 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO XAIUSDT: score=-30 | macd_r=F; ha=F; seguro_short=F(stoch=0.82)
+23:30:48 [INFO] [30m] XAI     | Score  -30 | RSI  46.8 | ADX  20.4 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO BEAMUSDT: score=-135 | seguro_short=F(stoch=0.19)
+23:30:48 [INFO] [30m] BEAM    | Score -135 | RSI  36.3 | ADX  45.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal POLYXUSDT: score=-10 insuficiente
+23:30:48 [INFO] [30m] POLYX   | Score  -10 | RSI  41.1 | ADX  27.8 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO IDUSDT: score=+50 | ha=F; seguro_long=F(stoch=0.69)
+23:30:48 [INFO] [30m] ID      | Score  +50 | RSI  52.9 | ADX  23.6 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO SYNUSDT: score=+80 | macd_r=F; ha=F; seguro_long=F(stoch=0.00)
+23:30:48 [INFO] [30m] SYN     | Score  +80 | RSI  61.8 | ADX  51.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO ASTRUSDT: score=+100 | ha=F; seguro_long=F(stoch=0.45)
+23:30:48 [INFO] [30m] ASTR    | Score +100 | RSI  56.0 | ADX  27.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal ILVUSDT: score=-25 insuficiente
+23:30:48 [INFO] [30m] ILV     | Score  -25 | RSI  49.7 | ADX  18.6 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal RONUSDT: score=-5 insuficiente
+23:30:48 [INFO] [30m] RON     | Score   -5 | RSI  43.4 | ADX  13.0 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal PIXELUSDT: score=+5 insuficiente
+23:30:48 [INFO] [30m] PIXEL   | Score   +5 | RSI  39.8 | ADX  32.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO MBOXUSDT: score=-80 | macd_r=F; ha=F; lateralizado; seguro_short=F(stoch=0.56)
+23:30:48 [INFO] [30m] MBOX    | Score  -80 | RSI  42.0 | ADX  17.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal SLPUSDT: score=-15 insuficiente
+23:30:48 [INFO] [30m] SLP     | Score  -15 | RSI  48.2 | ADX  19.1 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO TLMUSDT: score=-50 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] TLM     | Score  -50 | RSI  48.0 | ADX  22.7 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO NFPUSDT: score=+115 | ha=F; seguro_long=F(stoch=0.24)
+23:30:48 [INFO] [30m] NFP     | Score +115 | RSI  59.4 | ADX  22.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO HIGHUSDT: score=-55 | ha=F; seguro_short=F(stoch=0.27)
+23:30:48 [INFO] [30m] HIGH    | Score  -55 | RSI  45.0 | ADX  23.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO WINUSDT: score=+80 | macd_r=F; ha=F; seguro_long=F(stoch=0.43)
+23:30:48 [INFO] [30m] WIN     | Score  +80 | RSI  51.8 | ADX  22.0 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO DEGOUSDT: score=-65 | seguro_short=F(stoch=0.00)
+23:30:48 [INFO] [30m] DEGO    | Score  -65 | RSI  38.8 | ADX  25.3 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO LAZIOUSDT: score=-85 | macd_r=F; ha=F; seguro_short=F(stoch=0.76)
+23:30:48 [INFO] [30m] LAZIO   | Score  -85 | RSI  38.0 | ADX  36.2 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO SANTOSUSDT: score=+30 | ha=F; adx=8.4<17; lateralizado; seguro_long=F(stoch=0.79)
+23:30:48 [INFO] [30m] SANTOS  | Score  +30 | RSI  52.4 | ADX   8.4 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO ATMUSDT: score=+105 | ha=F; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] ATM     | Score +105 | RSI  55.4 | ADX  44.8 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO CITYUSDT: score=-85 | ha=F; adx=8.0<17; lateralizado; seguro_short=F(stoch=0.69)
+23:30:48 [INFO] [30m] CITY    | Score  -85 | RSI  48.3 | ADX   8.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO TRUMPUSDT: score=-95 | ha=F; adx=16.2<17; lateralizado; seguro_short=F(stoch=0.18)
+23:30:48 [INFO] [30m] TRUMP   | Score  -95 | RSI  45.3 | ADX  16.2 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO MOODENGUSDT: score=+85 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] MOODENG | Score  +85 | RSI  54.6 | ADX  19.4 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO CATIUSDT: score=+125 | adx=9.2<17; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] CATI    | Score +125 | RSI  58.1 | ADX   9.2 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO HMSTRUSDT: score=+35 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] HMSTR   | Score  +35 | RSI  57.8 | ADX  21.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO ACTUSDT: score=-50 | macd_r=F; ha=F; seguro_short=F(stoch=0.92)
+23:30:48 [INFO] [30m] ACT     | Score  -50 | RSI  45.3 | ADX  24.6 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO GOATUSDT: score=+85 | adx=12.8<17; lateralizado; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] GOAT    | Score  +85 | RSI  54.6 | ADX  12.8 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO PNUTUSDT: score=-45 | macd_r=F; ha=F; adx=15.8<17; lateralizado; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] PNUT    | Score  -45 | RSI  45.6 | ADX  15.8 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal COWUSDT: score=-5 insuficiente
+23:30:48 [INFO] [30m] COW     | Score   -5 | RSI  46.6 | ADX  19.3 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal OGNUSDT: score=+10 insuficiente
+23:30:48 [INFO] [30m] OGN     | Score  +10 | RSI  48.5 | ADX  26.1 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal PEOPLEUSDT: score=+15 insuficiente
+23:30:48 [INFO] [30m] PEOPLE  | Score  +15 | RSI  47.1 | ADX  25.1 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO LUNCUSDT: score=-90 | seguro_short=F(stoch=0.38)
+23:30:48 [INFO] [30m] LUNC    | Score  -90 | RSI  28.2 | ADX  27.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal USTCUSDT: score=-25 insuficiente
+23:30:48 [INFO] [30m] USTC    | Score  -25 | RSI  38.2 | ADX  25.6 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO STORJUSDT: score=+145 | lateralizado; seguro_long=F(stoch=0.97)
+23:30:48 [INFO] [30m] STORJ   | Score +145 | RSI  58.3 | ADX  17.3 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO SCUSDT: score=-60 | ha=F; lateralizado; seguro_short=F(stoch=0.46)
+23:30:48 [INFO] [30m] SC      | Score  -60 | RSI  35.8 | ADX  17.7 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO RVNUSDT: score=-55 | macd_r=F; ha=F; seguro_short=F(stoch=0.80)
+23:30:48 [INFO] [30m] RVN     | Score  -55 | RSI  44.8 | ADX  24.8 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO HOTUSDT: score=-50 | macd_r=F; ha=F; adx=8.0<17; lateralizado; seguro_short=F(stoch=0.92)
+23:30:48 [INFO] [30m] HOT     | Score  -50 | RSI  43.5 | ADX   8.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO DUSKUSDT: score=-85 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] DUSK    | Score  -85 | RSI  39.2 | ADX  42.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO ENJUSDT: score=+135 | ha=F; seguro_long=F(stoch=0.78)
+23:30:48 [INFO] [30m] ENJ     | Score +135 | RSI  69.7 | ADX  33.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal NEXOUSDT: score=-15 insuficiente
+23:30:48 [INFO] [30m] NEXO    | Score  -15 | RSI  40.5 | ADX  21.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal TFUELUSDT: score=-10 insuficiente
+23:30:48 [INFO] [30m] TFUEL   | Score  -10 | RSI  44.6 | ADX  30.8 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO SUNUSDT: score=+80 | macd_r=F; ha=F; seguro_long=F(stoch=0.15)
+23:30:48 [INFO] [30m] SUN     | Score  +80 | RSI  61.4 | ADX  32.1 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO FUNUSDT: score=+80 | seguro_long=F(stoch=0.76)
+23:30:48 [INFO] [30m] FUN     | Score  +80 | RSI  67.3 | ADX  22.6 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO TWTUSDT: score=+50 | ha=F; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] TWT     | Score  +50 | RSI  51.7 | ADX  31.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO DEXEUSDT: score=-125 | seguro_short=F(stoch=0.00)
+23:30:48 [INFO] [30m] DEXE    | Score -125 | RSI  15.0 | ADX  45.6 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO HOOKUSDT: score=+145 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] HOOK    | Score +145 | RSI  71.0 | ADX  30.2 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO ACHUSDT: score=-45 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] ACH     | Score  -45 | RSI  42.8 | ADX  31.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO PONDUSDT: score=+75 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] POND    | Score  +75 | RSI  60.6 | ADX  18.3 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO HYPEUSDT: score=+75 | ha=F; lateralizado; seguro_long=F(stoch=0.79)
+23:30:48 [INFO] [30m] HYPE    | Score  +75 | RSI  50.2 | ADX  17.4 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal VIRTUALUSDT: score=+10 insuficiente
+23:30:48 [INFO] [30m] VIRTUAL | Score  +10 | RSI  49.0 | ADX  30.4 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO MOVEUSDT: score=-55 | ha=F; adx=13.6<17; lateralizado; seguro_short=F(stoch=0.20)
+23:30:48 [INFO] [30m] MOVE    | Score  -55 | RSI  42.1 | ADX  13.6 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO GRASSUSDT: score=-55 | seguro_short=F(stoch=0.45)
+23:30:48 [INFO] [30m] GRASS   | Score  -55 | RSI  24.8 | ADX  36.8 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO SOLVUSDT: score=-65 | macd_r=F; ha=F; seguro_short=F(stoch=0.75)
+23:30:48 [INFO] [30m] SOLV    | Score  -65 | RSI  42.9 | ADX  23.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO KERNELUSDT: score=+145 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] KERNEL  | Score +145 | RSI  69.0 | ADX  20.6 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO MLNUSDT: score=-35 | macd_r=F; ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] MLN     | Score  -35 | RSI  49.0 | ADX  24.7 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO BANANAUSDT: score=-80 | ha=F; seguro_short=F(stoch=1.00)
+23:30:48 [INFO] [30m] BANANA  | Score  -80 | RSI  45.5 | ADX  26.1 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO SPECUSDT: score=+95 | ha=F; seguro_long=F(stoch=0.98)
+23:30:48 [INFO] [30m] SPEC    | Score  +95 | RSI  52.6 | ADX  23.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO ARPAUSDT: score=-75 | ha=F; seguro_short=F(stoch=0.74)
+23:30:48 [INFO] [30m] ARPA    | Score  -75 | RSI  38.1 | ADX  18.7 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO STEEMUSDT: score=-45 | macd_r=F; ha=F; seguro_short=F(stoch=0.80)
+23:30:48 [INFO] [30m] STEEM   | Score  -45 | RSI  42.4 | ADX  25.8 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO SYSUSDT: score=+55 | macd_r=F; ha=F; seguro_long=F(stoch=0.00)
+23:30:48 [INFO] [30m] SYS     | Score  +55 | RSI  62.0 | ADX  17.0 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal DODOUSDT: score=+0 insuficiente
+23:30:48 [INFO] [30m] DODO    | Score   +0 | RSI  41.9 | ADX  28.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO XVSUSDT: score=-35 | ha=F; adx=14.4<17; lateralizado; seguro_short=F(stoch=0.55)
+23:30:48 [INFO] [30m] XVS     | Score  -35 | RSI  46.2 | ADX  14.4 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO SFPUSDT: score=-50 | ha=F; seguro_short=F(stoch=0.45)
+23:30:48 [INFO] [30m] SFP     | Score  -50 | RSI  34.3 | ADX  33.4 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO PROSUSDT: score=+50 | ha=F; seguro_long=F(stoch=0.78)
+23:30:48 [INFO] [30m] PROS    | Score  +50 | RSI  63.1 | ADX  24.2 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO QUICKUSDT: score=-80 | ha=F; adx=13.1<17; seguro_short=F(stoch=0.35)
+23:30:48 [INFO] [30m] QUICK   | Score  -80 | RSI  46.5 | ADX  13.1 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO BICOUSDT: score=+65 | ha=F; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] BICO    | Score  +65 | RSI  48.3 | ADX  22.9 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO REEFUSDT: score=+35 | adx=14.5<17; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] REEF    | Score  +35 | RSI  67.0 | ADX  14.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO MBLUSDT: score=-95 | ha=F; adx=11.0<17; lateralizado; seguro_short=F(stoch=0.98)
+23:30:48 [INFO] [30m] MBL     | Score  -95 | RSI  43.9 | ADX  11.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal GTCUSDT: score=+20 insuficiente
+23:30:48 [INFO] [30m] GTC     | Score  +20 | RSI  49.7 | ADX  23.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO HIVEUSDT: score=-65 | seguro_short=F(stoch=0.00)
+23:30:48 [INFO] [30m] HIVE    | Score  -65 | RSI  29.8 | ADX  27.1 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO RAYUSDT: score=+75 | adx=14.9<17; lateralizado; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] RAY     | Score  +75 | RSI  53.9 | ADX  14.9 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO ORCAUSDT: score=+45 | macd_r=F; ha=F; seguro_long=F(stoch=0.42)
+23:30:48 [INFO] [30m] ORCA    | Score  +45 | RSI  49.5 | ADX  32.2 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal WEMIXUSDT: score=-20 insuficiente
+23:30:48 [INFO] [30m] WEMIX   | Score  -20 | RSI  34.9 | ADX  46.1 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO FIDAUSDT: score=+125 | seguro_long=F(stoch=0.86)
+23:30:48 [INFO] [30m] FIDA    | Score +125 | RSI  67.9 | ADX  33.8 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal SWEATUSDT: score=-20 insuficiente
+23:30:48 [INFO] [30m] SWEAT   | Score  -20 | RSI  47.0 | ADX  26.8 | K:UP | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO UMAUSDT: score=-50 | ha=F; seguro_short=F(stoch=0.96)
+23:30:48 [INFO] [30m] UMA     | Score  -50 | RSI  33.5 | ADX  31.7 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal COSUSDT: score=-25 insuficiente
+23:30:48 [INFO] [30m] COS     | Score  -25 | RSI  49.2 | ADX  13.1 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO ACMUSDT: score=+80 | adx=13.5<17; lateralizado; seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] ACM     | Score  +80 | RSI  52.7 | ADX  13.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal JUVUSDT: score=-15 insuficiente
+23:30:48 [INFO] [30m] JUV     | Score  -15 | RSI  45.5 | ADX  27.0 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal FLMUSDT: score=-15 insuficiente
+23:30:48 [INFO] [30m] FLM     | Score  -15 | RSI  43.0 | ADX  30.4 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal APEXUSDT: score=-10 insuficiente
+23:30:48 [INFO] [30m] APEX    | Score  -10 | RSI  47.1 | ADX  11.7 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO BSVUSDT: score=-35 | macd_r=F; ha=F; seguro_short=F(stoch=0.82)
+23:30:48 [INFO] [30m] BSV     | Score  -35 | RSI  41.4 | ADX  34.5 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO HFTUSDT: score=-60 | ha=F; adx=14.4<17; lateralizado; seguro_short=F(stoch=0.60)
+23:30:48 [INFO] [30m] HFT     | Score  -60 | RSI  43.4 | ADX  14.4 | K:DN | Grade:B | —
+23:30:48 [INFO]   SHORT-BLOQUEADO IRYSUSDT: score=-115 | ha=F; seguro_short=F(stoch=0.82)
+23:30:48 [INFO] [30m] IRYS    | Score -115 | RSI  40.8 | ADX  27.3 | K:DN | Grade:B | —
+23:30:48 [INFO]   sem-sinal ASTERUSDT: score=+5 insuficiente
+23:30:48 [INFO] [30m] ASTER   | Score   +5 | RSI  46.5 | ADX  25.6 | K:UP | Grade:B | —
+23:30:48 [INFO]   sem-sinal PENGUUSDT: score=+20 insuficiente
+23:30:48 [INFO] [30m] PENGU   | Score  +20 | RSI  48.5 | ADX  24.2 | K:DN | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO EPICUSDT: score=+140 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] EPIC    | Score +140 | RSI  63.5 | ADX  19.0 | K:UP | Grade:B | —
+23:30:48 [INFO]   LONG-BLOQUEADO HOMEUSDT: score=+130 | seguro_long=F(stoch=1.00)
+23:30:48 [INFO] [30m] HOME    | Score +130 | RSI  92.1 | ADX  50.3 | K:UP | Grade:B | —
+23:30:48 [INFO] [30m] Sem sinais — \U0001f4c8 LONG — \U0001f534 RSI sobrecomprado |   ENA: +145 | RSI 75 | ADX 37 |   STORJ: +145 | RSI 58 | ADX 17
+23:30:48 [INFO] [30m] Watchlist: 167 moedas encontradas
+23:30:48 [INFO] \u2705 Ciclo #2 concluído. Sinais: 0
+23:30:48 [INFO] \u23f3 Próximo ciclo em 1751s (29.2min)...
