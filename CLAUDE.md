@@ -78,6 +78,10 @@ rsi_zona_short = rsi > 25
 ## REGRA #2 — Volume mínimo para sinais
 
 - `vol_nao_fade` (SCOUT): `max(volumes[-1], volumes[-2]) >= vol_ma * 0.80` (FL=3; 0.65 FL=2; 0.50 FL=1; 0.20 FL=0)
+- SCOUT (autorizado 20/06 — caso TRUMP/USDT BRONZE 1/5 com RVOL 0.24x passou pelo `vol_nao_fade` solto demais):
+  além do `vol_nao_fade` acima, agora exige também `ADX >= 25` (piso fixo, substituiu o `_adx_min` escalado por
+  filtro 10/15) e `RVOL >= 1.2` — mesmo piso aplicado ao FLEX no mesmo dia. Torna SCOUT bem mais raro por
+  desenho — aceito explicitamente pelo usuário como trade-off.
 - BB_BREAK: RVOL ≥ 0.80 (FL=3; mais baixo em FL menor) + OBV confirmado
 - SURGE: melhor das 2 últimas velas `rvol_tier_max2 >= 3` (3x+)
 - Rompimento sem volume = falso rompimento
@@ -253,7 +257,7 @@ Sempre que pedir um ajuste, comece por aqui antes de grepar o código. Pipeline:
 | 9 | DIV | `rsi_div_bull`+`ha_bull`+`v_bom`+`rsi>25`+`rsi_zona_long`+`not exaustao_topo`+`adx>15`+`not lateralizado`+`preco>e200`+`score_inst_long>=55` |
 | 10 | FLEX | `score>=40`+`ha_bull2`+`macd_bull_r`+`adx>=25`+`not lateralizado`+`nao_ext_long_tight`+`seguro_long`+`flex_vol_ok`+`rvol>=1.2`+`rsi_zona_long`+`nao_overext_long`+`rsi_nao_chasing_long`+`score_inst_long>=50`+(`liq_long` ou `liq_fundo` ou `trendilo_long`+`kalman_subindo`)+(`trendilo_long` ou `kalman_subindo` ou `dna_flex_bull`) — *`adx`/`rvol` subidos de 14/0.5 para 25/1.2 em 20/06 (caso TIA/USDT SHORT BRONZE 2/5, RVOL 0.65x/ADX 24 — sinal fraco demais pelo gate antigo)* |
 | 11 | SETUP | `score>50`+`ha_bull2`+`macd_recuperando`+`adx>18`+`obv_bull`+`v_bom`+`acima_vwap`+`not lateralizado`+`nao_ext_long_tight`+`seguro_long`+(`liq_long` ou `liq_fundo`)+`preco>e200`+`score_inst_long>=50`+`rsi_zona_long` |
-| 12 | SCOUT | `score>=_sc_min`(25 FL≤0/40 outros)+`ha_bull_1`+`macd_bull_r`+`adx>=_adx_min`(10 FL≤0/15 outros)+`adx_subindo`(FL≥2)+`not lateralizado`+`nao_ext_long_tight`+`seguro_long`(FL≥1)+`vol_nao_fade`+`nao_overext_long`+`rsi_nao_chasing_long`+`rsi_zona_long`+`not liq_topo`(FL≥3)+soma(`dna_flow_bull`,`f_bull`,`trendilo_long`,`kalman_subindo`)`>=_fluxo_min`(0/1/2 por FL) |
+| 12 | SCOUT | `score>=_sc_min`(25 FL≤0/40 outros)+`ha_bull_1`+`macd_bull_r`+`adx>=25`(piso fixo, *antes era `_adx_min` 10/15 escalado por FL — endurecido 20/06 junto com `rvol>=1.2`, caso TRUMP/USDT BRONZE 1/5 RVOL 0.24x*)+`adx_subindo`(FL≥2)+`not lateralizado`+`nao_ext_long_tight`+`seguro_long`(FL≥1)+`vol_nao_fade`+`rvol>=1.2`+`nao_overext_long`+`rsi_nao_chasing_long`+`rsi_zona_long`+`not liq_topo`(FL≥3)+soma(`dna_flow_bull`,`f_bull`,`trendilo_long`,`kalman_subindo`)`>=_fluxo_min`(0/1/2 por FL) |
 
 `seguro_long` = `not perto_bb_topo` E `not ext_acima_e21` E `not vol_secando` E `not exaustao_topo` E `rsi<70` E `not stoch_esticado_up`.
 `seguro_short` = `not vol_secando` E `not exaustao_fund` E `rsi>27` E `not stoch_esticado_down`.
