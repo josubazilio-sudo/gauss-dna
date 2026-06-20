@@ -68,10 +68,10 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("score baixo")
         return motivos
 
-    # RSI zona — usa direção do score (não kalman)
-    if eh_long_cand and rsi >= 55:
+    # RSI zona — FLEX PRO 15/06 (CLAUDE.md REGRA #1): bloqueia só extremos absolutos
+    if eh_long_cand and rsi >= 75:
         motivos.append(f"RSI {rsi:.0f} sobrecomprado (LONG bloq)")
-    elif not eh_long_cand and rsi <= 45:
+    elif not eh_long_cand and rsi <= 25:
         motivos.append(f"RSI {rsi:.0f} sobrevendido (SHORT bloq)")
 
     if adx < (10 if FILTER_LEVEL <= 0 else 15):
@@ -306,42 +306,9 @@ async def executar_ciclo(session, estado, tf, moedas):
                 continue
 
             _rvol      = result.get("rvol", 1.0)
-            _rsi       = result.get("rsi", 50)
             _dna       = result.get("dna_flow_bull" if eh_long else "dna_flow_bear", False)
             _trl       = result.get("trendilo_long" if eh_long else "trendilo_short", False)
             _tend      = result.get("tendencia", "NEUTRO")
-            _hora_utc  = datetime.now(timezone.utc).hour
-            _baixa_liq    = 22 <= _hora_utc or _hora_utc < 8    # Asian/madrugada UTC
-            _aber_falsa   = _hora_utc in (8, 13)               # abertura Londres/NY
-            _sombra_sup   = result.get("sombra_sup", 0.0)
-            _sombra_inf   = result.get("sombra_inf", 0.0)
-            _liq_topo_r   = result.get("liq_topo", False)
-            _liq_fundo_r  = result.get("liq_fundo", False)
-            _armadilha = []
-            if _rvol < 0.80:
-                _armadilha.append("volume fraco")
-            if fonte == "BB_BREAK" and _rvol < 1.0:
-                _armadilha.append("BB break sem volume")
-            if eh_long and _rsi >= 50:
-                _armadilha.append(f"RSI {_rsi:.0f} elevado para LONG")
-            if not eh_long and _rsi <= 50:
-                _armadilha.append(f"RSI {_rsi:.0f} baixo para SHORT")
-            if not _dna and not _trl:
-                _armadilha.append("fluxo não confirmado")
-            if _tend == "NEUTRO":
-                _armadilha.append("tendência lateral")
-            if eh_long and _sombra_sup > 0.35:
-                _armadilha.append("pavio de rejeição no topo")
-            if not eh_long and _sombra_inf > 0.35:
-                _armadilha.append("pavio de rejeição no fundo")
-            if eh_long and _liq_topo_r:
-                _armadilha.append("varredura de topo detectada")
-            if not eh_long and _liq_fundo_r:
-                _armadilha.append("varredura de fundo detectada")
-            if _baixa_liq:
-                _armadilha.append(f"sessão baixa liquidez ({_hora_utc:02d}h UTC)")
-            if _aber_falsa:
-                _armadilha.append(f"abertura {'Londres' if _hora_utc == 8 else 'NY'} — 30min de risco")
 
             # FLEX sem fluxo direcional + mercado neutro = TP1 improvável (~50%)
             if fonte == "FLEX" and not _dna and not _trl and _tend == "NEUTRO":
@@ -361,7 +328,6 @@ async def executar_ciclo(session, estado, tf, moedas):
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
                 "funding_rate": result.get("funding_rate"),
                 "oi_change":    oi_change.get(sym),
-                "armadilha":    _armadilha,
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],
