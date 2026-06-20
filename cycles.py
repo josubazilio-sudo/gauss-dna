@@ -439,6 +439,22 @@ async def executar_ciclo(session, estado, tf, moedas):
             eh_long_ = result["sinal"] == "LONG"
             score_inst = result.get("score_inst_long" if eh_long_ else "score_inst_short", 0)
 
+            # Bloqueadores absolutos H1 Premium — ADX e RVOL mínimos.
+            # Contra-tendência (reversão/exaustão) fica de fora: opera justamente
+            # quando ADX/RVOL estão caindo (clímax de volume secando, ADX virando).
+            _exc_absoluto = {"REVERSAL", "SM_SWEEP", "EXTREME", "CORE", "DIV", "REBOUND", "PUMP", "DUMP"}
+            if FILTER_LEVEL >= 1 and fonte not in _exc_absoluto:
+                if result.get("adx", 0) < 20:
+                    log.info(f"  🚫 {abrev} [{tf}] bloqueado — ADX {result['adx']:.0f}<20 (absoluto H1 Premium)")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"adx<20(absoluto)"))
+                    continue
+                if result.get("rvol", 0) < 0.80:
+                    log.info(f"  🚫 {abrev} [{tf}] bloqueado — RVOL {result.get('rvol',0):.2f}x<0.80 (absoluto H1 Premium)")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], f"rvol<0.80(absoluto)"))
+                    continue
+
             # Near-miss tracking: captura candidatos sérios com ≤2 bloqueadores
             _bloqs_nm = _detectar_bloqueadores_diag(result)
             if len(_bloqs_nm) <= 2 and score_inst >= 45:
@@ -492,14 +508,26 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue
 
-            # Confiança mínima 55% para qualquer sinal (exceto REVERSAL e SM_SWEEP)
-            _conf_global = max(40, min(95, score_inst * 3 // 4))
+            # Confiança = score_inst − 10 (H1 Premium: Gate A=65%, S=75%)
+            _conf_global = max(40, min(95, score_inst - 10))
             if _h4_penalty:
                 _conf_global = max(40, _conf_global - 10)   # H4 oposto: -10% confiança
-            if FILTER_LEVEL >= 1 and _conf_global < 55 and fonte not in {"REVERSAL", "SM_SWEEP", "EXTREME"}:
-                log.info(f"  ⚠️ {abrev} bloqueado — confiança {_conf_global}% < 55% (inst={score_inst})")
+            # Anti-topo soft: RSI > 70 + preço > EMA21 + 2×ATR → confiança -15%
+            if eh_long_ and fonte not in {"EXTREME", "REVERSAL", "SM_SWEEP"}:
+                _rsi_at  = result.get("rsi", 50)
+                _e21_at  = result.get("e21", 0)
+                _atr_at  = result.get("atr", 0)
+                _preco_at = result.get("preco", 0)
+                if _rsi_at > 70 and _e21_at > 0 and _atr_at > 0 and _preco_at > _e21_at + 2 * _atr_at:
+                    _prev_c = _conf_global
+                    _conf_global = max(40, _conf_global - 15)
+                    log.info(f"  ⚠️ {abrev} [{tf}] anti-topo soft: RSI {_rsi_at:.0f}>70 + preço>EMA21+2ATR → conf {_prev_c}→{_conf_global}%")
+            # CORE/SCOUT/DIV/REBOUND: gate próprio de condições, conf não é filtro primário
+            _conf_exc = {"REVERSAL", "SM_SWEEP", "EXTREME", "CORE", "SCOUT", "DIV", "REBOUND"}
+            if FILTER_LEVEL >= 1 and _conf_global < 60 and fonte not in _conf_exc:
+                log.info(f"  ⚠️ {abrev} bloqueado — confiança {_conf_global}% < 60% (inst={score_inst})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"conf<55%({_conf_global}%)"))
+                                   result["rsi"], result["adx"], f"conf<60%({_conf_global}%)"))
                 continue
 
             # ── PROTEÇÃO TOPO/FUNDO REAL: apenas extremo absoluto (5 condições simultâneas) ──
@@ -539,10 +567,13 @@ async def executar_ciclo(session, estado, tf, moedas):
                 # Resistência mais urgente — verifica primeiro
                 if _sh_g > 0 and _preco_g > 0 and _preco_g > _sh_g * 0.998:
                     _bloq_gate.append(f"ENTRANDO EM RESISTENCIA (preco>{_sh_g:.6f}*0.998)")
+                _e50_g = result.get("e50", 0)
                 if _e10_g > 0 and _e21_g > 0 and _e10_g <= _e21_g:
                     _bloq_gate.append(f"EMA10 {_e10_g:.4f} <= EMA21 {_e21_g:.4f}")
-                if _adx_g <= 18:
-                    _bloq_gate.append(f"ADX {_adx_g:.0f}<=18")
+                if _e21_g > 0 and _e50_g > 0 and _e21_g <= _e50_g:
+                    _bloq_gate.append(f"EMA21 {_e21_g:.4f} <= EMA50 {_e50_g:.4f}")
+                if _adx_g <= 19:
+                    _bloq_gate.append(f"ADX {_adx_g:.0f}<20")
                 if _rvol_g < 1.3:
                     _bloq_gate.append(f"RVOL {_rvol_g:.2f}x<1.3")
                 if _e21_g > 0 and _preco_g > _e21_g * 1.04:
@@ -657,6 +688,16 @@ async def executar_ciclo(session, estado, tf, moedas):
             # Sinais de alta volatilidade: capa risco em 2%
             if fonte in ("SURGE", "BREAKOUT", "PUMP", "DUMP"):
                 pct_risco = min(pct_risco, 0.02)  # risco máx 2% — moves rápidos e violentos
+
+            # Grade B = qualidade insuficiente para H1 Premium (requer A ou S).
+            # Contra-tendência fica fora: grade genérica mede alinhamento de tendência,
+            # que é naturalmente fraco em setups de reversão/exaustão por desenho.
+            _exc_gradeB = {"REVERSAL", "SM_SWEEP", "CORE", "DIV", "REBOUND", "PUMP", "DUMP"}
+            if FILTER_LEVEL >= 1 and grade == "B" and fonte not in _exc_gradeB:
+                log.info(f"  ⚠️ {abrev} bloqueado — Grade B (Score Inst {score_inst})")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], "gradeB"))
+                continue
 
             if risco_ciclo + pct_risco > MAX_CYCLE_RISK:
                 log.info(f"  🛑 {abrev} bloqueado — risco ciclo {risco_ciclo*100:.0f}%+{pct_risco*100:.0f}% > teto")

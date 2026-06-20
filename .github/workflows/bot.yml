@@ -20,11 +20,11 @@ on:
       timeframes:
         description: 'Timeframes a analisar (ex: 5m,15m,1h  ou  30m,1h,4h)'
         required: false
-        default: '15m,1h,4h'
+        default: '1h'
       filter_level:
         description: 'Nivel de filtros: 0=debug(force), 1=minimo, 2=moderado, 3=completo (padrao)'
         required: false
-        default: '1'
+        default: '3'
 
 concurrency:
   group: bot-sinais
@@ -89,8 +89,8 @@ jobs:
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
           WA_PHONE: ${{ secrets.WA_PHONE }}
           WA_APIKEY: ${{ secrets.WA_APIKEY }}
-          TIMEFRAMES: ${{ github.event.inputs.timeframes || '15m,1h,4h' }}
-          FILTER_LEVEL: ${{ github.event.inputs.filter_level || '1' }}
+          TIMEFRAMES: ${{ github.event.inputs.timeframes || '1h' }}
+          FILTER_LEVEL: ${{ github.event.inputs.filter_level || '3' }}
           CYCLE_INTERVAL: '300'
           SIGNAL_MODE: 'FLEX'
           DYNAMIC_SCAN: 'true'

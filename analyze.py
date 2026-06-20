@@ -971,14 +971,14 @@ def graduar_sinal(ind, sinal):
     # com Score Inst 65 MÉDIO e RSI 69 que reverteu na entrada)
     if grade in ("S", "S+"):
         score_inst = i["score_inst_long"] if sinal == "LONG" else i["score_inst_short"]
-        _conf_g    = max(40, min(95, score_inst * 3 // 4))
+        _conf_g    = max(40, min(95, score_inst - 10))
         _dna_g     = i["dna_flow_bull"]  if sinal == "LONG" else i["dna_flow_bear"]
         _trl_g     = i["trendilo_long"]  if sinal == "LONG" else i["trendilo_short"]
         rsi_esticado = (sinal == "LONG" and i["rsi"] > 68) or (sinal == "SHORT" and i["rsi"] < 40)
         ha_fraco = (sinal == "LONG"  and i["ha_bull_1"] and not i["ha_bull"]) or \
                    (sinal == "SHORT" and i["ha_bear_1"] and not i["ha_bear"])
-        if (score_inst < 80 or rsi_esticado or ha_fraco or
-                i["rvol"] < 1.3 or i["adx"] < 22 or
+        if (score_inst < 85 or rsi_esticado or ha_fraco or
+                i["rvol"] < 1.20 or i["adx"] < 25 or
                 not (_dna_g and _trl_g) or _conf_g < 70):
             grade = "A"
 

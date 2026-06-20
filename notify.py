@@ -252,7 +252,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     elif fonte == "DUMP":               _lev = min(_lev, 8)   # pós-pump: alta volatilidade, conservador
     elif fonte == "BB_BREAK":           _lev = min(_lev, 8)   # rompimento BB: risco de falso break, cap 8x
     # Cap final por confiança (prevalece sobre grade)
-    _conf_lev = max(40, min(95, score_inst * 3 // 4))
+    _conf_lev = max(40, min(95, score_inst - 10))
     if   _conf_lev < 60: _lev = min(_lev, 5)
     elif _conf_lev < 70: _lev = min(_lev, 10)
     elif _conf_lev < 80: _lev = min(_lev, 15)
@@ -309,7 +309,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     k_str    = "↑" if kalman_subindo else "↓"
     linha_cross = f"📉 Cruzamento: {_escapar(info_cross)}\n" if info_cross else ""
 
-    _confianca = max(40, min(95, score_inst * 3 // 4))
+    _confianca = max(40, min(95, score_inst - 10))
     _fluxo_ico = "🟢" if (dna_flow_ok and trendilo_ok) else ("🟡" if (dna_flow_ok or trendilo_ok) else "🔴")
     _fluxo_str = "Completo" if (dna_flow_ok and trendilo_ok) else ("Parcial" if (dna_flow_ok or trendilo_ok) else "Ausente")
     _grade_ico = {"S+": "💎", "S": "🏆", "A+": "🔥", "A": "⭐", "B": "📊"}.get(grade, "📊")
