@@ -568,13 +568,18 @@ def detectar_sinais(ind):
     # surge_break_h/l JÁ implica liq_topo/fundo (rompe máxima/mínima recente),
     # por isso não usar not liq_topo/fundo aqui — seria contradição direta.
     # Usa melhor das 2 últimas velas p/ RVOL (pega sinal da vela anterior).
-    _surge_vol_ok  = i["rvol_tier_max2"] >= 3
+    # Exige pelo menos 1 de 2 confirmações de fluxo (dna_flow OU trendilo) — pedido
+    # 20/06 pós-trade LAB/USDT: SURGE sem nenhuma confirmação de fluxo (ambas "—")
+    # foi puro spike de volume na quebra, sem sustentação real, e deu squeeze.
+    _surge_vol_ok    = i["rvol_tier_max2"] >= 3
+    _surge_flow_long  = i["dna_flow_bull"] or i["trendilo_long"]
+    _surge_flow_short = i["dna_flow_bear"] or i["trendilo_short"]
     long_surge  = (_surge_vol_ok and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
                    not i["exaustao_topo"] and (i["kalman_subindo"] or i["k_short_subindo"]) and i["ha_bull"] and
-                   i["rsi"] < 78 and i["score_inst_long"] >= 50)
+                   i["rsi"] < 78 and i["score_inst_long"] >= 50 and _surge_flow_long)
     short_surge = (_surge_vol_ok and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
-                   i["rsi"] > 22 and i["score_inst_short"] >= 50)
+                   i["rsi"] > 22 and i["score_inst_short"] >= 50 and _surge_flow_short)
 
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
