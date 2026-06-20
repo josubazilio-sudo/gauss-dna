@@ -59,12 +59,19 @@ rsi_zona_short = rsi > 25
 - 22h–08h UTC (Asian/madrugada): `_inst_min += 10` (cap 70)
 - 08h e 13h UTC (abertura Londres/NY): `_inst_min += 10` (cap 70)
 
-## REGRA #4 — Alavancagem dinâmica 3x–20x
+## REGRA #4 — Alavancagem dinâmica 3x–50x (autorizado 20/06 — plano dobrar banca)
 
-- Base por grade: S+=20, S=16, A+=13, A=10, B=7
-- Modificadores: +2 inst≥80, +1 inst≥70, -2 inst<55, +1 RVOL≥1.5, -1 RVOL<0.80
-- Tetos por tipo: SCOUT=5x, MOMENTUM=10x, SURGE=12x
-- Clamp final: min 3x, máx 20x
+- Base por grade: S+=45, S=32, A+=22, A=14, B=8
+- Modificadores: +4 inst≥80, +2 inst≥70, -3 inst<55, +2 RVOL≥1.5, -1 RVOL<0.80
+- Tetos por tipo: SCOUT=6x, MOMENTUM=28x, SURGE=30x, PREMIUM=30x, BREAKOUT/PUMP=22x, DUMP=16x, BB_BREAK=18x
+- Cap por confiança: conf<60→6x, <70→14x, <80→22x, <90→35x
+- **Teto de segurança por liquidação** (REGRA #4 nova, crítica): a alavancagem final nunca pode deixar a
+  liquidação mais próxima que 1.3x a distância do stop, senão a corretora liquida a posição antes do stop
+  disparar (perda = 100% da margem do trade, não os 2-7% planejados de risco). Fórmula em `notify.py`:
+  `liq_cap = 100 / (1.3 * risco_pct)` — em stops apertados (ATR baixo) permite chegar a 50x; em stops largos
+  o teto efetivo cai bem abaixo disso automaticamente.
+- Clamp final: min 3x, máx 50x
+- Risco por trade já escalado por grade em `config.py` `RISK_BY_GRADE`: B=2%, A=3%, A+=4%, S=5%, S+=7% (SCOUT=1%)
 
 ## REGRA #5 — Defesas SMC (Smart Money)
 

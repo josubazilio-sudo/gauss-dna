@@ -237,29 +237,39 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     contratos    = valor_risco / risco if risco > 0 else 0
     valor_pos    = contratos * preco
 
-    # Alavancagem dinâmica 3x–20x por qualidade do sinal
-    _lev = {"S+": 20, "S": 16, "A+": 13, "A": 10, "B": 7}.get(grade, 7)
-    if score_inst >= 80:   _lev += 2   # confirmação institucional forte
-    elif score_inst >= 70: _lev += 1   # institucional bom
-    elif score_inst < 55:  _lev -= 2   # institucional fraco
-    if rvol_val >= 1.5:    _lev += 1   # volume muito acima da média
+    # Alavancagem dinâmica 3x–50x por qualidade do sinal (banca $100, plano 20/06)
+    _lev = {"S+": 45, "S": 32, "A+": 22, "A": 14, "B": 8}.get(grade, 8)
+    if score_inst >= 80:   _lev += 4   # confirmação institucional forte
+    elif score_inst >= 70: _lev += 2   # institucional bom
+    elif score_inst < 55:  _lev -= 3   # institucional fraco
+    if rvol_val >= 1.5:    _lev += 2   # volume muito acima da média
     elif rvol_val < 0.80:  _lev -= 1   # volume fraco
-    if fonte == "PREMIUM":               _lev = min(_lev, 15)  # institucional: risco menor, cap 15x
-    elif fonte == "SCOUT":               _lev = min(_lev, 5)   # sinal secundário: teto 5x
-    elif fonte == "MOMENTUM":           _lev = min(_lev, 10)  # momentum rápido: teto 10x
-    elif fonte == "SURGE":              _lev = min(_lev, 12)  # breakout explosivo: teto 12x
-    elif fonte in ("BREAKOUT", "PUMP"): _lev = min(_lev, 10)  # breakout nascente: teto 10x
-    elif fonte == "DUMP":               _lev = min(_lev, 8)   # pós-pump: alta volatilidade, conservador
-    elif fonte == "BB_BREAK":           _lev = min(_lev, 8)   # rompimento BB: risco de falso break, cap 8x
-    # Cap final por confiança (prevalece sobre grade)
+    if fonte == "PREMIUM":               _lev = min(_lev, 30)  # institucional: risco menor, cap 30x
+    elif fonte == "SCOUT":               _lev = min(_lev, 6)   # sinal secundário: teto 6x
+    elif fonte == "MOMENTUM":           _lev = min(_lev, 28)  # momentum rápido/stop apertado: teto 28x
+    elif fonte == "SURGE":              _lev = min(_lev, 30)  # breakout explosivo: teto 30x
+    elif fonte in ("BREAKOUT", "PUMP"): _lev = min(_lev, 22)  # breakout nascente: teto 22x
+    elif fonte == "DUMP":               _lev = min(_lev, 16)  # pós-pump: alta volatilidade, conservador
+    elif fonte == "BB_BREAK":           _lev = min(_lev, 18)  # rompimento BB: risco de falso break, cap 18x
+    # Cap por confiança (prevalece sobre grade)
     _conf_lev = max(40, min(95, score_inst - 10))
-    if   _conf_lev < 60: _lev = min(_lev, 5)
-    elif _conf_lev < 70: _lev = min(_lev, 10)
-    elif _conf_lev < 80: _lev = min(_lev, 15)
-    # conf>=80 (score>=107, impossível): cap 20x pelo clamp final
+    if   _conf_lev < 60: _lev = min(_lev, 6)
+    elif _conf_lev < 70: _lev = min(_lev, 14)
+    elif _conf_lev < 80: _lev = min(_lev, 22)
+    elif _conf_lev < 90: _lev = min(_lev, 35)
+    # conf>=90: sem cap extra aqui — decide o teto de liquidação/clamp final
+
+    # Teto de segurança por liquidação: a liquidação precisa ficar >=30% além
+    # do stop, senão a corretora liquida a posição ANTES do stop disparar —
+    # troca uma perda planejada de poucos % da banca por 100% da margem do
+    # trade. liq_dist% ≈ 100/alavancagem (aprox. margem isolada/cross).
+    if _risco_pct > 0:
+        _liq_cap = int(100 / (1.3 * _risco_pct))
+        _lev = min(_lev, max(3, _liq_cap))
+
     if extra.get("h4_penalty"):
         _lev = int(_lev * 0.75)                      # H4 oposto: -25% alavancagem máxima
-    alavancagem = max(3, min(20, _lev))              # clamp 3x–20x
+    alavancagem = max(3, min(50, _lev))              # clamp 3x–50x
 
     pos_alav     = valor_pos / alavancagem
     ganho_tp1    = valor_risco * r1 * 0.5       # 50% fechado em TP1
