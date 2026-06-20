@@ -111,7 +111,7 @@ def calcular_indicadores(candles):
         stoch_rsi = (_r14[-1] - _rmin) / (_rmax - _rmin) if _rmax > _rmin else 0.5
     else:
         stoch_rsi = 0.5
-    stoch_esticado_up   = stoch_rsi > 0.95                 # bloqueia apenas extremo absoluto
+    stoch_esticado_up   = stoch_rsi > 0.95 and rsi > 58   # bloqueia apenas extremo + RSI já elevado
     stoch_esticado_down = stoch_rsi < 0.05 and rsi < 30   # bloqueia apenas extremo + RSI fundo
 
     # DMI / ADX
