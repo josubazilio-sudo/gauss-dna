@@ -49,3 +49,4 @@ FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
 # ── Arquivos de estado ────────────────────────────────────────────────────────
 STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
+RESULTS_FILE = Path(__file__).parent / "resultados_log.csv"   # rastreamento de TP/STOP por sinal

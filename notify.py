@@ -324,7 +324,9 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     + agora
                 )
                 await enviar_whatsapp(session, wa_text)
-                return True
+                # Dict (truthy) em vez de True puro — permite ao chamador registrar
+                # a posição pro rastreamento de resultado (TP/STOP), pedido 20/06.
+                return {"stop": stop, "tp1": tp1, "tp2": final, "r1": r1, "r_final": r_final}
             else:
                 log.warning(f"❌ {data.get('description')}")
                 return False

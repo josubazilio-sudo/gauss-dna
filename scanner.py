@@ -54,6 +54,20 @@ async def buscar_candles(session, simbolo, tf, limite=250):
     return None
 
 
+async def buscar_preco_atual(session, simbolo):
+    """Busca só o preço atual (ticker), sem klines — usado pra checar TP/STOP
+    das posições em acompanhamento (rastreamento de resultado, pedido 20/06)."""
+    url = f"https://api.mexc.com/api/v3/ticker/price?symbol={simbolo}"
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=8)) as r:
+            if r.status != 200:
+                return None
+            data = await r.json()
+            return float(data["price"])
+    except Exception:
+        return None
+
+
 async def _buscar_seguro(session, simbolo, tf):
     """Versão sem exceção — retorna None em caso de falha."""
     try:

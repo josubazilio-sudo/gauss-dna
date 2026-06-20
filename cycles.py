@@ -20,8 +20,9 @@ from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
 from analyze import analisar, calcular_indicadores
 from notify import enviar_sinal, notificar
-from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_contract_data
-from state import carregar_estado, salvar_estado
+from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_contract_data, buscar_preco_atual
+from state import (carregar_estado, salvar_estado, registrar_posicao_aberta,
+                   verificar_posicoes_abertas, registrar_resultado, resumo_resultados)
 
 log = logging.getLogger("GAUSS+DNA")
 
@@ -99,6 +100,24 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     return motivos
 
 
+async def _atualizar_resultados(session, estado) -> None:
+    """Confere o preço atual das posições em acompanhamento e fecha (TP1_BE/TP2/STOP/
+    EXPIRADO) as que já resolveram, gravando em resultados_log.csv — pedido 20/06,
+    pra ter dado real de winrate em vez de impressão sobre 'perder boas entradas'."""
+    posicoes = estado.get("_posicoes_abertas", [])
+    if not posicoes:
+        return
+    simbolos = list({p["simbolo"] for p in posicoes})
+    tarefas  = [buscar_preco_atual(session, sym) for sym in simbolos]
+    valores  = await asyncio.gather(*tarefas)
+    precos   = {sym: val for sym, val in zip(simbolos, valores) if val is not None}
+
+    fechados = verificar_posicoes_abertas(estado, precos)
+    for f in fechados:
+        registrar_resultado(f)
+        log.info(f"📈 Resultado: {f['simbolo']} {f['direcao']} [{f['fonte']}] → {f['resultado']}")
+
+
 async def _enviar_diagnostico(session) -> None:
     """Envia relatório de diagnóstico de bloqueadores ao Telegram."""
     blq    = _diag_buffer["bloqueadores"]
@@ -149,6 +168,15 @@ async def _enviar_diagnostico(session) -> None:
             linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
 
     linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
+
+    # Resultado real dos sinais fechados nas últimas 24h (rastreamento, pedido 20/06)
+    _resumo = resumo_resultados(horas=24)
+    if _resumo:
+        _c = _resumo["contagem"]
+        _partes = [f"{v}x {k}" for k, v in sorted(_c.items(), key=lambda x: -x[1])]
+        linhas.append(f"\nResultados (24h): {_resumo['total']} fechados — {', '.join(_partes)} "
+                      f"— winrate {_resumo['winrate']:.0f}% — R medio {_resumo['r_medio']:+.2f}")
+
     _texto_diag = "\n".join(linhas)
     log.info(f"[DIAG]\n{_texto_diag}")
     await notificar(session, _texto_diag)
@@ -344,6 +372,9 @@ async def executar_ciclo(session, estado, tf, moedas):
                 longs_enviados  += 1 if eh_long else 0
                 shorts_enviados += 0 if eh_long else 1
                 enviados += 1
+                registrar_posicao_aberta(estado, sym, tf, result["sinal"], result["preco"],
+                                         ok["stop"], ok["tp1"], ok["tp2"], ok["r1"], ok["r_final"],
+                                         grade, result["fonte_sinal"])
         else:
             candidatos.append((result["score"], abrev, result["score"],
                                result["rsi"], result["adx"], result.get("fonte_sinal", "sem-sinal")))
@@ -502,6 +533,9 @@ async def executar_ciclo_mtf(session, estado, moedas):
                                         result["swing_high"], result["fonte_sinal"], "1h", grade, extra=extra)
                 if ok:
                     estado[chave] = agora; enviados += 1
+                    registrar_posicao_aberta(estado, sym, "1h", result["sinal"], result["preco"],
+                                             ok["stop"], ok["tp1"], ok["tp2"], ok["r1"], ok["r_final"],
+                                             grade, result["fonte_sinal"])
             else:
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"cooldown {mins}min"))
@@ -651,6 +685,7 @@ async def main():
                     enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas)
                     total   += enviados
                 log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
+                await _atualizar_resultados(session, estado)
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{ciclo}: {e}")
             finally:
