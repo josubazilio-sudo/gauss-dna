@@ -74,9 +74,29 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     cls_inst    = extra.get("inst_cls", "")
     dna_flow_ok = extra.get("dna_flow", False)
     trendilo_ok = extra.get("trendilo_dir", False)
+    adx_subindo = extra.get("adx_subindo", False)
     evento_liq  = extra.get("liq_event", "")
     funding_rate = extra.get("funding_rate")
     oi_change    = extra.get("oi_change")
+
+    # ── Classificação de confluência (Ouro/Prata/Bronze — pedido 20/06) ────────
+    # 5 critérios de qualidade real do setup (independente do tipo de sinal):
+    # fluxo duplo, volume forte, ADX forte e subindo, score inst alto, RSI saudável.
+    _rsi_saudavel = (40 <= rsi <= 68) if eh_long else (32 <= rsi <= 60)
+    _criterios = [
+        dna_flow_ok and trendilo_ok,
+        rvol_val >= 1.5,
+        adx > 20 and adx_subindo,
+        score_inst >= 65,
+        _rsi_saudavel,
+    ]
+    _n_conf = sum(1 for c in _criterios if c)
+    if _n_conf >= 4:
+        confluencia_emoji, confluencia_label = "🥇", "OURO"
+    elif _n_conf == 3:
+        confluencia_emoji, confluencia_label = "🥈", "PRATA"
+    else:
+        confluencia_emoji, confluencia_label = "🥉", "BRONZE"
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
     mult_atr = (2.0 if fonte == "SURGE"    else
@@ -251,7 +271,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
         f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 *{_escapar(tf_lbl)}*\n"
         f"{linha_cross}\n"
-        f"{emoji_grade} *GRADE: {_escapar(grade)}*\n"
+        f"{emoji_grade} *GRADE: {_escapar(grade)}* \\| {confluencia_emoji} *{_escapar(confluencia_label)}* \\({_escapar(str(_n_conf))}/5\\)\n"
         f"{linha_inst}"
         f"🎯 Confiança: *{_escapar(str(_confianca))}%*\n"
         f"{linha_liq}"

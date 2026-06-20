@@ -325,6 +325,7 @@ async def executar_ciclo(session, estado, tf, moedas):
                 "inst_cls":     result.get("cls_inst_long"   if eh_long else "cls_inst_short",   ""),
                 "dna_flow":     _dna,
                 "trendilo_dir": _trl,
+                "adx_subindo":  result.get("adx_subindo", False),
                 "liq_event":    ("LIQ FUNDO ↑" if result.get("liq_fundo") else
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
                 "funding_rate": result.get("funding_rate"),
@@ -490,6 +491,7 @@ async def executar_ciclo_mtf(session, estado, moedas):
                     "inst_cls":     r4h.get("cls_inst_long"   if eh_long else "cls_inst_short",   ""),
                     "dna_flow":     result.get("dna_flow_bull" if eh_long else "dna_flow_bear", False),
                     "trendilo_dir": result.get("trendilo_long" if eh_long else "trendilo_short", False),
+                    "adx_subindo":  result.get("adx_subindo", False),
                     "liq_event":    ("LIQ FUNDO ↑" if r4h.get("liq_fundo") else
                                      "LIQ TOPO ↓"  if r4h.get("liq_topo")  else ""),
                 }
@@ -539,6 +541,7 @@ async def executar_teste(session):
             "inst_cls":     result.get("cls_inst_long"   if eh_long else "cls_inst_short",   ""),
             "dna_flow":     result.get("dna_flow_bull"   if eh_long else "dna_flow_bear",  False),
             "trendilo_dir": result.get("trendilo_long"   if eh_long else "trendilo_short", False),
+            "adx_subindo":  result.get("adx_subindo", False),
             "liq_event":    ("LIQ FUNDO ↑" if result.get("liq_fundo") else
                              "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
             "funding_rate": result.get("funding_rate"),

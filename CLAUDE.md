@@ -288,6 +288,12 @@ Grade **A+ nunca é gerada** — só existe na tabela de leverage (código morto
 - Gate mais apertado que o ciclo normal: `score_min=40` e `inst_min=40` fixos
 - Cooldown 4h
 
+### Classificação de confluência — Ouro/Prata/Bronze (`notify.py enviar_sinal()`, autorizado 20/06)
+Selo informativo na mensagem, não bloqueia nenhum sinal — mede qualidade real do setup além do gate mínimo
+de entrada. 5 critérios (`dna_flow` e `trendilo` juntos | `rvol>=1.5` | `adx>20` e subindo | `score_inst>=65` |
+RSI saudável: 40-68 LONG / 32-60 SHORT): `>=4/5`→🥇OURO | `3/5`→🥈PRATA | `<=2/5`→🥉BRONZE. Motivado pelo caso
+LAB/USDT SURGE 20/06 (squeeze) — o sinal teria saído BRONZE (só RVOL batia), agora fica visível na mensagem.
+
 ### Stop / TP — `notify.py enviar_sinal()`
 - `mult_atr` base: `2.0` SURGE | `1.2` SM_SWEEP | `1.8` FLEX/SETUP | `1.5` demais
 - Usa stop estrutural (swing low/high ±0.3 ATR) se a distância ficar entre 0.3-2.5 ATR e do lado certo do preço
