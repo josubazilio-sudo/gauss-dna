@@ -101,13 +101,6 @@ async def buscar_top_pares_usdt(session, vol_min_m=1.0, max_pares=400):
         if not isinstance(data, list):
             return []
 
-        # SONDA TEMPORARIA (20/06) — descobrir o simbolo real do ALO na MEXC
-        # (ALOUSDT da -1121 no spot; investigando se o nome real e outro,
-        # como aconteceu com SPCXUSDT -> SPACEX(PRE)USDT). Remover apos achar.
-        _alo_candidatos = [t["symbol"] for t in data if "ALO" in t.get("symbol", "").upper()]
-        if _alo_candidatos:
-            log.info(f"SONDA ALO: simbolos contendo 'ALO' no ticker MEXC: {_alo_candidatos}")
-
         todos_pares = []
         for t in data:
             sym = t["symbol"]

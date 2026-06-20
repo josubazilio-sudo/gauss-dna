@@ -44,7 +44,6 @@ PRIORITY_WATCHLIST = [
     ("TELUSDT",   "TEL/USDT",   "TEL"),
     ("TAOUSDT",   "TAO/USDT",   "TAO"),
     ("SIRENUSDT", "SIREN/USDT", "SIREN"),
-    ("ALOUSDT",   "ALO/USDT",   "ALO"),
     ("OPGUSDT",   "OPG/USDT",   "OPG"),
     ("BEATUSDT",  "BEAT/USDT",  "BEAT"),
     ("GWEIUSDT",  "GWEI/USDT",  "GWEI"),
@@ -57,8 +56,13 @@ PRIORITY_WATCHLIST = [
 # anterior de fallback pro endpoint de futuros tambem falhou pelo mesmo motivo,
 # removida). Simbolo real confirmado via log de execucao real: o scanner dinamico
 # buscou esse mesmo ativo com sucesso usando exatamente "SPACEX(PRE)USDT" (aparece
-# como "SPACEX(PRE)" nos logs de score). ALOUSDT ainda em investigacao — ver
-# sonda temporaria em scanner.py:buscar_top_pares_usdt.
+# como "SPACEX(PRE)" nos logs de score).
+#
+# ALOUSDT removido (20/06) — confirmado via log real (sonda no ticker 24hr completo
+# da MEXC): nenhum simbolo contendo "ALO" existe na exchange, so um token nao
+# relacionado ("AALONUSDT"). Diferente do SPCX, aqui nao e simbolo errado — o
+# ativo "ALO" nao existe na MEXC. O nome real provavelmente e "ALLO" (Allora),
+# que ja esta cadastrado separadamente nesta watchlist e funciona normalmente.
 
 # Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
 _EXCLUIR = {
