@@ -311,27 +311,52 @@ LAB/USDT SURGE 20/06 (squeeze) — o sinal teria saído BRONZE (só RVOL batia),
 
 ---
 
-## MODO INSTITUCIONAL (opcional, autorizado 20/06 — não substitui FLEX/SCOUT)
+## MODO INSTITUCIONAL (autorizado 20/06, evoluído 20/06 — não substitui FLEX/SCOUT)
 
 `SIGNAL_MODE=INSTITUCIONAL` ativa um 3º modo (além de FLEX/ELITE), separado da cascata 1-12 — roda
-**em vez de**, não ao lado de FLEX (escolha de ciclo/run, igual ELITE). Filtro rígido, sem variação por
-FILTER_LEVEL, pedido pra reduzir frequência de sinal e exigir confluência total. Condição (`analyze.py`,
-`detectar_sinais()`):
+**em vez de**, não ao lado de FLEX (escolha de ciclo/run, igual ELITE). Objetivo pedido: "operar apenas
+movimentos institucionais de alta probabilidade". Reaproveita os sinais TIPADOS já existentes (não é
+mais uma condição monolítica única) — só 6 tipos ficam ativos, com prioridade quando mais de um bate:
+
+1. **SM_SWEEP** (score_inst≥70) · 2. **MOMENTUM** (≥70) · 3. **SURGE** (≥75) · 4. **PULLBACK** (≥65) ·
+5. **SETUP** (≥65) · 6. **FLEX** (≥80, prioridade mais baixa). SCOUT/DIV/REBOUND/BB_BREAK/CROSS/
+REVERSAL/ELITE ficam **fora** deste modo (não fazem parte do conjunto pedido).
+
+Cada um dos 6 exige a própria condição de entrada típica (`long_sm`, `long_momentum`, etc., a mesma
+cascata 1-12) **E** todo um piso comum (`analyze.py`, bloco `_base_inst_long`/`_base_inst_short` dentro
+de `detectar_sinais()`):
 
 ```
-LONG  = tendencia_bull + adx>25 + rvol>1.8 + score_inst_long>=70 + liq_fundo (sweep) +
-        preco>e21 + estrutura_alta (HH+HL) + not esticado (|preco-e21|/preco <= 4%)
-SHORT = espelho (tendencia_bear, liq_topo, estrutura_baixa, preco<e21)
+tendencia_bull/bear (e10>e21>e50>e200 + preco>e200, já existia)
+adx > 25 e adx_subindo (adx atual > adx vela anterior)
+rvol > 1.5
+dna_flow_bull/bear + trendilo_long/short (fluxo precisa bater nos dois)
+liq_fundo_12 / liq_topo_12 — sweep de liquidez nos últimos 12 candles (indicador NOVO,
+  variante de liq_fundo/liq_topo que olhava só 1-2 velas; usa o mesmo sm_swing_h/sm_swing_l)
+RSI: 35-68 LONG | 32-65 SHORT
+StochRSI: <0.85 LONG | >0.15 SHORT (mais solto que o stoch_esticado_up/down padrão)
+volume real > vol_ma e not vol_secando
+distância da BB ≥1% do lado errado (anti-topo LONG / anti-fundo SHORT, indicador novo `pos_bb`
+  agora exposto no dict — antes só existiam os booleanos perto_bb_topo/fund a 97%/3%)
+estrutura_alta/baixa (pivôs HH+HL / LH+LL, já existia)
 ```
 
-- `estrutura_alta`/`estrutura_baixa` é indicador novo (não existia antes): pivôs de 3 velas nos últimos
-  30 candles, HH+HL (alta) ou LH+LL (baixa) nos 2 últimos pivôs de cada lado.
-- Grade não usa `graduar_sinal()` por pontos — usa a própria Score Inst: `S`>=90, `A+`>=80, `A`>=70
-  (faixa 70-100, já que a condição de entrada exige >=70). Grade **A+ passa a ser real só neste modo**
-  (em FLEX/ELITE continua código morto, `graduar_sinal()` nunca produz A+ ali).
-- `RISK_BY_GRADE["A+"]`=1.5% e targets A+ (`notify.py`) ficam entre A e S (r1=2.0/r_final=4.0).
-- Gate pós-sinal (`cycles.py`) usa os thresholds padrão "demais" (score_min=40, inst_min=45) — a condição
-  de entrada já exige muito mais que isso, então nunca é o fator limitante.
+- **H4 obrigatório e rígido**: `cycles.py` usa `_h4_confirma_estrito()` (não o `_h4_confirma()` padrão)
+  quando `SIGNAL_MODE=="INSTITUCIONAL"` — exige H4 **confirmando ativamente** a direção (h4_bull para
+  LONG, h4_bear para SHORT), não só "ausência de divergência forte". Sem candle H4 disponível, bloqueia
+  (o modo padrão deixa passar se H4 não veio). Qualquer divergência bloqueia.
+- **Grade**: ainda pela própria Score Inst (não por `graduar_sinal()` por pontos) — `S`≥90, `A+`≥80,
+  `A`≥70 — esse comportamento mudou de `if fonte=="INSTITUCIONAL"` para `if SIGNAL_MODE=="INSTITUCIONAL"`
+  em `analyze.py:analisar()`, porque agora `fonte` vira o nome do tipo real (SM_SWEEP, FLEX, etc.), não
+  mais a string fixa `"INSTITUCIONAL"`.
+- **Cooldown próprio** (`config.py` `COOLDOWN_INSTITUCIONAL_MESMA_DIR`=3h, `..._OPOSTA`=2h) — só se aplica
+  quando `SIGNAL_MODE=="INSTITUCIONAL"`; os outros modos continuam com o cooldown padrão (`tf_minutos`,
+  mín. 2h mesma direção / 2h fixo oposta).
+- **Risco fixo 1%/trade** (`RISK_INSTITUCIONAL` em `config.py`, usado tanto em `cycles.py` pro acúmulo de
+  risco por ciclo quanto em `notify.py` pro tamanho real da posição) — ignora `RISK_BY_GRADE` neste modo.
+- **Teto de ciclo 5%** (`MAX_CYCLE_RISK_INSTITUCIONAL`, vs 10% padrão) e **máximo 2 posições simultâneas**
+  abertas (`MAX_POSICOES_INSTITUCIONAL`, checado via `len(estado["_posicoes_abertas"])` em `cycles.py` —
+  reaproveita o rastreamento de resultado, ver seção abaixo).
 - Fica bem mais raro que FLEX/SCOUT por desenho — não é bug se passar vários ciclos sem sinal nesse modo.
 
 ---

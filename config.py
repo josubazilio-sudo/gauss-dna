@@ -40,6 +40,15 @@ MAX_SCOUT_PER_CYCLE = 2      # máximo 2 SCOUTs por ciclo
 MAX_LONG_PER_CYCLE  = 2      # máximo 2 LONGs por ciclo (anti-correlação)
 MAX_SHORT_PER_CYCLE = 2      # máximo 2 SHORTs por ciclo
 
+# ── Modo INSTITUCIONAL (pedido 20/06 — filtro rígido, "apenas movimentos
+# institucionais de alta probabilidade") — risco/cooldown próprios, mais
+# conservadores que o modo FLEX padrão acima.
+RISK_INSTITUCIONAL          = 0.01   # 1% fixo por trade, independente da grade
+MAX_CYCLE_RISK_INSTITUCIONAL = 0.05  # teto 5% de capital por ciclo
+MAX_POSICOES_INSTITUCIONAL   = 2     # máximo 2 posições simultâneas abertas
+COOLDOWN_INSTITUCIONAL_MESMA_DIR = 10800  # 3h mesma direção
+COOLDOWN_INSTITUCIONAL_OPOSTA    = 7200   # 2h direção oposta
+
 # ── Nível de filtros (1=mínimo, 2=moderado, 3=completo) ──────────────────────
 # 1: vol 50%, sem adx_subindo, sem liq_topo/fundo, fluxo >=1
 # 2: vol 65%, adx_subindo ativo, fluxo >=2

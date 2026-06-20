@@ -15,6 +15,8 @@ from config import (
     CAPITAL, RISK_BY_GRADE, RISK_SCOUT, RISK_PCT,
     MAX_CYCLE_RISK, MAX_SCOUT_PER_CYCLE, MAX_LONG_PER_CYCLE, MAX_SHORT_PER_CYCLE,
     FILTER_LEVEL,
+    RISK_INSTITUCIONAL, MAX_CYCLE_RISK_INSTITUCIONAL, MAX_POSICOES_INSTITUCIONAL,
+    COOLDOWN_INSTITUCIONAL_MESMA_DIR, COOLDOWN_INSTITUCIONAL_OPOSTA,
 )
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -212,13 +214,37 @@ def _h4_confirma(candles_h4, direcao):
     return True
 
 
+def _h4_confirma_estrito(candles_h4, direcao):
+    """Versão rígida usada pelo modo INSTITUCIONAL: H4 precisa CONFIRMAR a
+    direção (não basta ausência de divergência forte) — qualquer H4 oposto
+    bloqueia, mesmo sem score extremo. Sem H4 disponível, bloqueia também
+    (modo institucional não opera sem confirmação multi-timeframe)."""
+    if candles_h4 is None:
+        return False
+    r4 = calcular_indicadores(candles_h4)
+    if not r4:
+        return False
+    h4_rsi  = r4["rsi"]
+    h4_vol  = r4.get("v_forte", False) or r4.get("obv_bull", False)
+    h4_vols = r4.get("v_forte", False) or r4.get("obv_bear", False)
+    h4_bull = (r4["score"] > 15 and r4.get("tbull_r", False) and
+               r4["adx"] >= 13 and h4_rsi < (75 if r4["adx"] > 30 else 65) and h4_vol)
+    h4_bear = (r4.get("tbear_r", False) and r4["adx"] >= 13 and
+               h4_vols and r4["score"] < -15 and h4_rsi > 43)
+    if direcao == "LONG":  return h4_bull
+    if direcao == "SHORT": return h4_bear
+    return False
+
+
 # ── Ciclo FLEX (por timeframe) ────────────────────────────────────────────────
 
 async def executar_ciclo(session, estado, tf, moedas):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     agora = time.time(); enviados = 0
     _diag_buffer["ciclos"] += 1
-    cooldown = max(tf_para_minutos(tf) * 60, 7200)
+    cooldown = (COOLDOWN_INSTITUCIONAL_MESMA_DIR if SIGNAL_MODE == "INSTITUCIONAL"
+                else max(tf_para_minutos(tf) * 60, 7200))
+    cooldown_oposta = (COOLDOWN_INSTITUCIONAL_OPOSTA if SIGNAL_MODE == "INSTITUCIONAL" else 7200)
     candidatos = []
     watchlist  = []
     risco_ciclo  = 0.0; scouts_enviados = 0
@@ -298,7 +324,8 @@ async def executar_ciclo(session, estado, tf, moedas):
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
                 continue
 
-            if tf in ("1h", "15m", "30m") and not _h4_confirma(h4c, result["sinal"]):
+            _h4_check = _h4_confirma_estrito if SIGNAL_MODE == "INSTITUCIONAL" else _h4_confirma
+            if tf in ("1h", "15m", "30m") and not _h4_check(h4c, result["sinal"]):
                 log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "H4 oposto"))
@@ -307,22 +334,28 @@ async def executar_ciclo(session, estado, tf, moedas):
             chave_dir = f"{sym}_{tf}_{result['sinal']}"
             chave_any = f"{sym}_{tf}"
             bloq_dir  = agora - estado.get(chave_dir, 0) < cooldown
-            bloq_flip = agora - estado.get(chave_any, 0) < 7200
+            bloq_flip = agora - estado.get(chave_any, 0) < cooldown_oposta
             if bloq_dir or bloq_flip:
                 if bloq_dir:
                     mins = int((cooldown - (agora - estado.get(chave_dir, 0))) / 60)
                 else:
-                    mins = int((7200 - (agora - estado.get(chave_any, 0))) / 60)
+                    mins = int((cooldown_oposta - (agora - estado.get(chave_any, 0))) / 60)
                 log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "cooldown"))
                 continue
 
             eh_long  = result["sinal"] == "LONG"
-            pct_risco = RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT)
+            _modo_inst = SIGNAL_MODE == "INSTITUCIONAL"
+            pct_risco = (RISK_INSTITUCIONAL if _modo_inst else
+                         RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT))
+            _teto_ciclo = MAX_CYCLE_RISK_INSTITUCIONAL if _modo_inst else MAX_CYCLE_RISK
 
-            if risco_ciclo + pct_risco > MAX_CYCLE_RISK:
+            if risco_ciclo + pct_risco > _teto_ciclo:
                 log.info(f"  🛑 {abrev} bloqueado — risco ciclo {risco_ciclo*100:.0f}%+{pct_risco*100:.0f}% > teto")
+                continue
+            if _modo_inst and len(estado.get("_posicoes_abertas", [])) >= MAX_POSICOES_INSTITUCIONAL:
+                log.info(f"  🛑 {abrev} bloqueado — {MAX_POSICOES_INSTITUCIONAL} posições já abertas (modo INSTITUCIONAL)")
                 continue
             if fonte == "SCOUT" and scouts_enviados >= MAX_SCOUT_PER_CYCLE:
                 log.info(f"  🔵 {abrev} SCOUT bloqueado — limite {MAX_SCOUT_PER_CYCLE}/ciclo")

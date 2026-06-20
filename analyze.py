@@ -232,6 +232,11 @@ def calcular_indicadores(candles):
                 fechamentos[-1] < sm_swing_h and (maximas[-1] - fechamentos[-1]) > atr * 0.2)
     liq_fundo = ((minimas[-2] <= sm_swing_l or minimas[-1] <= sm_swing_l) and
                  fechamentos[-1] > sm_swing_l and (fechamentos[-1] - minimas[-1]) > atr * 0.2)
+    # Sweep recente (últimos 12 candles) — usado pelo modo INSTITUCIONAL (pedido 20/06)
+    liq_topo_12 = any(maximas[-k] >= sm_swing_h and fechamentos[-k] < sm_swing_h and
+                       (maximas[-k] - fechamentos[-k]) > atr * 0.2 for k in range(1, min(13, n)))
+    liq_fundo_12 = any(minimas[-k] <= sm_swing_l and fechamentos[-k] > sm_swing_l and
+                        (fechamentos[-k] - minimas[-k]) > atr * 0.2 for k in range(1, min(13, n)))
 
     crange = maximas[-1] - minimas[-1]
     lwick  = min(aberturas[-1], preco) - minimas[-1]
@@ -447,6 +452,8 @@ def calcular_indicadores(candles):
         "impulso_bull": impulso_bull, "impulso_bear": impulso_bear,
         "liq_long": liq_long, "liq_short": liq_short,
         "liq_topo": liq_topo, "liq_fundo": liq_fundo,
+        "liq_topo_12": liq_topo_12, "liq_fundo_12": liq_fundo_12,
+        "pos_bb": pos_bb,
         "sombra_sup": sombra_sup, "sombra_inf": sombra_inf,
         "sm_bull": sm_bull, "sm_bear": sm_bear,
         "absorb_bull": absorb_bull, "absorb_bear": absorb_bear,
@@ -661,17 +668,40 @@ def detectar_sinais(ind):
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
                    sum([i["dna_flow_bear"], i["f_bear"], i["trendilo_short"], not i["kalman_subindo"]]) >= _fluxo_min)
 
-    # ── INSTITUCIONAL (modo opcional, filtro rígido — pedido 20/06) ───────────
-    # Tendência H1 + força + volume + sweep de liquidez + estrutura de swing
-    # confirmados juntos. Não usa FILTER_LEVEL (sempre no nível mais estrito) e
-    # não substitui FLEX/SCOUT — é um modo separado, escolhido via SIGNAL_MODE.
-    _esticado_h1 = abs(i["preco"] - i["e21"]) / i["preco"] > 0.04
-    long_institucional  = (i["tendencia_bull"] and i["adx"] > 25 and i["rvol"] > 1.8 and
-                            i["score_inst_long"] >= 70 and i["liq_fundo"] and
-                            i["preco"] > i["e21"] and i["estrutura_alta"] and not _esticado_h1)
-    short_institucional = (i["tendencia_bear"] and i["adx"] > 25 and i["rvol"] > 1.8 and
-                            i["score_inst_short"] >= 70 and i["liq_topo"] and
-                            i["preco"] < i["e21"] and i["estrutura_baixa"] and not _esticado_h1)
+    # ── INSTITUCIONAL (modo opcional, filtro rígido — evoluído 20/06) ─────────
+    # Reaproveita os sinais tipados já detectados acima (SM_SWEEP/MOMENTUM/SURGE/
+    # PULLBACK/SETUP/FLEX) mas exige confluência total: tendência+força+fluxo+
+    # sweep recente (12 candles)+estrutura de swing+RSI saudável+StochRSI não
+    # esticado+volume real+distância segura das BB (anti-topo/anti-fundo).
+    # H4 sem nenhuma divergência é checado em cycles.py (_h4_confirma_estrito),
+    # fora do escopo desta função. SCOUT/DIV/REBOUND/BB_BREAK/CROSS/REVERSAL/
+    # ELITE ficam de fora deste modo (não fazem parte da prioridade 1-6 pedida).
+    _vol_inst_ok     = i["volumes"][-1] > i["vol_ma"] and not i["vol_secando"]
+    _rsi_inst_long   = 35 <= i["rsi"] <= 68
+    _rsi_inst_short  = 32 <= i["rsi"] <= 65
+    _anti_topo_long  = (1 - i["pos_bb"]) >= 0.01
+    _anti_topo_short = i["pos_bb"] >= 0.01
+    _base_inst_long  = (i["tendencia_bull"] and i["adx"] > 25 and i["adx_subindo"] and
+                         i["rvol"] > 1.5 and i["dna_flow_bull"] and i["trendilo_long"] and
+                         i["liq_fundo_12"] and _rsi_inst_long and i["stoch_rsi"] < 0.85 and
+                         _vol_inst_ok and _anti_topo_long and i["estrutura_alta"])
+    _base_inst_short = (i["tendencia_bear"] and i["adx"] > 25 and i["adx_subindo"] and
+                         i["rvol"] > 1.5 and i["dna_flow_bear"] and i["trendilo_short"] and
+                         i["liq_topo_12"] and _rsi_inst_short and i["stoch_rsi"] > 0.15 and
+                         _vol_inst_ok and _anti_topo_short and i["estrutura_baixa"])
+
+    sm_inst        = _base_inst_long  and long_sm        and i["score_inst_long"]  >= 70
+    momentum_inst  = _base_inst_long  and long_momentum  and i["score_inst_long"]  >= 70
+    surge_inst     = _base_inst_long  and long_surge     and i["score_inst_long"]  >= 75
+    pullback_inst  = _base_inst_long  and long_pullback  and i["score_inst_long"]  >= 65
+    setup_inst     = _base_inst_long  and long_setup     and i["score_inst_long"]  >= 65
+    flex_inst      = _base_inst_long  and long_flex      and i["score_inst_long"]  >= 80
+    sm_inst_s      = _base_inst_short and short_sm       and i["score_inst_short"] >= 70
+    momentum_inst_s= _base_inst_short and short_momentum and i["score_inst_short"] >= 70
+    surge_inst_s   = _base_inst_short and short_surge    and i["score_inst_short"] >= 75
+    pullback_inst_s= _base_inst_short and short_pullback and i["score_inst_short"] >= 65
+    setup_inst_s   = _base_inst_short and short_setup    and i["score_inst_short"] >= 65
+    flex_inst_s    = _base_inst_short and short_flex     and i["score_inst_short"] >= 80
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
@@ -679,8 +709,24 @@ def detectar_sinais(ind):
         if long_elite or early_long:   sinal = "LONG";  fonte = "ELITE"
         elif short_elite or early_short: sinal = "SHORT"; fonte = "ELITE"
     elif SIGNAL_MODE == "INSTITUCIONAL":
-        if long_institucional:    sinal = "LONG";  fonte = "INSTITUCIONAL"
-        elif short_institucional: sinal = "SHORT"; fonte = "INSTITUCIONAL"
+        # Prioridade pedida 20/06: SM_SWEEP > MOMENTUM > SURGE > PULLBACK > SETUP > FLEX
+        ordem_inst = [
+            (sm_inst,        "LONG",  "SM_SWEEP"),
+            (sm_inst_s,       "SHORT", "SM_SWEEP"),
+            (momentum_inst,  "LONG",  "MOMENTUM"),
+            (momentum_inst_s, "SHORT", "MOMENTUM"),
+            (surge_inst,     "LONG",  "SURGE"),
+            (surge_inst_s,    "SHORT", "SURGE"),
+            (pullback_inst,  "LONG",  "PULLBACK"),
+            (pullback_inst_s, "SHORT", "PULLBACK"),
+            (setup_inst,     "LONG",  "SETUP"),
+            (setup_inst_s,    "SHORT", "SETUP"),
+            (flex_inst,      "LONG",  "FLEX"),
+            (flex_inst_s,     "SHORT", "FLEX"),
+        ]
+        for condição, dir_, src in ordem_inst:
+            if condição:
+                sinal = dir_; fonte = src; break
     else:
         ordem = [
             (long_pullback,  "LONG",  "PULLBACK"),
@@ -788,7 +834,7 @@ def analisar(simbolo, candles, funding_rate=None):
 
     # Modo INSTITUCIONAL classifica pela própria Score Inst (S>=90, A+>=80, A>=70)
     # em vez da grade por pontos — é o critério pedido nesse modo rígido
-    if fonte == "INSTITUCIONAL" and sinal:
+    if SIGNAL_MODE == "INSTITUCIONAL" and sinal:
         _si = ind["score_inst_long"] if sinal == "LONG" else ind["score_inst_short"]
         grade = "S" if _si >= 90 else "A+" if _si >= 80 else "A"
 
