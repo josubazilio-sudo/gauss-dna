@@ -14,6 +14,38 @@ log = logging.getLogger("GAUSS+DNA")
 # MEXC usa "60m" em vez de "1h" e formatos próprios
 _TF_MEXC = {"1h":"60m","2h":"120m","4h":"4h","6h":"6h","8h":"8h","12h":"12h","1d":"1d"}
 
+# MEXC contratos (futuros) usa símbolo com underscore (SPCX_USDT) e intervalo próprio
+_TF_MEXC_FUT = {"1m":"Min1","5m":"Min5","15m":"Min15","30m":"Min30","1h":"Min60",
+                "4h":"Hour4","8h":"Hour8","1d":"Day1","1w":"Week1"}
+
+
+async def _buscar_candles_futuros(session, simbolo, tf, limite):
+    """Fallback pro endpoint de contratos (futuros) — alguns ativos sintéticos
+    (ex: SPCXUSDT, pré-IPO) só têm mercado perpétuo na MEXC, sem par spot
+    (pedido 20/06 — confirmado por print real do usuário negociando SPCXUSDT
+    perpétuo, então o -1121 do endpoint spot não significa símbolo inexistente)."""
+    if not simbolo.endswith("USDT"):
+        return None
+    par = f"{simbolo[:-4]}_USDT"
+    intervalo = _TF_MEXC_FUT.get(tf)
+    if not intervalo:
+        return None
+    url = f"https://contract.mexc.com/api/v1/contract/kline/{par}?interval={intervalo}"
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            if r.status != 200:
+                return None
+            data = await r.json()
+        d = data.get("data") if isinstance(data, dict) else None
+        if not d or not isinstance(d.get("close"), list) or len(d["close"]) < 60:
+            return None
+        candles = [{"o": float(o), "h": float(h), "l": float(l), "c": float(c), "v": float(v)}
+                   for o, h, l, c, v in zip(d["open"], d["high"], d["low"], d["close"], d["vol"])]
+        return candles[-limite:]
+    except Exception as e:
+        log.info(f"_buscar_candles_futuros {par} [{tf}]: {e}")
+        return None
+
 
 # ── Busca de candles ──────────────────────────────────────────────────────────
 
@@ -36,9 +68,12 @@ async def buscar_candles(session, simbolo, tf, limite=250):
                     return None
                 data = await r.json()
             if isinstance(data, dict) and data.get("code") == -1121:
-                # símbolo inválido/delistado na MEXC — erro permanente, não vale retry
-                # nem warning (pedido 20/06 — SPCXUSDT/ALOUSDT poluindo o log a cada ciclo)
-                log.info(f"buscar_candles {simbolo} [{tf}]: símbolo inválido/delistado na MEXC, ignorando")
+                # sem par spot na MEXC — tenta o mercado de futuros antes de desistir
+                # (ex: SPCXUSDT só existe como perpétuo, não como spot)
+                fut = await _buscar_candles_futuros(session, simbolo, tf, limite)
+                if fut is not None:
+                    return fut
+                log.info(f"buscar_candles {simbolo} [{tf}]: sem par spot na MEXC e sem dado de futuros, ignorando")
                 return None
             if not isinstance(data, list):
                 log.warning(f"buscar_candles {simbolo} [{tf}]: {str(data)[:80]}")

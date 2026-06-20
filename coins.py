@@ -44,15 +44,19 @@ PRIORITY_WATCHLIST = [
     ("TELUSDT",   "TEL/USDT",   "TEL"),
     ("TAOUSDT",   "TAO/USDT",   "TAO"),
     ("SIRENUSDT", "SIREN/USDT", "SIREN"),
+    ("ALOUSDT",   "ALO/USDT",   "ALO"),
     ("OPGUSDT",   "OPG/USDT",   "OPG"),
     ("BEATUSDT",  "BEAT/USDT",  "BEAT"),
     ("GWEIUSDT",  "GWEI/USDT",  "GWEI"),
+    ("SPCXUSDT",  "SPCX/USDT",  "SPCX"),
     ("ALLOUSDT",  "ALLO/USDT",  "ALLO"),
     ("WLDUSDT",   "WLD/USDT",   "WLD"),
 ]
-# SPCXUSDT e ALOUSDT removidos (20/06) — MEXC retorna -1121 "Invalid symbol" pra
-# ambos no endpoint de klines (delistado/inexistente no spot), poluindo o log a
-# cada ciclo sem nunca conseguir gerar sinal.
+# SPCXUSDT/ALOUSDT: erro -1121 no endpoint spot da MEXC era engano meu (20/06) —
+# o usuário confirmou com print real que SPCXUSDT negocia ativamente como
+# perpétuo na MEXC. Causa real: esses ativos só têm mercado de futuros, sem par
+# spot — corrigido com fallback para o endpoint de contratos em scanner.py,
+# em vez de remover da watchlist.
 
 # Stablecoins, tokens alavancados e moedas com backtest ruim — excluídos do scanner dinâmico
 _EXCLUIR = {
