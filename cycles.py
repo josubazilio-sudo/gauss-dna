@@ -83,11 +83,11 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
         motivos.append("score baixo")
         return motivos
 
-    # RSI zona
-    if eh_long_cand and rsi >= 55:
-        motivos.append(f"RSI {rsi:.0f} >= 55 (LONG bloqueado)")
-    elif not eh_long_cand and rsi <= 40:
-        motivos.append(f"RSI {rsi:.0f} <= 40 (SHORT bloqueado)")
+    # RSI zona — FLEX PRO 15/06 (CLAUDE.md REGRA #1): bloqueia só extremos absolutos
+    if eh_long_cand and rsi >= 75:
+        motivos.append(f"RSI {rsi:.0f} >= 75 (LONG bloqueado)")
+    elif not eh_long_cand and rsi <= 25:
+        motivos.append(f"RSI {rsi:.0f} <= 25 (SHORT bloqueado)")
 
     if adx < _adx_min:
         motivos.append(f"ADX {adx:.1f} < {_adx_min}")
