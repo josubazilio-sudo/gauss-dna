@@ -1201,6 +1201,15 @@ async def main():
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
 
+            # Diagnóstico imediato no 1º ciclo sem sinal — visibilidade rápida ao reiniciar
+            # o bot, sem esperar 90min (nearmiss fica vazio quando nenhum sinal bruto dispara).
+            if ciclo == 1 and total == 0:
+                try:
+                    await _enviar_diagnostico(session)
+                    _diag_buffer["ultimo_envio"] = time.time()
+                except Exception:
+                    pass
+
             # Near-miss: após 90min sem sinal, avisa candidatos mais próximos
             _agora_d = time.time()
             if total > 0:
@@ -1217,6 +1226,14 @@ async def main():
                         linhas.append(f"{seta} {abrev_i} [{tf_i}] {fonte_i} RSI{rsi_i:.0f} — falta: {bloq_i}")
                     try:
                         await notificar(session, "\n".join(linhas))
+                    except Exception:
+                        pass
+                else:
+                    # Nenhum sinal bruto disparou em lugar nenhum (nearmiss fica vazio
+                    # pois só populamos dentro de "if result['sinal']:") — usa o relatório
+                    # completo de bloqueadores acumulado em _diag_buffer como fallback.
+                    try:
+                        await _enviar_diagnostico(session)
                     except Exception:
                         pass
                 _diag_buffer["ultimo_envio"] = _agora_d
