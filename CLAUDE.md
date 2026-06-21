@@ -597,3 +597,28 @@ raramente usado já que todo grade conhecido tem entrada própria em `RISK_BY_GR
 **Reverter** pra tabela original (`{"B": 0.005, "A": 0.01, "A+": 0.015, "S": 0.02, "S+": 0.03}`,
 `RISK_SCOUT=0.01`) quando os trades novos pós-fixes (Filtro V2 + BB_BREAK) confirmarem winrate melhor que
 os 26% anteriores — checar `resumo_resultados()` no diagnóstico horário antes de reverter.
+
+---
+
+## TETO CONSERVADOR DE ALAVANCAGEM (autorizado 21/06 — review manual de sinal real)
+
+Usuário revisou manualmente um sinal real (LONG, BB_BREAK, RSI 68, ADX~38, leverage sugerida 18x — auditado
+e confirmado como o sinal das 10:55 UTC, **antes** dos dois fixes de BB_BREAK do mesmo dia; com o código
+atual esse sinal já seria bloqueado por `rsi<65`, então não era mais um bug pendente) e considerou a
+alavancagem alta demais pra banca real ($86-93). Pediu critério próprio: 5-10x por padrão, só liberar 15x+
+com Score≥85 + ADX≥30 + RVOL≥2 + fluxo institucional + acima da MM200. Perguntado se aplicava ou mantinha
+a fórmula da REGRA #4 esperando mais dados — resposta "sem preferência"; optei por aplicar (linha com a
+redução de risco do mesmo dia: perfil mais defensivo enquanto a banca está baixa e a amostra de resultado
+ainda é pequena).
+
+`notify.py` (`enviar_sinal()`, após o teto de liquidação da REGRA #4): novo teto adicional —
+`_lev = min(_lev, 10)` **a não ser que** todos batam: `score_inst>=85` E `adx>=30` E `rvol_val>=2` E
+`dna_flow_ok` E `trendilo_ok` (fluxo nos dois indicadores, não só um) E a favor da MM200
+(`tendencia=="ALTA"` LONG / `"BAIXA"` SHORT, mesmo campo que já alimenta o display da mensagem). Quando os
+5 critérios batem, a fórmula original da REGRA #4 (grade + score_inst + RVOL + cap por fonte/confiança/
+liquidação) continua valendo sem este teto extra — não criei um segundo número fixo tipo "15x", a
+alavancagem final nesse caso vem só dos caps que já existiam.
+
+Não toca em stop/TP/R:R (gestão de saída) nem no tamanho de posição (`RISK_BY_GRADE`, já reduzido à parte
+no mesmo dia) — só no teto de alavancagem. Reverter junto com a revisão de gestão pós 30-50 trades, se os
+dados mostrarem que o teto de 10x não fazia diferença real no resultado.

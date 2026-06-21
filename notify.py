@@ -203,6 +203,18 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     if risco_pct > 0:
         _liq_cap = int(100 / (1.3 * risco_pct))
         _lev = min(_lev, max(3, _liq_cap))
+
+    # Teto conservador por padrão (autorizado 21/06 — banca real baixa, perfil mais
+    # defensivo pedido pelo usuário): trava em 10x a não ser que o sinal bata TODOS
+    # os critérios de alta convicção (mesmos critérios pedidos: score_inst>=85,
+    # adx>=30, rvol>=2, fluxo institucional alinhado nos dois indicadores, e a favor
+    # da MM200) — nesse caso a fórmula acima continua valendo sem este teto extra.
+    _mm200_ok = (tendencia == "ALTA") if eh_long else (tendencia == "BAIXA")
+    _alta_conviccao = (score_inst >= 85 and adx >= 30 and rvol_val >= 2 and
+                       dna_flow_ok and trendilo_ok and _mm200_ok)
+    if not _alta_conviccao:
+        _lev = min(_lev, 10)
+
     alavancagem = max(3, min(50, _lev))          # clamp 3x–50x
 
     pos_alav     = valor_pos / alavancagem
