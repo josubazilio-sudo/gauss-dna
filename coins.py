@@ -47,7 +47,6 @@ PRIORITY_WATCHLIST = [
     ("OPGUSDT",   "OPG/USDT",   "OPG"),
     ("BEATUSDT",  "BEAT/USDT",  "BEAT"),
     ("GWEIUSDT",  "GWEI/USDT",  "GWEI"),
-    ("SPACEX(PRE)USDT", "SPCX/USDT", "SPCX"),
     ("ALLOUSDT",  "ALLO/USDT",  "ALLO"),
     ("WLDUSDT",   "WLD/USDT",   "WLD"),
 ]
@@ -71,6 +70,12 @@ _EXCLUIR = {
     "AIXDROP",
     "GIGGLE", "USELESS", "EDEN", "PLAY", "MAGMA", "CHIP",
     "SLX", "JGGL", "MYX", "SENTIS", "XPL", "TAO",
+    # SPACEX(PRE) removido 21/06 — token pre-market/sintetico (acao pre-IPO),
+    # nao e par cripto spot normal. Preco do spot usado pra analise diverge do
+    # contrato perpetuo real (caso real: sinal SHORT $168.76 vs preco real no
+    # MEXC Perpetuo ~$181, ~7.3% de diferenca) — segundo incidente real com
+    # esse ativo (primeiro em 20/06, reversao violenta por baixa liquidez).
+    "SPACEX(PRE)", "SPCX",
 }
 _EXCLUIR_SUFIXO = ("UP", "DOWN", "BULL", "BEAR", "3L", "3S", "2L", "2S", "5L", "5S")
 
