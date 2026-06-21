@@ -248,7 +248,7 @@ Sempre que pedir um ajuste, comece por aqui antes de grepar o código. Pipeline:
 | 0 | ELITE/EARLY (só modo ELITE) | `tendencia_forte`+`tendencia_bull`+`alinhado_bull`+`e200_subindo`+`macd_bull3`+`ha_bull3`+`f_forte`+`adx_long_ok`+`rsi_bull_elite`+(`v_forte2` ou `obv_bull`)+`nao_ext_long`+`kalman_accel_up`+`acima_vwap`+`tend_consistente_bull`+(`impulso_bull` ou `liq_long`)+`score>65`+`seguro_long`. EARLY = exaustão (`exaustao_venda`) + `liq_long` + `absorb_bull` + `macd_recuperando` |
 | 1 | PULLBACK | `pullback_bull`+`tbull_r`+`preco<e21*1.03`+`dna_flow_bull`+`adx>18`+`pdi>mdi`+`rsi_zona_long`+`score_inst_long>=50`+`seguro_long`+`trendilo_long`+`not liq_topo` |
 | 2 | CROSS | `algum_cross_bull`+`dna_flow_bull`+`adx_long_ok`+`preco>e200`+`score_inst_long>=50`+`rsi_zona_long`+`seguro_long`+(`trendilo_long` ou `kalman_subindo`) |
-| 3 | BB_BREAK | `bb_break_long`+`bb_expand`+`kalman_subindo`+`k_short_subindo`+`score>40`+`adx>=15`+`adx_subindo`(FL≥2)+`not lateralizado`+`not ext_acima_e21`+`obv_bull`+`not liq_topo`(FL≥3)+`preco>e200`(*novo 20/06 — caso SPCXUSDT, short_bb_break disparou sem checar tendência de fundo e foi pego por reversão violenta em ativo de baixa liquidez; mesmo filtro do SM_SWEEP*)+`rvol>=0.50-0.80`(por FL)+`rsi_zona_long`+`score_inst_long>=50` |
+| 3 | BB_BREAK | `bb_break_long`+`bb_expand`+`kalman_subindo`+`k_short_subindo`+`score>40`+`adx>=15`+`adx_subindo`(FL≥2)+`not lateralizado`+`not ext_acima_e21`+`obv_bull`+`not liq_topo`(FL≥3)+`preco>e200`(*novo 20/06 — caso SPCXUSDT, short_bb_break disparou sem checar tendência de fundo e foi pego por reversão violenta em ativo de baixa liquidez; mesmo filtro do SM_SWEEP*)+`preco>e50`(*novo 21/06 — segundo incidente real no mesmo ativo (SPACEX(PRE), removido da watchlist): sinal mostrou entrada divergente do preço real negociável; ao investigar, BB_BREAK só checava EMA200, permitindo disparar em pullback ainda acima/abaixo da EMA50 dentro da tendência maior — adicionado o mesmo alinhamento de EMA que `tendencia_bull/bear` já exige*)+`rvol>=0.50-0.80`(por FL)+`rsi_zona_long`+`score_inst_long>=50` |
 | 4 | SM_SWEEP | `sm_bull`+`rsi>25`+`rsi_zona_long`+`preco>e200`+`score_inst_long>=60` |
 | 5 | REVERSAL | `rsi<30`+`ha_bull`+`v_forte`+(`liq_fundo` ou `absorb_bull`)+`macd_recuperando`+`adx>12`+`preco>e200*0.96`+(`dna_flow_bull` ou `obv_bull`) — sem gate de `score_inst` |
 | 6 | SURGE | `rvol_tier_max2>=3`(3x+)+`candle_bull_pct>0.03`+`surge_break_h`+`not exaustao_topo`+(`kalman_subindo` ou `k_short_subindo`)+`ha_bull`+`rsi<78`+`score_inst_long>=50`+(`dna_flow_bull` ou `trendilo_long`) — **não** usa `not liq_topo` (contradição com `surge_break_h`). *Exigência de fluxo adicionada 20/06 — SURGE sem nenhuma confirmação de fluxo (DNA Flow e Trendilo ambos "—") é puro spike de volume sem sustentação, propenso a squeeze (caso real LAB/USDT 20/06).* |
@@ -356,12 +356,57 @@ estrutura_alta/baixa (pivôs HH+HL / LH+LL, já existia)
 - **Cooldown próprio** (`config.py` `COOLDOWN_INSTITUCIONAL_MESMA_DIR`=3h, `..._OPOSTA`=2h) — só se aplica
   quando `SIGNAL_MODE=="INSTITUCIONAL"`; os outros modos continuam com o cooldown padrão (`tf_minutos`,
   mín. 2h mesma direção / 2h fixo oposta).
-- **Risco fixo 1%/trade** (`RISK_INSTITUCIONAL` em `config.py`, usado tanto em `cycles.py` pro acúmulo de
-  risco por ciclo quanto em `notify.py` pro tamanho real da posição) — ignora `RISK_BY_GRADE` neste modo.
-- **Teto de ciclo 5%** (`MAX_CYCLE_RISK_INSTITUCIONAL`, vs 10% padrão) e **máximo 2 posições simultâneas**
-  abertas (`MAX_POSICOES_INSTITUCIONAL`, checado via `len(estado["_posicoes_abertas"])` em `cycles.py` —
-  reaproveita o rastreamento de resultado, ver seção abaixo).
+- **Risco por grade** (`RISK_INSTITUCIONAL_POR_GRADE` em `config.py` — ver AJUSTE INSTITUCIONAL ELITE
+  abaixo, substituiu o risco fixo 1% original) usado tanto em `cycles.py` pro acúmulo de risco por ciclo
+  quanto em `notify.py` pro tamanho real da posição — ignora `RISK_BY_GRADE` neste modo.
+- **Teto de ciclo 5%** (`MAX_CYCLE_RISK_INSTITUCIONAL`, vs 10% padrão) e **máximo 3 posições simultâneas**
+  abertas (`MAX_POSICOES_INSTITUCIONAL` — subiu de 2 pra 3 no AJUSTE INSTITUCIONAL ELITE, checado via
+  `len(estado["_posicoes_abertas"])` em `cycles.py`, tanto no ciclo FLEX quanto no MTF — reaproveita o
+  rastreamento de resultado, ver seção abaixo).
 - Fica bem mais raro que FLEX/SCOUT por desenho — não é bug se passar vários ciclos sem sinal nesse modo.
+
+---
+
+## AJUSTE INSTITUCIONAL ELITE (autorizado 21/06 — "foco em qualidade e não quantidade")
+
+Pedido do usuário pra endurecer ainda mais o modo `SIGNAL_MODE=INSTITUCIONAL` já existente (não criou um
+modo novo — usuário escolheu evoluir o existente entre as opções apresentadas). Aplicado em `analyze.py`
+(piso comum `_base_inst_long`/`_base_inst_short`), `config.py`, `notify.py` e `cycles.py`.
+
+- **RSI mais estreito**: LONG `45-68` (subiu o piso de 35→45 — pedido original do usuário era 50, mas
+  50 cortaria boa parte do pullback clássico que ainda é entrada institucional válida; 45 ainda corta
+  oversold/chasing extremo, foi a opção que o usuário escolheu entre as apresentadas) | SHORT `32-50`
+  (desceu o teto de 65→50 — evita short ainda em RSI neutro/forte, i.e. perseguir topo de correção).
+- **Heikin Ashi obrigatório** (`ha_bull`/`ha_bear`) no piso comum — antes só vinha embutido em alguns
+  sinais individuais (ex: `long_momentum`, `long_sm`), não em todos os 6 tipos do modo.
+- **Score Institucional mínimo unificado em 80** pra todos os 6 tipos (SM_SWEEP/MOMENTUM/SURGE/PULLBACK/
+  SETUP/FLEX) — pedido original do usuário era "Score≥75 e Confiança≥70%", mas `notify.py` calcula
+  `confiança = score_inst - 10`, então confiança≥70% já implica score_inst≥80 (o piso mais estrito
+  prevalecia mesmo assim) — unificado num só número em vez de manter dois redundantes.
+- **Grade só S/A+** (`GRAUS_PERMITIDOS_INSTITUCIONAL = {"S","A+"}` em `config.py`, checado em
+  `cycles.py:executar_ciclo()` e `executar_ciclo_mtf()`) — grade `A` (que ainda passava antes, e que ainda
+  passa no FLEX/ELITE padrão) é bloqueada neste modo. Na prática a grade `A` já nem deveria mais ocorrer
+  aqui, porque `analyze.py:analisar()` só atribui `A` quando `score_inst<80`, e o sinal não dispara nesse
+  modo sem `score_inst>=80` — o filtro de grade fica como piso de segurança redundante, não como gate ativo.
+- **Risco por grade em vez de fixo**: `RISK_INSTITUCIONAL_POR_GRADE = {"A+": 0.005, "S": 0.01}` em
+  `config.py` (substituiu `RISK_INSTITUCIONAL=0.01` fixo) — S opera mais arriscado (1%) que A+ (0.5%),
+  que agora é o degrau mais baixo aceito neste modo. Usado em `notify.py` (tamanho real da posição) e
+  `cycles.py` (acúmulo de risco por ciclo).
+- **Máximo de posições simultâneas 2→3** (`MAX_POSICOES_INSTITUCIONAL`) — pedido explícito do usuário.
+- **Circuit breaker de stops consecutivos** (`STOPS_CONSECUTIVOS_PAUSA=3` em `config.py`): após 3 STOPs
+  consecutivos em posições abertas sob este modo, pausa novas entradas institucionais até a próxima
+  posição fechar como vitória (`TP1_BE` ou `TP2`) — reage a dado real de mercado, não a um tempo fixo
+  (pedido original do usuário era "pausar até o próximo ciclo forte", interpretado como "até vencer", já
+  que "ciclo forte" não tem definição objetiva no código). Implementado via:
+  - `state.py registrar_posicao_aberta()` ganhou o parâmetro `modo` (guarda em que `SIGNAL_MODE` a posição
+    foi aberta, já que o modo pode mudar entre runs cacheados em `last_signals.json`).
+  - `cycles.py _atualizar_resultados()` incrementa `estado["_stops_consecutivos_inst"]` a cada `STOP` de
+    posição com `modo=="INSTITUCIONAL"`, zera no primeiro `TP1_BE`/`TP2`.
+  - `cycles.py executar_ciclo()` e `executar_ciclo_mtf()` bloqueiam nova entrada institucional quando
+    `estado["_stops_consecutivos_inst"] >= STOPS_CONSECUTIVOS_PAUSA`.
+- **Gestão (stop/TP) intocada** — por pedido explícito do usuário e pela regra de não tocar gestão antes de
+  30-50 trades fechados (ver RASTREAMENTO DE RESULTADO abaixo), este ajuste não mexeu em `notify.py`
+  stop/TP/leverage, só em filtros de entrada e risco/posição.
 
 ---
 
@@ -401,3 +446,52 @@ saber objetivamente se o problema é stop apertado, entrada tardia, ou se na rea
 - ⚠️ Não tomar nenhuma decisão de ajustar stop/entrada/TP **sem antes olhar esse resumo** — é exatamente o
   dado que faltava pra distinguir "stop apertado de mais" de "mercado genuinamente contra" de "está tudo
   bem, é variância normal".
+- **Detalhamento por fonte/grade** (autorizado 21/06 — caso real de winrate 14%/7 trades, amostra pequena
+  demais pra diagnosticar causa): `resumo_resultados()` (`state.py`) agora também agrega por `fonte` (tipo
+  de sinal) e `grade`, contando STOP/total e R médio de cada grupo. `cycles.py` (`_enviar_diagnostico`)
+  imprime uma linha extra por agrupamento (`por fonte: ...`, `por grade: ...`) só quando há mais de 1 grupo
+  na amostra. É observabilidade pura — não muda stop/TP/entrada, só deixa o dado pronto pra quando a amostra
+  chegar nos 30-50 trades necessários (regra acima) pra identificar se algum tipo de sinal específico está
+  puxando o winrate pra baixo.
+
+---
+
+## AJUSTE PROFISSIONAL — DNA + GAUSS H1/30M (autorizado 21/06 — "qualidade acima de quantidade")
+
+Pedido do usuário pra reduzir frequência de sinais e subir a barra de qualidade — menos sinais, mais
+convicção. Implementado como **gates adicionais pós-sinal** (`cycles.py`), sem reescrever a cascata de 12
+sinais em `analyze.py` (preserva todo o histórico de calibração por incidente já documentado neste arquivo).
+
+- **Timeframes**: `config.py` agora filtra `TIMEFRAMES` pra só aceitar `30m`/`1h` — qualquer `5m`/`15m`
+  vindo de env var é descartado (`_TF_PERMITIDOS`); se a lista ficar vazia, cai pra `["30m","1h"]`.
+- **Filtro de Regime Global**: `cycles.py:_btc_h1_regime_neutro()` — busca BTCUSDT H1 uma vez por ciclo
+  (`main()`, antes de `executar_ciclo_mtf`/`executar_ciclo`) e bloqueia LONG e SHORT em **todas** as moedas
+  se `BTC ADX < 20` E `BTC RSI` entre 45-55 (mercado sem direção). Falha aberta (não bloqueia) se a busca do
+  BTC falhar — mesma filosofia do `_h4_confirma` (sem dado, não bloqueia). Thresholds em `config.py`
+  (`BTC_REGIME_ADX_MAX/RSI_MIN/RSI_MAX`).
+- **RVOL adaptativo por TF**: `config.py RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.80}` — gate novo em
+  `executar_ciclo`/`executar_ciclo_mtf`, aplicado a todos os tipos de sinal (além do RVOL que cada sinal já
+  pode exigir na própria condição em `analyze.py`, que continua intocada).
+- **Piso de ADX universal**: `config.py ADX_MIN_GLOBAL = 20` — bloqueia qualquer sinal com `ADX < 20`,
+  mesmo que a condição própria do sinal (ex: PULLBACK `adx>18`) já tenha deixado passar.
+- **Qualidade mínima — só grade A/S**: `config.py GRAUS_PERMITIDOS = {"A","A+","S","S+"}` — `B` é
+  bloqueado nos dois ciclos. SCOUT (que graduamente sai como B com frequência) fica bem mais raro por
+  consequência direta, não é bug.
+- **Smart Money Flow obrigatório**: o bloqueio que antes só valia pra FLEX em tendência neutra
+  (`fonte=="FLEX" and not _dna and not _trl and _tend=="NEUTRO"`) foi generalizado pra **todos os tipos de
+  sinal, sempre** — `not _dna and not _trl` (sem DNA Flow nem Trendilo alinhados na direção do sinal)
+  bloqueia, independente de tendência ou fonte. Mesmo gate adicionado no `executar_ciclo_mtf` (que antes não
+  tinha checagem de fluxo nenhuma). Efeito colateral esperado: REVERSAL (que só exige `dna_flow_bull or
+  obv_bull`, não Trendilo) também pode ficar mais raro se só bater via OBV.
+- **RSI Flex Pro (penalização gradual, REGRA #1 intacta)**: `analyze.py`, bloco do `score` — os gates duros
+  (`rsi_zona_long<75` / `rsi_zona_short>25`) **não mudaram**. Adicionado só uma penalização gradual no
+  `score` bruto, na mesma direção que ele já aponta (puxa pra zero, não inverte sinal): score>0 (lean LONG)
+  com RSI>70 → -15, RSI>65 → -7; score<0 (lean SHORT) com RSI<30 → +15, RSI<35 → +7.
+- **Bônus de ADX no score**: breakpoints do score subiram de `>30`/`>22` pra `>=30`/`>=25` (pedido
+  explícito do usuário "score bonus em ADX>=25 e ADX>=30").
+- **Gestão intocada**: `notify.py` (stop/TP/leverage/risco) não foi tocado neste ajuste — por pedido
+  explícito do usuário, só revisar depois de 30-50 trades fechados (ver RASTREAMENTO DE RESULTADO acima).
+- Nenhum dos gates novos altera `_detectar_bloqueadores_diag()` (diagnóstico horário) — esses motivos novos
+  (`grade=B`, `adx<20`, `rvol<0.70`, `sem fluxo SMC`, `regime BTC neutro`) aparecem só no log do ciclo, não
+  no resumo de diagnóstico enviado ao Telegram. Se isso virar um bloqueador frequente, vale considerar
+  expor no diagnóstico horário também.

@@ -351,7 +351,7 @@ def calcular_indicadores(candles):
         (15 if f_bull else -15 if f_bear else 0) +
         (10 if f_forte else 0) +
         (20 if macd_bull else -20 if macd_bear else 0) +
-        (20 if adx > 30 else 10 if adx > 22 else 0) +
+        (20 if adx >= 30 else 10 if adx >= 25 else 0) +
         (10 if v_forte else -5) +
         (10 if rsi_bull else -10 if rsi_bear else 0) +
         (10 if e200_subindo else -10 if e200_descendo else 0) +
@@ -363,6 +363,16 @@ def calcular_indicadores(candles):
         (5  if tend_consistente_bull else -5 if tend_consistente_bear else 0) +
         (10 if trendilo_long else -10 if trendilo_short else 0)
     )
+    # AJUSTE PROFISSIONAL (21/06) — RSI Flex Pro: não bloqueia (REGRA #1 intacta,
+    # rsi_zona_long/short continuam <75/>25), só penaliza gradualmente entrada
+    # esticada — reduz score na MESMA direção que ele já aponta, puxando o
+    # sinal pra mais perto de zero quanto mais perseguido (chasing) o RSI estiver.
+    if score > 0:
+        if rsi > 70:   score -= 15
+        elif rsi > 65: score -= 7
+    elif score < 0:
+        if rsi < 30:   score += 15
+        elif rsi < 35: score += 7
     score = max(-145, min(145, score))
 
     # Score institucional 0-100
@@ -551,11 +561,13 @@ def detectar_sinais(ind):
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
                       i["obv_bull"] and _no_liq_topo and i["preco"] > i["e200"] and
+                      i["preco"] > i["e50"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
                       i["obv_bear"] and _no_liq_fund and i["preco"] < i["e200"] and
+                      i["preco"] < i["e50"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
@@ -680,31 +692,44 @@ def detectar_sinais(ind):
     # H4 sem nenhuma divergência é checado em cycles.py (_h4_confirma_estrito),
     # fora do escopo desta função. SCOUT/DIV/REBOUND/BB_BREAK/CROSS/REVERSAL/
     # ELITE ficam de fora deste modo (não fazem parte da prioridade 1-6 pedida).
+    # AJUSTE INSTITUCIONAL ELITE (21/06 — pedido "foco em qualidade, não
+    # quantidade"): RSI LONG sobe piso de 35→45 (ainda preserva a maior parte
+    # do pullback clássico, só corta RSI<45 chasing/oversold extremo); RSI
+    # SHORT desce teto de 65→50 (evita short com RSI ainda neutro/forte,
+    # i.e. perseguir topo de correção). HA passa a ser exigido no piso comum
+    # (antes só vinha embutido em alguns sinais individuais, não em todos).
+    # Score Inst mínimo unificado em 80 pra todos os 6 tipos — usuário pediu
+    # "score>=75 + confiança>=70%", mas confiança=score_inst-10 (notify.py),
+    # então confiança>=70% já implica score_inst>=80 — unificado num só piso
+    # em vez de manter dois números redundantes (o mais estrito prevalecia
+    # mesmo assim).
     _vol_inst_ok     = i["volumes"][-1] > i["vol_ma"] and not i["vol_secando"]
-    _rsi_inst_long   = 35 <= i["rsi"] <= 68
-    _rsi_inst_short  = 32 <= i["rsi"] <= 65
+    _rsi_inst_long   = 45 <= i["rsi"] <= 68
+    _rsi_inst_short  = 32 <= i["rsi"] <= 50
     _anti_topo_long  = (1 - i["pos_bb"]) >= 0.01
     _anti_topo_short = i["pos_bb"] >= 0.01
     _base_inst_long  = (i["tendencia_bull"] and i["adx"] > 25 and i["adx_subindo"] and
                          i["rvol"] > 1.5 and i["dna_flow_bull"] and i["trendilo_long"] and
                          i["liq_fundo_12"] and _rsi_inst_long and i["stoch_rsi"] < 0.85 and
-                         _vol_inst_ok and _anti_topo_long and i["estrutura_alta"])
+                         _vol_inst_ok and _anti_topo_long and i["estrutura_alta"] and
+                         i["ha_bull"])
     _base_inst_short = (i["tendencia_bear"] and i["adx"] > 25 and i["adx_subindo"] and
                          i["rvol"] > 1.5 and i["dna_flow_bear"] and i["trendilo_short"] and
                          i["liq_topo_12"] and _rsi_inst_short and i["stoch_rsi"] > 0.15 and
-                         _vol_inst_ok and _anti_topo_short and i["estrutura_baixa"])
+                         _vol_inst_ok and _anti_topo_short and i["estrutura_baixa"] and
+                         i["ha_bear"])
 
-    sm_inst        = _base_inst_long  and long_sm        and i["score_inst_long"]  >= 70
-    momentum_inst  = _base_inst_long  and long_momentum  and i["score_inst_long"]  >= 70
-    surge_inst     = _base_inst_long  and long_surge     and i["score_inst_long"]  >= 75
-    pullback_inst  = _base_inst_long  and long_pullback  and i["score_inst_long"]  >= 65
-    setup_inst     = _base_inst_long  and long_setup     and i["score_inst_long"]  >= 65
+    sm_inst        = _base_inst_long  and long_sm        and i["score_inst_long"]  >= 80
+    momentum_inst  = _base_inst_long  and long_momentum  and i["score_inst_long"]  >= 80
+    surge_inst     = _base_inst_long  and long_surge     and i["score_inst_long"]  >= 80
+    pullback_inst  = _base_inst_long  and long_pullback  and i["score_inst_long"]  >= 80
+    setup_inst     = _base_inst_long  and long_setup     and i["score_inst_long"]  >= 80
     flex_inst      = _base_inst_long  and long_flex      and i["score_inst_long"]  >= 80
-    sm_inst_s      = _base_inst_short and short_sm       and i["score_inst_short"] >= 70
-    momentum_inst_s= _base_inst_short and short_momentum and i["score_inst_short"] >= 70
-    surge_inst_s   = _base_inst_short and short_surge    and i["score_inst_short"] >= 75
-    pullback_inst_s= _base_inst_short and short_pullback and i["score_inst_short"] >= 65
-    setup_inst_s   = _base_inst_short and short_setup    and i["score_inst_short"] >= 65
+    sm_inst_s      = _base_inst_short and short_sm       and i["score_inst_short"] >= 80
+    momentum_inst_s= _base_inst_short and short_momentum and i["score_inst_short"] >= 80
+    surge_inst_s   = _base_inst_short and short_surge    and i["score_inst_short"] >= 80
+    pullback_inst_s= _base_inst_short and short_pullback and i["score_inst_short"] >= 80
+    setup_inst_s   = _base_inst_short and short_setup    and i["score_inst_short"] >= 80
     flex_inst_s    = _base_inst_short and short_flex     and i["score_inst_short"] >= 80
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────

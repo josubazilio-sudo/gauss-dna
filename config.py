@@ -14,8 +14,13 @@ WA_PHONE  = os.environ.get("WA_PHONE", "")    # ex: 5511999999999 (sem +)
 WA_APIKEY = os.environ.get("WA_APIKEY", "")
 
 # ── Timeframes ────────────────────────────────────────────────────────────────
-TIMEFRAME  = os.environ.get("TIMEFRAME", "15m")
-TIMEFRAMES = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",")]
+# AJUSTE PROFISSIONAL (21/06) — qualidade acima de quantidade: operar somente
+# H1 e 30M, ignorar 5M/15M (ruído demais pro perfil de sinal institucional).
+TIMEFRAME  = os.environ.get("TIMEFRAME", "1h")
+_TF_PERMITIDOS = {"30m", "1h"}
+TIMEFRAMES = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",") if t.strip() in _TF_PERMITIDOS]
+if not TIMEFRAMES:
+    TIMEFRAMES = ["30m", "1h"]
 
 # ── Modo de operação ──────────────────────────────────────────────────────────
 SIGNAL_MODE    = os.environ.get("SIGNAL_MODE", "FLEX").upper()  # FLEX | ELITE | INSTITUCIONAL
@@ -43,17 +48,47 @@ MAX_SHORT_PER_CYCLE = 2      # máximo 2 SHORTs por ciclo
 # ── Modo INSTITUCIONAL (pedido 20/06 — filtro rígido, "apenas movimentos
 # institucionais de alta probabilidade") — risco/cooldown próprios, mais
 # conservadores que o modo FLEX padrão acima.
-RISK_INSTITUCIONAL          = 0.01   # 1% fixo por trade, independente da grade
+# AJUSTE INSTITUCIONAL ELITE (21/06): risco agora varia por grade (S opera
+# mais arriscado que A+, que é o degrau mais baixo aceito neste modo desde
+# que GRAUS_PERMITIDOS_INSTITUCIONAL passou a excluir grade A); máx. de
+# posições simultâneas sobe de 2 pra 3 (pedido explícito do usuário).
+RISK_INSTITUCIONAL_POR_GRADE = {"A+": 0.005, "S": 0.01}   # 0.5% A+ | 1% S
 MAX_CYCLE_RISK_INSTITUCIONAL = 0.05  # teto 5% de capital por ciclo
-MAX_POSICOES_INSTITUCIONAL   = 2     # máximo 2 posições simultâneas abertas
+MAX_POSICOES_INSTITUCIONAL   = 3     # máximo 3 posições simultâneas abertas
 COOLDOWN_INSTITUCIONAL_MESMA_DIR = 10800  # 3h mesma direção
 COOLDOWN_INSTITUCIONAL_OPOSTA    = 7200   # 2h direção oposta
+
+# Só grade S e A+ neste modo (grade A, que ainda passava antes, é bloqueada)
+GRAUS_PERMITIDOS_INSTITUCIONAL = {"S", "A+"}
+
+# Circuit breaker (pedido 21/06): após N stops consecutivos no modo
+# institucional, pausa novas entradas até a primeira posição fechar como
+# vencedora (TP1_BE ou TP2) — reage a dado real de mercado, não a tempo fixo.
+STOPS_CONSECUTIVOS_PAUSA = 3
 
 # ── Nível de filtros (1=mínimo, 2=moderado, 3=completo) ──────────────────────
 # 1: vol 50%, sem adx_subindo, sem liq_topo/fundo, fluxo >=1
 # 2: vol 65%, adx_subindo ativo, fluxo >=2
 # 3: vol 80%, todas as defesas SMC ativas (padrão)
 FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
+
+# ── AJUSTE PROFISSIONAL (21/06) — qualidade acima de quantidade ──────────────
+# RVOL mínimo por timeframe (30M tende a ter RVOL mais baixo que H1 com o
+# mesmo grau de convicção real — piso diferenciado evita bloqueio excessivo).
+RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.80}
+
+# Piso universal de força de tendência — aplicado a TODOS os tipos de sinal,
+# além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
+ADX_MIN_GLOBAL = 20
+
+# Só opera grade A e S (S+ incluso) — ignora B e C/BRONZE.
+GRAUS_PERMITIDOS = {"A", "A+", "S", "S+"}
+
+# Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
+# LONG e SHORT em todas as moedas até o regime mudar.
+BTC_REGIME_ADX_MAX  = 20
+BTC_REGIME_RSI_MIN  = 45
+BTC_REGIME_RSI_MAX  = 55
 
 # ── Arquivos de estado ────────────────────────────────────────────────────────
 STATE_FILE   = Path("last_signals.json")
