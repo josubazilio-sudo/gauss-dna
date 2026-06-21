@@ -61,16 +61,18 @@ LONG:  bb_break_long AND bb_expand AND kalman_subindo AND k_short_subindo
        AND NOT ext_acima_e21 AND obv_bull AND NOT liq_topo(FL>=3)
        AND preco > e200 AND preco > e50 AND NOT stoch_esticado_up
        AND rvol >= 0.50/0.65/0.80 (por nível de filtro) AND rsi_zona_long
-       AND score_inst_long >= 50
+       AND rsi < 65 AND score_inst_long >= 50
 
 SHORT: bb_break_short AND bb_expand AND kalman_descendo AND k_short_descendo
        AND score < -40 AND adx >= 15 AND adx_subindo(FL>=2) AND NOT lateralizado
        AND NOT ext_abaixo_e21 AND obv_bear AND NOT liq_fundo(FL>=3)
        AND preco < e200 AND preco < e50 AND NOT stoch_esticado_down
        AND rvol >= 0.50/0.65/0.80 (por nível de filtro) AND rsi_zona_short
-       AND score_inst_short >= 50
+       AND rsi > 35 AND score_inst_short >= 50
 ```
 NOT stoch_esticado_up/down adicionado 21/06 (ver CLAUDE.md "BB_BREAK — defesa de StochRSI esgotado").
+rsi < 65 / rsi > 35 adicionado 21/06 (3º caso real, WUSDT — ver CLAUDE.md "BB_BREAK — RSI com espaço pra
+correr"): exige margem até o teto/piso absoluto da REGRA #1 (75/25), só pra este tipo de sinal.
 
 ### 4. SM_SWEEP (Smart Money)
 ```
