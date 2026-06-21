@@ -622,3 +622,44 @@ alavancagem final nesse caso vem só dos caps que já existiam.
 Não toca em stop/TP/R:R (gestão de saída) nem no tamanho de posição (`RISK_BY_GRADE`, já reduzido à parte
 no mesmo dia) — só no teto de alavancagem. Reverter junto com a revisão de gestão pós 30-50 trades, se os
 dados mostrarem que o teto de 10x não fazia diferença real no resultado.
+
+---
+
+## SINAL ATRASADO + STOP APERTADO — PRIORIDADE ÚNICA (autorizado 21/06)
+
+Usuário declarou explicitamente que, a partir de agora, **uma regra prevalece sobre todas as outras**:
+não quebrar a banca com (1) sinal atrasado (entrada perto do fim do movimento), (2) stop apertado demais
+(estopado por ruído antes da tese se confirmar), (3) sinal de má qualidade/risco — e pediu pra deixar de
+seguir os processos burocráticos anteriores (ex: "esperar 30-50 trades antes de tocar gestão") quando eles
+travarem uma solução direta pra esses 3 problemas. Isso **não revoga** as regras permanentes (REGRA #0-#5)
+nem o histórico de calibração por incidente acima — é uma prioridade de desempate quando a cautela
+processual conflitar com proteção de capital óbvia e já evidenciada por dado real (banca em $86, 78%
+STOP/24h, múltiplos incidentes reais de entrada tardia).
+
+### Fix 1 — Sinal atrasado (generalização de anti-chasing)
+`nao_overext_long/short` (preço não pode estar >50% além do range das últimas 48 velas) e
+`rsi_nao_chasing_long/short` (RSI não pode ter saltado >18pts numa vela só) já existiam em `analyze.py`
+mas só eram aplicados a **FLEX e SCOUT**. Generalizados para mais 7 tipos de sinal: **PULLBACK, CROSS,
+SM_SWEEP, BB_BREAK, SETUP, DIV, REBOUND** (este último só ganhou `nao_overext`, não `rsi_nao_chasing`,
+porque sua entrada já é necessariamente um pullback de várias velas, não um salto de RSI numa vela só).
+Deliberadamente **não** aplicado a REVERSAL, SURGE, MOMENTUM — esses 3 são, por desenho, sinais que
+entram justamente perto de um extremo/spike (mesma razão pela qual SURGE já não usa `not liq_topo`/
+`liq_fundo`, seria contradição direta com a própria condição de entrada do sinal). Só adiciona critério
+(AND puro) — nunca afrouxa nada, então o efeito é sinais mais raros e mais seletivos, nunca menos seguros.
+
+### Fix 2 — Stop apertado
+`notify.py` (`enviar_sinal()`), dois ajustes:
+- `SM_SWEEP` tinha o stop mais apertado do sistema (`mult_atr=1.2`, vs 1.5 padrão/1.8 FLEX-SETUP/2.0
+  SURGE) sem nenhum incidente documentado que justificasse isso — subiu pra 1.5 (mesmo padrão de
+  "demais"), removendo o caso especial.
+- Buffer do stop estrutural (`stop_estrutural = swing_low/high ± atr*0.3`) subiu pra `atr*0.5` — dá mais
+  espaço pro stop respirar além do swing antes de ser ativado, reduzindo sensibilidade a pavio de ruído
+  no exato ponto da estrutura (que é onde o preço mais tende a tocar antes de reverter).
+
+Fix 3 (sinal de má qualidade) já estava coberto pelo Filtro de Execução V2 + GRAUS_PERMITIDOS + ADX_MIN_
+GLOBAL + Smart Money Flow obrigatório (ver seções acima) — nenhuma mudança nova necessária ali agora; o
+Fix 1 acima também ataca esse pilar (entrada tardia é, na prática, um subtipo de sinal de baixa qualidade).
+
+Não mexe em R:R, alvos (`r1`/`r_final`) nem leverage — só largura do stop e seletividade de entrada.
+Validar com o próximo lote de `resultados_log.csv`: se a taxa de STOP cair sem reduzir TP2/TP1_BE na
+mesma proporção, o diagnóstico (entrada tardia + stop apertado) estava certo.
