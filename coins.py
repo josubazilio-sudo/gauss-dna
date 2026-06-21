@@ -49,6 +49,34 @@ PRIORITY_WATCHLIST = [
     ("GWEIUSDT",  "GWEI/USDT",  "GWEI"),
     ("ALLOUSDT",  "ALLO/USDT",  "ALLO"),
     ("WLDUSDT",   "WLD/USDT",   "WLD"),
+    # ── Bubble RAIN.TRADE 21/06 — moedas em destaque no print enviado pelo usuário.
+    # Leitura visual de captura de tela, NÃO verificada contra a lista de símbolos
+    # da MEXC (sem acesso à API nesta sessão pra confirmar antes). Se algum destes
+    # não existir como par spot na MEXC, o scanner só loga "símbolo inválido" e
+    # ignora (mesmo padrão de SPCXUSDT/ALOUSDT) — checar logs do próximo run e
+    # remover os inválidos daqui.
+    ("BIOUSDT",   "BIO/USDT",   "BIO"),
+    ("HEXUSDT",   "HEX/USDT",   "HEX"),
+    ("CFGUSDT",   "CFG/USDT",   "CFG"),
+    ("ZIGUSDT",   "ZIG/USDT",   "ZIG"),
+    ("NOCKUSDT",  "NOCK/USDT",  "NOCK"),
+    ("RAVEUSDT",  "RAVE/USDT",  "RAVE"),
+    ("ALCHUSDT",  "ALCH/USDT",  "ALCH"),
+    ("DYDXUSDT",  "DYDX/USDT",  "DYDX"),
+    # ── Leitura de baixa confiança (texto pequeno no print) — incluídos a pedido
+    # do usuário, mas com chance maior de símbolo errado/inexistente na MEXC.
+    ("KMNOUSDT",  "KMNO/USDT",  "KMNO"),
+    ("BASUSDT",   "BAS/USDT",   "BAS"),
+    ("MEGAUSDT",  "MEGA/USDT",  "MEGA"),
+    ("XPRUSDT",   "XPR/USDT",   "XPR"),
+    ("METUSDT",   "MET/USDT",   "MET"),
+    ("TROLLUSDT", "TROLL/USDT", "TROLL"),
+    ("ZAMAUSDT",  "ZAMA/USDT",  "ZAMA"),
+    ("SHXUSDT",   "SHX/USDT",   "SHX"),
+    ("CYSUSDT",   "CYS/USDT",   "CYS"),
+    ("STAUUSDT",  "STAU/USDT",  "STAU"),
+    ("UAIUSDT",   "UAI/USDT",   "UAI"),
+    ("PLSXUSDT",  "PLSX/USDT",  "PLSX"),
 ]
 # SPCXUSDT corrigido (20/06): a string "SPCXUSDT" nunca existiu na MEXC — causa
 # real do -1121 era simbolo errado em coins.py, nao falta de par spot (a tentativa
