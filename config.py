@@ -14,8 +14,13 @@ WA_PHONE  = os.environ.get("WA_PHONE", "")    # ex: 5511999999999 (sem +)
 WA_APIKEY = os.environ.get("WA_APIKEY", "")
 
 # ── Timeframes ────────────────────────────────────────────────────────────────
-TIMEFRAME  = os.environ.get("TIMEFRAME", "15m")
-TIMEFRAMES = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",")]
+# AJUSTE PROFISSIONAL (21/06) — qualidade acima de quantidade: operar somente
+# H1 e 30M, ignorar 5M/15M (ruído demais pro perfil de sinal institucional).
+TIMEFRAME  = os.environ.get("TIMEFRAME", "1h")
+_TF_PERMITIDOS = {"30m", "1h"}
+TIMEFRAMES = [t.strip() for t in os.environ.get("TIMEFRAMES", TIMEFRAME).split(",") if t.strip() in _TF_PERMITIDOS]
+if not TIMEFRAMES:
+    TIMEFRAMES = ["30m", "1h"]
 
 # ── Modo de operação ──────────────────────────────────────────────────────────
 SIGNAL_MODE    = os.environ.get("SIGNAL_MODE", "FLEX").upper()  # FLEX | ELITE | INSTITUCIONAL
@@ -54,6 +59,24 @@ COOLDOWN_INSTITUCIONAL_OPOSTA    = 7200   # 2h direção oposta
 # 2: vol 65%, adx_subindo ativo, fluxo >=2
 # 3: vol 80%, todas as defesas SMC ativas (padrão)
 FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
+
+# ── AJUSTE PROFISSIONAL (21/06) — qualidade acima de quantidade ──────────────
+# RVOL mínimo por timeframe (30M tende a ter RVOL mais baixo que H1 com o
+# mesmo grau de convicção real — piso diferenciado evita bloqueio excessivo).
+RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.80}
+
+# Piso universal de força de tendência — aplicado a TODOS os tipos de sinal,
+# além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
+ADX_MIN_GLOBAL = 20
+
+# Só opera grade A e S (S+ incluso) — ignora B e C/BRONZE.
+GRAUS_PERMITIDOS = {"A", "A+", "S", "S+"}
+
+# Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
+# LONG e SHORT em todas as moedas até o regime mudar.
+BTC_REGIME_ADX_MAX  = 20
+BTC_REGIME_RSI_MIN  = 45
+BTC_REGIME_RSI_MAX  = 55
 
 # ── Arquivos de estado ────────────────────────────────────────────────────────
 STATE_FILE   = Path("last_signals.json")

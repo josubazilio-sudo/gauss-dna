@@ -401,3 +401,45 @@ saber objetivamente se o problema é stop apertado, entrada tardia, ou se na rea
 - ⚠️ Não tomar nenhuma decisão de ajustar stop/entrada/TP **sem antes olhar esse resumo** — é exatamente o
   dado que faltava pra distinguir "stop apertado de mais" de "mercado genuinamente contra" de "está tudo
   bem, é variância normal".
+
+---
+
+## AJUSTE PROFISSIONAL — DNA + GAUSS H1/30M (autorizado 21/06 — "qualidade acima de quantidade")
+
+Pedido do usuário pra reduzir frequência de sinais e subir a barra de qualidade — menos sinais, mais
+convicção. Implementado como **gates adicionais pós-sinal** (`cycles.py`), sem reescrever a cascata de 12
+sinais em `analyze.py` (preserva todo o histórico de calibração por incidente já documentado neste arquivo).
+
+- **Timeframes**: `config.py` agora filtra `TIMEFRAMES` pra só aceitar `30m`/`1h` — qualquer `5m`/`15m`
+  vindo de env var é descartado (`_TF_PERMITIDOS`); se a lista ficar vazia, cai pra `["30m","1h"]`.
+- **Filtro de Regime Global**: `cycles.py:_btc_h1_regime_neutro()` — busca BTCUSDT H1 uma vez por ciclo
+  (`main()`, antes de `executar_ciclo_mtf`/`executar_ciclo`) e bloqueia LONG e SHORT em **todas** as moedas
+  se `BTC ADX < 20` E `BTC RSI` entre 45-55 (mercado sem direção). Falha aberta (não bloqueia) se a busca do
+  BTC falhar — mesma filosofia do `_h4_confirma` (sem dado, não bloqueia). Thresholds em `config.py`
+  (`BTC_REGIME_ADX_MAX/RSI_MIN/RSI_MAX`).
+- **RVOL adaptativo por TF**: `config.py RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.80}` — gate novo em
+  `executar_ciclo`/`executar_ciclo_mtf`, aplicado a todos os tipos de sinal (além do RVOL que cada sinal já
+  pode exigir na própria condição em `analyze.py`, que continua intocada).
+- **Piso de ADX universal**: `config.py ADX_MIN_GLOBAL = 20` — bloqueia qualquer sinal com `ADX < 20`,
+  mesmo que a condição própria do sinal (ex: PULLBACK `adx>18`) já tenha deixado passar.
+- **Qualidade mínima — só grade A/S**: `config.py GRAUS_PERMITIDOS = {"A","A+","S","S+"}` — `B` é
+  bloqueado nos dois ciclos. SCOUT (que graduamente sai como B com frequência) fica bem mais raro por
+  consequência direta, não é bug.
+- **Smart Money Flow obrigatório**: o bloqueio que antes só valia pra FLEX em tendência neutra
+  (`fonte=="FLEX" and not _dna and not _trl and _tend=="NEUTRO"`) foi generalizado pra **todos os tipos de
+  sinal, sempre** — `not _dna and not _trl` (sem DNA Flow nem Trendilo alinhados na direção do sinal)
+  bloqueia, independente de tendência ou fonte. Mesmo gate adicionado no `executar_ciclo_mtf` (que antes não
+  tinha checagem de fluxo nenhuma). Efeito colateral esperado: REVERSAL (que só exige `dna_flow_bull or
+  obv_bull`, não Trendilo) também pode ficar mais raro se só bater via OBV.
+- **RSI Flex Pro (penalização gradual, REGRA #1 intacta)**: `analyze.py`, bloco do `score` — os gates duros
+  (`rsi_zona_long<75` / `rsi_zona_short>25`) **não mudaram**. Adicionado só uma penalização gradual no
+  `score` bruto, na mesma direção que ele já aponta (puxa pra zero, não inverte sinal): score>0 (lean LONG)
+  com RSI>70 → -15, RSI>65 → -7; score<0 (lean SHORT) com RSI<30 → +15, RSI<35 → +7.
+- **Bônus de ADX no score**: breakpoints do score subiram de `>30`/`>22` pra `>=30`/`>=25` (pedido
+  explícito do usuário "score bonus em ADX>=25 e ADX>=30").
+- **Gestão intocada**: `notify.py` (stop/TP/leverage/risco) não foi tocado neste ajuste — por pedido
+  explícito do usuário, só revisar depois de 30-50 trades fechados (ver RASTREAMENTO DE RESULTADO acima).
+- Nenhum dos gates novos altera `_detectar_bloqueadores_diag()` (diagnóstico horário) — esses motivos novos
+  (`grade=B`, `adx<20`, `rvol<0.70`, `sem fluxo SMC`, `regime BTC neutro`) aparecem só no log do ciclo, não
+  no resumo de diagnóstico enviado ao Telegram. Se isso virar um bloqueador frequente, vale considerar
+  expor no diagnóstico horário também.

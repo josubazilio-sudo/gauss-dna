@@ -351,7 +351,7 @@ def calcular_indicadores(candles):
         (15 if f_bull else -15 if f_bear else 0) +
         (10 if f_forte else 0) +
         (20 if macd_bull else -20 if macd_bear else 0) +
-        (20 if adx > 30 else 10 if adx > 22 else 0) +
+        (20 if adx >= 30 else 10 if adx >= 25 else 0) +
         (10 if v_forte else -5) +
         (10 if rsi_bull else -10 if rsi_bear else 0) +
         (10 if e200_subindo else -10 if e200_descendo else 0) +
@@ -363,6 +363,16 @@ def calcular_indicadores(candles):
         (5  if tend_consistente_bull else -5 if tend_consistente_bear else 0) +
         (10 if trendilo_long else -10 if trendilo_short else 0)
     )
+    # AJUSTE PROFISSIONAL (21/06) — RSI Flex Pro: não bloqueia (REGRA #1 intacta,
+    # rsi_zona_long/short continuam <75/>25), só penaliza gradualmente entrada
+    # esticada — reduz score na MESMA direção que ele já aponta, puxando o
+    # sinal pra mais perto de zero quanto mais perseguido (chasing) o RSI estiver.
+    if score > 0:
+        if rsi > 70:   score -= 15
+        elif rsi > 65: score -= 7
+    elif score < 0:
+        if rsi < 30:   score += 15
+        elif rsi < 35: score += 7
     score = max(-145, min(145, score))
 
     # Score institucional 0-100
