@@ -100,12 +100,15 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         confluencia_emoji, confluencia_label = "🥉", "BRONZE"
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
+    # SM_SWEEP subiu de 1.2 para 1.5 ATR (autorizado 21/06 — era o stop mais apertado
+    # do sistema, sem ganho claro de qualidade, mais exposto a ser estopado por ruído).
     mult_atr = (2.0 if fonte == "SURGE"    else
-                1.2 if fonte == "SM_SWEEP" else
                 1.8 if fonte in ("FLEX", "SETUP") else 1.5)
 
     stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
-    stop_estrutural = swing_low - atr * 0.3 if eh_long else swing_high + atr * 0.3
+    # Buffer estrutural subiu de 0.3 para 0.5 ATR (autorizado 21/06 — mesmo motivo:
+    # dar mais espaço pro stop respirar além do swing, menos sensível a pavio de ruído).
+    stop_estrutural = swing_low - atr * 0.5 if eh_long else swing_high + atr * 0.5
     dist_swing = abs(preco - stop_estrutural)
 
     usar_estrutural = (fonte not in ("SURGE", "BB_BREAK", "MOMENTUM") and
