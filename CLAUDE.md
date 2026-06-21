@@ -578,3 +578,22 @@ os 3 incidentes reais (CVX, ASTER, WUSDT) teriam sido bloqueados por este piso n
 Não toca em stop/TP/leverage (gestão) nem nos outros 10 critérios do BB_BREAK — só fecha a margem de RSI
 especificamente pra este tipo de sinal, que agora soma 3 incidentes reais na mesma sessão (a taxa mais
 alta de qualquer tipo de sinal monitorado hoje, ver `por fonte: BB_BREAK:3/3STOP` no resumo de 24h).
+
+---
+
+## RISCO PELA METADE — TEMPORÁRIO (autorizado 21/06 — banca real em $86)
+
+Banca real caiu pra $86 (de capital inicial ~$93-100) sob winrate 26%/24h (dado de *antes* dos 2 fixes de
+qualidade de entrada do mesmo dia: Filtro de Execução V2 e defesa de RSI/StochRSI no BB_BREAK). Ainda não
+há trades novos suficientes pra confirmar se os fixes melhoraram o winrate — perguntado ao usuário se
+queria reduzir risco, pausar sinais, ou manter; resposta foi "sem preferência". Escolhido reduzir risco
+(opção mais conservadora que não interrompe a coleta de dado novo, que é o que falta pra validar os fixes).
+
+`config.py RISK_BY_GRADE`/`RISK_SCOUT` cortados pela metade: B 0.5%→0.25%, A 1%→0.5%, A+ 1.5%→0.75%,
+S 2%→1%, S+ 3%→1.5%, SCOUT 1%→0.5%. Só afeta tamanho da posição (`valor_risco = CAPITAL * pct_risco` em
+`notify.py`) — não toca em stop/TP/leverage nem em nenhum filtro de entrada. `RISK_PCT` (fallback genérico,
+raramente usado já que todo grade conhecido tem entrada própria em `RISK_BY_GRADE`) não foi alterado.
+
+**Reverter** pra tabela original (`{"B": 0.005, "A": 0.01, "A+": 0.015, "S": 0.02, "S+": 0.03}`,
+`RISK_SCOUT=0.01`) quando os trades novos pós-fixes (Filtro V2 + BB_BREAK) confirmarem winrate melhor que
+os 26% anteriores — checar `resumo_resultados()` no diagnóstico horário antes de reverter.
