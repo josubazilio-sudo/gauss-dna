@@ -561,11 +561,13 @@ def detectar_sinais(ind):
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
                       i["obv_bull"] and _no_liq_topo and i["preco"] > i["e200"] and
+                      i["preco"] > i["e50"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
                       i["obv_bear"] and _no_liq_fund and i["preco"] < i["e200"] and
+                      i["preco"] < i["e50"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
