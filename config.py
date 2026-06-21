@@ -37,8 +37,13 @@ SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "2"))     # rescan a cada N cicl
 CAPITAL   = float(os.environ.get("CAPITAL",  "100"))    # capital total em USD
 RISK_PCT  = float(os.environ.get("RISK_PCT", "0.03"))   # risco base por trade (3%)
 
-RISK_BY_GRADE = {"B": 0.005, "A": 0.01, "A+": 0.015, "S": 0.02, "S+": 0.03}
-RISK_SCOUT    = 0.01                                     # SCOUT = 1% (sinal secundário)
+# Risco pela metade (autorizado 21/06 — banca real em $86, winrate 26%/24h ainda sem
+# dado novo suficiente pra confirmar os 2 fixes de qualidade de entrada do mesmo dia,
+# Filtro de Execução V2 e defesa de RSI/StochRSI no BB_BREAK). Protege capital enquanto
+# acumula trades novos — não toca em stop/TP/leverage (gestão), só no tamanho da posição.
+# Reverter pra tabela original quando os trades novos confirmarem melhora no winrate.
+RISK_BY_GRADE = {"B": 0.0025, "A": 0.005, "A+": 0.0075, "S": 0.01, "S+": 0.015}
+RISK_SCOUT    = 0.005                                    # SCOUT = 0.5% (sinal secundário)
 
 MAX_CYCLE_RISK      = 0.10   # teto 10% de capital por ciclo
 MAX_SCOUT_PER_CYCLE = 2      # máximo 2 SCOUTs por ciclo
