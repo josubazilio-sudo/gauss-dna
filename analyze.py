@@ -557,17 +557,23 @@ def detectar_sinais(ind):
     # foi pego por reversão violenta em ativo de baixa liquidez). Mesmo filtro que
     # já existe no SM_SWEEP, evita romper banda contra a tendência maior.
     _rvol_bb      = 0.50 if _FLV <= 1 else (0.65 if _FLV == 2 else 0.80)
+    # StochRSI esgotado (pedido 21/06 — casos reais CVX/ASTER: BB_BREAK disparou com
+    # StochRSI já saturado <0.05/>0.80 e RSI já no fim da janela, ou seja, depois do
+    # movimento em vez de com espaço pra continuar). Só o pedaço de stoch de
+    # seguro_long/short — não o seguro_long/short inteiro, que contradiria bb_break_long/
+    # short por definição (perto_bb_topo/fund é sempre verdadeiro quando o preço já
+    # rompeu a banda).
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
                       i["obv_bull"] and _no_liq_topo and i["preco"] > i["e200"] and
-                      i["preco"] > i["e50"] and
+                      i["preco"] > i["e50"] and not i["stoch_esticado_up"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
                       i["obv_bear"] and _no_liq_fund and i["preco"] < i["e200"] and
-                      i["preco"] < i["e50"] and
+                      i["preco"] < i["e50"] and not i["stoch_esticado_down"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
