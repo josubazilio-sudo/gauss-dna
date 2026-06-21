@@ -356,12 +356,57 @@ estrutura_alta/baixa (pivôs HH+HL / LH+LL, já existia)
 - **Cooldown próprio** (`config.py` `COOLDOWN_INSTITUCIONAL_MESMA_DIR`=3h, `..._OPOSTA`=2h) — só se aplica
   quando `SIGNAL_MODE=="INSTITUCIONAL"`; os outros modos continuam com o cooldown padrão (`tf_minutos`,
   mín. 2h mesma direção / 2h fixo oposta).
-- **Risco fixo 1%/trade** (`RISK_INSTITUCIONAL` em `config.py`, usado tanto em `cycles.py` pro acúmulo de
-  risco por ciclo quanto em `notify.py` pro tamanho real da posição) — ignora `RISK_BY_GRADE` neste modo.
-- **Teto de ciclo 5%** (`MAX_CYCLE_RISK_INSTITUCIONAL`, vs 10% padrão) e **máximo 2 posições simultâneas**
-  abertas (`MAX_POSICOES_INSTITUCIONAL`, checado via `len(estado["_posicoes_abertas"])` em `cycles.py` —
-  reaproveita o rastreamento de resultado, ver seção abaixo).
+- **Risco por grade** (`RISK_INSTITUCIONAL_POR_GRADE` em `config.py` — ver AJUSTE INSTITUCIONAL ELITE
+  abaixo, substituiu o risco fixo 1% original) usado tanto em `cycles.py` pro acúmulo de risco por ciclo
+  quanto em `notify.py` pro tamanho real da posição — ignora `RISK_BY_GRADE` neste modo.
+- **Teto de ciclo 5%** (`MAX_CYCLE_RISK_INSTITUCIONAL`, vs 10% padrão) e **máximo 3 posições simultâneas**
+  abertas (`MAX_POSICOES_INSTITUCIONAL` — subiu de 2 pra 3 no AJUSTE INSTITUCIONAL ELITE, checado via
+  `len(estado["_posicoes_abertas"])` em `cycles.py`, tanto no ciclo FLEX quanto no MTF — reaproveita o
+  rastreamento de resultado, ver seção abaixo).
 - Fica bem mais raro que FLEX/SCOUT por desenho — não é bug se passar vários ciclos sem sinal nesse modo.
+
+---
+
+## AJUSTE INSTITUCIONAL ELITE (autorizado 21/06 — "foco em qualidade e não quantidade")
+
+Pedido do usuário pra endurecer ainda mais o modo `SIGNAL_MODE=INSTITUCIONAL` já existente (não criou um
+modo novo — usuário escolheu evoluir o existente entre as opções apresentadas). Aplicado em `analyze.py`
+(piso comum `_base_inst_long`/`_base_inst_short`), `config.py`, `notify.py` e `cycles.py`.
+
+- **RSI mais estreito**: LONG `45-68` (subiu o piso de 35→45 — pedido original do usuário era 50, mas
+  50 cortaria boa parte do pullback clássico que ainda é entrada institucional válida; 45 ainda corta
+  oversold/chasing extremo, foi a opção que o usuário escolheu entre as apresentadas) | SHORT `32-50`
+  (desceu o teto de 65→50 — evita short ainda em RSI neutro/forte, i.e. perseguir topo de correção).
+- **Heikin Ashi obrigatório** (`ha_bull`/`ha_bear`) no piso comum — antes só vinha embutido em alguns
+  sinais individuais (ex: `long_momentum`, `long_sm`), não em todos os 6 tipos do modo.
+- **Score Institucional mínimo unificado em 80** pra todos os 6 tipos (SM_SWEEP/MOMENTUM/SURGE/PULLBACK/
+  SETUP/FLEX) — pedido original do usuário era "Score≥75 e Confiança≥70%", mas `notify.py` calcula
+  `confiança = score_inst - 10`, então confiança≥70% já implica score_inst≥80 (o piso mais estrito
+  prevalecia mesmo assim) — unificado num só número em vez de manter dois redundantes.
+- **Grade só S/A+** (`GRAUS_PERMITIDOS_INSTITUCIONAL = {"S","A+"}` em `config.py`, checado em
+  `cycles.py:executar_ciclo()` e `executar_ciclo_mtf()`) — grade `A` (que ainda passava antes, e que ainda
+  passa no FLEX/ELITE padrão) é bloqueada neste modo. Na prática a grade `A` já nem deveria mais ocorrer
+  aqui, porque `analyze.py:analisar()` só atribui `A` quando `score_inst<80`, e o sinal não dispara nesse
+  modo sem `score_inst>=80` — o filtro de grade fica como piso de segurança redundante, não como gate ativo.
+- **Risco por grade em vez de fixo**: `RISK_INSTITUCIONAL_POR_GRADE = {"A+": 0.005, "S": 0.01}` em
+  `config.py` (substituiu `RISK_INSTITUCIONAL=0.01` fixo) — S opera mais arriscado (1%) que A+ (0.5%),
+  que agora é o degrau mais baixo aceito neste modo. Usado em `notify.py` (tamanho real da posição) e
+  `cycles.py` (acúmulo de risco por ciclo).
+- **Máximo de posições simultâneas 2→3** (`MAX_POSICOES_INSTITUCIONAL`) — pedido explícito do usuário.
+- **Circuit breaker de stops consecutivos** (`STOPS_CONSECUTIVOS_PAUSA=3` em `config.py`): após 3 STOPs
+  consecutivos em posições abertas sob este modo, pausa novas entradas institucionais até a próxima
+  posição fechar como vitória (`TP1_BE` ou `TP2`) — reage a dado real de mercado, não a um tempo fixo
+  (pedido original do usuário era "pausar até o próximo ciclo forte", interpretado como "até vencer", já
+  que "ciclo forte" não tem definição objetiva no código). Implementado via:
+  - `state.py registrar_posicao_aberta()` ganhou o parâmetro `modo` (guarda em que `SIGNAL_MODE` a posição
+    foi aberta, já que o modo pode mudar entre runs cacheados em `last_signals.json`).
+  - `cycles.py _atualizar_resultados()` incrementa `estado["_stops_consecutivos_inst"]` a cada `STOP` de
+    posição com `modo=="INSTITUCIONAL"`, zera no primeiro `TP1_BE`/`TP2`.
+  - `cycles.py executar_ciclo()` e `executar_ciclo_mtf()` bloqueiam nova entrada institucional quando
+    `estado["_stops_consecutivos_inst"] >= STOPS_CONSECUTIVOS_PAUSA`.
+- **Gestão (stop/TP) intocada** — por pedido explícito do usuário e pela regra de não tocar gestão antes de
+  30-50 trades fechados (ver RASTREAMENTO DE RESULTADO abaixo), este ajuste não mexeu em `notify.py`
+  stop/TP/leverage, só em filtros de entrada e risco/posição.
 
 ---
 

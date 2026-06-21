@@ -48,11 +48,23 @@ MAX_SHORT_PER_CYCLE = 2      # máximo 2 SHORTs por ciclo
 # ── Modo INSTITUCIONAL (pedido 20/06 — filtro rígido, "apenas movimentos
 # institucionais de alta probabilidade") — risco/cooldown próprios, mais
 # conservadores que o modo FLEX padrão acima.
-RISK_INSTITUCIONAL          = 0.01   # 1% fixo por trade, independente da grade
+# AJUSTE INSTITUCIONAL ELITE (21/06): risco agora varia por grade (S opera
+# mais arriscado que A+, que é o degrau mais baixo aceito neste modo desde
+# que GRAUS_PERMITIDOS_INSTITUCIONAL passou a excluir grade A); máx. de
+# posições simultâneas sobe de 2 pra 3 (pedido explícito do usuário).
+RISK_INSTITUCIONAL_POR_GRADE = {"A+": 0.005, "S": 0.01}   # 0.5% A+ | 1% S
 MAX_CYCLE_RISK_INSTITUCIONAL = 0.05  # teto 5% de capital por ciclo
-MAX_POSICOES_INSTITUCIONAL   = 2     # máximo 2 posições simultâneas abertas
+MAX_POSICOES_INSTITUCIONAL   = 3     # máximo 3 posições simultâneas abertas
 COOLDOWN_INSTITUCIONAL_MESMA_DIR = 10800  # 3h mesma direção
 COOLDOWN_INSTITUCIONAL_OPOSTA    = 7200   # 2h direção oposta
+
+# Só grade S e A+ neste modo (grade A, que ainda passava antes, é bloqueada)
+GRAUS_PERMITIDOS_INSTITUCIONAL = {"S", "A+"}
+
+# Circuit breaker (pedido 21/06): após N stops consecutivos no modo
+# institucional, pausa novas entradas até a primeira posição fechar como
+# vencedora (TP1_BE ou TP2) — reage a dado real de mercado, não a tempo fixo.
+STOPS_CONSECUTIVOS_PAUSA = 3
 
 # ── Nível de filtros (1=mínimo, 2=moderado, 3=completo) ──────────────────────
 # 1: vol 50%, sem adx_subindo, sem liq_topo/fundo, fluxo >=1

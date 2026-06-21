@@ -7,7 +7,7 @@ import aiohttp
 from datetime import datetime
 from config import (TG_TOKEN, TG_CHATID, WA_PHONE, WA_APIKEY,
                     CAPITAL, RISK_PCT, RISK_BY_GRADE, RISK_SCOUT, SIGNAL_MODE,
-                    RISK_INSTITUCIONAL)
+                    RISK_INSTITUCIONAL_POR_GRADE)
 from indicators import formatar_preco
 from state import registrar_trade
 
@@ -169,7 +169,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     final = preco + risco * r_final if eh_long else preco - risco * r_final
 
     # ── Tamanho da posição ────────────────────────────────────────────────────
-    pct_risco    = (RISK_INSTITUCIONAL if SIGNAL_MODE == "INSTITUCIONAL" else
+    pct_risco    = (RISK_INSTITUCIONAL_POR_GRADE.get(grade, 0.01) if SIGNAL_MODE == "INSTITUCIONAL" else
                      RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT))
     valor_risco  = CAPITAL * pct_risco
     contratos    = valor_risco / risco if risco > 0 else 0

@@ -15,10 +15,11 @@ from config import (
     CAPITAL, RISK_BY_GRADE, RISK_SCOUT, RISK_PCT,
     MAX_CYCLE_RISK, MAX_SCOUT_PER_CYCLE, MAX_LONG_PER_CYCLE, MAX_SHORT_PER_CYCLE,
     FILTER_LEVEL,
-    RISK_INSTITUCIONAL, MAX_CYCLE_RISK_INSTITUCIONAL, MAX_POSICOES_INSTITUCIONAL,
+    RISK_INSTITUCIONAL_POR_GRADE, MAX_CYCLE_RISK_INSTITUCIONAL, MAX_POSICOES_INSTITUCIONAL,
     COOLDOWN_INSTITUCIONAL_MESMA_DIR, COOLDOWN_INSTITUCIONAL_OPOSTA,
     RVOL_MIN_BY_TF, ADX_MIN_GLOBAL, GRAUS_PERMITIDOS,
     BTC_REGIME_ADX_MAX, BTC_REGIME_RSI_MIN, BTC_REGIME_RSI_MAX,
+    GRAUS_PERMITIDOS_INSTITUCIONAL, STOPS_CONSECUTIVOS_PAUSA,
 )
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -120,6 +121,13 @@ async def _atualizar_resultados(session, estado) -> None:
     for f in fechados:
         registrar_resultado(f)
         log.info(f"📈 Resultado: {f['simbolo']} {f['direcao']} [{f['fonte']}] → {f['resultado']}")
+        # Circuit breaker do modo INSTITUCIONAL (pedido 21/06) — só conta posições
+        # abertas sob esse modo; vitória (TP1_BE/TP2) zera o contador, STOP soma.
+        if f.get("modo") == "INSTITUCIONAL":
+            if f["resultado"] == "STOP":
+                estado["_stops_consecutivos_inst"] = estado.get("_stops_consecutivos_inst", 0) + 1
+            elif f["resultado"] in ("TP1_BE", "TP2"):
+                estado["_stops_consecutivos_inst"] = 0
 
 
 async def _enviar_diagnostico(session) -> None:
@@ -344,8 +352,11 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             # AJUSTE PROFISSIONAL (21/06) — qualidade mínima: só grade A/S, ADX>=20
             # universal (piso geral, alguns sinais já exigem mais na própria condição),
             # RVOL adaptativo por timeframe (30m mais solto que 1h).
-            if grade not in GRAUS_PERMITIDOS:
-                log.info(f"  ⚠️ {abrev} bloqueado — grade {grade} abaixo do mínimo (só A/S)")
+            # AJUSTE INSTITUCIONAL ELITE (21/06): nesse modo a barra sobe mais —
+            # grade A (que ainda passa no FLEX/ELITE) é bloqueada, só S/A+.
+            _graus_ok = GRAUS_PERMITIDOS_INSTITUCIONAL if SIGNAL_MODE == "INSTITUCIONAL" else GRAUS_PERMITIDOS
+            if grade not in _graus_ok:
+                log.info(f"  ⚠️ {abrev} bloqueado — grade {grade} abaixo do mínimo ({'/'.join(sorted(_graus_ok))})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"grade={grade}"))
                 continue
@@ -400,7 +411,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
 
             eh_long  = result["sinal"] == "LONG"
             _modo_inst = SIGNAL_MODE == "INSTITUCIONAL"
-            pct_risco = (RISK_INSTITUCIONAL if _modo_inst else
+            pct_risco = (RISK_INSTITUCIONAL_POR_GRADE.get(grade, 0.01) if _modo_inst else
                          RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT))
             _teto_ciclo = MAX_CYCLE_RISK_INSTITUCIONAL if _modo_inst else MAX_CYCLE_RISK
 
@@ -409,6 +420,12 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 continue
             if _modo_inst and len(estado.get("_posicoes_abertas", [])) >= MAX_POSICOES_INSTITUCIONAL:
                 log.info(f"  🛑 {abrev} bloqueado — {MAX_POSICOES_INSTITUCIONAL} posições já abertas (modo INSTITUCIONAL)")
+                continue
+            # Circuit breaker (pedido 21/06): após N stops consecutivos no modo
+            # institucional, pausa novas entradas até a primeira posição fechar como
+            # vencedora (TP1_BE ou TP2) — contador atualizado em _atualizar_resultados().
+            if _modo_inst and estado.get("_stops_consecutivos_inst", 0) >= STOPS_CONSECUTIVOS_PAUSA:
+                log.info(f"  🛑 {abrev} bloqueado — circuit breaker ({estado.get('_stops_consecutivos_inst', 0)} stops consecutivos, aguardando vitória)")
                 continue
             if fonte == "SCOUT" and scouts_enviados >= MAX_SCOUT_PER_CYCLE:
                 log.info(f"  🔵 {abrev} SCOUT bloqueado — limite {MAX_SCOUT_PER_CYCLE}/ciclo")
@@ -462,7 +479,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 enviados += 1
                 registrar_posicao_aberta(estado, sym, tf, result["sinal"], result["preco"],
                                          ok["stop"], ok["tp1"], ok["tp2"], ok["r1"], ok["r_final"],
-                                         grade, result["fonte_sinal"])
+                                         grade, result["fonte_sinal"], modo=SIGNAL_MODE)
         else:
             candidatos.append((result["score"], abrev, result["score"],
                                result["rsi"], result["adx"], result.get("fonte_sinal", "sem-sinal")))
@@ -606,9 +623,12 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
             # AJUSTE PROFISSIONAL (21/06) — mesma qualidade mínima do ciclo FLEX:
             # só grade A/S, ADX>=20 universal, RVOL>=0.80 (piso H1) e fluxo SMC
             # (DNA Flow/Trendilo) obrigatório na direção do sinal.
-            if grade not in GRAUS_PERMITIDOS:
+            # AJUSTE INSTITUCIONAL ELITE (21/06): mesmo piso institucional-aware do
+            # ciclo FLEX (só S/A+ neste modo).
+            _graus_ok_mtf = GRAUS_PERMITIDOS_INSTITUCIONAL if SIGNAL_MODE == "INSTITUCIONAL" else GRAUS_PERMITIDOS
+            if grade not in _graus_ok_mtf:
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"grade={grade}"))
-                log.info(f"[MTF] {abrev:7s} | bloqueado — grade {grade} abaixo do mínimo (só A/S)")
+                log.info(f"[MTF] {abrev:7s} | bloqueado — grade {grade} abaixo do mínimo ({'/'.join(sorted(_graus_ok_mtf))})")
                 continue
             if result["adx"] < ADX_MIN_GLOBAL:
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"adx<{ADX_MIN_GLOBAL}"))
@@ -625,6 +645,17 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "sem fluxo SMC"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — sem fluxo institucional (DNA Flow/Trendilo)")
                 continue
+
+            # AJUSTE INSTITUCIONAL ELITE (21/06): mesmo teto de posições simultâneas
+            # e circuit breaker de stops consecutivos do ciclo FLEX, aplicado também
+            # aqui — MTF é o outro caminho que pode abrir posição em modo INSTITUCIONAL.
+            if SIGNAL_MODE == "INSTITUCIONAL":
+                if len(estado.get("_posicoes_abertas", [])) >= MAX_POSICOES_INSTITUCIONAL:
+                    log.info(f"[MTF] {abrev:7s} | bloqueado — {MAX_POSICOES_INSTITUCIONAL} posições já abertas (modo INSTITUCIONAL)")
+                    continue
+                if estado.get("_stops_consecutivos_inst", 0) >= STOPS_CONSECUTIVOS_PAUSA:
+                    log.info(f"[MTF] {abrev:7s} | bloqueado — circuit breaker ({estado.get('_stops_consecutivos_inst', 0)} stops consecutivos, aguardando vitória)")
+                    continue
 
             chave = f"{sym}_MTF"
             if agora - estado.get(chave, 0) >= cooldown_mtf:
@@ -649,7 +680,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                     estado[chave] = agora; enviados += 1
                     registrar_posicao_aberta(estado, sym, "1h", result["sinal"], result["preco"],
                                              ok["stop"], ok["tp1"], ok["tp2"], ok["r1"], ok["r_final"],
-                                             grade, result["fonte_sinal"])
+                                             grade, result["fonte_sinal"], modo=SIGNAL_MODE)
             else:
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"cooldown {mins}min"))

@@ -79,12 +79,12 @@ def salvar_estado(estado):
 # tardia etc. — só impressão. Resultado fechado vai pro resultados_log.csv.
 
 def registrar_posicao_aberta(estado, simbolo, tf, direcao, entrada, stop, tp1, tp2,
-                              r1, r_final, grade, fonte):
+                              r1, r_final, grade, fonte, modo=""):
     posicoes = estado.setdefault("_posicoes_abertas", [])
     posicoes.append({
         "simbolo": simbolo, "tf": tf, "direcao": direcao,
         "entrada": entrada, "stop": stop, "tp1": tp1, "tp2": tp2,
-        "r1": r1, "r_final": r_final, "grade": grade, "fonte": fonte,
+        "r1": r1, "r_final": r_final, "grade": grade, "fonte": fonte, "modo": modo,
         "tp1_atingido": False,
         "aberta_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "ts_abertura": time.time(),
