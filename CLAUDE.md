@@ -534,3 +534,25 @@ STOP) e descartar o afrouxamento de cima (contraditório e sem efeito prático r
 - Efeito esperado: sinais mais raros (objetivo real era reduzir STOP, não aumentar frequência — a parte
   "aumentar frequência" do documento original foi descartada por contradizer este filtro). Validar com o
   próximo lote de `resultados_log.csv` antes de qualquer novo ajuste de seletividade.
+
+---
+
+## BB_BREAK — DEFESA DE STOCHRSI ESGOTADO (autorizado 21/06 — casos reais CVX e ASTER)
+
+Usuário reportou (com print do gráfico) dois sinais BB_BREAK SHORT reais (CVX/USDT e ASTER/USDT, ambos
+30M) entrando "depois do movimento" — RSI já em 30-32 (perto do piso de 25 da REGRA #1) e, no caso do
+ASTER, StochRSI em 0.0114 (extremamente saturado). Pedido: o sinal devia esperar o RSI "pronto pra
+descer" (ainda com espaço pra continuar), não disparar quando o indicador já esgotou.
+
+Auditoria em `analyze.py` achou a causa raiz: `long_bb_break`/`short_bb_break` (linha ~560) é o **único**
+tipo de sinal da cascata 1-12 que não checa StochRSI saturado (`stoch_esticado_up`/`stoch_esticado_down`,
+REGRA #5) — PULLBACK, CROSS, SM_SWEEP, FLEX, SETUP, DIV, REBOUND todos usam `seguro_long`/`seguro_short`
+(que inclui esse check), BB_BREAK nunca usou. Não dá pra simplesmente adicionar `seguro_long`/`seguro_short`
+inteiro: `perto_bb_topo`/`perto_bb_fund` (`pos_bb>0.97`/`<0.03`) é **sempre verdadeiro** quando
+`bb_break_long`/`short` já é verdadeiro (preço já rompeu a banda, logo `pos_bb>1.0` ou `<0.0`) — geraria
+contradição igual à já documentada do SURGE com `liq_topo`/`liq_fundo`.
+
+Fix aplicado: adicionado só o pedaço relevante e sem contradição —
+`not stoch_esticado_up` em `long_bb_break`, `not stoch_esticado_down` em `short_bb_break`. Bloqueia
+exatamente o padrão dos dois casos reais (RSI já no fim da janela + StochRSI já saturado <0.05/>0.80),
+sem tocar nos outros 10 critérios do BB_BREAK nem na REGRA #1 (rsi_zona continua intocada).
