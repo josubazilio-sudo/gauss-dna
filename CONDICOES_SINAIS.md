@@ -269,7 +269,9 @@ Aplicados a **todos** os sinais, independente do tipo:
 6. Score Inst < _inst_min:
      35 (SCOUT) | 40 (REVERSAL/SM_SWEEP/DIV) | 45 (demais)
      → max(., 60) em sessão perigosa (22h-08h UTC ou abertura 08h/13h UTC)
+     → max(., 75) sempre — FILTRO DE EXECUÇÃO V2 (21/06, "confiança>=65%"), dominante na prática
    → bloqueia
+6b. RVOL < max(RVOL_MIN_BY_TF[tf], 1.0)                → bloqueia (piso V2 sobe RVOL efetivo p/ 1.0)
 7. H4 diverge da direção (1h/30m/15m)              → bloqueia
 8. Cooldown: mesma direção = tf_minutos*60s (mín. 2h);
    qualquer direção mesma moeda/tf = 2h            → bloqueia
