@@ -663,3 +663,13 @@ Fix 1 acima também ataca esse pilar (entrada tardia é, na prática, um subtipo
 Não mexe em R:R, alvos (`r1`/`r_final`) nem leverage — só largura do stop e seletividade de entrada.
 Validar com o próximo lote de `resultados_log.csv`: se a taxa de STOP cair sem reduzir TP2/TP1_BE na
 mesma proporção, o diagnóstico (entrada tardia + stop apertado) estava certo.
+
+### Fix 1b — RSI "criterioso" (mesmo dia, pedido seguinte do usuário)
+Usuário pediu RSI mais criterioso/com espaço pra continuar, não só bloqueio de extremo absoluto — exatamente
+o gap que ainda restava em **PULLBACK, CROSS, SM_SWEEP**: esses 3 usavam só `rsi_zona_long/short` (<75/>25,
+REGRA #1), sem nenhum teto intermediário, enquanto FLEX/SCOUT/SETUP/REBOUND/DIV já tinham `nao_ext_long_
+tight`/`short` (`(preco-e21)/atr<2.5 and (rsi<65 ou (adx>32 e rsi<75))` — teto efetivo de RSI 65, com
+exceção até 75 só em tendência muito forte). Adicionado `nao_ext_long_tight`/`short` aos 3 que faltavam —
+reusa o critério já calibrado em vez de inventar um número novo. R:R por grade já era generoso o
+suficiente (A=1.8R/3.5R, S/S+=2.2R/4.5R — bem além do "risco 1 / retorno 2" pedido), não precisou de
+mudança ali.

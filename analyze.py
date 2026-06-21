@@ -532,22 +532,22 @@ def detectar_sinais(ind):
                       i["dna_flow_bull"] and i["adx"] > 18 and i["pdi"] > i["mdi"] and
                       i["rsi_zona_long"] and i["score_inst_long"] >= 50 and
                       i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"] and
-                      i["nao_overext_long"] and i["rsi_nao_chasing_long"])
+                      i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
                       i["dna_flow_bear"] and i["adx"] > 18 and i["mdi"] > i["pdi"] and
                       i["rsi_zona_short"] and i["score_inst_short"] >= 50 and
                       i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"] and
-                      i["nao_overext_short"] and i["rsi_nao_chasing_short"])
+                      i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
 
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
-                   i["nao_overext_long"] and i["rsi_nao_chasing_long"])
+                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
     short_cross = (i["algum_cross_bear"] and i["dna_flow_bear"] and i["adx_short_ok"] and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]) and
-                   i["nao_overext_short"] and i["rsi_nao_chasing_short"])
+                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
 
     # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
     _fluxo_min   = 0 if _FLV <= 0 else (1 if _FLV == 1 else 2)
@@ -595,10 +595,10 @@ def detectar_sinais(ind):
     # ── Smart Money ───────────────────────────────────────────────────────────
     long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi_zona_long"] and
                 i["preco"] > i["e200"] and i["score_inst_long"] >= 60 and
-                i["nao_overext_long"] and i["rsi_nao_chasing_long"])
+                i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
     short_sm = (i["sm_bear"] and i["rsi_zona_short"] and i["rsi"] < 75 and
                 i["preco"] < i["e200"] and i["score_inst_short"] >= 60 and
-                i["nao_overext_short"] and i["rsi_nao_chasing_short"])
+                i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
 
     # ── Reversão extrema ──────────────────────────────────────────────────────
     long_reversal  = (i["rsi"] < 30 and i["ha_bull"] and i["v_forte"] and
