@@ -180,6 +180,14 @@ async def _enviar_diagnostico(session) -> None:
         _partes = [f"{v}x {k}" for k, v in sorted(_c.items(), key=lambda x: -x[1])]
         linhas.append(f"\nResultados (24h): {_resumo['total']} fechados — {', '.join(_partes)} "
                       f"— winrate {_resumo['winrate']:.0f}% — R medio {_resumo['r_medio']:+.2f}")
+        # Detalhamento por fonte/grade (observabilidade — não altera gestão, só
+        # acelera o diagnóstico quando a amostra chegar nos 30-50 trades)
+        for _rotulo, _grupo in (("fonte", _resumo.get("por_fonte", {})),
+                                 ("grade", _resumo.get("por_grade", {}))):
+            if len(_grupo) > 1:
+                _det = [f"{k}:{d['stop']}/{d['total']}STOP"
+                        for k, d in sorted(_grupo.items(), key=lambda x: -x[1]["total"])]
+                linhas.append(f"  por {_rotulo}: {', '.join(_det)}")
 
     _texto_diag = "\n".join(linhas)
     log.info(f"[DIAG]\n{_texto_diag}")

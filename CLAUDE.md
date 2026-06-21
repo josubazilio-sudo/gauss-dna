@@ -401,6 +401,13 @@ saber objetivamente se o problema é stop apertado, entrada tardia, ou se na rea
 - ⚠️ Não tomar nenhuma decisão de ajustar stop/entrada/TP **sem antes olhar esse resumo** — é exatamente o
   dado que faltava pra distinguir "stop apertado de mais" de "mercado genuinamente contra" de "está tudo
   bem, é variância normal".
+- **Detalhamento por fonte/grade** (autorizado 21/06 — caso real de winrate 14%/7 trades, amostra pequena
+  demais pra diagnosticar causa): `resumo_resultados()` (`state.py`) agora também agrega por `fonte` (tipo
+  de sinal) e `grade`, contando STOP/total e R médio de cada grupo. `cycles.py` (`_enviar_diagnostico`)
+  imprime uma linha extra por agrupamento (`por fonte: ...`, `por grade: ...`) só quando há mais de 1 grupo
+  na amostra. É observabilidade pura — não muda stop/TP/entrada, só deixa o dado pronto pra quando a amostra
+  chegar nos 30-50 trades necessários (regra acima) pra identificar se algum tipo de sinal específico está
+  puxando o winrate pra baixo.
 
 ---
 

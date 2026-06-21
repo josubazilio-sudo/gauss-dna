@@ -183,13 +183,18 @@ def registrar_resultado(p):
 
 def resumo_resultados(horas=24):
     """Lê resultados_log.csv e devolve um resumo agregado das últimas N horas
-    (contagem por resultado e winrate), pra enriquecer o diagnóstico horário."""
+    (contagem por resultado e winrate), pra enriquecer o diagnóstico horário.
+    Inclui também detalhamento por fonte (tipo de sinal) e grade — observabilidade
+    pura (não altera stop/TP/entrada), pra já ter o dado pronto pra quando a
+    amostra chegar nos 30-50 trades necessários pra revisar gestão (ver CLAUDE.md)."""
     if not RESULTS_FILE.exists():
         return None
     limite = datetime.now().timestamp() - horas * 3600
     contagem = {}
     soma_r = 0.0
     n_com_r = 0
+    por_fonte = {}   # fonte -> {"total": n, "stop": n, "r_soma": x, "r_n": n}
+    por_grade = {}   # grade -> {"total": n, "stop": n, "r_soma": x, "r_n": n}
     try:
         with RESULTS_FILE.open(encoding="utf-8") as f:
             for row in csv.DictReader(f, delimiter=";"):
@@ -201,8 +206,17 @@ def resumo_resultados(horas=24):
                     continue
                 res = row["resultado"]
                 contagem[res] = contagem.get(res, 0) + 1
-                if row.get("r_realizado"):
-                    soma_r += float(row["r_realizado"]); n_com_r += 1
+                r_val = float(row["r_realizado"]) if row.get("r_realizado") else None
+                if r_val is not None:
+                    soma_r += r_val; n_com_r += 1
+                for chave, agrupador in (("fonte", por_fonte), ("grade", por_grade)):
+                    k = row.get(chave) or "?"
+                    d = agrupador.setdefault(k, {"total": 0, "stop": 0, "r_soma": 0.0, "r_n": 0})
+                    d["total"] += 1
+                    if res == "STOP":
+                        d["stop"] += 1
+                    if r_val is not None:
+                        d["r_soma"] += r_val; d["r_n"] += 1
     except Exception:
         return None
     if not contagem:
@@ -211,4 +225,5 @@ def resumo_resultados(horas=24):
     vitorias = contagem.get("TP1_BE", 0) + contagem.get("TP2", 0)
     winrate = vitorias / total * 100 if total else 0
     return {"contagem": contagem, "total": total, "winrate": winrate,
-            "r_medio": soma_r / n_com_r if n_com_r else 0.0}
+            "r_medio": soma_r / n_com_r if n_com_r else 0.0,
+            "por_fonte": por_fonte, "por_grade": por_grade}
