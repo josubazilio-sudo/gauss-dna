@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Confeitaria",
+    "slug": "confeitaria",
+    "version": "1.0.0",
+    "scheme": "confeitaria",
+    "platforms": ["ios", "android", "web"],
+    "plugins": ["expo-router"],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

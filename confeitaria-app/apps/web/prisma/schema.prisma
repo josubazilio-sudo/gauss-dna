@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  telefone  String?
+  senha     String
+  role      String   @default("cliente")
+  cart      Cart?
+  enderecos Address[]
+  pedidos   Order[]
+  posts     Post[]
+  comentarios Comment[]
+  appointments Appointment[]
+  criadoEm  DateTime @default(now())
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  nome     String    @unique
+  slug     String    @unique
+  descricao String?
+  produtos Product[]
+}
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  nome        String
+  slug        String    @unique
+  descricao   String?
+  preco       Float
+  imagem      String?
+  categoriaId Int
+  categoria   Category  @relation(fields: [categoriaId], references: [id])
+  disponivel  Boolean   @default(true)
+  criadoEm    DateTime  @default(now())
+  itens       CartItem[]
+  itensPedido OrderItem[]
+}
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  usuarioId Int        @unique
+  usuario   User       @relation(fields: [usuarioId], references: [id])
+  itens     CartItem[]
+  criadoEm  DateTime   @default(now())
+}
+
+model CartItem {
+  id         Int     @id @default(autoincrement())
+  cartId     Int
+  cart       Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product @relation(fields: [productId], references: [id])
+  quantidade Int     @default(1)
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  usuarioId   Int
+  usuario     User        @relation(fields: [usuarioId], references: [id])
+  itens       OrderItem[]
+  enderecoId  Int?
+  endereco    Address?    @relation(fields: [enderecoId], references: [id])
+  status      String      @default("pendente")
+  total       Float
+  taxaEntrega Float       @default(0)
+  formaPagamento String?
+  observacao  String?
+  criadoEm    DateTime    @default(now())
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  orderId    Int
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product @relation(fields: [productId], references: [id])
+  quantidade Int
+  precoUnit  Float
+}
+
+model Address {
+  id          Int     @id @default(autoincrement())
+  usuarioId   Int
+  usuario     User    @relation(fields: [usuarioId], references: [id])
+  rua         String
+  numero      String
+  bairro      String
+  cidade      String  @default("São Paulo")
+  estado      String  @default("SP")
+  cep         String?
+  complemento String?
+  principal   Boolean @default(false)
+  pedidos     Order[]
+}
+
+model Appointment {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  usuario    User     @relation(fields: [usuarioId], references: [id])
+  data       DateTime
+  tipoBolo   String
+  observacao String?
+  status     String   @default("pendente")
+  criadoEm   DateTime @default(now())
+}
+
+model Schedule {
+  id         Int      @id @default(autoincrement())
+  data       DateTime @unique
+  disponivel Boolean  @default(true)
+}
+
+model Post {
+  id          Int       @id @default(autoincrement())
+  usuarioId   Int
+  usuario     User      @relation(fields: [usuarioId], references: [id])
+  imagem      String?
+  texto       String
+  curtidas    Int       @default(0)
+  comentarios Comment[]
+  criadoEm    DateTime  @default(now())
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  texto     String
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  usuarioId Int
+  usuario   User     @relation(fields: [usuarioId], references: [id])
+  criadoEm  DateTime @default(now())
+}

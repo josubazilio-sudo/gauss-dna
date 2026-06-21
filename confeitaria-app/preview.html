@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confeitaria</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fef6ee;color:#292524}
+header{background:#db2777;color:#fff;padding:1.5rem 2rem}
+header div{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:1.875rem;font-weight:700}
+nav{display:flex;gap:1.5rem;font-size:.875rem}
+nav a{color:#fff;text-decoration:none}
+nav a:hover{color:#fbcfe8}
+.hero{max-width:1200px;margin:0 auto;padding:4rem 1rem;text-align:center}
+.hero h2{font-size:3rem;margin-bottom:1rem}
+.hero p{font-size:1.125rem;color:#57534e;margin-bottom:2rem;max-width:36rem;margin-left:auto;margin-right:auto}
+.btn{display:inline-block;padding:.75rem 2rem;border-radius:9999px;font-weight:500;text-decoration:none;transition:.2s}
+.btn-primary{background:#db2777;color:#fff}
+.btn-primary:hover{background:#be185d}
+.btn-outline{border:2px solid #db2777;color:#db2777}
+.btn-outline:hover{background:#fdf2f8}
+.services{background:#fff;padding:4rem 1rem}
+.services-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem}
+.service-card{text-align:center;padding:1.5rem;border-radius:16px;background:#fef6ee}
+.service-card .icon{font-size:2.5rem;margin-bottom:.75rem}
+.service-card h3{font-size:1.25rem;margin-bottom:.5rem}
+.service-card p{color:#78716c}
+.section{padding:3rem 1rem}
+.section-title{font-size:1.875rem;font-weight:700;margin-bottom:2rem}
+.container{max-width:1200px;margin:0 auto}
+.catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.5rem}
+.card{background:#fff;border-radius:16px;padding:1rem;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.card:hover{box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.card .emoji{font-size:3rem;text-align:center;margin-bottom:.75rem}
+.tag{font-size:.75rem;background:#fce7f3;color:#be185d;padding:2px 8px;border-radius:9999px}
+.card h3{font-weight:600;margin-top:.5rem;font-size:1.125rem}
+.price{color:#db2777;font-weight:700;font-size:1.25rem;margin-top:.25rem}
+.btn-add{width:100%;background:#db2777;color:#fff;padding:.5rem;border:none;border-radius:9999px;font-size:.875rem;cursor:pointer;margin-top:.75rem}
+.btn-add:hover{background:#be185d}
+.bg-white{background:#fff}
+.bg-warm{background:#fef6ee}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.calendar-grid .day-head{font-size:.75rem;font-weight:500;color:#78716c;padding:.25rem}
+.calendar-grid .day{padding:.5rem;border-radius:8px;font-size:.875rem}
+.calendar-grid .day.available{background:#fce7f3;color:#be185d;cursor:pointer}
+.calendar-grid .day.available:hover{background:#fbcfe8}
+.calendar-grid .day.disabled{color:#d6d3d1}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-size:.875rem;font-weight:500;margin-bottom:.25rem}
+.form-group input,.form-group select,.form-group textarea{width:100%;border:1px solid #d6d3d1;border-radius:8px;padding:.5rem .75rem;font-size:.875rem}
+.post{background:#fff;border-radius:16px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.post-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}
+.avatar{width:2.5rem;height:2.5rem;background:#fce7f3;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem}
+.post-emoji{font-size:4rem;text-align:center;padding:1rem 0}
+.post-actions{display:flex;gap:1rem;font-size:.875rem;color:#78716c;margin-top:.75rem}
+.post-actions button{background:none;border:none;cursor:pointer;color:#78716c;display:flex;align-items:center;gap:4px}
+.post-actions button:hover{color:#db2777}
+footer{background:#292524;color:#a8a29e;text-align:center;padding:1.5rem;font-size:.875rem}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Confeitaria</h1>
+    <nav>
+      <a href="#home">Início</a>
+      <a href="#catalogo">Catálogo</a>
+      <a href="#agenda">Agenda</a>
+      <a href="#social">Social</a>
+    </nav>
+  </div>
+</header>
+
+<section id="home" class="hero">
+  <h2>Bolos artesanais<br>com amor e tradição</h2>
+  <p>Encomende bolos personalizados, doces finos e muito mais. Entrega em toda a cidade.</p>
+  <div>
+    <a href="#catalogo" class="btn btn-primary">Ver Catálogo</a>
+    <a href="#agenda" class="btn btn-outline" style="margin-left:.75rem">Agendar Bolo</a>
+  </div>
+</section>
+
+<section class="services">
+  <div class="services-grid">
+    <div class="service-card">
+      <div class="icon">🎂</div>
+      <h3>Bolos Personalizados</h3>
+      <p>Do jeito que você sonhou</p>
+    </div>
+    <div class="service-card">
+      <div class="icon">🧁</div>
+      <h3>Doces Finos</h3>
+      <p>Para todas as ocasiões</p>
+    </div>
+    <div class="service-card">
+      <div class="icon">🚚</div>
+      <h3>Delivery</h3>
+      <p>Entregamos em sua casa</p>
+    </div>
+  </div>
+</section>
+
+<section id="catalogo" class="section">
+  <div class="container">
+    <h2 class="section-title">Catálogo</h2>
+    <div class="catalog-grid">
+      <div class="card"><div class="emoji">🍫</div><span class="tag">Bolos</span><h3>Bolo de Chocolate</h3><p class="price">R$ 89,90</p><button class="btn-add">Adicionar ao Carrinho</button></div>
+      <div class="card"><div class="emoji">🍓</div><span class="tag">Bolos</span><h3>Bolo de Morango</h3><p class="price">R$ 94,90</p><button class="btn-add">Adicionar ao Carrinho</button></div>
+      <div class="card"><div class="emoji">🥕</div><span class="tag">Bolos</span><h3>Bolo de Cenoura</h3><p class="price">R$ 79,90</p><button class="btn-add">Adicionar ao Carrinho</button></div>
+      <div class="card"><div class="emoji">🍋</div><span class="tag">Bolos</span><h3>Bolo de Limão</h3><p class="price">R$ 84,90</p><button class="btn-add">Adicionar ao Carrinho</button></div>
+      <div class="card"><div class="emoji">🍫</div><span class="tag">Doces</span><h3>Brigadeiro (unid)</h3><p class="price">R$ 3,50</p><button class="btn-add">Adicionar ao Carrinho</button></div>
+      <div class="card"><div class="emoji">🧁</div><span class="tag">Doces</span><h3>Cupcake</h3><p class="price">R$ 8,90</p><button class="btn-add">Adicionar ao Carrinho</button></div>
+      <div class="card"><div class="emoji">🍰</div><span class="tag">Tortas</span><h3>Torta de Morango</h3><p class="price">R$ 69,90</p><button class="btn-add">Adicionar ao Carrinho</button></div>
+      <div class="card"><div class="emoji">🍋</div><span class="tag">Tortas</span><h3>Torta de Limão</h3><p class="price">R$ 64,90</p><button class="btn-add">Adicionar ao Carrinho</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="agenda" class="section bg-white">
+  <div class="container" style="max-width:56rem">
+    <h2 class="section-title">Agenda de Encomendas</h2>
+    <div class="bg-warm" style="border-radius:16px;padding:1.5rem;margin-bottom:2rem">
+      <h3 style="font-size:1.25rem;margin-bottom:1rem">Datas Disponíveis</h3>
+      <div class="calendar-grid">
+        <div class="day-head">Dom</div><div class="day-head">Seg</div><div class="day-head">Ter</div><div class="day-head">Qua</div><div class="day-head">Qui</div><div class="day-head">Sex</div><div class="day-head">Sáb</div>
+        <div class="day disabled">1</div><div class="day disabled">2</div><div class="day disabled">3</div><div class="day disabled">4</div>
+        <div class="day available">5</div><div class="day available">6</div><div class="day available">7</div>
+        <div class="day available">8</div><div class="day available">9</div><div class="day available">10</div><div class="day available">11</div>
+        <div class="day available">12</div><div class="day available">13</div><div class="day available">14</div><div class="day available">15</div><div class="day available">16</div>
+        <div class="day disabled">17</div><div class="day disabled">18</div><div class="day disabled">19</div><div class="day disabled">20</div>
+        <div class="day available">21</div><div class="day available">22</div><div class="day available">23</div><div class="day available">24</div><div class="day available">25</div><div class="day available">26</div><div class="day available">27</div><div class="day available">28</div>
+        <div class="day disabled">29</div><div class="day disabled">30</div><div class="day disabled">31</div>
+      </div>
+    </div>
+    <div class="bg-warm" style="border-radius:16px;padding:1.5rem">
+      <h3 style="font-size:1.25rem;margin-bottom:1rem">Solicitar Agendamento</h3>
+      <form>
+        <div class="form-group"><label>Nome</label><input type="text" placeholder="Seu nome"></div>
+        <div class="form-group"><label>Data desejada</label><input type="date"></div>
+        <div class="form-group"><label>Tipo de bolo</label><select><option>Bolo de Chocolate</option><option>Bolo de Morango</option><option>Bolo de Cenoura</option><option>Bolo Personalizado</option></select></div>
+        <div class="form-group"><label>Observações</label><textarea rows="3" placeholder="Descreva o que deseja..."></textarea></div>
+        <button type="button" class="btn btn-primary">Solicitar Agendamento</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section id="social" class="section">
+  <div class="container" style="max-width:42rem">
+    <h2 class="section-title">Social</h2>
+    <div class="post">
+      <div class="post-header"><div class="avatar">👩‍🍳</div><div><p style="font-weight:600;font-size:.875rem">Confeitaria</p><p style="font-size:.75rem;color:#a8a29e">2h atrás</p></div></div>
+      <div class="post-emoji">🎂</div>
+      <p>Bolo de aniversário que fizemos hoje!</p>
+      <div class="post-actions"><button>❤️ 24</button><button>💬 5</button></div>
+    </div>
+    <div class="post" style="margin-top:1.5rem">
+      <div class="post-header"><div class="avatar">👩‍🍳</div><div><p style="font-weight:600;font-size:.875rem">Confeitaria</p><p style="font-size:.75rem;color:#a8a29e">5h atrás</p></div></div>
+      <div class="post-emoji">🧁</div>
+      <p>Nossos novos cupcakes de chocolate belga 🍫</p>
+      <div class="post-actions"><button>❤️ 31</button><button>💬 8</button></div>
+    </div>
+    <div class="post" style="margin-top:1.5rem">
+      <div class="post-header"><div class="avatar">👩‍🍳</div><div><p style="font-weight:600;font-size:.875rem">Confeitaria</p><p style="font-size:.75rem;color:#a8a29e">1d atrás</p></div></div>
+      <div class="post-emoji">🍰</div>
+      <p>Torta de morango da semana, quem quer?</p>
+      <div class="post-actions"><button>❤️ 18</button><button>💬 3</button></div>
+    </div>
+  </div>
+</section>
+
+<footer>&copy; 2026 Confeitaria. Todos os direitos reservados.</footer>
+
+</body>
+</html>

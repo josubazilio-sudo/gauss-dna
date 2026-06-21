@@ -1,0 +1,15 @@
+{
+  "name": "confeitaria-app",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "db:push": "pnpm --filter @confeitaria/api db:push",
+    "db:seed": "pnpm --filter @confeitaria/api db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
