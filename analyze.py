@@ -563,18 +563,28 @@ def detectar_sinais(ind):
     # seguro_long/short — não o seguro_long/short inteiro, que contradiria bb_break_long/
     # short por definição (perto_bb_topo/fund é sempre verdadeiro quando o preço já
     # rompeu a banda).
+    # RSI com "espaço pra correr" (pedido 21/06 — 3º caso real, WUSDT LONG RSI=68,
+    # rompeu quase encostando no teto da REGRA #1 (75) e devolveu o movimento. Junto
+    # com CVX/ASTER (RSI~30, quase no piso 25), os 3 incidentes reais de BB_BREAK
+    # nesta sessão entraram a <10 pontos do limite absoluto de rsi_zona — comprando/
+    # vendendo exatamente quando o RSI já não tinha mais espaço pra continuar na
+    # direção do sinal. Piso/teto adicional só pro BB_BREAK (não altera rsi_zona_long/
+    # short, que é REGRA #1 e continua <75/>25 pra todos os outros sinais) — exige
+    # pelo menos ~10pts de margem até o teto/piso absoluto antes de disparar.
     long_bb_break  = (i["bb_break_long"] and i["bb_expand"] and i["kalman_subindo"] and
                       i["k_short_subindo"] and i["score"] > 40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_acima_e21"] and
                       i["obv_bull"] and _no_liq_topo and i["preco"] > i["e200"] and
                       i["preco"] > i["e50"] and not i["stoch_esticado_up"] and
-                      i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["score_inst_long"] >= 50)
+                      i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["rsi"] < 65 and
+                      i["score_inst_long"] >= 50)
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                       i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
                       _adx_sub_ok and not i["lateralizado"] and not i["ext_abaixo_e21"] and
                       i["obv_bear"] and _no_liq_fund and i["preco"] < i["e200"] and
                       i["preco"] < i["e50"] and not i["stoch_esticado_down"] and
-                      i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["score_inst_short"] >= 50)
+                      i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["rsi"] > 35 and
+                      i["score_inst_short"] >= 50)
 
     # ── Smart Money ───────────────────────────────────────────────────────────
     long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi_zona_long"] and

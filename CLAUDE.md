@@ -556,3 +556,25 @@ Fix aplicado: adicionado só o pedaço relevante e sem contradição —
 `not stoch_esticado_up` em `long_bb_break`, `not stoch_esticado_down` em `short_bb_break`. Bloqueia
 exatamente o padrão dos dois casos reais (RSI já no fim da janela + StochRSI já saturado <0.05/>0.80),
 sem tocar nos outros 10 critérios do BB_BREAK nem na REGRA #1 (rsi_zona continua intocada).
+
+---
+
+## BB_BREAK — RSI COM ESPAÇO PRA CORRER (autorizado 21/06 — 3º caso real, WUSDT)
+
+Mesmo dia, 3º incidente real de BB_BREAK: WUSDT LONG entrou com RSI=68 (StochRSI não estava saturado,
+então o fix anterior não pegou este caso) e a posição bateu STOP — preço rompeu a banda, chegou perto do
+TP1 e devolveu o movimento todo. Olhando os 3 casos reais juntos (CVX SHORT RSI~30-32, ASTER SHORT
+RSI~30, WUSDT LONG RSI=68): todos entraram a menos de ~10 pontos do limite absoluto de `rsi_zona`
+(75 LONG / 25 SHORT, REGRA #1) — ou seja, o RSI já estava no fim do espaço que a REGRA #1 permite antes de
+travar, exatamente o padrão que o usuário descreveu repetidamente como "comprar/vender depois que o
+movimento já aconteceu" / "só comprar quando o RSI tem espaço pra subir, não pra descer".
+
+Fix aplicado: piso/teto adicional **só no BB_BREAK** (não altera `rsi_zona_long`/`short`, que é a REGRA #1
+e continua `<75`/`>25` pra todos os outros 11 sinais da cascata) — `long_bb_break` agora exige também
+`rsi < 65`, `short_bb_break` exige também `rsi > 35`. Dá ~10 pontos de margem até o teto/piso absoluto da
+REGRA #1 antes de disparar, em vez de deixar o BB_BREAK romper banda já quase no limite. Validação:
+os 3 incidentes reais (CVX, ASTER, WUSDT) teriam sido bloqueados por este piso novo.
+
+Não toca em stop/TP/leverage (gestão) nem nos outros 10 critérios do BB_BREAK — só fecha a margem de RSI
+especificamente pra este tipo de sinal, que agora soma 3 incidentes reais na mesma sessão (a taxa mais
+alta de qualquer tipo de sinal monitorado hoje, ver `por fonte: BB_BREAK:3/3STOP` no resumo de 24h).
