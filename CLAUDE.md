@@ -495,3 +495,42 @@ sinais em `analyze.py` (preserva todo o histórico de calibração por incidente
   (`grade=B`, `adx<20`, `rvol<0.70`, `sem fluxo SMC`, `regime BTC neutro`) aparecem só no log do ciclo, não
   no resumo de diagnóstico enviado ao Telegram. Se isso virar um bloqueador frequente, vale considerar
   expor no diagnóstico horário também.
+
+---
+
+## FILTRO DE EXECUÇÃO V2 (autorizado 21/06 — caso real 78% STOP/24h)
+
+Motivado por `resultados_log.csv` real: 18 trades fechados em 24h, 14 STOP, 4 TP2, **zero TP1_BE** — padrão
+binário (ou corre limpo até TP2, ou vai direto pro stop), que aponta pra qualidade de entrada/confluência
+insuficiente, não pra distância de stop/TP (que continua intocada, mesma regra de esperar 30-50 trades).
+
+O usuário trouxe um documento próprio ("AJUSTE PROFISSIONAL V2") pedindo simultaneamente **afrouxar** quase
+todo piso de detecção (ADX_MIN_GLOBAL 20→18, RVOL_MIN_BY_TF, score/score_inst por sinal, RSI até 78/22, etc,
+objetivo declarado "aumentar frequência") **e** adicionar um "Filtro de Execução" final mais estrito
+(Grade A/A+/S, Confiança≥65%, Score Inst≥70, ADX≥20, RVOL≥1.0, R:R≥1:2). Auditoria antes de aplicar achou
+contradição real: `confiança = score_inst-10` (`notify.py` linha ~192, vale pra **todo** sinal, não só
+INSTITUCIONAL) — logo "Confiança≥65%" já significa `score_inst≥75`, que é **mais apertado** que qualquer
+piso de detecção do próprio documento (PULLBACK/FLEX pediam `score_inst≥45`) e mais apertado que o "Score
+Inst≥70" do mesmo bloco (esse ficou redundante/morto, mesmo erro já corrigido uma vez no AJUSTE
+INSTITUCIONAL ELITE). Aplicar o documento inteiro faria o filtro final dominar e anular o afrouxamento de
+cima — resultado prático seria sinal **mais raro**, não mais frequente, e não atacaria o padrão binário
+observado. Apresentado ao usuário, que escolheu aplicar **só** a camada final (mais seletiva, ataca o
+STOP) e descartar o afrouxamento de cima (contraditório e sem efeito prático real de qualquer forma).
+
+### O que foi implementado
+- `config.py`: `INST_MIN_EXEC = 75` (score_inst mínimo unificado, equivalente a confiança≥65%) e
+  `RVOL_MIN_EXEC = 1.0` — constantes novas, não substituem `RVOL_MIN_BY_TF`/o `_inst_min` tiered por tipo
+  de sinal (35-60), são um piso adicional por cima (`max(...)`), pra manter a calibração por incidente já
+  documentada nas seções acima.
+- `cycles.py executar_ciclo()`: `_rvol_min_tf = max(RVOL_MIN_BY_TF.get(tf,0.80), RVOL_MIN_EXEC)` e
+  `_inst_min = max(_inst_min, INST_MIN_EXEC)` — só quando `FILTER_LEVEL>=1` (preserva o modo debug/force
+  `FILTER_LEVEL=0` sem o piso novo).
+- `cycles.py executar_ciclo_mtf()`: mesmo piso aplicado em `_inst_min_mtf` (antes fixo 40) e `_rvol_mtf`
+  (antes fixo 0.80 do TF "1h").
+- `ADX≥20` do documento já existia (`ADX_MIN_GLOBAL`), `Grade A/A+/S` já existia (`GRAUS_PERMITIDOS` —
+  manteve S+ também, sem motivo pra bloquear o que é estritamente melhor que S). `R:R≥1:2` já estava
+  satisfeito pelas grades que passam o filtro de grade (`notify.py`: A=1.8R/3.5R, A+=2.0R/4.0R,
+  S/S+=2.2R/4.5R, mesmo após calibração por ADX baixo) — nenhuma mudança necessária ali.
+- Efeito esperado: sinais mais raros (objetivo real era reduzir STOP, não aumentar frequência — a parte
+  "aumentar frequência" do documento original foi descartada por contradizer este filtro). Validar com o
+  próximo lote de `resultados_log.csv` antes de qualquer novo ajuste de seletividade.

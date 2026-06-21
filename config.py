@@ -84,6 +84,18 @@ ADX_MIN_GLOBAL = 20
 # Só opera grade A e S (S+ incluso) — ignora B e C/BRONZE.
 GRAUS_PERMITIDOS = {"A", "A+", "S", "S+"}
 
+# Filtro de Execução V2 (autorizado 21/06 — caso real de 78% STOP em 24h, padrão
+# binário STOP-ou-TP2 sem nenhum TP1_BE, indicando problema de qualidade de
+# entrada). Camada final acima dos pisos por tipo de sinal já existentes (que
+# variam 35-60 — ver _inst_min em cycles.py) — "confiança" exibida no Telegram
+# é score_inst-10 (notify.py), então confiança>=65% equivale a score_inst>=75.
+# Reduz frequência (não é o "aumentar frequência" do V2 original do usuário —
+# essa parte foi descartada por contradizer este filtro, ver CLAUDE.md), mas
+# ataca diretamente a taxa de STOP ao exigir confluência institucional bem mais
+# alta pra qualquer sinal ser executado, independente do tipo.
+INST_MIN_EXEC = 75
+RVOL_MIN_EXEC = 1.0
+
 # Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
 # LONG e SHORT em todas as moedas até o regime mudar.
 BTC_REGIME_ADX_MAX  = 20

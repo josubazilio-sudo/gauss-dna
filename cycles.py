@@ -17,7 +17,7 @@ from config import (
     FILTER_LEVEL,
     RISK_INSTITUCIONAL_POR_GRADE, MAX_CYCLE_RISK_INSTITUCIONAL, MAX_POSICOES_INSTITUCIONAL,
     COOLDOWN_INSTITUCIONAL_MESMA_DIR, COOLDOWN_INSTITUCIONAL_OPOSTA,
-    RVOL_MIN_BY_TF, ADX_MIN_GLOBAL, GRAUS_PERMITIDOS,
+    RVOL_MIN_BY_TF, ADX_MIN_GLOBAL, GRAUS_PERMITIDOS, INST_MIN_EXEC, RVOL_MIN_EXEC,
     BTC_REGIME_ADX_MAX, BTC_REGIME_RSI_MIN, BTC_REGIME_RSI_MAX,
     GRAUS_PERMITIDOS_INSTITUCIONAL, STOPS_CONSECUTIVOS_PAUSA,
 )
@@ -365,7 +365,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL}"))
                 continue
-            _rvol_min_tf = RVOL_MIN_BY_TF.get(tf, 0.80)
+            _rvol_min_tf = max(RVOL_MIN_BY_TF.get(tf, 0.80), RVOL_MIN_EXEC)
             if result.get("rvol", 1.0) < _rvol_min_tf:
                 log.info(f"  ⚠️ {abrev} bloqueado — RVOL {result.get('rvol', 0):.2f} < {_rvol_min_tf} ({tf})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -382,6 +382,8 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                          40 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 45)
             if FILTER_LEVEL >= 1 and (_sessao_perigosa or _abertura_falsa):
                 _inst_min = max(_inst_min, 60)   # sessão perigosa: exige confirmação institucional forte
+            if FILTER_LEVEL >= 1:
+                _inst_min = max(_inst_min, INST_MIN_EXEC)  # filtro de execução V2 (21/06)
             if score_inst < _inst_min:
                 log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
@@ -612,7 +614,8 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                      f"{result['fonte_sinal']} | RSI {result['rsi']:.1f} | ADX {result['adx']:.1f}")
             eh_long_mtf = result["sinal"] == "LONG"
             score_inst_mtf = result.get("score_inst_long" if eh_long_mtf else "score_inst_short", 0)
-            _score_min_mtf = 40; _inst_min_mtf = 40
+            _score_min_mtf = 40
+            _inst_min_mtf = max(40, INST_MIN_EXEC) if FILTER_LEVEL >= 1 else 40
             if abs(result["score"]) < _score_min_mtf or score_inst_mtf < _inst_min_mtf:
                 motivo = (f"score {result['score']:+d}<{_score_min_mtf}" if abs(result["score"]) < _score_min_mtf
                           else f"Score Inst {score_inst_mtf}<{_inst_min_mtf}")
@@ -635,9 +638,10 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
                 continue
             _rvol_mtf = result.get("rvol", 1.0)
-            if _rvol_mtf < RVOL_MIN_BY_TF.get("1h", 0.80):
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"rvol<{RVOL_MIN_BY_TF.get('1h', 0.80)}"))
-                log.info(f"[MTF] {abrev:7s} | bloqueado — RVOL {_rvol_mtf:.2f} < {RVOL_MIN_BY_TF.get('1h', 0.80)}")
+            _rvol_min_mtf = max(RVOL_MIN_BY_TF.get("1h", 0.80), RVOL_MIN_EXEC)
+            if _rvol_mtf < _rvol_min_mtf:
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"rvol<{_rvol_min_mtf}"))
+                log.info(f"[MTF] {abrev:7s} | bloqueado — RVOL {_rvol_mtf:.2f} < {_rvol_min_mtf}")
                 continue
             _dna_mtf = result.get("dna_flow_bull" if eh_long_mtf else "dna_flow_bear", False)
             _trl_mtf = result.get("trendilo_long" if eh_long_mtf else "trendilo_short", False)
