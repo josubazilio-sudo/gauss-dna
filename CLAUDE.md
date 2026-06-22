@@ -1,5 +1,24 @@
 # GAUSS+DNA — Regras de Prioridade Permanente
 
+## REGRA #-1 — VONTADE DO USUÁRIO SEMPRE PREVALECE (autorizado 22/06, prioridade acima de todas as outras)
+
+O que o usuário pede **agora** sempre tem prioridade sobre qualquer decisão antiga documentada neste
+arquivo — mesmo que essa decisão tenha sido marcada como "regra permanente", "autorizado" ou justificada
+com um incidente real no passado. Histórico de incidentes/calibração abaixo continua valendo como
+**contexto** (por que algo ficou de um jeito), não como **trava** que precise de debate ou justificativa
+extra pra ser revertida quando o usuário pedir o contrário.
+
+Na prática:
+- Se um pedido novo do usuário contradiz algo documentado abaixo, aplico o pedido novo direto — não preciso
+  reabrir auditoria, pedir confirmação extra, ou defender a regra antiga antes de mudar.
+- Não apago o histórico/justificativas antigas só porque uma regra foi superada — registro como
+  "superseded" (mesmo padrão já usado nas seções V2→V3 abaixo), pra manter o "porquê" rastreável.
+- Essa regra não desliga julgamento técnico: se um pedido for ambíguo ou tiver mais de uma interpretação
+  razoável, ainda perguntar antes de agir (`AskUserQuestion`) — a prioridade aqui é sobre **conflito entre
+  pedido novo e regra antiga**, não sobre adivinhar pedidos pouco claros.
+
+---
+
 ## REGRA #0 — COMPORTAMENTO DO ASSISTENTE (PRIORIDADE ABSOLUTA)
 
 **Enquanto o bot não disparar sinal: nunca aceitar estado parado. Agir.**
