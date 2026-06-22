@@ -843,3 +843,37 @@ resultado real de 24h passou a também agregar por `timeframe` (campo que já ex
 houver mais de 1 timeframe na amostra. Quando a amostra acumular trades suficientes em 30M e 1H, esse
 detalhamento mostra objetivamente se um dos dois timeframes está puxando o winrate pra baixo, antes de
 restringir `TIMEFRAMES` pra só `1h` (mudança que hoje seria especulação, não dado).
+
+---
+
+## TIMEOUT DO JOB MENOR QUE O CRON — 2º CASO REAL DE GAP (autorizado 22/06)
+
+Usuário reportou "bot não está enviando nada" — investigação (`mcp__github__get_job_logs`, linha a linha,
+não só status do run) confirmou que o envio em si **funciona**: achou diagnósticos sendo entregues com
+`ok:true` do Telegram tanto num run de 6min cancelado quanto num de 5h25min, incluindo um exatamente às
+06:30 UTC (= 3:30 BRT, confirmado pelo usuário como a última mensagem recebida). `getChat` confirmou que
+`TG_CHATID` aponta pro grupo certo, com permissão de postar — não era um Secret errado.
+
+A causa raiz real: o run iniciado 01:11 UTC ocupou o runner até 06:37 (bateu o timeout do step "Rodar bot",
+que era 325min) — e os ticks de cron de 07h e 08h foram **pulados** pelo GitHub Actions (comportamento
+documentado: cron agendado não dispara se o run anterior ainda está ocupando o concurrency group), abrindo
+um buraco de 2h11min sem nenhum run até o próximo `workflow_dispatch` manual às 08:48. Isso é a mesma causa
+raiz já registrada uma vez nesta sessão (ver comentário em `bot.yml`, redução de cron de 2h→1h) — só que
+reduzir o **cron** não resolve, porque o problema real é que o **timeout do job (325min) é maior que o
+intervalo do cron (60min)**: qualquer run que dure o timeout completo garante matematicamente que pelo menos
+um tick agendado vai cair "no meio" do runner ocupado e ser descartado.
+
+### Fix aplicado (`bot.yml`)
+- `timeout-minutes` do job (`scanner`) `330` → `58`
+- `timeout-minutes` do step "Rodar bot" `325` → `55`
+- Efeito: cada execução do bot (mesmo em `LOOP_MODE=true`) sempre termina sozinha antes do próximo tick
+  horário do cron — o concurrency group nunca fica ocupado no momento em que um novo tick deveria disparar,
+  eliminando a causa raiz do buraco (não só encurtando o timeout, que só reduziria o tamanho do buraco sem
+  resolvê-lo). `LOOP_MODE` continua funcionando normalmente dentro da janela de 55min (vários ciclos de
+  `CYCLE_INTERVAL=300s` cada); o cron horário assume a continuidade entre janelas.
+- Não foi necessário mudar `TG_CHATID`/`TG_TOKEN` — ambos já estavam corretos (confirmado via `getChat` e
+  via o timestamp 06:30 UTC citado pelo usuário batendo exatamente com um diagnóstico real do log).
+- Pedido explícito do usuário nesta sessão: parar de disparar `workflow_dispatch` manualmente após cada
+  ajuste (a cascata de disparos manuais + cron já estava causando cancelamentos em cadeia) — este fix foi
+  commitado/pushado mas **sem** disparo manual automático; o próximo tick de cron (a cada hora) já assume
+  a partir daqui.
