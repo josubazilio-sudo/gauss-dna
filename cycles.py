@@ -234,13 +234,15 @@ async def _enviar_diagnostico(session) -> None:
         linhas.append("\nCandidatos (por que nao disparou):")
         for entry in top_long:
             _, sym, sc, rsi, adx, tf = entry[:6]
-            bloqs = entry[6] if len(entry) > 6 else []
-            bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
+            bloqs    = entry[6] if len(entry) > 6 else []
+            detalhe  = entry[7] if len(entry) > 7 else None
+            bloq_str = detalhe or (", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente")
             linhas.append(f"  LONG  {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
         for entry in top_short:
             _, sym, sc, rsi, adx, tf = entry[:6]
-            bloqs = entry[6] if len(entry) > 6 else []
-            bloq_str = ", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente"
+            bloqs    = entry[6] if len(entry) > 6 else []
+            detalhe  = entry[7] if len(entry) > 7 else None
+            bloq_str = detalhe or (", ".join(bloqs[:2]) if bloqs else "HA/MACD pendente")
             linhas.append(f"  SHORT {sym} {sc:+d} RSI{rsi:.0f} → {bloq_str}")
 
     linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
@@ -410,7 +412,8 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             for _b in _bloqs:
                 _diag_buffer["bloqueadores"][_b] = _diag_buffer["bloqueadores"].get(_b, 0) + 1
             _diag_buffer["candidatos"].append(
-                (abs(result["score"]), abrev, result["score"], result["rsi"], result["adx"], tf, _bloqs)
+                (abs(result["score"]), abrev, result["score"], result["rsi"], result["adx"], tf, _bloqs,
+                 result.get("bloqueio_detalhe"))
             )
 
         if result["sinal"]:
