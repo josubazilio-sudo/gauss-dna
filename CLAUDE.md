@@ -1002,3 +1002,37 @@ das últimas 3 velas` — exige um fade ainda mais extremo antes de bloquear, se
 - Validar com o próximo run real (via cron, sem disparo manual — ver nota de consistência acima) se o
   afrouxamento do `vol_secando` já é suficiente pra gerar sinal sem voltar a piorar o winrate/STOP-rate
   (winrate real 24h estava em 37% antes deste ajuste — ver "RASTREAMENTO DE RESULTADO").
+
+---
+
+## AUDITORIA DE DIA INTEIRO SEM SINAL — BTC_REGIME_ADX_MAX AFROUXADO (22/06)
+
+Usuário perguntou diretamente: "em 300 criptomoedas no dia inteiro não deu nem um sinal?" — auditoria
+real (não suposição) de todos os runs completos de 2026-06-22 (00:00-22:19 UTC, via `mcp__github__get_job_logs`,
+6 runs completos + 2 cancelados spot-checados) confirmou: **zero sinais reais em todo o dia**, em qualquer
+run, qualquer hora.
+
+Duas causas reais, sem sobreposição de horário:
+- **Madrugada/noite** (00:27-08:48 UTC e 20:18-21:52 UTC — várias horas seguidas): `_btc_h1_regime_neutro()`
+  bloqueava 100% dos ciclos, todas as moedas, sem nem chegar a analisar (BTC H1 ADX~18-19, RSI~48-54 —
+  dentro da faixa neutra antiga ADX<20/RSI 45-55).
+- **Tarde** (14:02-18:49 UTC, mercado ativo): análise rodava normal, mas `vol_secando`/`exaustao` saturavam
+  `seguro_long/short` — mesma causa já documentada em "AUDITORIA DE OPORTUNIDADES PERDIDAS" acima (fix do
+  `vol_secando` já estava aplicado mas ainda não tinha passado por um run completo pra validar).
+
+(Um run "success" de 4s às 11:59 UTC não é real — é o autoteste `TEST_MODE` do bot (`executar_teste()` em
+`cycles.py`), manda 2 sinais fake só pra validar entrega no Telegram, não conta como scan de mercado.)
+
+### Fix aplicado — só o filtro de regime BTC, isolado do vol_secando já tocado antes
+`config.py BTC_REGIME_ADX_MAX`: `20` → `15` — alinhado ao piso global `ADX_MIN_GLOBAL` já usado no resto do
+sistema (não inventei um número novo). Exige BTC genuinamente mais flat (ADX<15, não <20) antes de zerar o
+ciclo inteiro pra todas as moedas. `BTC_REGIME_RSI_MIN/MAX` (45-55) intocados — mudança isolada numa
+variável só, mesmo padrão do fix anterior, pra poder medir o efeito de cada filtro separadamente.
+
+### O que NÃO foi tocado nesta rodada
+- `vol_secando` — já afrouxado na rodada anterior, ainda sem run completo pra validar o efeito
+- RSI/ADX/RVOL por sinal individual na cascata (`analyze.py`) — não identificados como bloqueador
+  dominante nesta auditoria (o gargalo real era o filtro de regime zerando o ciclo inteiro, não os
+  critérios por sinal)
+- Validar com o próximo run completo (cron ou disparo manual) se a combinação dos dois fixes já é
+  suficiente pra gerar pelo menos 1 sinal real, antes de seguir afrouxando outros filtros.
