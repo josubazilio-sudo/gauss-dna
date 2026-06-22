@@ -494,6 +494,53 @@ def calcular_indicadores(candles):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# CLASSIFICAÇÃO INSTITUCIONAL V2 (autorizado 22/06 — substitui o selo Ouro/Prata/
+# Bronze antigo de 5 critérios em notify.py, que era só informativo). Aqui a
+# classificação É o próprio gate de execução (regras em cycles.py: OURO sempre,
+# PRATA só com H1 alinhado, BRONZE ignorado) e também escolhe o alvo de saída
+# (TP1=1R fixo / TP2 por tier, ver notify.py).
+#
+# "Score" do pedido do usuário = score_inst (0-100), não o "score" bruto direcional
+# — mesma convenção já documentada em CLAUDE.md ("Confiança = score_inst-10", ver
+# FILTRO DE EXECUÇÃO V2). Como confiança é só score_inst-10, os dois números do
+# pedido original (Score≥85 + Confiança≥75%, etc.) descrevem o mesmo valor — usa
+# só score_inst, evitando reintroduzir a mesma redundância já corrigida uma vez.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def classificar_v2(ind, sinal):
+    """Classifica o sinal em OURO/PRATA/BRONZE/None pela CLASSIFICAÇÃO
+    INSTITUCIONAL V2. Retorna None quando nem o piso de BRONZE é atingido."""
+    if not sinal:
+        return None
+    eh_long = sinal == "LONG"
+    score_inst = ind["score_inst_long"] if eh_long else ind["score_inst_short"]
+    rvol, adx, rsi = ind["rvol"], ind["adx"], ind["rsi"]
+
+    fluxo_ok  = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
+                (ind["dna_flow_bear"] or ind["trendilo_short"])
+    kalman_ok = ind["kalman_subindo"] if eh_long else ind["kalman_descendo"]
+    mm200_ok  = ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]
+    mm50_ok   = ind["preco"] > ind["e50"] if eh_long else ind["preco"] < ind["e50"]
+    liq_varrida = ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"]
+    dist_mm21 = abs(ind["preco"] - ind["e21"]) / ind["preco"] if ind["preco"] else 1.0
+
+    if eh_long:
+        rsi_ouro, rsi_prata = 40 <= rsi <= 65, 35 <= rsi <= 70
+    else:
+        rsi_ouro, rsi_prata = 35 <= rsi <= 60, 30 <= rsi <= 65
+
+    if (score_inst >= 85 and rvol >= 1.8 and adx >= 25 and fluxo_ok and kalman_ok
+            and mm200_ok and rsi_ouro and liq_varrida and dist_mm21 <= 0.03):
+        return "OURO"
+    if (score_inst >= 75 and rvol >= 1.4 and adx >= 22 and fluxo_ok and kalman_ok
+            and mm50_ok and rsi_prata):
+        return "PRATA"
+    if score_inst >= 65 and rvol >= 1.2 and fluxo_ok:
+        return "BRONZE"
+    return None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ETAPA 2 — DETECTAR SINAIS
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -896,6 +943,8 @@ def analisar(simbolo, candles, funding_rate=None):
         _si = ind["score_inst_long"] if sinal == "LONG" else ind["score_inst_short"]
         grade = "S" if _si >= 90 else "A+" if _si >= 80 else "A"
 
+    classificacao = classificar_v2(ind, sinal)
+
     # Log de diagnóstico quando há score mas sem sinal
     if not sinal:
         sc = ind["score"]
@@ -982,4 +1031,13 @@ def analisar(simbolo, candles, funding_rate=None):
         "trendilo_long":  ind["trendilo_long"],
         "trendilo_short": ind["trendilo_short"],
         "funding_rate":   funding_rate,
+        # Expostos pra Classificação Institucional V2 / gating em cycles.py
+        # (já existiam dentro de "ind", só faltava propagar pro dict final)
+        "classificacao":  classificacao,
+        "lateralizado":   ind["lateralizado"],
+        "alinhado_bull":  ind["alinhado_bull"],
+        "alinhado_bear":  ind["alinhado_bear"],
+        "adx_subindo":    ind["adx_subindo"],
+        "e21":            ind["e21"],
+        "e50":            ind["e50"],
     }

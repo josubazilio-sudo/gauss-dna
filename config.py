@@ -98,8 +98,12 @@ GRAUS_PERMITIDOS = {"A", "A+", "S", "S+"}
 # essa parte foi descartada por contradizer este filtro, ver CLAUDE.md), mas
 # ataca diretamente a taxa de STOP ao exigir confluência institucional bem mais
 # alta pra qualquer sinal ser executado, independente do tipo.
+# CLASSIFICAÇÃO INSTITUCIONAL V2 (autorizado 22/06) subiu o piso universal de
+# RVOL de 1.0 pra 1.2 — mesmo valor do "Bloquear LONG/SHORT: RVOL<1.2" do pedido
+# e também o piso da própria BRONZE (que fica ignorada por regra de execução,
+# mas mantém o piso coerente com o resto da cascata).
 INST_MIN_EXEC = 75
-RVOL_MIN_EXEC = 1.0
+RVOL_MIN_EXEC = 1.2
 
 # Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
 # LONG e SHORT em todas as moedas até o regime mudar.
