@@ -37,13 +37,17 @@ def _label_tf(tf):
     return tf.upper()
 
 
-# ── Régua de stop/TP — Estratégia de Saída V2 ────────────────────────────────
+# ── Régua de stop/TP — CLASSIFICAÇÃO INSTITUCIONAL V3 (autorizado 22/06,
+# substitui a Estratégia de Saída V2) ─────────────────────────────────────────
 # Extraído de enviar_sinal() em 22/06 pra ser reaproveitado pelo auto_backtest.py
 # sem duplicar a lógica de gestão — qualquer ajuste de stop/TP feito aqui
 # vale tanto pro sinal real quanto pro backtest automático que roda em cima dele.
 
 def calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classificacao):
-    """Stop adaptativo (ATR vs estrutural) + alvos fixos (TP1=1R/TP2 por tier)."""
+    """Stop adaptativo (ATR vs estrutural, intocado) + alvos fixos em R, V3
+    (TP1=1.5R/30%, TP2=3R/40%, TP3=5R/20%, 10% final sem alvo — segue tendência).
+    Os 3 múltiplos são fixos pelo documento do usuário, independente de
+    tier/grade/fonte — substitui a tabela por tier (OURO/PRATA) da V2."""
     mult_atr = (2.0 if fonte == "SURGE" else 1.8 if fonte in ("FLEX", "SETUP") else 1.5)
     stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
     stop_estrutural = swing_low - atr * 0.5 if eh_long else swing_high + atr * 0.5
@@ -61,22 +65,13 @@ def calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classifi
         label_stop = f"{mult_atr:.1f} ATR"
 
     risco = abs(preco - stop)
-    r1      = 1.0
-    r_final = {"OURO": 4.0, "PRATA": 3.0}.get(classificacao, 3.0)
+    r1, r2, r3 = 1.5, 3.0, 5.0
 
-    if risco > 0:
-        if eh_long and swing_high > preco:
-            dist_r = (swing_high - preco) / risco
-            if dist_r < r1:
-                r1 = max(0.5, round(dist_r * 0.92, 1))
-        elif not eh_long and swing_low < preco:
-            dist_r = (preco - swing_low) / risco
-            if dist_r < r1:
-                r1 = max(0.5, round(dist_r * 0.92, 1))
-
-    tp1 = preco + risco * r1      if eh_long else preco - risco * r1
-    tp2 = preco + risco * r_final if eh_long else preco - risco * r_final
-    return {"stop": stop, "tp1": tp1, "tp2": tp2, "r1": r1, "r_final": r_final,
+    tp1 = preco + risco * r1 if eh_long else preco - risco * r1
+    tp2 = preco + risco * r2 if eh_long else preco - risco * r2
+    tp3 = preco + risco * r3 if eh_long else preco - risco * r3
+    return {"stop": stop, "tp1": tp1, "tp2": tp2, "tp3": tp3,
+            "r1": r1, "r2": r2, "r3": r3,
             "risco": risco, "label_stop": label_stop}
 
 
@@ -122,18 +117,19 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     funding_rate = extra.get("funding_rate")
     oi_change    = extra.get("oi_change")
 
-    # ── Classificação Institucional V2 (autorizado 22/06 — substitui o selo
-    # Ouro/Prata/Bronze antigo, que era só informativo) — já decidida e usada
-    # como gate de execução em cycles.py (OURO sempre, PRATA só com H1 alinhado,
-    # BRONZE/None nunca chega aqui), só exibida aqui.
+    # ── Classificação Institucional V3 (autorizado 22/06 — substitui a V2) —
+    # já decidida e usada como gate de execução em cycles.py (OURO sempre,
+    # PRATA só com H1 alinhado, BRONZE só com H1 alinhado ou score_inst>=70,
+    # None nunca chega aqui), só exibida aqui.
     classificacao = extra.get("classificacao") or "PRATA"
     confluencia_emoji = {"OURO": "🥇", "PRATA": "🥈", "BRONZE": "🥉"}.get(classificacao, "🥈")
     confluencia_label = classificacao
 
-    # ── Stop/TP — Estratégia de Saída V2 (extraído pra notify.calcular_stop_tp,
-    # reaproveitado pelo auto_backtest.py — ver REGRA #4/CLASSIFICAÇÃO V2 no CLAUDE.md) ─
+    # ── Stop/TP — CLASSIFICAÇÃO INSTITUCIONAL V3 (extraído pra
+    # notify.calcular_stop_tp, reaproveitado pelo auto_backtest.py) ──────────
     _stp = calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classificacao)
-    stop, tp1, final, r1, r_final = _stp["stop"], _stp["tp1"], _stp["tp2"], _stp["r1"], _stp["r_final"]
+    stop, tp1, tp2, tp3 = _stp["stop"], _stp["tp1"], _stp["tp2"], _stp["tp3"]
+    r1, r2, r3 = _stp["r1"], _stp["r2"], _stp["r3"]
     risco, label_stop = _stp["risco"], _stp["label_stop"]
     if risco <= 0:
         log.warning(f"⚠️ {abrev} risco=0 (stop={stop:.8f} == preco={preco:.8f}) — sinal ignorado")
@@ -190,12 +186,14 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     alavancagem = max(3, min(50, _lev))          # clamp 3x–50x
 
     pos_alav     = valor_pos / alavancagem
-    # Split 50% TP1 / 30% TP2 / 20% runner (Estratégia de Saída V2) — ganho_total
-    # é uma estimativa-piso assumindo o "restante" sai no mesmo nível do TP2
-    # (o runner pode rodar mais via trailing MM10/MM21, ver _checar_runners)
-    ganho_tp1    = valor_risco * r1 * 0.5
-    ganho_tp2    = valor_risco * r_final * 0.3
-    ganho_total  = ganho_tp1 + ganho_tp2 + valor_risco * r_final * 0.2
+    # Split 30% TP1 / 40% TP2 / 20% TP3 / 10% runner (CLASSIFICAÇÃO INSTITUCIONAL
+    # V3) — ganho_total é uma estimativa-piso assumindo o "restante" (10%) sai no
+    # mesmo nível do TP3 (o runner pode rodar mais via trailing MM10/MM21+fluxo+
+    # volume, ver _checar_runners em cycles.py)
+    ganho_tp1    = valor_risco * r1 * 0.3
+    ganho_tp2    = valor_risco * r2 * 0.4
+    ganho_tp3    = valor_risco * r3 * 0.2
+    ganho_total  = ganho_tp1 + ganho_tp2 + ganho_tp3 + valor_risco * r3 * 0.1
 
     # ── Labels de modo ────────────────────────────────────────────────────────
     tf_lbl = _label_tf(tf)
@@ -268,9 +266,10 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"{aviso_scout}\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
         f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}` · R\\=`{_bruto(f'{risco_pct:.1f}')}%`\n"
-        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
-        f"🎯 TP2 \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 30%\n"
-        f"🏁 Restante \\(20%\\): segue MM10/MM21 \\+ estrutura\n\n"
+        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 30% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
+        f"🎯 TP2 \\({_escapar(str(r2))}R\\): `${_bruto(_fmt(tp2))}` → fechar 40%\n"
+        f"🎯 TP3 \\({_escapar(str(r3))}R\\): `${_bruto(_fmt(tp3))}` → fechar 20%\n"
+        f"🏁 Restante \\(10%\\): segue tendência \\(MM10/MM21 \\+ fluxo \\+ volume\\)\n\n"
         f"📊 RSI: {_escapar(f'{rsi:.0f}')}\n"
         f"{linha_rvol}"
         f"📉 ADX: {_escapar(f'{adx:.0f}')}\n"
@@ -278,7 +277,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"📍 Tendência: {_escapar(tendencia)}\n\n"
         f"📐 *Gestão \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
         f"Risco: `${_bruto(f'{valor_risco:.2f}')}` \\| Pos: `${_bruto(f'{valor_pos:.2f}')}` \\| {_escapar(str(alavancagem))}x \\(`${_bruto(f'{pos_alav:.2f}')}` colateral\\)\n"
-        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| TP2 \\+`${_bruto(f'{ganho_tp2:.2f}')}` \\| Total\\* \\+`${_bruto(f'{ganho_total:.2f}')}`\n"
+        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| TP2 \\+`${_bruto(f'{ganho_tp2:.2f}')}` \\| TP3 \\+`${_bruto(f'{ganho_tp3:.2f}')}` \\| Total\\* \\+`${_bruto(f'{ganho_total:.2f}')}`\n"
         f"{linha_funding}"
         f"{linha_oi}"
         f"⏰ {_escapar(agora)}"
@@ -294,8 +293,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
             data = await r.json()
             if data.get("ok"):
                 log.info(f"✅ {direcao} {abrev} Grade:{grade} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{fonte}]")
-                registrar_trade(simbolo, tf, direcao, preco, stop, tp1, final,
-                                r1, r_final, grade, score, rsi, adx, fonte)
+                registrar_trade(simbolo, tf, direcao, preco, stop, tp1, tp3,
+                                r1, r3, grade, score, rsi, adx, fonte)
                 # WhatsApp — mensagem simplificada
                 import re as _re
                 wa_tipo = _re.sub(r'[^\w\s\-→/]', '', tag_modo).strip()
@@ -304,9 +303,10 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     f"Tipo: {wa_tipo}\n\n"
                     f"Entrada: ${formatar_preco(preco)}\n"
                     f"Stop: ${_fmt(stop)} ({label_stop})\n"
-                    f"TP1 ({r1}R, 50%): ${_fmt(tp1)} -> stop BE\n"
-                    f"TP2 ({r_final}R, 30%): ${_fmt(final)}\n"
-                    f"Restante (20%): MM10/MM21 + estrutura\n\n"
+                    f"TP1 ({r1}R, 30%): ${_fmt(tp1)} -> stop BE\n"
+                    f"TP2 ({r2}R, 40%): ${_fmt(tp2)}\n"
+                    f"TP3 ({r3}R, 20%): ${_fmt(tp3)}\n"
+                    f"Restante (10%): segue tendência (MM10/MM21 + fluxo + volume)\n\n"
                     f"Risco ${valor_risco:.2f} | {alavancagem}x ${pos_alav:.2f} colateral\n"
                     f"RSI {rsi:.0f} | ADX {adx:.0f} | "
                     + (f"RVOL {rvol_val:.2f}x {rvol_lbl} | " if rvol_lbl else "")
@@ -318,7 +318,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                 await enviar_whatsapp(session, wa_text)
                 # Dict (truthy) em vez de True puro — permite ao chamador registrar
                 # a posição pro rastreamento de resultado (TP/STOP), pedido 20/06.
-                return {"stop": stop, "tp1": tp1, "tp2": final, "r1": r1, "r_final": r_final}
+                return {"stop": stop, "tp1": tp1, "tp2": tp2, "tp3": tp3,
+                        "r1": r1, "r2": r2, "r3": r3}
             else:
                 log.warning(f"❌ {data.get('description')}")
                 return False

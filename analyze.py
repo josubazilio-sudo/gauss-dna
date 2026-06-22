@@ -373,6 +373,14 @@ def calcular_indicadores(candles):
     elif score < 0:
         if rsi < 30:   score += 15
         elif rsi < 35: score += 7
+    # CLASSIFICAÇÃO INSTITUCIONAL V3 (22/06) — mercado lateral deixou de ser
+    # bloqueio universal (cycles.py) e virou penalidade gradual aqui, puxando
+    # pra zero na mesma direção que o score já aponta (mesmo padrão do RSI
+    # Flex Pro acima). Sinais que ainda exigem "not lateralizado" na própria
+    # condição (BB_BREAK, SCOUT, etc.) continuam bloqueando — isso é só o
+    # piso universal pós-cascata que mudou.
+    if lateralizado:
+        score = score - 10 if score > 0 else score + 10 if score < 0 else score
     score = max(-145, min(145, score))
 
     # Score institucional 0-100
@@ -494,30 +502,31 @@ def calcular_indicadores(candles):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CLASSIFICAÇÃO INSTITUCIONAL V2 (autorizado 22/06 — substitui o selo Ouro/Prata/
-# Bronze antigo de 5 critérios em notify.py, que era só informativo). Aqui a
-# classificação É o próprio gate de execução (regras em cycles.py: OURO sempre,
-# PRATA só com H1 alinhado, BRONZE ignorado) e também escolhe o alvo de saída
-# (TP1=1R fixo / TP2 por tier, ver notify.py).
-#
-# "Score" do pedido do usuário = score_inst (0-100), não o "score" bruto direcional
-# — mesma convenção já documentada em CLAUDE.md ("Confiança = score_inst-10", ver
-# FILTRO DE EXECUÇÃO V2). Como confiança é só score_inst-10, os dois números do
-# pedido original (Score≥85 + Confiança≥75%, etc.) descrevem o mesmo valor — usa
-# só score_inst, evitando reintroduzir a mesma redundância já corrigida uma vez.
+# CLASSIFICAÇÃO INSTITUCIONAL V3 (autorizado 22/06 — substitui a V2. Motivo:
+# auditoria de 3 runs reais seguidos (~3h, 14h-19h44) mostrou ZERO sinais
+# enviados — a V2 (Score_inst>=90/80/75 + BRONZE sempre ignorado) tinha
+# acumulado filtro sobre filtro a cada incidente até o funil ficar bom demais
+# pra deixar passar qualquer coisa, incluindo movimentos reais e fortes (ALLO,
+# GWEI, HUS — ver screenshots do usuário). Documento "CLASSIFICAÇÃO
+# INSTITUCIONAL V3" do usuário reduz os pisos de Score_inst e adiciona BRONZE
+# como executável condicional (antes sempre ignorado). Continua sendo o
+# próprio gate de execução (regras em cycles.py) e escolhendo o alvo de saída
+# (ver "Saída em 4 estágios" em notify.py/state.py, também V3).
 # ══════════════════════════════════════════════════════════════════════════════
 
 def classificar_v2(ind, sinal):
     """Classifica o sinal em OURO/PRATA/BRONZE/None pela CLASSIFICAÇÃO
-    INSTITUCIONAL V2. Retorna None quando nem o piso de BRONZE é atingido.
+    INSTITUCIONAL V3 (nome da função mantido por compatibilidade com todo o
+    fiação existente em cycles.py — o conteúdo é a V3). Retorna None quando
+    nem o piso de BRONZE é atingido.
 
-    Pisos atualizados 22/06 (doc "DNA+GAUSS INSTITUCIONAL V2" do usuário,
-    aplicado globalmente — afeta FLEX/ELITE/INSTITUCIONAL, autorizado
-    explicitamente após pergunta de escopo): Score sobe (85→90 / 75→80 / 65→75)
-    mas RVOL desce bastante (1.8→1.2 / 1.4→0.90 / 1.2→0.70) — o piso de
-    qualidade migra de "precisa de volume excepcional" pra "precisa de muita
-    convicção direcional" (score_inst mais alto compensa RVOL mais baixo).
-    BRONZE ganhou piso de ADX (>=20) que não existia antes.
+    Mudanças V2→V3: Score_inst minimo cai bastante (90→80 OURO, 80→70 PRATA,
+    75→60 BRONZE) e RVOL sobe um pouco (1.2→1.5 OURO, 0.90→1.2 PRATA, 0.70→1.0
+    BRONZE) — a barra de qualidade migra de "score altíssimo" pra "volume real
+    + score moderado", bem menos raro. PRATA não exige mais fluxo confirmado
+    (opcional) e BRONZE ignora fluxo completamente (antes exigiam). Distância
+    MM21 da OURO sobe de <=3% pra <=6% (deixa de cortar entradas em tendência
+    já um pouco estendida).
     """
     if not sinal:
         return None
@@ -534,17 +543,17 @@ def classificar_v2(ind, sinal):
     dist_mm21 = abs(ind["preco"] - ind["e21"]) / ind["preco"] if ind["preco"] else 1.0
 
     if eh_long:
-        rsi_ouro, rsi_prata = 40 <= rsi <= 65, 35 <= rsi <= 70
+        rsi_ouro, rsi_prata = 35 <= rsi <= 70, 30 <= rsi <= 75
     else:
-        rsi_ouro, rsi_prata = 35 <= rsi <= 60, 30 <= rsi <= 65
+        rsi_ouro, rsi_prata = 30 <= rsi <= 65, 25 <= rsi <= 70
 
-    if (score_inst >= 90 and rvol >= 1.2 and adx >= 25 and fluxo_ok and kalman_ok
-            and mm200_ok and rsi_ouro and liq_varrida and dist_mm21 <= 0.03):
+    if (score_inst >= 80 and rvol >= 1.5 and adx >= 22 and fluxo_ok and kalman_ok
+            and mm200_ok and rsi_ouro and liq_varrida and dist_mm21 <= 0.06):
         return "OURO"
-    if (score_inst >= 80 and rvol >= 0.90 and adx >= 22 and fluxo_ok and kalman_ok
+    if (score_inst >= 70 and rvol >= 1.2 and adx >= 18 and kalman_ok
             and mm50_ok and rsi_prata):
         return "PRATA"
-    if score_inst >= 75 and rvol >= 0.70 and adx >= 20 and fluxo_ok:
+    if score_inst >= 60 and rvol >= 1.0 and adx >= 15:
         return "BRONZE"
     return None
 
