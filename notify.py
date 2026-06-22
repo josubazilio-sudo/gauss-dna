@@ -261,7 +261,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"🚨 *{_escapar(tag_modo)} — {direcao}*\n\n"
         f"{'🟢' if eh_long else '🔴'} *{_escapar(label)}* \\| 🕐 *{_escapar(tf_lbl)}*\n"
         f"{linha_cross}\n"
-        f"{emoji_grade} *GRADE: {_escapar(grade)}* \\| {confluencia_emoji} *{_escapar(confluencia_label)}* \\({_escapar(str(_n_conf))}/5\\)\n"
+        f"{emoji_grade} *GRADE: {_escapar(grade)}* \\| {confluencia_emoji} *{_escapar(confluencia_label)}*\n"
         f"{linha_inst}"
         f"🎯 Confiança: *{_escapar(str(_confianca))}%*\n"
         f"{linha_liq}"
