@@ -578,11 +578,12 @@ def calcular_indicadores(candles):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
-    """Classifica o sinal em PRATA/BRONZE/None pela CLASSIFICAÇÃO GAUSS+DNA
-    v5.0 (nome da função mantido por compatibilidade — substitui a V4).
-    OURO desabilitado (banca < $500). `ha4_bull`/`ha4_bear` (HA do H4) são
-    opcionais — quando não vierem (None), o piso de HA4 do BRONZE não bloqueia
-    (chamador ainda não tem o dado), só HA1 é exigido nesse caso.
+    """Classifica o sinal em OURO/PRATA/BRONZE/None pela CLASSIFICAÇÃO GAUSS+DNA
+    v5.0 (nome da função mantido por compatibilidade). OURO reativado (23/06)
+    — essencial pra sessão perigosa não virar bloqueio total (~12h/dia).
+    `ha4_bull`/`ha4_bear` (HA do H4) são opcionais — quando não vierem (None),
+    o piso de HA4 do BRONZE não bloqueia (chamador ainda não tem o dado), só
+    HA1 é exigido nesse caso.
     """
     if not sinal:
         return None
@@ -617,12 +618,18 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
                    not ha1_ok, not vol_ok])
     _base = (mm200_ok and seguro_alertas <= 1 and _misses <= 1)
 
-    if (_base and score_inst >= 85 and rvol >= 1.5 and adx >= 25 and dist_mm21 <= 0.02):
+    # OURO reativado — antes desabilitado por banca<$500, mas essencial porque
+    # sessão perigosa (22h-08h + 08h/13h UTC = ~50% do dia) exige OURO.
+    if (_base and score_inst >= 80 and rvol >= 1.3 and adx >= 22 and
+        dist_mm21 <= 0.03 and fluxo_ok and liq_varrida):
+        return "OURO"
+
+    if (_base and score_inst >= 75 and rvol >= 1.2 and adx >= 20 and dist_mm21 <= 0.03):
         return "PRATA"
 
     ha4_ok = True if (ha4_bull is None and ha4_bear is None) else \
              (ha4_bull if eh_long else ha4_bear)
-    if (_base and ha4_ok and score_inst >= 75 and rvol >= 1.0 and adx >= 22):
+    if (_base and ha4_ok and score_inst >= 65 and rvol >= 0.8 and adx >= 18):
         return "BRONZE"
     return None
 

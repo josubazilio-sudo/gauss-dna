@@ -1,0 +1,460 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #E91E63;
+    --primary-dark: #C2185B;
+    --secondary: #FF6F00;
+    --accent: #FFB300;
+    --bg-warm: #FFF8E1;
+    --bg-cream: #FFFBF0;
+    --text-dark: #3E2723;
+    --text-light: #5D4037;
+    --white: #FFFFFF;
+    --shadow: 0 4px 20px rgba(0,0,0,0.1);
+    --shadow-hover: 0 8px 30px rgba(0,0,0,0.15);
+    --radius: 16px;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: var(--bg-cream);
+    color: var(--text-dark);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Hero */
+.hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: var(--white);
+    text-align: center;
+    padding: 100px 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.tagline {
+    font-size: 1.4rem;
+    font-weight: 300;
+    margin-bottom: 15px;
+    opacity: 0.95;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto 30px;
+    opacity: 0.9;
+}
+
+.btn-cta {
+    display: inline-block;
+    background: var(--white);
+    color: var(--primary);
+    padding: 15px 40px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow);
+}
+
+.btn-cta:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+}
+
+/* Seção Sobre */
+.sobre {
+    padding: 80px 0;
+    background: var(--white);
+}
+
+.sobre h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    color: var(--primary);
+    margin-bottom: 50px;
+}
+
+.sobre-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+}
+
+.sobre-card {
+    background: var(--bg-warm);
+    padding: 40px 30px;
+    border-radius: var(--radius);
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.sobre-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+}
+
+.emoji {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 20px;
+}
+
+.sobre-card h3 {
+    color: var(--primary-dark);
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+}
+
+.sobre-card p {
+    color: var(--text-light);
+}
+
+/* Receitas */
+.receitas {
+    padding: 80px 0;
+    background: linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
+}
+
+.receitas h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    color: var(--primary);
+    margin-bottom: 10px;
+}
+
+.section-subtitle {
+    text-align: center;
+    color: var(--text-light);
+    margin-bottom: 50px;
+    font-size: 1.1rem;
+}
+
+.receitas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 30px;
+}
+
+.receita-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 30px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    border-top: 4px solid var(--primary);
+}
+
+.receita-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-hover);
+}
+
+.receita-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.receita-emoji {
+    font-size: 2.5rem;
+}
+
+.receita-tag {
+    background: var(--primary);
+    color: var(--white);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.receita-card h3 {
+    color: var(--text-dark);
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+}
+
+.receita-desc {
+    color: var(--text-light);
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+}
+
+.receita-ingredientes {
+    background: var(--bg-warm);
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.receita-ingredientes li {
+    color: var(--text-dark);
+    margin: 8px 0;
+    font-size: 0.9rem;
+    list-style: none;
+    padding-left: 20px;
+    position: relative;
+}
+
+.receita-ingredientes li::before {
+    content: '•';
+    color: var(--primary);
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+.receita-macros {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.receita-macros span {
+    background: var(--primary);
+    color: var(--white);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.receita-preparo {
+    background: var(--bg-cream);
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 3px solid var(--secondary);
+}
+
+.receita-preparo h4 {
+    color: var(--secondary);
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.receita-preparo p {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+/* Autoestima */
+.autoestima {
+    padding: 80px 0;
+    background: var(--white);
+}
+
+.autoestima h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    color: var(--primary);
+    margin-bottom: 10px;
+}
+
+.dicas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.dica-card {
+    padding: 30px;
+    background: var(--bg-warm);
+    border-radius: var(--radius);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.dica-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+
+.dica-number {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--primary);
+    opacity: 0.3;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+}
+
+.dica-card h3 {
+    color: var(--primary-dark);
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.dica-card p {
+    color: var(--text-light);
+    position: relative;
+    z-index: 1;
+}
+
+/* Rotina */
+.rotina {
+    padding: 80px 0;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: var(--white);
+}
+
+.rotina h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    margin-bottom: 50px;
+}
+
+.rotina-timeline {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.rotina-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255,255,255,0.15);
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.rotina-item:hover {
+    background: rgba(255,255,255,0.25);
+    transform: translateX(10px);
+}
+
+.rotina-hora {
+    background: var(--white);
+    color: var(--primary);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-right: 20px;
+    min-width: 70px;
+    text-align: center;
+}
+
+.rotina-content h3 {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.rotina-content p {
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+
+/* Footer */
+.footer {
+    background: var(--text-dark);
+    color: var(--white);
+    text-align: center;
+    padding: 50px 20px;
+}
+
+.footer h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    color: var(--accent);
+}
+
+.footer p {
+    opacity: 0.9;
+    margin-bottom: 10px;
+}
+
+.footer-copy {
+    opacity: 0.6;
+    font-size: 0.9rem;
+    margin-top: 20px;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .hero h1 {
+        font-size: 2.5rem;
+    }
+    
+    .tagline {
+        font-size: 1.1rem;
+    }
+    
+    .receitas-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .rotina-item {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .rotina-hora {
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+}
+
+/* Animações */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.receita-card, .dica-card, .sobre-card {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.receita-card:nth-child(1) { animation-delay: 0.1s; }
+.receita-card:nth-child(2) { animation-delay: 0.2s; }
+.receita-card:nth-child(3) { animation-delay: 0.3s; }
+.receita-card:nth-child(4) { animation-delay: 0.4s; }
+.receita-card:nth-child(5) { animation-delay: 0.5s; }
+.receita-card:nth-child(6) { animation-delay: 0.6s; }

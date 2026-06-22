@@ -106,7 +106,7 @@ RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.70}
 # além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
 # GAUSS+DNA v5.0 (23/06) subiu de 15 pra 20 ("Bloquear LONG/SHORT: ADX<20" —
 # substitui a CLASSIFICAÇÃO INSTITUCIONAL V3/V4) — ver CLAUDE.md.
-ADX_MIN_GLOBAL = 20
+ADX_MIN_GLOBAL = 18
 
 # GRAUS_PERMITIDOS (gate por grade letra S+/S/A/B no modo padrão FLEX/ELITE)
 # foi REMOVIDO na V3 — auditoria de 3 runs reais seguidos mostrou zero sinais

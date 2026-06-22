@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "appliedMigrations": [
+    {
+      "id": "2026-05-11-first-time-baseline-scan",
+      "appliedAt": "2026-06-19T21:21:57.587Z",
+      "journal": null,
+      "checksum": "sha256:79fbb52f3a0de384b72e4babc62d06db67b1bd10ec430a9447d08a8522b788d0"
+    },
+    {
+      "id": "2026-05-11-legacy-orphan-files",
+      "appliedAt": "2026-06-19T21:21:57.587Z",
+      "journal": null,
+      "checksum": "sha256:c0eb04a9eed6dbd3ccf150a2e083882bc3a928c22e629ff1c2a7debfe66ddc28"
+    }
+  ]
+}

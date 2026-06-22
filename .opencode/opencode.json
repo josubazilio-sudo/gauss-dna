@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "read": {
+      "C:/Users/josue/Usersjosuegauss-dna/.opencode/get-shit-done/*": "allow"
+    },
+    "external_directory": {
+      "C:/Users/josue/Usersjosuegauss-dna/.opencode/get-shit-done/*": "allow"
+    }
+  }
+}

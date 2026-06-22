@@ -1,0 +1,761 @@
+//@version=6
+strategy("DNA INSTITUCIONAL UNIFICADO [GAUSS+DNA]",
+     shorttitle="DNA UNIFICADO",
+     overlay=false,
+     max_bars_back=3000,
+     max_lines_count=500,
+     max_labels_count=500,
+     max_boxes_count=200)
+
+// INPUTS - TENDENCIA
+groupTrend  = "TENDENCIA"
+ema10Len    = input.int(10,   "EMA10 Rapida",    group=groupTrend)
+ema21Len    = input.int(21,   "EMA21",            group=groupTrend)
+ema50Len    = input.int(50,   "EMA50",            group=groupTrend)
+ema200Len   = input.int(200,  "EMA200",           group=groupTrend)
+
+// INPUTS - MACD + HA
+groupMACD    = "MACD + HEIKIN ASHI"
+macdFast     = input.int(12,   "MACD Fast",        group=groupMACD)
+macdSlow     = input.int(26,   "MACD Slow",        group=groupMACD)
+macdSignal   = input.int(9,    "MACD Signal",      group=groupMACD)
+
+// INPUTS - RSI (Configuracao GAUSS+DNA)
+groupRSI     = "RSI - REGRA #1"
+rsiLen       = input.int(14,    "RSI Periodo",              group=groupRSI)
+rsiOB        = input.int(75,    "RSI Sobrecomprado (bloqueia LONG)",  group=groupRSI, tooltip="REGRA #1: LONG bloqueado se RSI > 75")
+rsiOS        = input.int(25,    "RSI Sobrevendido (bloqueia SHORT)",  group=groupRSI, tooltip="REGRA #1: SHORT bloqueado se RSI < 25")
+rsiMidLong   = input.int(55,   "RSI Zona Media LONG",     group=groupRSI, tooltip="Acima disso, score degradado")
+rsiMidShort  = input.int(40,   "RSI Zona Media SHORT",    group=groupRSI, tooltip="Abaixo disso, score degradado")
+
+// INPUTS - KALMAN FILTER
+groupKalman       = "KALMAN FILTER"
+kalmanShortLen    = input.int(50,    "Kalman Rapido",         group=groupKalman)
+kalmanLongLen     = input.int(150,   "Kalman Lento",          group=groupKalman)
+useKalmanFilter   = input.bool(true, "Usar Kalman no Filtro", group=groupKalman)
+candleColorKalman = input.bool(true, "Kalman Candle Color",   group=groupKalman)
+upperCol          = input.color(#13bd6e, "Kalman Up", inline="kcolors", group=groupKalman)
+lowerCol          = input.color(#af0d4b, "Kalman Dn", inline="kcolors", group=groupKalman)
+
+// INPUTS - FILTROS (Configuracao GAUSS+DNA)
+groupFilter      = "FILTROS INSTITUCIONAIS"
+adxLen           = input.int(14,      "ADX Periodo",                group=groupFilter)
+adxSmooth        = input.int(14,      "ADX Smooth",                 group=groupFilter)
+adxMinLong       = input.float(18.0,  "ADX Min LONG (CORE)",       step=0.5, group=groupFilter, tooltip="CORE: adx >= 18")
+adxMinShort      = input.float(18.0,  "ADX Min SHORT (CORE)",      step=0.5, group=groupFilter)
+adxStrong        = input.float(28.0,  "ADX Forte",                  step=0.5, group=groupFilter)
+adxDeclineTol    = input.float(1.0,   "Tolerancia ADX decline",    step=0.5, group=groupFilter)
+
+atrLen           = input.int(14,      "ATR Periodo",                group=groupFilter)
+sweepMinATR      = input.float(0.3,   "Sweep min ATR",             step=0.05, group=groupFilter)
+
+// Volume (Configuracao GAUSS+DNA: vol_nao_fade com 0.80)
+volLen           = input.int(20,      "Media Volume",               group=groupFilter)
+volMultFade      = input.float(0.80,  "Volume Fade Threshold",     step=0.05, group=groupFilter, tooltip="REGRA #2: vol_nao_fade = max(v[-1], v[-2]) >= volMA * 0.80")
+volMultStrong    = input.float(1.5,   "Volume Forte (RVOL)",       step=0.1, group=groupFilter, tooltip="v_forte: RVOL >= 1.5x = +10pts score")
+
+maxDistATR       = input.float(2.5,   "Distancia EMA50 ATR",       step=0.1, group=groupFilter)
+
+// INPUTS - GESTAO DE RISCO (Configuracao GAUSS+DNA)
+groupRisk         = "GESTAO DE RISCO"
+riskPct           = input.float(2.0,  "Risco por trade (%)",       step=0.5, minval=0.5, maxval=5.0, group=groupRisk, tooltip="Institucional: 1-3% max")
+leverageBase      = input.float(10.0, "Alavancagem Base (x)",      step=1.0, minval=3.0, maxval=20.0, group=groupRisk, tooltip="REGRA #4: 3x-20x por grade")
+stopAtrMult       = input.float(1.5,  "STOP ATR (CORE=1.5)",       step=0.1, group=groupRisk, tooltip="CORE stop: 1.5 ATR")
+tp1R              = input.float(1.5,  "TP1 R:R",                   step=0.1, group=groupRisk)
+tpFinalR          = input.float(3.5,  "ALVO FINAL R:R",            step=0.1, group=groupRisk)
+tp1Qty            = input.float(35,   "Fechar em TP1 (%)",         group=groupRisk)
+
+useBreakEven      = input.bool(true,  "Break Even apos TP1",       group=groupRisk)
+useTrail          = input.bool(true,  "Segurar Tendencia Forte",   group=groupRisk)
+enableShort       = input.bool(true,  "Ativar SHORT",              group=groupRisk)
+
+// INPUTS - VISUAL
+groupVisual    = "VISUAL"
+bullColor      = input.color(color.rgb(0, 204, 173),  "Bull", group=groupVisual)
+bearColor      = input.color(color.rgb(255, 94, 116), "Bear", group=groupVisual)
+showTable      = input.bool(true,  "Mostrar Tabela R/R", group=groupVisual)
+showKalman     = input.bool(true,  "Mostrar Kalman",     group=groupVisual)
+showScore      = input.bool(true,  "Mostrar Score",      group=groupVisual)
+
+// MEDIAS
+ema10  = ta.ema(close, ema10Len)
+ema21  = ta.ema(close, ema21Len)
+ema50  = ta.ema(close, ema50Len)
+ema200 = ta.ema(close, ema200Len)
+
+// ATR
+atrRaw = ta.atr(atrLen)
+atr    = math.max(atrRaw, syminfo.mintick)
+
+// KALMAN FILTER
+kalman_filter(src, length, R=0.01, Q=0.1) =>
+    var float estimate  = na
+    var float error_est = 1.0
+    float error_meas    = R * length
+    var float kalman_gain = 0.0
+    if na(estimate)
+        estimate := src[1]
+    float prediction = estimate
+    kalman_gain := error_est / (error_est + error_meas)
+    estimate    := prediction + kalman_gain * (src - prediction)
+    error_est   := (1 - kalman_gain) * error_est + Q / length
+    estimate
+
+float shortKalman = kalman_filter(close, kalmanShortLen)
+float longKalman  = kalman_filter(close, kalmanLongLen)
+
+bool kalmanTrendUp   = shortKalman > longKalman
+bool kalmanTrendDown = shortKalman < longKalman
+
+color kalmanTrendCol  = kalmanTrendUp ? upperCol : lowerCol
+color kalmanTrendCol1 = shortKalman > shortKalman[2] ? upperCol : lowerCol
+
+color candleColK = candleColorKalman
+     ? (kalmanTrendUp and shortKalman > shortKalman[2]
+        ? upperCol
+        : not kalmanTrendUp and shortKalman < shortKalman[2]
+        ? lowerCol
+        : color.gray)
+     : na
+
+// Boxes Kalman
+var box lower_box = box(na)
+var box upper_box = box(na)
+float atrKalman = ta.atr(14) * 0.5
+
+if kalmanTrendUp and not kalmanTrendUp[1]
+    label.new(bar_index, low - atrKalman * 2,
+         "UP\n" + str.tostring(math.round(close, 2)),
+         color=color(na), textcolor=upperCol,
+         style=label.style_label_up, size=size.normal, force_overlay=true)
+    lower_box := box.new(bar_index, low + atrKalman, bar_index, low,
+         border_color=na, bgcolor=color.new(upperCol, 60), force_overlay=true)
+
+if not ta.change(kalmanTrendUp)
+    lower_box.set_right(bar_index)
+
+if kalmanTrendUp[1] and not kalmanTrendUp
+    label.new(bar_index, high + atrKalman * 2,
+         str.tostring(math.round(close, 2)) + "\nDN",
+         color=color(na), textcolor=lowerCol,
+         style=label.style_label_down, size=size.normal, force_overlay=true)
+    upper_box := box.new(bar_index, high, bar_index, high - atrKalman,
+         border_color=na, bgcolor=color.new(lowerCol, 60), force_overlay=true)
+
+if not ta.change(kalmanTrendUp)
+    upper_box.set_right(bar_index)
+
+// MACD + HEIKIN ASHI
+[macdLine, signalLine, histLine] =
+     ta.macd(close, macdFast, macdSlow, macdSignal)
+
+// HA suavizado
+haClose = (macdLine + signalLine) / 2
+
+var float haOpen = na
+haOpen :=
+     na(haOpen[1])
+     ? (macdLine + signalLine) / 2
+     : (haOpen[1] + haClose[1]) / 2
+
+haHighBase = math.max(math.max(macdLine, signalLine), math.max(haOpen, haClose))
+haLowBase  = math.min(math.min(macdLine, signalLine), math.min(haOpen, haClose))
+
+haHigh = histLine > 0 ? math.max(haHighBase, histLine) : haHighBase
+haLow  = histLine < 0 ? math.min(haLowBase,  histLine) : haLowBase
+
+haBull  = haClose > haOpen
+haBear  = haClose < haOpen
+haBull2 = haBull and haBull[1]
+haBear2 = haBear and haBear[1]
+
+// MACD Momentum
+macdBull =
+     macdLine > signalLine and
+     histLine > histLine[1] and
+     histLine > 0 and
+     haBull2
+
+macdBear =
+     macdLine < signalLine and
+     histLine < histLine[1] and
+     histLine < 0 and
+     haBear2
+
+// RSI - REGRA #1 GAUSS+DNA
+rsi       = ta.rsi(close, rsiLen)
+rsiSmooth = ta.ema(rsi, 5)
+
+// Zonas RSI (REGRA #1)
+rsiZonaLongOK  = rsi < rsiOB
+rsiZonaShortOK = rsi > rsiOS
+
+// Zonas de momentum
+rsiMomentumBull = rsiSmooth > 50 and rsiSmooth < rsiOB
+rsiMomentumBear = rsiSmooth < 50 and rsiSmooth > rsiOS
+
+// Zonas extremas (bloqueio)
+rsiOverbought   = rsi > rsiOB
+rsiOversold     = rsi < rsiOS
+
+// Degrade score se RSI na zona media
+rsiMidZoneLong  = rsiSmooth > rsiMidLong
+rsiMidZoneShort = rsiSmooth < rsiMidShort
+
+// DIVERGENCIA RSI
+pivotLowVal  = ta.pivotlow(low,  3, 3)
+pivotHighVal = ta.pivothigh(high, 3, 3)
+
+var float prevPivLow   = na
+var float prevPivRSILo = na
+var float prevPivHigh  = na
+var float prevPivRSIHi = na
+
+var bool bullDiv = false
+var bool bearDiv = false
+
+if not na(pivotLowVal)
+    bullDiv      := not na(prevPivLow) and pivotLowVal < prevPivLow and rsiSmooth > prevPivRSILo
+    prevPivLow   := pivotLowVal
+    prevPivRSILo := rsiSmooth
+else
+    bullDiv := false
+
+if not na(pivotHighVal)
+    bearDiv      := not na(prevPivHigh) and pivotHighVal > prevPivHigh and rsiSmooth < prevPivRSIHi
+    prevPivHigh  := pivotHighVal
+    prevPivRSIHi := rsiSmooth
+else
+    bearDiv := false
+
+// ADX / VOLUME / FLUXO
+[pdi, mdi, adx] = ta.dmi(adxLen, adxSmooth)
+
+adxLongOk  = adx > adxMinLong  and pdi > mdi and adx >= adx[1] * 0.95
+adxShortOk = adx > adxMinShort and mdi > pdi and adx >= adx[1] * 0.95
+
+// Volume - REGRA #2 (vol_nao_fade)
+volMa       = ta.sma(volume, volLen)
+volNaoFade  = math.max(volume[1], volume[2]) >= volMa * volMultFade
+volStrong   = volume > volMa * volMultStrong
+volWeak     = volume < volMa * 0.85
+volSecando  = volume < volume[1] and volume[1] < volume[2]
+
+// Fluxo Institucional
+spread  = math.max(high - low, syminfo.mintick)
+flowRaw = ((close - open) / spread) * volume
+flow    = ta.ema(flowRaw, 13)
+
+flowBull   = flow > 0
+flowBear   = flow < 0
+flowStrong = math.abs(flow) > ta.sma(math.abs(flow), 20) * 1.2
+
+// TENDENCIA (Configuracao GAUSS+DNA)
+trendBull =
+     close > ema200 and
+     ema10 > ema21  and
+     ema21 > ema50  and
+     ema50 > ema200
+
+trendBear =
+     close < ema200 and
+     ema10 < ema21  and
+     ema21 < ema50  and
+     ema50 < ema200
+
+trendAlignmentBull = close > ema10 and close > ema21 and close > ema50
+trendAlignmentBear = close < ema10 and close < ema21 and close < ema50
+
+ema200Rising  = ema200 > ema200[3]
+ema200Falling = ema200 < ema200[3]
+
+// Forca da tendencia
+trendStrength = atr > 0 ? math.abs(ema21 - ema50) / atr : 0.0
+strongTrend   = trendStrength > 0.6
+
+// DISTANCIA
+distLong  = atr > 0 ? (close - ema50) / atr : 0.0
+distShort = atr > 0 ? (ema50 - close) / atr : 0.0
+
+notExtendedLong  = distLong  < maxDistATR
+notExtendedShort = distShort < maxDistATR
+
+// IMPULSO + SWEEP + ABSORCAO
+bullImpulse =
+     close > high[1] and close > open and
+     (close - open) > atr * 0.15
+
+bearImpulse =
+     close < low[1] and close < open and
+     (open - close) > atr * 0.15
+
+// Sweep de Liquidez
+sweepDepthLong  = low[1] - low
+sweepDepthShort = high - high[1]
+
+liqSweepLong =
+     low < low[1] and
+     sweepDepthLong > atr * sweepMinATR and
+     close > low[1] and
+     close > open
+
+liqSweepShort =
+     high > high[1] and
+     sweepDepthShort > atr * sweepMinATR and
+     close < high[1] and
+     close < open
+
+// Absorcao
+candleRange = high - low
+lowerWick   = math.min(open, close) - low
+upperWick   = high - math.max(open, close)
+
+bullAbsorption =
+     lowerWick > candleRange * 0.45 and
+     close > (low + candleRange * 0.6) and
+     volume > volMa
+
+bearAbsorption =
+     upperWick > candleRange * 0.45 and
+     close < (high - candleRange * 0.6) and
+     volume > volMa
+
+// Exaustao MACD
+sellExhaustion = histLine < histLine[1] and histLine[1] < histLine[2]
+buyExhaustion  = histLine > histLine[1] and histLine[1] > histLine[2]
+
+// SCORE INSTITUCIONAL UNIFICADO
+scoreTrendBull  = trendBull ? 20 : 0
+scoreTrendBear  = trendBear ? -20 : 0
+scoreTrend      = trendBull ? 20 : trendBear ? -20 : 0
+
+scoreAdxLong    = adxLongOk ? 15 : 0
+scoreAdxShort   = adxShortOk ? -15 : 0
+scoreAdx        = adx > adxStrong ? 15 : adx > adxMinLong ? 10 : -10
+
+scoreFlow       = flowBull ? 15 : flowBear ? -15 : 0
+
+scoreHA         = haBull2 ? 10 : haBear2 ? -10 : 0
+
+scoreRSI        = rsiMomentumBull ? 10 : rsiMomentumBear ? -10 : 0
+
+scoreVol        = volStrong ? 10 : volWeak ? -5 : 0
+
+scoreDiv        = bullDiv ? 5 : bearDiv ? -5 : 0
+
+scoreKalman     = kalmanTrendUp ? 10 : kalmanTrendDown ? -10 : 0
+
+scoreEMA200     = ema200Rising ? 10 : ema200Falling ? -10 : 0
+
+scoreInstRaw = math.abs(scoreTrend) + math.abs(scoreAdx) + math.abs(scoreFlow) +
+               math.abs(scoreHA) + math.abs(scoreRSI) + math.abs(scoreVol) +
+               math.abs(scoreDiv) + math.abs(scoreKalman) + math.abs(scoreEMA200)
+
+scoreLong  = scoreTrendBull + scoreAdxLong + scoreFlow + scoreHA + scoreRSI + scoreVol + scoreDiv + scoreKalman + scoreEMA200
+scoreShort = scoreTrendBear + scoreAdxShort + scoreFlow + scoreHA + scoreRSI + scoreVol + scoreDiv + scoreKalman + scoreEMA200
+
+// REGRAS DO BOT GAUSS+DNA - Score Minimo por Tipo
+hourUTC       = hour
+sessaoPerigosa = (hourUTC >= 22 or hourUTC < 8) or hourUTC == 8 or hourUTC == 13
+
+instMinBase    = 25
+instMinFinal   = sessaoPerigosa ? math.min(instMinBase + 10, 70) : instMinBase
+
+// COOLDOWN DINAMICO
+var int lastLongBar  = na
+var int lastShortBar = na
+
+cooldownBars =
+     adx > 35 ? 2 :
+     adx > 25 ? 3 :
+     5
+
+tradeCooldownLong  = na(lastLongBar)  or (bar_index - lastLongBar  > cooldownBars)
+tradeCooldownShort = na(lastShortBar) or (bar_index - lastShortBar > cooldownBars)
+
+// REVERSAO PRECOCE
+earlyLong =
+     barstate.isconfirmed and
+     tradeCooldownLong    and
+     adxLongOk            and
+     volStrong            and
+     sellExhaustion       and
+     liqSweepLong         and
+     bullAbsorption       and
+     bullDiv              and
+     flowBull             and
+     ema200Rising         and
+     close > ema50        and
+     rsiZonaLongOK        and
+     (not useKalmanFilter or kalmanTrendUp)
+
+earlyShort =
+     enableShort          and
+     barstate.isconfirmed and
+     tradeCooldownShort   and
+     adxShortOk           and
+     volStrong            and
+     buyExhaustion        and
+     liqSweepShort        and
+     bearAbsorption       and
+     bearDiv              and
+     flowBear             and
+     ema200Falling        and
+     close < ema50        and
+     rsiZonaShortOK       and
+     (not useKalmanFilter or kalmanTrendDown)
+
+// SINAL LONG - CORE (11 criterios GAUSS+DNA)
+longCoreCriteria =
+     rsi >= 45 and rsi <= 58 and
+     rsiSmooth > rsiSmooth[2] and
+     adx >= adxMinLong and
+     volNaoFade and
+     not volSecando and
+     (not useKalmanFilter or kalmanTrendUp) and
+     flowBull and
+     close > ema21 and ema10 > ema21 and
+     haBull and
+     not liqSweepLong and
+     close > ema200 and close <= ema21 * 1.02
+
+longSignal =
+     barstate.isconfirmed and
+     tradeCooldownLong    and
+     rsiZonaLongOK        and
+     longCoreCriteria     and
+     scoreLong > instMinFinal
+
+// SINAL SHORT - CORE (11 criterios GAUSS+DNA)
+shortCoreCriteria =
+     rsi >= 42 and rsi <= 55 and
+     rsiSmooth < rsiSmooth[2] and
+     adx >= adxMinShort and
+     volNaoFade and
+     not volSecando and
+     (not useKalmanFilter or kalmanTrendDown) and
+     flowBear and
+     close < ema21 and ema10 < ema21 and
+     haBear and
+     not liqSweepShort and
+     close < ema200 and close >= ema21 * 0.98
+
+shortSignal =
+     enableShort          and
+     barstate.isconfirmed and
+     tradeCooldownShort   and
+     rsiZonaShortOK       and
+     shortCoreCriteria    and
+     math.abs(scoreShort) > instMinFinal
+
+// ENTRADAS FINAIS
+newLong  = (longSignal  and not longSignal[1])  or (earlyLong  and not earlyLong[1])
+newShort = (shortSignal and not shortSignal[1]) or (earlyShort and not earlyShort[1])
+
+// ATR CONGELADO
+var float longATR  = atr
+var float shortATR = atr
+
+if newLong
+    longATR := atr
+
+if newShort
+    shortATR := atr
+
+// ALAVANCAGEM DINAMICA - REGRA #4 (3x-20x)
+gradeScore    = scoreInstRaw
+
+float baseLev = 7.0
+if gradeScore >= 80
+    baseLev := 20.0
+else if gradeScore >= 70
+    baseLev := 16.0
+else if gradeScore >= 60
+    baseLev := 13.0
+else if gradeScore >= 50
+    baseLev := 10.0
+
+float modInst = 0.0
+if scoreInstRaw >= 80
+    modInst := 2.0
+else if scoreInstRaw >= 70
+    modInst := 1.0
+else if scoreInstRaw < 55
+    modInst := -2.0
+
+float modVol = 0.0
+if volStrong
+    modVol := 1.0
+else if volume < volMa * 0.80
+    modVol := -1.0
+
+float modSessao = sessaoPerigosa ? -1.0 : 0.0
+
+leverageFinal = math.max(3.0, math.min(20.0, baseLev + modInst + modVol + modSessao))
+
+// TAMANHO DA POSICAO
+stopDistLong  = atr * stopAtrMult
+stopDistShort = atr * stopAtrMult
+
+capitalAtRisk = strategy.equity * (riskPct / 100)
+
+qtyLong  = (capitalAtRisk * leverageFinal) / math.max(stopDistLong,  syminfo.mintick)
+qtyShort = (capitalAtRisk * leverageFinal) / math.max(stopDistShort, syminfo.mintick)
+
+// EXECUCAO
+if newLong  and strategy.position_size == 0
+    strategy.entry("LONG",  strategy.long,  qty=qtyLong)
+
+if newShort and strategy.position_size == 0
+    strategy.entry("SHORT", strategy.short, qty=qtyShort)
+
+// Controle cooldown
+if strategy.opentrades > strategy.opentrades[1]
+    if strategy.position_size > 0
+        lastLongBar  := bar_index
+    else if strategy.position_size < 0
+        lastShortBar := bar_index
+
+// GESTAO DE RISCO
+avgPrice = strategy.position_avg_price
+
+longStop  = avgPrice - longATR  * stopAtrMult
+shortStop = avgPrice + shortATR * stopAtrMult
+
+longRisk  = avgPrice - longStop
+shortRisk = shortStop - avgPrice
+
+longTP1   = avgPrice + longRisk * tp1R
+longFinal = avgPrice + longRisk * tpFinalR
+
+shortTP1   = avgPrice - shortRisk * tp1R
+shortFinal = avgPrice - shortRisk * tpFinalR
+
+// BREAK EVEN
+var bool beLong  = false
+var bool beShort = false
+
+if strategy.position_size == 0
+    beLong  := false
+    beShort := false
+
+if strategy.position_size > 0 and high >= longTP1
+    beLong := true
+
+if strategy.position_size < 0 and low <= shortTP1
+    beShort := true
+
+longStopFinal  = beLong  and useBreakEven ? avgPrice : longStop
+shortStopFinal = beShort and useBreakEven ? avgPrice : shortStop
+
+// TRAILING
+trendStrongLong =
+     strategy.position_size > 0 and
+     ema10 > ema21 and close > ema21 and
+     flowBull and adx > adxStrong
+
+trendStrongShort =
+     strategy.position_size < 0 and
+     ema10 < ema21 and close < ema21 and
+     flowBear and adx > adxStrong
+
+trailOffsetLong  = math.round(nz(longATR,  atr) * stopAtrMult / syminfo.mintick)
+trailOffsetShort = math.round(nz(shortATR, atr) * stopAtrMult / syminfo.mintick)
+
+finalLongLimit  = useTrail and trendStrongLong  ? na : longFinal
+finalShortLimit = useTrail and trendStrongShort ? na : shortFinal
+
+finalLongTrailP  = useTrail and trendStrongLong  ? longTP1  : na
+finalShortTrailP = useTrail and trendStrongShort ? shortTP1 : na
+
+finalLongTrailO  = useTrail and trendStrongLong  ? trailOffsetLong  : na
+finalShortTrailO = useTrail and trendStrongShort ? trailOffsetShort : na
+
+// SAIDAS
+strategy.exit("LONG TP1",   from_entry="LONG",  qty_percent=tp1Qty, stop=longStopFinal,  limit=longTP1)
+strategy.exit("LONG FINAL", from_entry="LONG",  qty_percent=100,    stop=longStopFinal,  limit=finalLongLimit,
+     trail_price=finalLongTrailP, trail_offset=finalLongTrailO)
+
+strategy.exit("SHORT TP1",   from_entry="SHORT", qty_percent=tp1Qty, stop=shortStopFinal, limit=shortTP1)
+strategy.exit("SHORT FINAL", from_entry="SHORT", qty_percent=100,    stop=shortStopFinal, limit=finalShortLimit,
+     trail_price=finalShortTrailP, trail_offset=finalShortTrailO)
+
+// SAIDA ESTRUTURAL
+exitLong =
+     strategy.position_size > 0 and
+     close < ema21 and ema10 < ema21 and
+     volWeak and flowBear and
+     close > longStopFinal
+
+exitShort =
+     strategy.position_size < 0 and
+     close > ema21 and ema10 > ema21 and
+     volWeak and flowBull and
+     close < shortStopFinal
+
+if exitLong
+    strategy.close("LONG")
+
+if exitShort
+    strategy.close("SHORT")
+
+// VISUAL - HISTOGRAMA MACD
+plot(histLine,
+     title="Histograma",
+     style=plot.style_columns,
+     color=histLine >= 0 ? color.new(bullColor, 0) : color.new(bearColor, 0),
+     linewidth=4)
+
+// VISUAL - MACD + SIGNAL
+plot(macdLine,   title="MACD",   color=color.rgb(0,132,255), linewidth=2)
+plot(signalLine, title="Signal", color=color.orange,         linewidth=2)
+
+// VISUAL - HEIKIN ASHI MACD
+plotcandle(haOpen, haHigh, haLow, haClose,
+     title="MACD HA",
+     color=       haBull ? color.lime : color.red,
+     wickcolor=   haBull ? color.lime : color.red,
+     bordercolor= haBull ? color.lime : color.red)
+
+// VISUAL - ZERO LINE
+hline(0, "ZERO", color=color.new(color.gray, 50))
+
+// VISUAL - ESCALA
+scaleFix = math.max(math.abs(histLine), math.abs(macdLine))
+plot( scaleFix * 1.8, display=display.none)
+plot(-scaleFix * 1.8, display=display.none)
+
+// VISUAL - RSI ZONE
+rsiVisual = ((rsiSmooth - 50) / 50) * scaleFix
+
+plot(rsiVisual,
+     title="RSI Zone",
+     color=
+          rsiOverbought    ? color.red  :
+          rsiOversold      ? color.lime :
+          rsiMomentumBull  ? color.new(color.lime, 50) :
+          rsiMomentumBear  ? color.new(color.red,  50) :
+          color.gray,
+     linewidth=3)
+
+// Fundo RSI
+bgcolor(rsiOverbought ? color.new(color.red, 90) : na, title="RSI OB Fundo")
+bgcolor(rsiOversold   ? color.new(color.lime, 90) : na, title="RSI OS Fundo")
+
+// VISUAL - KALMAN (overlay)
+kalmanDisplay = showKalman ? display.all : display.none
+p1 = plot(shortKalman, "Kalman Rapido", color=kalmanTrendCol1, force_overlay=true, display=kalmanDisplay)
+p2 = plot(longKalman,  "Kalman Lento",  color=kalmanTrendCol, linewidth=2, force_overlay=true, display=kalmanDisplay)
+fill(p1, p2, shortKalman, longKalman, na, color.new(kalmanTrendCol, 80), display=kalmanDisplay)
+
+plotcandle(open, high, low, close,
+     title="Kalman Candles",
+     color=candleColK, wickcolor=candleColK, bordercolor=candleColK,
+     force_overlay=true, display=kalmanDisplay)
+
+// VISUAL - SCORE
+scoreDisplay = showScore ? display.all : display.none
+plot(scoreLong,
+     title="Score LONG",
+     style=plot.style_columns,
+     color=scoreLong > 0 ? color.new(bullColor, 30) : color.new(bearColor, 70),
+     linewidth=2, display=scoreDisplay)
+
+// VISUAL - EMAS (overlay)
+plot(ema10,  "EMA10",  color=color.green,  force_overlay=true)
+plot(ema21,  "EMA21",  color=color.red,    force_overlay=true)
+plot(ema50,  "EMA50",  color=color.yellow, linewidth=2, force_overlay=true)
+plot(ema200, "EMA200", color=color.white,  linewidth=2, force_overlay=true)
+
+// VISUAL - SINAIS BUY / SELL
+plotshape(newLong,
+     title="BUY",
+     style=shape.labelup,
+     location=location.bottom,
+     color=bullColor,
+     text="BUY",
+     textcolor=color.white)
+
+plotshape(newShort,
+     title="SELL",
+     style=shape.labeldown,
+     location=location.top,
+     color=bearColor,
+     text="SELL",
+     textcolor=color.white)
+
+// VISUAL - FUNDO TENDENCIA
+bgcolor(
+     trendBull ? color.new(bullColor, 94) :
+     trendBear ? color.new(bearColor, 94) : na)
+
+// VISUAL - TABELA INSTITUCIONAL
+if showTable and barstate.islast
+    var table riskTable = table.new(position.top_right, 2, 12,
+         bgcolor=color.new(color.black, 70), border_width=1,
+         border_color=color.new(color.gray, 50), frame_width=1,
+         frame_color=color.new(color.gray, 50))
+
+    effectiveRisk = riskPct * leverageFinal
+    riskColor     = effectiveRisk > 15 ? color.red : effectiveRisk > 9 ? color.orange : color.white
+
+    table.cell(riskTable, 0, 0,  "Score Inst",       text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 0,  str.tostring(scoreInstRaw),
+         text_color=scoreInstRaw >= 70 ? color.lime : scoreInstRaw >= 50 ? color.yellow : color.red,
+         text_size=size.small)
+
+    table.cell(riskTable, 0, 1,  "Score LONG",       text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 1,  str.tostring(scoreLong),
+         text_color=scoreLong > 0 ? color.lime : color.red,
+         text_size=size.small)
+
+    table.cell(riskTable, 0, 2,  "Alavancagem",      text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 2,  str.tostring(leverageFinal, "#.#") + "x",
+         text_color=color.yellow, text_size=size.small)
+
+    table.cell(riskTable, 0, 3,  "Risco Efetivo",    text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 3,  str.tostring(effectiveRisk, "#.#") + "%",
+         text_color=riskColor, text_size=size.small)
+
+    table.cell(riskTable, 0, 4,  "TP1 R:R",          text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 4,  "1:" + str.tostring(tp1R, "#.#"),
+         text_color=color.lime,   text_size=size.small)
+
+    table.cell(riskTable, 0, 5,  "Alvo Final",       text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 5,  "1:" + str.tostring(tpFinalR, "#.#"),
+         text_color=color.lime,   text_size=size.small)
+
+    table.cell(riskTable, 0, 6,  "RSI",              text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 6,  str.tostring(math.round(rsi, 1)),
+         text_color=rsiOverbought ? color.red : rsiOversold ? color.lime : color.white,
+         text_size=size.small)
+
+    table.cell(riskTable, 0, 7,  "ADX",              text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 7,  str.tostring(math.round(adx, 1)),
+         text_color=adx > adxStrong ? color.lime : adx > adxMinLong ? color.yellow : color.red,
+         text_size=size.small)
+
+    table.cell(riskTable, 0, 8,  "Kalman",           text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 8,  kalmanTrendUp ? "BULL" : "BEAR",
+         text_color=kalmanTrendUp ? color.lime : color.red,
+         text_size=size.small)
+
+    table.cell(riskTable, 0, 9,  "Fluxo",            text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 9,  flowBull ? "BULL" : "BEAR",
+         text_color=flowBull ? color.lime : color.red,
+         text_size=size.small)
+
+    table.cell(riskTable, 0, 10, "Volume",           text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 10, volStrong ? "FORTE" : volNaoFade ? "OK" : "FRACO",
+         text_color=volStrong ? color.lime : volNaoFade ? color.yellow : color.red,
+         text_size=size.small)
+
+    table.cell(riskTable, 0, 11, "Sessao",           text_color=color.gray,   text_size=size.small)
+    table.cell(riskTable, 1, 11, sessaoPerigosa ? "PERIGOSA" : "SEGURA",
+         text_color=sessaoPerigosa ? color.orange : color.lime,
+         text_size=size.small)
+
+// ALERTAS
+alertcondition(newLong,               "LONG",  "COMPRA - DNA UNIFICADO")
+alertcondition(newShort,              "SHORT", "VENDA - DNA UNIFICADO")
+alertcondition(exitLong or exitShort, "EXIT",  "SAIDA - DNA UNIFICADO")
