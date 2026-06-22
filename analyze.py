@@ -673,6 +673,20 @@ def detectar_sinais(ind):
                       i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"] and
                       i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
 
+    # ── CORE — 11 critérios institucionais (adicionado 14/06) ────────────────
+    long_core  = (45 <= i["rsi"] <= 58 and i["rsi_subindo"] and
+                  i["adx"] >= 18 and i["vol_nao_fade"] and not i["vol_secando"] and
+                  i["kalman_subindo"] and i["trendilo_long"] and
+                  i["tbull_loose"] and i["ha_bull"] and
+                  not i["liq_topo"] and i["preco"] > i["e200"] and
+                  i["preco"] <= i["e21"] * 1.02)
+    short_core = (42 <= i["rsi"] <= 55 and i["rsi_caindo"] and
+                  i["adx"] >= 18 and i["vol_nao_fade"] and not i["vol_secando"] and
+                  not i["kalman_subindo"] and i["trendilo_short"] and
+                  i["tbear_loose"] and i["ha_bear"] and
+                  not i["liq_fundo"] and i["preco"] < i["e200"] and
+                  i["preco"] >= i["e21"] * 0.98)
+
     # ── Cross ─────────────────────────────────────────────────────────────────
     long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
@@ -930,6 +944,8 @@ def detectar_sinais(ind):
         ordem = [
             (long_pullback,  "LONG",  "PULLBACK"),
             (short_pullback, "SHORT", "PULLBACK"),
+            (long_core,      "LONG",  "CORE"),
+            (short_core,     "SHORT", "CORE"),
             (long_cross,     "LONG",  f"CROSS:{i['label_cross']}"),
             (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
             (long_bb_break,  "LONG",  "BB_BREAK"),
