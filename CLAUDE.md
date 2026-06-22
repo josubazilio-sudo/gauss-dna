@@ -33,10 +33,17 @@
 ### Mensagens ao usuário (pedido 20/06 — única coisa que deve chegar via bot)
 O bot só envia 2 tipos de mensagem ao Telegram a partir de agora:
 1. **Sinal real** (`notify.py enviar_sinal()`)
-2. **Diagnóstico de ausência de sinal**, 1x por hora enquanto não houver sinal (`cycles.py _enviar_diagnostico()`,
-   intervalo de 3600s tanto pra elegibilidade quanto pro envio — ver `main()`)
-- Mensagem de "bot iniciado" e "watchlist/setup em formação" foram **removidas do Telegram** (ficam só no log) —
-  eram ruído extra que o usuário não pediu.
+2. **Diagnóstico**, **sempre no 1º ciclo de cada run** (ajustado 22/06 — pedido do usuário "sempre mandava
+   mensagem quando dava o run... pra sempre saber que estava em atividade") + depois a cada 1h sem sinal
+   dentro do mesmo run (relevante só em `LOOP_MODE`, já que o timeout do job hoje é ~55min — ver "TIMEOUT DO
+   JOB MENOR QUE O CRON" abaixo, então cada run de cron já corresponde a 1 diagnóstico garantido). Antes
+   (20/06-22/06) só mandava no 1º ciclo se `total_analisados>0`; isso foi removido — agora manda
+   incondicionalmente no ciclo 1, mesmo que nenhuma moeda tenha sido analisada ainda, pra garantir que o
+   usuário sempre recebe pelo menos 1 mensagem por hora confirmando que o bot está rodando. `cycles.py
+   _enviar_diagnostico()`/`main()`.
+- Mensagem de "bot iniciado" e "watchlist/setup em formação" continuam **removidas do Telegram** (ficam só
+  no log) — o pedido de 22/06 foi atendido reforçando a garantia do diagnóstico (ponto 2), não recriando
+  uma 3ª categoria de mensagem; mantém o princípio de só 2 tipos de mensagem chegando ao usuário.
 - Sempre que eu (assistente) estiver numa sessão ativa e ler esse diagnóstico (colado pelo usuário, ou via log de
   run), devo **auditar antes de aceitar como "mercado parado"**: distinguir bug/contradição de filtro (→ corrigir,
   REGRA #0 acima) de condição genuína de mercado (→ só informar, sem inventar ajuste). Sinal nunca deve parar de
