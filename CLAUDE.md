@@ -73,6 +73,11 @@ O bot só envia 2 tipos de mensagem ao Telegram a partir de agora:
 - Desde 20/06 o diagnóstico horário (ponto 2) também inclui um resumo de **resultado real das últimas 24h**
   (contagem por STOP/TP1_BE/TP2/EXPIRADO, winrate, R médio) — ver seção "RASTREAMENTO DE RESULTADO" abaixo.
   Continua sendo só 2 tipos de mensagem, o resumo é anexado ao diagnóstico existente, não é mensagem nova.
+  Ajustado 22/06 (pedido do usuário, print real do resumo "winrate 37%... por fonte/grade") — essa linha
+  agora **sempre aparece** no diagnóstico, mesmo sem nenhum trade fechado na janela de 24h (antes ficava
+  omitida por completo quando `resumo_resultados()` devolvia `None`, parecendo rastreamento quebrado em vez
+  de "ainda sem dado"). `cycles.py _enviar_diagnostico()`: bloco `else` novo escreve "Resultados (24h):
+  nenhum fechado ainda" nesse caso.
 
 ---
 

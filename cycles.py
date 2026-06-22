@@ -253,6 +253,10 @@ async def _enviar_diagnostico(session) -> None:
     linhas.append(f"\nCiclos: {ciclos} | Analises: {tot}")
 
     # Resultado real dos sinais fechados nas últimas 24h (rastreamento, pedido 20/06)
+    # Linha SEMPRE aparece (pedido 22/06 — usuário quer garantia de que esse
+    # resumo "continue mostrando"), mesmo com 0 fechados — antes ficava omitida
+    # por completo quando resumo_resultados() devolvia None (CSV vazio/inexistente
+    # ou nenhum trade fechado na janela), o que parecia rastreamento "quebrado".
     _resumo = resumo_resultados(horas=24)
     if _resumo:
         _c = _resumo["contagem"]
@@ -268,6 +272,8 @@ async def _enviar_diagnostico(session) -> None:
                 _det = [f"{k}:{d['stop']}/{d['total']}STOP"
                         for k, d in sorted(_grupo.items(), key=lambda x: -x[1]["total"])]
                 linhas.append(f"  por {_rotulo}: {', '.join(_det)}")
+    else:
+        linhas.append("\nResultados (24h): nenhum fechado ainda")
 
     # Backtest automático por sinal (22/06) — dado de calibração rápido (sliding
     # window no histórico), não substitui o resultado real acima, é só leading indicator
