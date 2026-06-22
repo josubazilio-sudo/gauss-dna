@@ -951,3 +951,54 @@ um tick agendado vai cair "no meio" do runner ocupado e ser descartado.
   ajuste (a cascata de disparos manuais + cron já estava causando cancelamentos em cadeia) — este fix foi
   commitado/pushado mas **sem** disparo manual automático; o próximo tick de cron (a cada hora) já assume
   a partir daqui.
+- ⚠️ Nota de consistência (22/06, sessão seguinte): esse pedido contradiz a frase "Após qualquer ajuste de
+  código: Sempre disparar o bot automaticamente... autorizado permanentemente" da REGRA #0 no topo deste
+  arquivo. Auditoria confirmou o problema é real e recorrente: `mcp__github__actions_list` mostrou 3 runs
+  consecutivos `cancelled` no mesmo dia, exatamente o padrão de disparos manuais em sequência cancelando o
+  run anterior via concurrency group. Decisão (sessão 22/06, ajuste de `vol_secando`): quando o ajuste for
+  pequeno/incremental e já existir um run em andamento, **não** disparar de novo — deixar o cron horário
+  assumir. Só disparar manual de novo se o usuário pedir dado imediato ou não houver run em andamento.
+
+---
+
+## AUDITORIA DE OPORTUNIDADES PERDIDAS — vol_secando AFROUXADO (autorizado 22/06)
+
+Pedido do usuário: avaliar se está perdendo boas oportunidades, **sem endurecer** mais nada — afrouxar até
+um limite que ainda garanta sinal de qualidade (não afrouxar tudo de qualquer jeito). Em vez de adivinhar,
+auditei um run real completo via `mcp__github__get_job_logs` (run 27976146741, 18:49-19:44 UTC, 12 ciclos,
+~55min, dezenas de moedas por ciclo, run pego ANTES do print de resultado 24h ter sido mostrado):
+
+- **3 dos 12 ciclos (25%) tiveram zero análise** — BTC H1 em regime neutro (`_btc_h1_regime_neutro()`)
+  bloqueia LONG e SHORT em **todas** as moedas, não só nas correlacionadas a BTC. Genuíno (mercado sem
+  direção no BTC), não é bug — registrado aqui só como contexto, não alterado nesta rodada.
+- Nos outros 9 ciclos: **669 candidatos LONG/SHORT bloqueados** por `seguro_long`/`seguro_short` ou
+  condição própria do sinal, **zero sinais reais disparados** no run inteiro. Top motivos (contagem real):
+  1. `seguro=F(vol_sec...)` — 268 ocorrências (~40% de todos os bloqueios) — de longe o maior bloqueador
+  2. `ha1=F` — 142 (Heikin-Ashi última vela, usado por SCOUT — trade-off já aceito, ver REGRA #2)
+  3. `fluxo<N/4` — 135 (SCOUT, trade-off já aceito, ver REGRA #2 "torna SCOUT bem mais raro por desenho")
+  4. `adx<15` — 105 (piso global `ADX_MIN_GLOBAL`, mercado genuinamente sem força de tendência)
+  5. `macd_r=F` — 67 (condição própria de cada sinal)
+  6. `seguro=F(exaustao)` — 60 (anti-chasing, intencional)
+  7. `lateral` — 44 (BB squeeze)
+  8. `rsi_zona` — ~50 no total somado (REGRA #1, intocada — não alterar sem pedido específico)
+
+### Fix aplicado — só o maior blocker, isolado dos outros
+`vol_secando` (`analyze.py`, dentro de `calcular_indicadores()`) exigia volume da última vela `< 25% da
+média` **E** `< 50% do mínimo das últimas 3 velas` — limiar apertado demais pro próprio objetivo do filtro
+(capturar esgotamento *extremo* de volume, não qualquer fade moderado). Sozinho respondia por ~40% de todo
+bloqueio de `seguro_long`/`seguro_short` (usado por PULLBACK, CROSS, BB_BREAK, SM_SWEEP, SETUP, DIV,
+REBOUND, FLEX, SCOUT — praticamente toda a cascata). Afrouxado pra `< 18% da média` **E** `< 40% do mínimo
+das últimas 3 velas` — exige um fade ainda mais extremo antes de bloquear, sem remover a defesa.
+
+### O que NÃO foi tocado nesta rodada (de propósito — mudança isolada pra medir o efeito real)
+- `ha_bull_1`/`fluxo` do SCOUT — já é trade-off aceito explicitamente (REGRA #2, "SCOUT bem mais raro por
+  desenho — aceito explicitamente pelo usuário")
+- `ADX_MIN_GLOBAL` (15) — já é o piso mínimo desde a V3, abaixo disso deixaria de ser "força de tendência"
+- REGRA #1 (RSI zona 75/25) e `seguro_long/short` (stoch saturado, exaustão, bb_topo/fundo) — defesas
+  anti-chasing ligadas a incidentes reais documentados (BB_BREAK CVX/ASTER/WUSDT) — não tocadas sem pedido
+  explícito do usuário nomeando especificamente esse filtro
+- Filtro de regime BTC H1 (`_btc_h1_regime_neutro`) — bloqueia 25% dos ciclos por completo, candidato real
+  a próxima rodada de afrouxamento se o usuário confirmar que quer revisar esse específico
+- Validar com o próximo run real (via cron, sem disparo manual — ver nota de consistência acima) se o
+  afrouxamento do `vol_secando` já é suficiente pra gerar sinal sem voltar a piorar o winrate/STOP-rate
+  (winrate real 24h estava em 37% antes deste ajuste — ver "RASTREAMENTO DE RESULTADO").
