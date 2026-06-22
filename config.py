@@ -119,7 +119,13 @@ RVOL_MIN_EXEC = 1.0
 
 # Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
 # LONG e SHORT em todas as moedas até o regime mudar.
-BTC_REGIME_ADX_MAX  = 20
+# AJUSTE 22/06 (auditoria de dia inteiro sem sinal — ver CLAUDE.md "AUDITORIA
+# DE OPORTUNIDADES PERDIDAS"): ADX_MAX 20→15, alinhado ao piso global
+# ADX_MIN_GLOBAL já usado no resto do sistema — exige BTC genuinamente mais
+# flat antes de zerar o ciclo inteiro (esse filtro sozinho zerou ciclos por
+# horas seguidas hoje: 00:27-08:48 e 20:18-21:52 UTC, sem nenhum sinal em
+# nenhuma moeda nesses horários). RSI 45-55 intocado — mudança isolada.
+BTC_REGIME_ADX_MAX  = 15
 BTC_REGIME_RSI_MIN  = 45
 BTC_REGIME_RSI_MAX  = 55
 
