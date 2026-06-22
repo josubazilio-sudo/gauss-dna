@@ -961,7 +961,12 @@ def analisar(simbolo, candles, funding_rate=None):
 
     classificacao = classificar_v2(ind, sinal)
 
-    # Log de diagnóstico quando há score mas sem sinal
+    # Log de diagnóstico quando há score mas sem sinal — o mesmo detalhamento
+    # (bloqueio_detalhe) também vai pro dict de retorno, pra cycles.py poder
+    # expor o motivo EXATO por candidato no diagnóstico horário do Telegram,
+    # em vez da versão genérica/aproximada que _detectar_bloqueadores_diag()
+    # tinha que reconstruir a partir de só um subconjunto de campos do result.
+    bloqueio_detalhe = None
     if not sinal:
         sc = ind["score"]
         if sc > 25:
@@ -982,7 +987,8 @@ def analisar(simbolo, candles, funding_rate=None):
             if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
             if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
-            log.info(f"  LONG-BLOQ {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
+            bloqueio_detalhe = "; ".join(b) or "sem detalhe"
+            log.info(f"  LONG-BLOQ {simbolo}: score={sc:+d} | {bloqueio_detalhe}")
         elif sc < -25:
             b = []
             if not ind["macd_bear_r"]:   b.append("macd_r=F")
@@ -999,8 +1005,10 @@ def analisar(simbolo, candles, funding_rate=None):
             if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
             if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
-            log.info(f"  SHORT-BLOQ {simbolo}: score={sc:+d} | {'; '.join(b) or 'sem detalhe'}")
+            bloqueio_detalhe = "; ".join(b) or "sem detalhe"
+            log.info(f"  SHORT-BLOQ {simbolo}: score={sc:+d} | {bloqueio_detalhe}")
         else:
+            bloqueio_detalhe = "score insuficiente"
             log.info(f"  sem-sinal {simbolo}: score={sc:+d} insuficiente")
 
     return {
@@ -1017,6 +1025,7 @@ def analisar(simbolo, candles, funding_rate=None):
         "swing_high":   ind["swing_high"],
         "grade":        grade,
         "pts_grade":    pts,
+        "bloqueio_detalhe": bloqueio_detalhe,
         # Indicadores para ciclo e envio
         "ha_bull":      ind["ha_bull"],
         "obv_bull":     ind["obv_bull"],
