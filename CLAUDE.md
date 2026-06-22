@@ -675,85 +675,15 @@ mudança ali. *(R:R por grade citado aqui é histórico — a tabela foi removid
 
 ---
 
-## CLASSIFICAÇÃO INSTITUCIONAL V2 — GATE DE ENTRADA E SAÍDA EM 3 ESTÁGIOS (autorizado 22/06)
+## CLASSIFICAÇÃO INSTITUCIONAL V2 — GATE DE ENTRADA E SAÍDA EM 3 ESTÁGIOS (22/06)
 
-Pedido do usuário pra substituir o selo Ouro/Prata/Bronze antigo (informativo, nunca bloqueava nada) por
-uma classificação que **é** o gate final de entrada, com regras de execução próprias por nível, e trocar a
-tabela de R-múltiplo por grade/fonte/ADX por uma saída fixa em 3 estágios. Pedido explícito: "se precisar
-deletar faça uma limpeza para não ficar muito assunto misturado" — por isso as seções antigas (Classificação
-de confluência, tabela de R-múltiplo) acima foram marcadas como SUPERSEDED em vez de duplicadas.
-
-### Classificação — `analyze.py classificar_v2()`, chamada dentro de `analisar()`, exposta como `result["classificacao"]`
-Usa só `score_inst_long/short` (não soma "Confiança" separado — `confiança = score_inst-10` já é o mesmo
-número, mesma redundância já corrigida uma vez no FILTRO DE EXECUÇÃO V2, ver seção acima):
-
-- 🥇 **OURO**: `score_inst>=90` + `RVOL>=1.2` + `ADX>=25` + fluxo confirmado (`dna_flow` ou `trendilo` na
-  direção) + Kalman alinhado (`kalman_subindo`/`kalman_descendo`) + MM200 favorável (`tendencia_bull`/`bear`)
-  + RSI `40-65` LONG / `35-60` SHORT + liquidez varrida (`liq_fundo_12` LONG / `liq_topo_12` SHORT) +
-  distância até a MM21 `<=3%` do preço
-- 🥈 **PRATA**: `score_inst>=80` + `RVOL>=0.90` + `ADX>=22` + fluxo confirmado + Kalman alinhado + MM50
-  favorável (`preco>e50` LONG / `preco<e50` SHORT) + RSI `35-70` LONG / `30-65` SHORT
-- 🥉 **BRONZE**: `score_inst>=75` + `RVOL>=0.70` + `ADX>=20` + fluxo confirmado
-- Nenhum dos 3 pisos atingido → `None`
-- ⚠️ Pisos atualizados 22/06 (eram Score 85/75/65, RVOL 1.8/1.4/1.2) — ver "DNA+GAUSS INSTITUCIONAL V2"
-  mais abaixo. Mudança aplicada **globalmente** (FLEX/ELITE/INSTITUCIONAL, não só institucional) por escolha
-  explícita do usuário ao ser perguntado sobre o escopo.
-
-### Regras de execução — gate real, em `cycles.py` (`executar_ciclo()` e `executar_ciclo_mtf()`)
-- **OURO**: sempre opera (nenhuma checagem extra)
-- **PRATA**: só opera se H1 estiver alinhado na direção do sinal. Quando o ciclo já é H1 (MTF, ou
-  `executar_ciclo` com `tf=="1h"`), reusa `result["alinhado_bull"/"alinhado_bear"]` direto. Quando o ciclo
-  é 30M, busca H1 separado por símbolo via prefetch novo (`todos_h1_align`, mesmo padrão do prefetch H4 já
-  existente) e calcula alinhamento com `calcular_indicadores()` sobre essas velas.
-- **BRONZE / sem classificação**: ignorado — sinal nem chega a ser enviado (vai pro diagnóstico horário
-  como candidato bloqueado, motivo `v2=BRONZE`/`v2=none`)
-- **Bloqueios universais explícitos do pedido** (`cycles.py`, antes do gate de classificação): `RSI>75`
-  bloqueia LONG, `RSI<25` bloqueia SHORT (já cobertos por REGRA #1/`rsi_zona`, mas a checagem explícita foi
-  adicionada igual mesmo assim por pedido direto), mercado lateral (`ind["lateralizado"]`) bloqueia os dois
-  lados. `RVOL_MIN_EXEC` subiu de `1.0`→`1.2` em `config.py` pra bater com o "RVOL<1.2" do pedido (ADX<20 já
-  era coberto por `ADX_MIN_GLOBAL`).
-- `analisar()` também passou a expor no dict final (antes ficavam só dentro de `calcular_indicadores()`,
-  nunca chegavam no `result` usado por `cycles.py`): `lateralizado`, `alinhado_bull/bear`, `adx_subindo`,
-  `e21`, `e50` — corrige de quebra um bug latente onde `adx_subindo` sempre chegava `False` em `cycles.py`
-  (lia de um dict que nunca tinha essa chave).
-
-### Saída — `notify.py enviar_sinal()`, 3 estágios fixos (substitui a tabela por grade/fonte/ADX)
-- **TP1 = 1R fixo** (`r1=1.0`, antes variava 1.2-2.2R por grade) → fecha 50% da posição, stop conceitual
-  vai pra BE (break-even)
-- **TP2 por tier de classificação** (`r_final`): OURO=4.0R | PRATA/BRONZE=3.0R → fecha 30%
-- **Restante (20%, "runner")**: não tem alvo de preço fixo — segue MM10/MM21 e perda de estrutura (pivôs
-  HH/HL ou LH/LL). Resolvido por `cycles.py _checar_runners()` (candle fresco, não ticker simples): fecha
-  quando o preço perde MM10 **e** MM21 simultaneamente, ou quando `estrutura_alta`/`estrutura_baixa` vira
-  falso.
-- Teto estrutural do TP1 (nunca passa de ~92% da distância até o próximo swing) e o cálculo de stop em si
-  (`mult_atr`, stop estrutural) ficaram **intocados** — só os R-múltiplos de alvo mudaram.
-
-### Rastreamento de posição — 3 estágios (`state.py`)
-- Antes: 2 estágios (aberta → tp1_atingido), `TP2` fechava 100% da posição de uma vez.
-- Agora: 3 estágios (aberta → `tp1_atingido` → `tp1_atingido`+`tp2_atingido`="runner"). `tp2_atingido=True`
-  não fecha a posição, só marca que virou runner — fica em `estado["_posicoes_abertas"]` até
-  `_checar_runners()` resolver.
-- `fechar_runner()` (novo) — remove a posição de `_posicoes_abertas` por identidade (`p is posicao`) e
-  devolve o dict com `resultado="TP2_RUNNER"` pronto pra `registrar_resultado()`.
-- R realizado novo: `TP2_RUNNER = r1*0.5 + r_final*0.3 + r_runner*0.2`, onde `r_runner` é calculado no
-  momento do fechamento do runner (`(preco_saida-entrada)/risco`), não um valor fixo. O `TP2` antigo
-  (binário, fechava tudo de uma vez) continua existindo só como branch legado em `registrar_resultado()`
-  pra qualquer posição que já estivesse cacheada em `last_signals.json` antes deste commit — código novo
-  nunca produz `TP2` puro.
-- `_CAMPOS_RESULTADOS` (schema do `resultados_log.csv`) **não foi alterado** — `r_runner` e `classificacao`
-  ficam só no JSON de estado (`last_signals.json`, sem schema fixo), não em colunas novas do CSV, pra não
-  quebrar o arquivo já cacheado entre runs do GitHub Actions (mudar colunas de um CSV append-only quebra o
-  header/linhas anteriores).
-- Circuit breaker institucional (`_stops_consecutivos_inst`) passou a zerar também em `TP2_RUNNER`, não só
-  `TP1_BE`/`TP2`.
-
-### O que NÃO mudou
-- Tamanho de posição (`RISK_BY_GRADE`/`RISK_INSTITUCIONAL_POR_GRADE`, ver RISCO PELA METADE acima)
-- Alavancagem (REGRA #4 + TETO CONSERVADOR DE ALAVANCAGEM acima)
-- Distância do stop (`mult_atr`, stop estrutural — só o Fix 2 de 21/06 já documentado acima)
-- A cascata de 12 sinais em `analyze.py:detectar_sinais()` — a classificação V2 roda **depois** que um
-  sinal já foi detectado, é uma camada adicional de gate/saída, não substitui nenhuma condição de entrada
-  da cascata.
+⚠️ **SUPERSEDED 22/06 (V3, mesmo dia)** — auditoria de 3 runs reais seguidos (~3h) achou ZERO sinais
+enviados: o funil empilhado da V2 (grade letra + `ADX_MIN_GLOBAL=20` + `RVOL_MIN_EXEC=1.2` +
+`score_inst>=75` fixo + sessão perigosa cravando 60) bloqueava até movimentos reais fortes (ALLO/GWEI/HUS,
+ver prints do usuário). Usuário trouxe documento próprio "CLASSIFICAÇÃO INSTITUCIONAL V3" pra recalibrar —
+ver seção dedicada abaixo pro esquema atual (pisos OURO/PRATA/BRONZE mais baixos, saída em 4 estágios em
+vez de 3). Mantida aqui só como registro histórico do que existiu entre os dois pedidos do usuário no
+mesmo dia.
 
 ---
 
@@ -772,7 +702,7 @@ documentos anteriores do usuário, ver FILTRO DE EXECUÇÃO V2 acima) — pergun
    A>=70), nunca produz S+ — confirmado manter esse esquema e só ampliar a faixa permitida pra incluir A
    (antes só S/A+ passavam).
 3. **Escopo do OURO/PRATA/BRONZE**: confirmado aplicar globalmente (afeta também FLEX/ELITE, não só
-   INSTITUCIONAL) — ver tabela atualizada na seção CLASSIFICAÇÃO INSTITUCIONAL V2 acima.
+   INSTITUCIONAL) — pisos já superseded pela V3, ver seção CLASSIFICAÇÃO INSTITUCIONAL V3 abaixo.
 
 ### O que foi implementado (`analyze.py`, bloco `_base_inst_long`/`_base_inst_short` dentro de `detectar_sinais()`)
 - `ADX > 25` → `ADX > 20`
@@ -783,11 +713,11 @@ documentos anteriores do usuário, ver FILTRO DE EXECUÇÃO V2 acima) — pergun
   explícito "ADX atual >= ADX anterior - 2"). Essa tolerância é local ao piso institucional, não mudou o
   `adx_subindo` global usado por SCOUT/BB_BREAK na cascata normal.
 - **Score Inst mínimo** dos 6 tipos (SM_SWEEP/MOMENTUM/SURGE/PULLBACK/SETUP/FLEX): `80` → `75`.
-- **Exceção de mercado lateral** (`cycles.py`, só quando `SIGNAL_MODE=="INSTITUCIONAL"`): o bloqueio
-  universal de `lateralizado` (CLASSIFICAÇÃO V2) passa a abrir excepção se `bb_expand` (BB Width expandindo)
-  **ou** `ADX > 25` — squeeze já rompendo não é mais tratado como lateral morto. `bb_expand` precisou ser
-  adicionado ao dict de retorno de `analisar()` (já existia dentro de `calcular_indicadores()`, não chegava
-  no `result` usado por `cycles.py`).
+- **Exceção de mercado lateral** (histórico — `cycles.py`, só quando `SIGNAL_MODE=="INSTITUCIONAL"`): pedido
+  feito quando ainda existia o bloqueio universal de `lateralizado` da V2. Esse bloqueio universal (e a
+  exceção dele) foi removido por completo na V3 do mesmo dia (mercado lateral hoje só penaliza -10 no
+  score, nunca bloqueia, ver seção V3 abaixo) — `bb_expand` continua calculado em `analyze.py` (usado por
+  `bb_break_long/short` na própria cascata), só não existe mais essa exceção específica em `cycles.py`.
 - `config.py GRAUS_PERMITIDOS_INSTITUCIONAL`: `{"S","A+"}` → `{"S","A+","A"}`.
 - Classificação OURO/PRATA/BRONZE: ver tabela atualizada na seção anterior (mudança global, não só deste modo).
 
@@ -797,6 +727,118 @@ documentos anteriores do usuário, ver FILTRO DE EXECUÇÃO V2 acima) — pergun
 - H4 estrito (`_h4_confirma_estrito`), stop/TP/leverage (gestão) — intocados, mesma regra de só revisar
   gestão depois de amostra suficiente de trades fechados.
 - A cascata de detecção dos 6 tipos de sinal em si (SM_SWEEP/MOMENTUM/etc.) — só o piso comum por cima.
+
+---
+
+## CLASSIFICAÇÃO INSTITUCIONAL V3 — GATE DE ENTRADA E SAÍDA EM 4 ESTÁGIOS (autorizado 22/06)
+
+Substitui a CLASSIFICAÇÃO INSTITUCIONAL V2 (acima, marcada SUPERSEDED) no mesmo dia. Motivado por auditoria
+de 3 runs reais consecutivos (~3h de bot rodando) que confirmou **zero sinais enviados** — o funil
+empilhado da V2 (grade letra bloqueando + `ADX_MIN_GLOBAL=20` + `RVOL_MIN_EXEC=1.2` + `score_inst>=75`
+fixo pra todo sinal + sessão perigosa forçando piso 60) bloqueava até movimentos reais fortes que o usuário
+mostrou com prints (ALLO +11.37%, GWEI +20.60%, HUS -24.41%). Usuário trouxe documento próprio
+("CLASSIFICAÇÃO INSTITUCIONAL V3") com pisos OURO/PRATA/BRONZE bem mais baixos, regra de execução nova pra
+BRONZE (antes sempre ignorado, agora opera condicionalmente), bloqueios universais reduzidos a só RSI/ADX/
+RVOL/MM200, e saída em 4 estágios em vez de 3.
+
+### Classificação — `analyze.py classificar_v2()` (nome mantido por compatibilidade, conteúdo é a V3)
+Usa só `score_inst_long/short`:
+
+- 🥇 **OURO**: `score_inst>=80` + `RVOL>=1.5` + `ADX>=22` + fluxo confirmado (`dna_flow` ou `trendilo` na
+  direção, **obrigatório**) + Kalman alinhado + MM200 favorável + RSI `35-70` LONG / `30-65` SHORT +
+  liquidez varrida (`liq_fundo_12` LONG / `liq_topo_12` SHORT) + distância até a MM21 `<=6%` do preço
+- 🥈 **PRATA**: `score_inst>=70` + `RVOL>=1.2` + `ADX>=18` + Kalman alinhado + MM50 favorável + RSI `30-75`
+  LONG / `25-70` SHORT — fluxo **opcional** (não checado)
+- 🥉 **BRONZE**: `score_inst>=60` + `RVOL>=1.0` + `ADX>=15` — fluxo **ignorado** completamente
+- Nenhum dos 3 pisos atingido → `None`
+- Mudança de pisos V2→V3: Score mínimo cai bastante (90→80 OURO, 80→70 PRATA, 75→60 BRONZE), RVOL sobe um
+  pouco (1.2→1.5 OURO, 0.90→1.2 PRATA, 0.70→1.0 BRONZE) — a barra de qualidade migra de "score altíssimo"
+  pra "volume real + score moderado", bem menos raro. PRATA deixa de exigir fluxo (era obrigatório).
+  Distância MM21 da OURO sobe de `<=3%` pra `<=6%` (deixa de cortar entrada em tendência já um pouco
+  estendida). RSI das 3 faixas afrouxa nas duas pontas.
+
+### Regras de execução — gate real, em `cycles.py` (`executar_ciclo()` e `executar_ciclo_mtf()`)
+- **OURO**: sempre opera (nenhuma checagem extra)
+- **PRATA**: só opera se H1 estiver alinhado na direção do sinal (igual V2 — `result["alinhado_bull/bear"]`
+  direto quando o ciclo já é H1, ou busca H1 lazy por símbolo quando o ciclo é 30M)
+- **BRONZE**: passa a operar (era sempre ignorado na V2) **quando** H1 alinhado **OU** `score_inst>=70` —
+  novo na V3, pedido explícito do documento do usuário ("Operar apenas quando H1 alinhado OU Score≥70")
+- **Nenhuma classificação**: ignorado — sinal nem chega a ser enviado (diagnóstico horário registra motivo
+  `v3=none`)
+- **Bloqueios universais** (`cycles.py`, antes do gate de classificação, bem mais curtos que a V2): `RSI>80`
+  bloqueia LONG, `RSI<20` bloqueia SHORT (afrouxado de 75/25 da V2/REGRA #1 pro piso explícito do documento
+  V3 — REGRA #1 original de 75/25 continua intocada dentro da própria cascata de `analyze.py`, isso é só o
+  piso pós-cascata em `cycles.py`), `ADX<15` (`ADX_MIN_GLOBAL`, caiu de 20), `RVOL<1.0` (`RVOL_MIN_EXEC`,
+  caiu de 1.2), e MM200 contra a direção (`tendencia` precisa favorecer LONG/SHORT). **Mercado lateral
+  deixou de bloquear** (V3: "NÃO BLOQUEAR") — `analyze.py` agora aplica só uma penalidade de -10 no `score`
+  bruto (puxa pra zero na mesma direção que o score já apontava, mesmo padrão do RSI Flex Pro), os sinais
+  que ainda exigem `not lateralizado` na própria condição da cascata (BB_BREAK, SCOUT etc.) continuam
+  bloqueando — só o piso universal pós-cascata mudou. O bloqueio universal "Smart Money Flow obrigatório
+  pra todos os tipos" da V2 também foi removido — fluxo agora só é checado dentro da própria condição OURO
+  em `classificar_v2()` (obrigatório lá), PRATA é opcional e BRONZE ignora, não precisa de checagem
+  separada em `cycles.py`.
+- **Grade letra (S+/S/A/B) deixou de bloquear** fora do modo `SIGNAL_MODE=="INSTITUCIONAL"` — `config.py
+  GRAUS_PERMITIDOS` foi removido. A qualidade de entrada agora é gate só da classificação OURO/PRATA/BRONZE;
+  grade letra continua existindo só pra dimensionar risco (`RISK_BY_GRADE`). No modo `INSTITUCIONAL`
+  (separado, não tocado pela V3) `GRAUS_PERMITIDOS_INSTITUCIONAL` continua bloqueando normalmente.
+- **Sessão perigosa (REGRA #3)** reimplementada: nos horários de risco (22h-08h UTC + abertura 08h/13h UTC)
+  só **OURO** opera — PRATA e BRONZE são bloqueados nesses horários, independente do piso de score que
+  bateriam fora deles. Substitui o mecanismo antigo de forçar `_inst_min` pra um piso fixo de 60.
+
+### Saída — `notify.py calcular_stop_tp()`/`enviar_sinal()`, 4 estágios fixos (substitui os 3 da V2)
+- **TP1 = 1.5R fixo** → fecha 30% da posição, stop conceitual vai pra BE (break-even)
+- **TP2 = 3R fixo** → fecha 40%
+- **TP3 = 5R fixo** → fecha 20%
+- **Restante (10%, "runner")**: não tem alvo de preço fixo — segue tendência. Resolvido por `cycles.py
+  _checar_runners()` (candle fresco, não ticker simples): só encerra quando os **3 critérios batem
+  juntos** — MM10 cruza abaixo da MM21 (LONG) / acima (SHORT) **E** fluxo (DNA Flow/Trendilo) perde força
+  na direção do trade **E** volume cai (`RVOL<1.0`). Os 3 múltiplos (1.5/3/5) são **fixos pelo documento do
+  usuário**, independente de tier/grade/fonte — substitui a tabela por tier (OURO=4R/PRATA=3R) da V2.
+- O teto estrutural de TP1 que existia na V2 (nunca passar de ~92% da distância até o swing) **foi
+  removido** — a V3 pede R-múltiplos fixos sem condicionar a estrutura, então o TP1 hoje é sempre
+  `entrada ± 1.5×risco`, sem cap. O cálculo do stop em si (`mult_atr`, stop estrutural) ficou intocado —
+  só os múltiplos/splits de alvo mudaram.
+
+### Rastreamento de posição — 4 estágios (`state.py`)
+- Antes (V2): 3 estágios (aberta → `tp1_atingido` → `tp1_atingido`+`tp2_atingido`="runner").
+- Agora (V3): 4 estágios (aberta → `tp1_atingido` → `+tp2_atingido` → `+tp3_atingido`="runner").
+  `registrar_posicao_aberta()` ganhou `tp3`/`r2`/`r3` (substituindo o `r_final` único da V2).
+  `verificar_posicoes_abertas()` resolve TP1/TP2/TP3 no mesmo poll de preço se o preço já passou de vários
+  de uma vez (mesmo padrão cascateado da V2). `fechar_runner()` (intocado na assinatura) agora só é chamado
+  depois que `tp1_atingido`+`tp2_atingido`+`tp3_atingido` os 3 são verdadeiros — devolve `resultado=
+  "TP3_RUNNER"` (renomeado de `"TP2_RUNNER"`).
+- R realizado novo: `TP3_RUNNER = r1*0.3 + r2*0.4 + r3*0.2 + r_runner*0.1`, onde `r_runner` é calculado no
+  momento do fechamento do runner, igual à V2. `TP1_BE` realiza `r1*0.3` (era `r1*0.5` na V2, porque agora
+  o TP1 só fecha 30%, não 50%). Os resultados antigos `"TP2"` (binário, V1) e `"TP2_RUNNER"` (V2, 3
+  estágios) continuam existindo só como branches legados em `registrar_resultado()` pra qualquer posição
+  que já estivesse cacheada em `last_signals.json` antes deste commit (usam fallback `p.get("r2",
+  p.get("r_final", 3.0))` já que posições antigas não têm `r2`/`r3` gravados) — código novo nunca produz
+  `TP2`/`TP2_RUNNER`.
+- `_CAMPOS_RESULTADOS` (schema do `resultados_log.csv`) **continua sem alteração** (mesma regra da V2) —
+  `tp3`/`r2`/`r3`/`r_runner`/`classificacao` ficam só no JSON de estado, não em colunas novas do CSV.
+- `resumo_resultados()` (winrate) passou a contar `TP2_RUNNER` e `TP3_RUNNER` como vitória, junto com
+  `TP1_BE`/`TP2` (antes só esses dois contavam — gap real seria subestimar o winrate real assim que os
+  primeiros runners V3 começarem a fechar).
+- Circuit breaker institucional (`_stops_consecutivos_inst`) zera em `TP1_BE`/`TP2`/`TP2_RUNNER`/
+  `TP3_RUNNER` (lista de vitórias ampliada, mesmo motivo do winrate acima).
+
+### `auto_backtest.py` — acompanha a nova régua
+`_simular_forward()` usa `tp1`/`tp3` (pulou o `tp2` intermediário de propósito — aproximação, não testa o
+candle-a-candle de TP2 separado) e os pesos `r1*0.3 + r2*0.4 + r3*0.3` quando TP3 é atingido (30% final
+aproxima TP3+runner juntos). Coluna `n_tp2` do CSV (schema legado, não alterado) hoje representa "bateu
+TP3+runner aproximado", não mais o TP2 literal.
+
+### O que NÃO mudou
+- Tamanho de posição (`RISK_BY_GRADE`/`RISK_INSTITUCIONAL_POR_GRADE`)
+- Alavancagem (REGRA #4 + TETO CONSERVADOR DE ALAVANCAGEM)
+- Cálculo do stop em si (`mult_atr`, stop estrutural)
+- A cascata de 12 sinais em `analyze.py:detectar_sinais()` — a classificação V3 roda **depois** que um
+  sinal já foi detectado, é uma camada adicional de gate/saída, não substitui nenhuma condição de entrada
+  da cascata. REGRA #1 (`rsi_zona_long/short` 75/25 dentro da própria cascata) também intocada — só o piso
+  universal pós-cascata em `cycles.py` afrouxou pra 80/20.
+- Modo `SIGNAL_MODE=="INSTITUCIONAL"` (separado, AJUSTE INSTITUCIONAL ELITE + DNA+GAUSS INSTITUCIONAL V2
+  acima) — continua com sua própria grade (`GRAUS_PERMITIDOS_INSTITUCIONAL`), risco, cooldown e circuit
+  breaker, nenhum desses tocado pela V3.
 
 ---
 
@@ -829,12 +871,13 @@ real já existente, não substituí-lo.
   senão o dado seria perdido a cada run isolado do GitHub Actions.
 
 ### Limitação conhecida (documentada no próprio módulo)
-A saída real do bot tem 3 estágios (TP1=50%→BE, TP2=30%, 20% "runner" via MM10/MM21+estrutura, ver
-CLASSIFICAÇÃO INSTITUCIONAL V2 acima). O backtest aproxima o runner como TP2 fechando os 50% finais de uma
-vez (sem tracking candle-a-candle do trailing) — suficiente pra medir taxa de STOP e winrate de entrada,
-**não é réplica exata** do `resultados_log.csv` real. Decisão de ajuste de filtro/gestão deve sempre
-priorizar o dado real (`resumo_resultados()`) quando a amostra real for suficiente — o backtest automático é
-um indicador adiantado (*leading indicator*) pra calibração rápida enquanto a amostra real ainda é pequena.
+A saída real do bot tem 4 estágios desde a V3 (TP1=1.5R/30%→BE, TP2=3R/40%, TP3=5R/20%, 10% final "runner"
+via MM10/MM21+fluxo+volume — ver CLASSIFICAÇÃO INSTITUCIONAL V3 abaixo). O backtest aproxima o TP3+runner
+como um só evento (fecham juntos, sem tracking candle-a-candle do trailing) — suficiente pra medir taxa de
+STOP e winrate de entrada, **não é réplica exata** do `resultados_log.csv` real. Decisão de ajuste de
+filtro/gestão deve sempre priorizar o dado real (`resumo_resultados()`) quando a amostra real for
+suficiente — o backtest automático é um indicador adiantado (*leading indicator*) pra calibração rápida
+enquanto a amostra real ainda é pequena.
 
 ### Por timeframe (`state.py resumo_resultados()` / `cycles.py _enviar_diagnostico()`)
 Resposta à pergunta "operar só H1 fica mais limpo?" (22/06): em vez de decidir sem dado, o resumo de
