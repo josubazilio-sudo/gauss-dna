@@ -1065,12 +1065,17 @@ async def main():
             if LOOP_MODE and ciclo % 5 == 0:
                 log.info(f"💓 Heartbeat ciclo #{ciclo} | {len(moedas_ativas)} moedas")
 
-            # Diagnóstico: varredura imediata no 1º ciclo, depois a cada 1h sem sinais
+            # Diagnóstico: SEMPRE no 1º ciclo de cada run (pedido 22/06 — usuário
+            # quer garantia de "sempre sabia que estava em atividade"; antes só
+            # mandava se total_analisados>0, e com o timeout de job reduzido pra
+            # 55min — ver "TIMEOUT DO JOB MENOR QUE O CRON" — cada run = 1 tick de
+            # cron, então essa garantia agora equivale a "sempre manda 1 msg por
+            # run"), depois a cada 1h sem sinais dentro do mesmo run (LOOP_MODE)
             # (única mensagem secundária enviada ao usuário, além do sinal — pedido 20/06)
             _agora_d    = time.time()
             _enviar_diag = False
-            if ciclo == 1 and _diag_buffer["total_analisados"] > 0:
-                _enviar_diag = True   # varredura imediata ao iniciar
+            if ciclo == 1:
+                _enviar_diag = True   # garante 1 diagnóstico por run, sempre
             else:
                 if total > 0:
                     _diag_buffer["ultimo_sinal"] = _agora_d
