@@ -184,7 +184,12 @@ def calcular_indicadores(candles):
     ext_acima_e21  = (preco - e21) / atr > 3.0
     ext_abaixo_e21 = (e21 - preco) / atr > 3.0
     vol3 = [volumes[-4], volumes[-3], volumes[-2]]
-    vol_secando = volumes[-1] < vol_ma * 0.25 and volumes[-1] < min(vol3) * 0.5
+    # Afrouxado 22/06 (pedido do usuário — avaliação de oportunidades perdidas):
+    # auditoria de um run real de 55min/12 ciclos achou ZERO sinais disparados;
+    # vol_secando isolado respondia por ~40% de todo "seguro=F" (187+ ocorrências
+    # de 669 candidatos LONG/SHORT bloqueados) — limiar 0.25/0.5 bloqueava fade de
+    # volume moderado, não só o esgotamento extremo que o filtro pretende capturar.
+    vol_secando = volumes[-1] < vol_ma * 0.18 and volumes[-1] < min(vol3) * 0.40
 
     def _minima_tocou_ema(ema_arr, n=5):
         return any(minimas[i] <= ema_arr[i] * 1.015 for i in range(-n, -1))
