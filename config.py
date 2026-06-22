@@ -161,4 +161,4 @@ TESTE_RESULTS_FILE = Path(__file__).parent / "teste_resultados_log.csv"  # estra
 
 # ── Estratégia de teste paralela (autorizado 23/06 — "criar uma estratégia
 # separada teste pra ver o que dá certo", enviada ao Telegram pra acompanhar) ──
-MAX_SINAIS_TESTE_POR_CICLO = 3   # cap por ciclo, só pra não inundar o Telegram
+MAX_SINAIS_TESTE_POR_CICLO = 0   # desligado (pedido do usuário 23/06 — "não quero mais sinal teste, quero sinal real")
