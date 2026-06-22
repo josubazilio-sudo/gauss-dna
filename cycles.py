@@ -334,14 +334,6 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
         log.info(f"[{tf}] Buscando H4 de {len(moedas)} moedas para filtro de direção...")
         todos_h4 = await _prefetch_lote(session, moedas, "4h")
 
-    # H1 alinhado (Classificação Institucional V2, regra de execução PRATA —
-    # "somente se H1 estiver alinhado"). Quando tf já é "1h" o próprio result
-    # já é H1 (reusa result["alinhado_bull/bear"]); só precisa de prefetch
-    # separado quando o ciclo roda em "30m" (mesmo padrão do prefetch H4 acima).
-    todos_h1_align = None
-    if tf == "30m":
-        todos_h1_align = await _prefetch_lote(session, moedas, "1h")
-
     funding_rates, oi_atual = await buscar_contract_data(session)
 
     # Calcula variação % do OI em relação ao ciclo anterior (persiste no estado)
@@ -352,10 +344,9 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             oi_change[sym_oi] = (oi - prev) / prev * 100
         estado[f"oi_{sym_oi}"] = oi
 
-    for (sym, label, abrev), candles, h4c, h1c in zip(
+    for (sym, label, abrev), candles, h4c in zip(
             moedas, todos_candles,
-            todos_h4 if todos_h4 else [None]*len(moedas),
-            todos_h1_align if todos_h1_align else [None]*len(moedas)):
+            todos_h4 if todos_h4 else [None]*len(moedas)):
 
         if enviados >= MAX_SINAIS_POR_CICLO:
             log.info(f"[{tf}] Limite de {MAX_SINAIS_POR_CICLO} sinais por ciclo atingido")
@@ -365,16 +356,6 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
         result = analisar(sym, candles, funding_rate=funding_rates.get(sym))
         if not result: continue
         grade = result.get("grade", "B")
-
-        # H1 alinhado pro gate PRATA (V2) — em tf=="1h" o próprio result já é H1.
-        if tf == "1h":
-            h1_align_bull, h1_align_bear = result.get("alinhado_bull", False), result.get("alinhado_bear", False)
-        elif h1c:
-            _r1h = calcular_indicadores(h1c)
-            h1_align_bull = _r1h.get("alinhado_bull", False) if _r1h else False
-            h1_align_bear = _r1h.get("alinhado_bear", False) if _r1h else False
-        else:
-            h1_align_bull = h1_align_bear = False
 
         atr_pct = (result["atr"] / result["preco"]) * 100 if result["preco"] else 0
         if atr_pct > 4.0:
@@ -534,7 +515,17 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                    result["rsi"], result["adx"], f"v2={classificacao or 'none'}"))
                 continue
             if classificacao == "PRATA":
-                _h1_ok = h1_align_bull if eh_long else h1_align_bear
+                # H1 alinhado pro gate PRATA (V2) — em tf=="1h" o próprio result já é
+                # H1. Em 30m, busca H1 só pra este símbolo aqui (lazy — antes era
+                # prefetch de TODAS as moedas do ciclo, autorizado 22/06 a remover
+                # após caso real de HTTP 429 em excesso: a maioria das moedas nem
+                # chega até esta checagem, prefetch em massa desperdiçava chamada).
+                if tf == "1h":
+                    _h1_ok = result.get("alinhado_bull" if eh_long else "alinhado_bear", False)
+                else:
+                    h1c = await buscar_candles(session, sym, "1h")
+                    _r1h = calcular_indicadores(h1c) if h1c else None
+                    _h1_ok = _r1h.get("alinhado_bull" if eh_long else "alinhado_bear", False) if _r1h else False
                 if not _h1_ok:
                     log.info(f"  🥈 {abrev} bloqueado — PRATA exige H1 alinhado")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
