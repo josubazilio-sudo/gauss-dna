@@ -75,29 +75,17 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     cls_inst    = extra.get("inst_cls", "")
     dna_flow_ok = extra.get("dna_flow", False)
     trendilo_ok = extra.get("trendilo_dir", False)
-    adx_subindo = extra.get("adx_subindo", False)
     evento_liq  = extra.get("liq_event", "")
     funding_rate = extra.get("funding_rate")
     oi_change    = extra.get("oi_change")
 
-    # ── Classificação de confluência (Ouro/Prata/Bronze — pedido 20/06) ────────
-    # 5 critérios de qualidade real do setup (independente do tipo de sinal):
-    # fluxo duplo, volume forte, ADX forte e subindo, score inst alto, RSI saudável.
-    _rsi_saudavel = (40 <= rsi <= 68) if eh_long else (32 <= rsi <= 60)
-    _criterios = [
-        dna_flow_ok and trendilo_ok,
-        rvol_val >= 1.5,
-        adx > 20 and adx_subindo,
-        score_inst >= 65,
-        _rsi_saudavel,
-    ]
-    _n_conf = sum(1 for c in _criterios if c)
-    if _n_conf >= 4:
-        confluencia_emoji, confluencia_label = "🥇", "OURO"
-    elif _n_conf == 3:
-        confluencia_emoji, confluencia_label = "🥈", "PRATA"
-    else:
-        confluencia_emoji, confluencia_label = "🥉", "BRONZE"
+    # ── Classificação Institucional V2 (autorizado 22/06 — substitui o selo
+    # Ouro/Prata/Bronze antigo, que era só informativo) — já decidida e usada
+    # como gate de execução em cycles.py (OURO sempre, PRATA só com H1 alinhado,
+    # BRONZE/None nunca chega aqui), só exibida aqui.
+    classificacao = extra.get("classificacao") or "PRATA"
+    confluencia_emoji = {"OURO": "🥇", "PRATA": "🥈", "BRONZE": "🥉"}.get(classificacao, "🥈")
+    confluencia_label = classificacao
 
     # ── Stop adaptativo ───────────────────────────────────────────────────────
     # SM_SWEEP subiu de 1.2 para 1.5 ATR (autorizado 21/06 — era o stop mais apertado
@@ -128,45 +116,23 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         return False
     risco_pct = risco / preco * 100
 
-    # ── Alvos por grade e tipo de sinal ──────────────────────────────────────
-    if fonte == "SCOUT":
-        r1, r_final = 1.2, 2.0
-    elif grade in ("S+", "S"):
-        r1, r_final = 2.2, 4.5
-    elif grade == "A+":
-        r1, r_final = 2.0, 4.0
-    elif grade == "A":
-        r1, r_final = 1.8, 3.5
-    else:
-        r1, r_final = 1.5, 2.5
-
-    if fonte == "SURGE":
-        r1      = max(1.5, r1 - 0.5)
-        r_final = max(3.0, r_final - 1.0)
-    elif fonte == "DIV":
-        r_final = max(2.5, r_final - 0.5)
-
-    # ── Calibração por fase de mercado (ADX) ─────────────────────────────────
-    # ADX < 20: mercado lateral/oscilando — saída rápida antes da reversão
-    # ADX 20-24: tendência moderada — alvos ligeiramente comprimidos
-    # ADX >= 25: tendência forte — manter alvos originais
-    if adx < 20:
-        r1      = max(0.8, round(r1 * 0.65, 1))
-        r_final = max(1.5, round(r_final * 0.75, 1))
-    elif adx < 25:
-        r1      = max(1.0, round(r1 * 0.85, 1))
-        r_final = max(2.0, round(r_final * 0.90, 1))
+    # ── Alvos fixos — Estratégia de Saída V2 (autorizado 22/06) ──────────────
+    # TP1=1R fixo (sai 50%, stop→BE) | TP2 por tier (sai 30%) | resto (20%)
+    # "runner" segue MM10/MM21 + perda de estrutura (ver _checar_runners em
+    # cycles.py) — substitui a tabela antiga de R-múltiplo por grade/fonte/ADX.
+    r1      = 1.0
+    r_final = {"OURO": 4.0, "PRATA": 3.0}.get(classificacao, 3.0)
 
     # ── Teto estrutural: TP1 não ultrapassa próximo swing high/low ────────────
     if risco > 0:
         if eh_long and swing_high > preco:
             dist_r = (swing_high - preco) / risco
             if dist_r < r1:
-                r1 = max(0.8, round(dist_r * 0.92, 1))
+                r1 = max(0.5, round(dist_r * 0.92, 1))
         elif not eh_long and swing_low < preco:
             dist_r = (preco - swing_low) / risco
             if dist_r < r1:
-                r1 = max(0.8, round(dist_r * 0.92, 1))
+                r1 = max(0.5, round(dist_r * 0.92, 1))
 
     tp1   = preco + risco * r1      if eh_long else preco - risco * r1
     final = preco + risco * r_final if eh_long else preco - risco * r_final
@@ -221,8 +187,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     alavancagem = max(3, min(50, _lev))          # clamp 3x–50x
 
     pos_alav     = valor_pos / alavancagem
+    # Split 50% TP1 / 30% TP2 / 20% runner (Estratégia de Saída V2) — ganho_total
+    # é uma estimativa-piso assumindo o "restante" sai no mesmo nível do TP2
+    # (o runner pode rodar mais via trailing MM10/MM21, ver _checar_runners)
     ganho_tp1    = valor_risco * r1 * 0.5
-    ganho_total  = valor_risco * (r1 + r_final) * 0.5
+    ganho_tp2    = valor_risco * r_final * 0.3
+    ganho_total  = ganho_tp1 + ganho_tp2 + valor_risco * r_final * 0.2
 
     # ── Labels de modo ────────────────────────────────────────────────────────
     tf_lbl = _label_tf(tf)
@@ -296,7 +266,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
         f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}` · R\\=`{_bruto(f'{risco_pct:.1f}')}%`\n"
         f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
-        f"🎯 TP2 \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 50%\n\n"
+        f"🎯 TP2 \\({_escapar(str(r_final))}R\\): `${_bruto(_fmt(final))}` → fechar 30%\n"
+        f"🏁 Restante \\(20%\\): segue MM10/MM21 \\+ estrutura\n\n"
         f"📊 RSI: {_escapar(f'{rsi:.0f}')}\n"
         f"{linha_rvol}"
         f"📉 ADX: {_escapar(f'{adx:.0f}')}\n"
@@ -304,7 +275,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"📍 Tendência: {_escapar(tendencia)}\n\n"
         f"📐 *Gestão \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
         f"Risco: `${_bruto(f'{valor_risco:.2f}')}` \\| Pos: `${_bruto(f'{valor_pos:.2f}')}` \\| {_escapar(str(alavancagem))}x \\(`${_bruto(f'{pos_alav:.2f}')}` colateral\\)\n"
-        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| TP2 \\+`${_bruto(f'{ganho_total:.2f}')}`\n"
+        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| TP2 \\+`${_bruto(f'{ganho_tp2:.2f}')}` \\| Total\\* \\+`${_bruto(f'{ganho_total:.2f}')}`\n"
         f"{linha_funding}"
         f"{linha_oi}"
         f"⏰ {_escapar(agora)}"
@@ -330,8 +301,9 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     f"Tipo: {wa_tipo}\n\n"
                     f"Entrada: ${formatar_preco(preco)}\n"
                     f"Stop: ${_fmt(stop)} ({label_stop})\n"
-                    f"TP1 ({r1}R): ${_fmt(tp1)}\n"
-                    f"TP Final ({r_final}R): ${_fmt(final)}\n\n"
+                    f"TP1 ({r1}R, 50%): ${_fmt(tp1)} -> stop BE\n"
+                    f"TP2 ({r_final}R, 30%): ${_fmt(final)}\n"
+                    f"Restante (20%): MM10/MM21 + estrutura\n\n"
                     f"Risco ${valor_risco:.2f} | {alavancagem}x ${pos_alav:.2f} colateral\n"
                     f"RSI {rsi:.0f} | ADX {adx:.0f} | "
                     + (f"RVOL {rvol_val:.2f}x {rvol_lbl} | " if rvol_lbl else "")

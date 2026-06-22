@@ -27,7 +27,8 @@ from analyze import analisar, calcular_indicadores
 from notify import enviar_sinal, notificar
 from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_contract_data, buscar_preco_atual
 from state import (carregar_estado, salvar_estado, registrar_posicao_aberta,
-                   verificar_posicoes_abertas, registrar_resultado, resumo_resultados)
+                   verificar_posicoes_abertas, registrar_resultado, resumo_resultados,
+                   fechar_runner)
 
 log = logging.getLogger("GAUSS+DNA")
 
@@ -122,12 +123,48 @@ async def _atualizar_resultados(session, estado) -> None:
         registrar_resultado(f)
         log.info(f"📈 Resultado: {f['simbolo']} {f['direcao']} [{f['fonte']}] → {f['resultado']}")
         # Circuit breaker do modo INSTITUCIONAL (pedido 21/06) — só conta posições
-        # abertas sob esse modo; vitória (TP1_BE/TP2) zera o contador, STOP soma.
+        # abertas sob esse modo; vitória (TP1_BE/TP2/TP2_RUNNER) zera o contador, STOP soma.
         if f.get("modo") == "INSTITUCIONAL":
             if f["resultado"] == "STOP":
                 estado["_stops_consecutivos_inst"] = estado.get("_stops_consecutivos_inst", 0) + 1
-            elif f["resultado"] in ("TP1_BE", "TP2"):
+            elif f["resultado"] in ("TP1_BE", "TP2", "TP2_RUNNER"):
                 estado["_stops_consecutivos_inst"] = 0
+
+
+async def _checar_runners(session, estado) -> None:
+    """Resolve posições no estágio 'runner' (já bateram TP1 e TP2 — 20% restante
+    da Estratégia de Saída V2, autorizado 22/06): 'segue MM10/MM21 e perda de
+    estrutura'. Ticker simples (usado em _atualizar_resultados) não basta aqui —
+    precisa de candle fresco pra calcular EMA/estrutura, por isso roda separado."""
+    posicoes = estado.get("_posicoes_abertas", [])
+    runners  = [p for p in posicoes if p.get("tp1_atingido") and p.get("tp2_atingido")]
+    if not runners:
+        return
+    for p in runners:
+        try:
+            candles = await buscar_candles(session, p["simbolo"], p["tf"])
+            if not candles or len(candles) < 60:
+                continue
+            ind = calcular_indicadores(candles)
+            if not ind:
+                continue
+            eh_long = p["direcao"] == "LONG"
+            preco   = ind["preco"]
+            perdeu_mm        = (preco < ind["e10"] and preco < ind["e21"]) if eh_long else \
+                                (preco > ind["e10"] and preco > ind["e21"])
+            perdeu_estrutura = (not ind["estrutura_alta"]) if eh_long else (not ind["estrutura_baixa"])
+            if perdeu_mm or perdeu_estrutura:
+                risco_unid = abs(p["entrada"] - p["stop"]) or 1e-9
+                r_runner = ((preco - p["entrada"]) if eh_long else (p["entrada"] - preco)) / risco_unid
+                fechado = fechar_runner(estado, p, preco, r_runner)
+                if fechado:
+                    registrar_resultado(fechado)
+                    motivo = "MM10/MM21" if perdeu_mm else "estrutura"
+                    log.info(f"🏁 Runner encerrado: {p['simbolo']} {p['direcao']} → {motivo} | R extra {r_runner:+.2f}")
+                    if fechado.get("modo") == "INSTITUCIONAL":
+                        estado["_stops_consecutivos_inst"] = 0
+        except Exception as e:
+            log.warning(f"⚠️ Erro checando runner {p['simbolo']}: {e}")
 
 
 async def _enviar_diagnostico(session) -> None:
@@ -297,6 +334,14 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
         log.info(f"[{tf}] Buscando H4 de {len(moedas)} moedas para filtro de direção...")
         todos_h4 = await _prefetch_lote(session, moedas, "4h")
 
+    # H1 alinhado (Classificação Institucional V2, regra de execução PRATA —
+    # "somente se H1 estiver alinhado"). Quando tf já é "1h" o próprio result
+    # já é H1 (reusa result["alinhado_bull/bear"]); só precisa de prefetch
+    # separado quando o ciclo roda em "30m" (mesmo padrão do prefetch H4 acima).
+    todos_h1_align = None
+    if tf == "30m":
+        todos_h1_align = await _prefetch_lote(session, moedas, "1h")
+
     funding_rates, oi_atual = await buscar_contract_data(session)
 
     # Calcula variação % do OI em relação ao ciclo anterior (persiste no estado)
@@ -307,9 +352,10 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             oi_change[sym_oi] = (oi - prev) / prev * 100
         estado[f"oi_{sym_oi}"] = oi
 
-    for (sym, label, abrev), candles, h4c in zip(
+    for (sym, label, abrev), candles, h4c, h1c in zip(
             moedas, todos_candles,
-            todos_h4 if todos_h4 else [None]*len(moedas)):
+            todos_h4 if todos_h4 else [None]*len(moedas),
+            todos_h1_align if todos_h1_align else [None]*len(moedas)):
 
         if enviados >= MAX_SINAIS_POR_CICLO:
             log.info(f"[{tf}] Limite de {MAX_SINAIS_POR_CICLO} sinais por ciclo atingido")
@@ -319,6 +365,16 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
         result = analisar(sym, candles, funding_rate=funding_rates.get(sym))
         if not result: continue
         grade = result.get("grade", "B")
+
+        # H1 alinhado pro gate PRATA (V2) — em tf=="1h" o próprio result já é H1.
+        if tf == "1h":
+            h1_align_bull, h1_align_bear = result.get("alinhado_bull", False), result.get("alinhado_bear", False)
+        elif h1c:
+            _r1h = calcular_indicadores(h1c)
+            h1_align_bull = _r1h.get("alinhado_bull", False) if _r1h else False
+            h1_align_bear = _r1h.get("alinhado_bear", False) if _r1h else False
+        else:
+            h1_align_bull = h1_align_bear = False
 
         atr_pct = (result["atr"] / result["preco"]) * 100 if result["preco"] else 0
         if atr_pct > 4.0:
@@ -370,6 +426,20 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  ⚠️ {abrev} bloqueado — RVOL {result.get('rvol', 0):.2f} < {_rvol_min_tf} ({tf})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"rvol<{_rvol_min_tf}"))
+                continue
+
+            # CLASSIFICAÇÃO INSTITUCIONAL V2 (autorizado 22/06) — bloqueios universais
+            # explícitos do pedido (RSI/ADX/lateral já são cobertos em boa parte pela
+            # REGRA #1/ADX_MIN_GLOBAL, mas o pedido pede checagem explícita também aqui).
+            _eh_long_uni = result["sinal"] == "LONG"
+            if _eh_long_uni and result["rsi"] > 75:
+                log.info(f"  ⚠️ {abrev} bloqueado — RSI {result['rsi']:.0f} > 75 (LONG)")
+                continue
+            if not _eh_long_uni and result["rsi"] < 25:
+                log.info(f"  ⚠️ {abrev} bloqueado — RSI {result['rsi']:.0f} < 25 (SHORT)")
+                continue
+            if result.get("lateralizado"):
+                log.info(f"  ⚠️ {abrev} bloqueado — mercado lateral (V2)")
                 continue
 
             eh_long_ = result["sinal"] == "LONG"
@@ -453,6 +523,24 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                    result["rsi"], result["adx"], "sem fluxo SMC"))
                 continue
 
+            # REGRAS DE EXECUÇÃO da Classificação Institucional V2 (autorizado
+            # 22/06) — OURO sempre opera, PRATA só com H1 alinhado, BRONZE/sem
+            # classificação é ignorado. Esta classificação É o gate final de
+            # entrada (substitui o selo antigo, que era só informativo).
+            classificacao = result.get("classificacao")
+            if classificacao not in ("OURO", "PRATA"):
+                log.info(f"  🥉 {abrev} bloqueado — classificação V2 {classificacao or 'nenhuma'} (ignorado)")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], f"v2={classificacao or 'none'}"))
+                continue
+            if classificacao == "PRATA":
+                _h1_ok = h1_align_bull if eh_long else h1_align_bear
+                if not _h1_ok:
+                    log.info(f"  🥈 {abrev} bloqueado — PRATA exige H1 alinhado")
+                    candidatos.append((abs(result["score"]), abrev, result["score"],
+                                       result["rsi"], result["adx"], "prata sem H1"))
+                    continue
+
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
                 "rvol":         _rvol,
@@ -465,6 +553,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                  "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
                 "funding_rate": result.get("funding_rate"),
                 "oi_change":    oi_change.get(sym),
+                "classificacao": classificacao,
             }
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],
@@ -481,7 +570,8 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 enviados += 1
                 registrar_posicao_aberta(estado, sym, tf, result["sinal"], result["preco"],
                                          ok["stop"], ok["tp1"], ok["tp2"], ok["r1"], ok["r_final"],
-                                         grade, result["fonte_sinal"], modo=SIGNAL_MODE)
+                                         grade, result["fonte_sinal"], modo=SIGNAL_MODE,
+                                         classificacao=classificacao)
         else:
             candidatos.append((result["score"], abrev, result["score"],
                                result["rsi"], result["adx"], result.get("fonte_sinal", "sem-sinal")))
@@ -650,6 +740,21 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 log.info(f"[MTF] {abrev:7s} | bloqueado — sem fluxo institucional (DNA Flow/Trendilo)")
                 continue
 
+            # CLASSIFICAÇÃO INSTITUCIONAL V2 (autorizado 22/06) — entrada no MTF é
+            # sempre H1, então "H1 alinhado" reusa result["alinhado_bull/bear"] direto
+            # (sem prefetch extra, diferente do caminho FLEX em 30m).
+            classificacao_mtf = result.get("classificacao")
+            if classificacao_mtf not in ("OURO", "PRATA"):
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"v2={classificacao_mtf or 'none'}"))
+                log.info(f"[MTF] {abrev:7s} | bloqueado — classificação V2 {classificacao_mtf or 'nenhuma'} (ignorado)")
+                continue
+            if classificacao_mtf == "PRATA":
+                _h1_ok_mtf = result.get("alinhado_bull") if eh_long_mtf else result.get("alinhado_bear")
+                if not _h1_ok_mtf:
+                    setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "prata sem H1"))
+                    log.info(f"[MTF] {abrev:7s} | bloqueado — PRATA exige H1 alinhado")
+                    continue
+
             # AJUSTE INSTITUCIONAL ELITE (21/06): mesmo teto de posições simultâneas
             # e circuit breaker de stops consecutivos do ciclo FLEX, aplicado também
             # aqui — MTF é o outro caminho que pode abrir posição em modo INSTITUCIONAL.
@@ -674,6 +779,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                     "adx_subindo":  result.get("adx_subindo", False),
                     "liq_event":    ("LIQ FUNDO ↑" if r4h.get("liq_fundo") else
                                      "LIQ TOPO ↓"  if r4h.get("liq_topo")  else ""),
+                    "classificacao": classificacao_mtf,
                 }
                 ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                         result["preco"], result["atr"], r4h["score"],
@@ -684,7 +790,8 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                     estado[chave] = agora; enviados += 1
                     registrar_posicao_aberta(estado, sym, "1h", result["sinal"], result["preco"],
                                              ok["stop"], ok["tp1"], ok["tp2"], ok["r1"], ok["r_final"],
-                                             grade, result["fonte_sinal"], modo=SIGNAL_MODE)
+                                             grade, result["fonte_sinal"], modo=SIGNAL_MODE,
+                                             classificacao=classificacao_mtf)
             else:
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"cooldown {mins}min"))
@@ -844,6 +951,7 @@ async def main():
                     total   += enviados
                 log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
                 await _atualizar_resultados(session, estado)
+                await _checar_runners(session, estado)
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{ciclo}: {e}")
             finally:
