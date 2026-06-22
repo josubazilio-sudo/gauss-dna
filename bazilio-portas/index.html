@@ -217,6 +217,10 @@
     <h2 style="margin-top:30px;">Lançamentos registrados</h2>
     <label>Filtrar por prestador</label>
     <select id="lanc-filtro-prestador"><option value="">Todos</option></select>
+    <div class="card row" style="background:#fafaf5; margin-top:14px;">
+      <span>Total de lançamentos: <strong id="lanc-total-qtd">0</strong></span>
+      <strong id="lanc-total-valor" style="color:var(--gold-dark); font-size:18px;">R$ 0,00</strong>
+    </div>
     <div id="lista-lancamentos"></div>
   </section>
 
@@ -545,6 +549,9 @@ function renderListaLancamentos() {
   const filtro = document.getElementById('lanc-filtro-prestador').value;
   let lista = [...db.lancamentos].sort((a,b) => b.data.localeCompare(a.data) || b.id - a.id);
   if (filtro) lista = lista.filter(l => l.prestador_id == filtro);
+
+  document.getElementById('lanc-total-qtd').textContent = lista.length;
+  document.getElementById('lanc-total-valor').textContent = formatarMoeda(lista.reduce((s,l) => s + l.valor_total, 0));
 
   if (lista.length === 0) {
     document.getElementById('lista-lancamentos').innerHTML = '<div class="empty">Nenhum lançamento encontrado.</div>';
