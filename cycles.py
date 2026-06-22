@@ -39,7 +39,8 @@ MAX_SINAIS_POR_CICLO = 3
 # ── Buffer de diagnóstico (30 min) ────────────────────────────────────────────
 
 _diag_buffer: dict = {
-    "bloqueadores":     {},   # motivo -> count
+    "bloqueadores":            {},   # motivo -> count (pré-cascata, genérico)
+    "bloqueadores_pos_cascata": {},  # motivo -> count (sinal já detectado, bloqueado depois)
     "candidatos":       [],   # (score_abs, abrev, score, rsi, adx, tf)
     "total_analisados": 0,
     "ciclos":           0,
@@ -114,7 +115,8 @@ def _diag_pos_cascata(motivo: str) -> None:
     sem isso esses motivos so apareciam no log do ciclo (stdout), nunca no
     diagnostico enviado ao Telegram (gap documentado no CLAUDE.md, virou
     bloqueador frequente — ex: regime BTC H1 neutro bloqueando 100% dos ciclos)."""
-    _diag_buffer["bloqueadores"][motivo] = _diag_buffer["bloqueadores"].get(motivo, 0) + 1
+    _b = _diag_buffer["bloqueadores_pos_cascata"]
+    _b[motivo] = _b.get(motivo, 0) + 1
 
 
 async def _atualizar_resultados(session, estado) -> None:
@@ -181,6 +183,7 @@ async def _checar_runners(session, estado) -> None:
 async def _enviar_diagnostico(session) -> None:
     """Envia relatório de diagnóstico de bloqueadores ao Telegram."""
     blq    = _diag_buffer["bloqueadores"]
+    blq_pc = _diag_buffer["bloqueadores_pos_cascata"]
     cand   = _diag_buffer["candidatos"]
     tot    = _diag_buffer["total_analisados"]
     ciclos = _diag_buffer["ciclos"]
@@ -211,6 +214,19 @@ async def _enviar_diagnostico(session) -> None:
             linhas.append(f"  {i}. {motivo} — {cnt}x")
     else:
         linhas.append("Nenhum bloqueador detectado neste periodo")
+
+    # Bloqueios PÓS-cascata — sinal já tinha sido detectado (PULLBACK/CROSS/
+    # SM_SWEEP/BB_BREAK/etc) e foi rejeitado depois (grade/ADX/RVOL/Score Inst/
+    # H4/cooldown/fluxo SMC/classificação V2/regime BTC). Seção separada da
+    # "Bloqueadores mais frequentes" acima de propósito: esses motivos são raros
+    # comparados aos bloqueios genéricos pré-cascata (centenas de ocorrências),
+    # então misturados no mesmo top-6 por frequência eles nunca apareciam —
+    # mesmo já estando registrados no buffer (gap real, corrigido 22/06).
+    if blq_pc:
+        top_blq_pc = sorted(blq_pc.items(), key=lambda x: x[1], reverse=True)[:6]
+        linhas.append("\nSinais detectados mas bloqueados depois:")
+        for i, (motivo, cnt) in enumerate(top_blq_pc, 1):
+            linhas.append(f"  {i}. {motivo} — {cnt}x")
 
     top_long  = sorted([c for c in cand if c[2] > 0],  key=lambda x: x[0], reverse=True)[:4]
     top_short = sorted([c for c in cand if c[2] < 0],  key=lambda x: x[0], reverse=True)[:4]
@@ -1028,6 +1044,7 @@ async def main():
                 _diag_buffer.update({
                     "ultimo_envio":     _agora_d,
                     "bloqueadores":     {},
+                    "bloqueadores_pos_cascata": {},
                     "candidatos":       [],
                     "total_analisados": 0,
                     "ciclos":           0,
