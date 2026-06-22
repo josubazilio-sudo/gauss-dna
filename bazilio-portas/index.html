@@ -378,13 +378,18 @@ function formatarMoeda(v) {
 }
 
 // ---------- Aggregation ----------
+function statusLancamento(l) {
+  if (!l.fechamento_id) return 'pendente';
+  const f = db.fechamentos.find(x => x.id === l.fechamento_id);
+  return (f && f.status === 'pago') ? 'pago' : 'pendente';
+}
 function agruparPorPeriodo(lancamentos, tipo) {
   const fn = tipo === 'semana' ? getSemana : tipo === 'quinzena' ? getQuinzena : getMes;
   const grupos = {};
   for (const l of lancamentos) {
     const p = fn(l.data);
     if (!grupos[p.chave]) {
-      grupos[p.chave] = { ...p, qtd_portas: 0, qtd_macanetas: 0, qtd_acabamento_vista: 0, valor_portas: 0, valor_macanetas: 0, valor_acabamento_vista: 0, valor_total: 0 };
+      grupos[p.chave] = { ...p, qtd_portas: 0, qtd_macanetas: 0, qtd_acabamento_vista: 0, valor_portas: 0, valor_macanetas: 0, valor_acabamento_vista: 0, valor_total: 0, valor_pago: 0, valor_pendente: 0 };
     }
     const g = grupos[p.chave];
     g.qtd_portas += l.qtd_portas;
@@ -394,6 +399,8 @@ function agruparPorPeriodo(lancamentos, tipo) {
     g.valor_macanetas += l.valor_macanetas;
     g.valor_acabamento_vista += l.valor_acabamento_vista;
     g.valor_total += l.valor_total;
+    if (statusLancamento(l) === 'pago') g.valor_pago += l.valor_total;
+    else g.valor_pendente += l.valor_total;
   }
   return Object.values(grupos).sort((a,b) => b.inicio.localeCompare(a.inicio));
 }
@@ -607,13 +614,35 @@ function renderResumos() {
   if (filtro) lancs = lancs.filter(l => l.prestador_id == filtro);
   const grupos = agruparPorPeriodo(lancs, resumoTipo);
 
+  const fnAtual = resumoTipo === 'semana' ? getSemana : resumoTipo === 'quinzena' ? getQuinzena : getMes;
+  const chaveAtual = fnAtual(hoje()).chave;
+  const grupoAtual = grupos.find(g => g.chave === chaveAtual);
+
+  let html = '';
+  if (grupoAtual) {
+    html += `
+    <div class="card" style="border-color:var(--gold); background:#fffdf5;">
+      <div class="subtitle" style="margin-bottom:8px;">Período atual — ${grupoAtual.label}</div>
+      <div class="grid" style="margin-bottom:0;">
+        <div class="stat-card"><div class="label">Já ganhou (pago)</div><div class="value" style="color:var(--success);">${formatarMoeda(grupoAtual.valor_pago)}</div></div>
+        <div class="stat-card"><div class="label">Vai receber (pendente)</div><div class="value" style="color:var(--danger);">${formatarMoeda(grupoAtual.valor_pendente)}</div></div>
+        <div class="stat-card"><div class="label">Total do período</div><div class="value">${formatarMoeda(grupoAtual.valor_total)}</div></div>
+      </div>
+    </div>`;
+  }
+
   if (grupos.length === 0) {
-    document.getElementById('lista-resumos').innerHTML = '<div class="empty">Nenhum dado para esse período.</div>';
+    html += '<div class="empty">Nenhum dado para esse período.</div>';
+    document.getElementById('lista-resumos').innerHTML = html;
     return;
   }
-  document.getElementById('lista-resumos').innerHTML = grupos.map(g => `
+  html += grupos.map(g => `
     <div class="card">
       <div class="row"><strong>${g.label}</strong><strong style="color:var(--gold-dark);">${formatarMoeda(g.valor_total)}</strong></div>
+      <div class="row" style="font-size:13px; color:var(--text-light); margin-top:4px;">
+        <span>Já ganhou: <strong style="color:var(--success);">${formatarMoeda(g.valor_pago)}</strong></span>
+        <span>A receber: <strong style="color:var(--danger);">${formatarMoeda(g.valor_pendente)}</strong></span>
+      </div>
       <table>
         <tr><th>Item</th><th>Qtd</th><th>Valor</th></tr>
         <tr><td>Portas</td><td>${g.qtd_portas}</td><td>${formatarMoeda(g.valor_portas)}</td></tr>
@@ -622,6 +651,7 @@ function renderResumos() {
       </table>
     </div>
   `).join('');
+  document.getElementById('lista-resumos').innerHTML = html;
 }
 
 // ---------- Render: folha de pagamento ----------
