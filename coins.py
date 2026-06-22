@@ -56,7 +56,6 @@ PRIORITY_WATCHLIST = [
     # ignora (mesmo padrão de SPCXUSDT/ALOUSDT) — checar logs do próximo run e
     # remover os inválidos daqui.
     ("BIOUSDT",   "BIO/USDT",   "BIO"),
-    ("HEXUSDT",   "HEX/USDT",   "HEX"),
     ("CFGUSDT",   "CFG/USDT",   "CFG"),
     ("ZIGUSDT",   "ZIG/USDT",   "ZIG"),
     ("NOCKUSDT",  "NOCK/USDT",  "NOCK"),
@@ -74,10 +73,11 @@ PRIORITY_WATCHLIST = [
     ("ZAMAUSDT",  "ZAMA/USDT",  "ZAMA"),
     ("SHXUSDT",   "SHX/USDT",   "SHX"),
     ("CYSUSDT",   "CYS/USDT",   "CYS"),
-    ("STAUUSDT",  "STAU/USDT",  "STAU"),
     ("UAIUSDT",   "UAI/USDT",   "UAI"),
-    ("PLSXUSDT",  "PLSX/USDT",  "PLSX"),
 ]
+# HEXUSDT, STAUUSDT, PLSXUSDT removidos (22/06) — confirmados inválidos via log real
+# do scanner ("símbolo inválido na MEXC (spot)"), exatamente o que o comentário acima
+# pedia pra checar no próximo run.
 # SPCXUSDT corrigido (20/06): a string "SPCXUSDT" nunca existiu na MEXC — causa
 # real do -1121 era simbolo errado em coins.py, nao falta de par spot (a tentativa
 # anterior de fallback pro endpoint de futuros tambem falhou pelo mesmo motivo,
