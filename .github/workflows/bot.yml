@@ -2,7 +2,14 @@ name: GAUSS+DNA Bot de Sinais
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    # Era */2h — caso real 22/06: run iniciado 01:11 (LOOP_MODE=true, nunca sai sozinho)
+    # rodou ininterrupto até bater o timeout do step "Rodar bot" (325min) às 06:37 e
+    # terminou em failure. Os ticks de cron esperados em 02h/04h/06h simplesmente não
+    # dispararam (cron do GitHub Actions é best-effort, pode atrasar/pular sob carga) —
+    # sem eles, o concurrency group (cancel-in-progress) nunca reiniciou o job, e o bot
+    # ficou "parado" de 06:37 até o usuário notar. Reduzido pra 1h pra encurtar o buraco
+    # se algum tick futuro também for perdido.
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       tg_token:
