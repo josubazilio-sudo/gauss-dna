@@ -37,6 +37,49 @@ def _label_tf(tf):
     return tf.upper()
 
 
+# ── Régua de stop/TP — Estratégia de Saída V2 ────────────────────────────────
+# Extraído de enviar_sinal() em 22/06 pra ser reaproveitado pelo auto_backtest.py
+# sem duplicar a lógica de gestão — qualquer ajuste de stop/TP feito aqui
+# vale tanto pro sinal real quanto pro backtest automático que roda em cima dele.
+
+def calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classificacao):
+    """Stop adaptativo (ATR vs estrutural) + alvos fixos (TP1=1R/TP2 por tier)."""
+    mult_atr = (2.0 if fonte == "SURGE" else 1.8 if fonte in ("FLEX", "SETUP") else 1.5)
+    stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
+    stop_estrutural = swing_low - atr * 0.5 if eh_long else swing_high + atr * 0.5
+    dist_swing = abs(preco - stop_estrutural)
+
+    usar_estrutural = (fonte not in ("SURGE", "BB_BREAK", "MOMENTUM") and
+                       atr * 0.3 < dist_swing < atr * 2.5 and
+                       (stop_estrutural < preco if eh_long else stop_estrutural > preco))
+
+    if usar_estrutural:
+        stop = min(stop_atr, stop_estrutural) if eh_long else max(stop_atr, stop_estrutural)
+        label_stop = "Estrutura"
+    else:
+        stop = stop_atr
+        label_stop = f"{mult_atr:.1f} ATR"
+
+    risco = abs(preco - stop)
+    r1      = 1.0
+    r_final = {"OURO": 4.0, "PRATA": 3.0}.get(classificacao, 3.0)
+
+    if risco > 0:
+        if eh_long and swing_high > preco:
+            dist_r = (swing_high - preco) / risco
+            if dist_r < r1:
+                r1 = max(0.5, round(dist_r * 0.92, 1))
+        elif not eh_long and swing_low < preco:
+            dist_r = (preco - swing_low) / risco
+            if dist_r < r1:
+                r1 = max(0.5, round(dist_r * 0.92, 1))
+
+    tp1 = preco + risco * r1      if eh_long else preco - risco * r1
+    tp2 = preco + risco * r_final if eh_long else preco - risco * r_final
+    return {"stop": stop, "tp1": tp1, "tp2": tp2, "r1": r1, "r_final": r_final,
+            "risco": risco, "label_stop": label_stop}
+
+
 # ── WhatsApp ──────────────────────────────────────────────────────────────────
 
 async def enviar_whatsapp(session, texto):
@@ -87,55 +130,15 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     confluencia_emoji = {"OURO": "🥇", "PRATA": "🥈", "BRONZE": "🥉"}.get(classificacao, "🥈")
     confluencia_label = classificacao
 
-    # ── Stop adaptativo ───────────────────────────────────────────────────────
-    # SM_SWEEP subiu de 1.2 para 1.5 ATR (autorizado 21/06 — era o stop mais apertado
-    # do sistema, sem ganho claro de qualidade, mais exposto a ser estopado por ruído).
-    mult_atr = (2.0 if fonte == "SURGE"    else
-                1.8 if fonte in ("FLEX", "SETUP") else 1.5)
-
-    stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
-    # Buffer estrutural subiu de 0.3 para 0.5 ATR (autorizado 21/06 — mesmo motivo:
-    # dar mais espaço pro stop respirar além do swing, menos sensível a pavio de ruído).
-    stop_estrutural = swing_low - atr * 0.5 if eh_long else swing_high + atr * 0.5
-    dist_swing = abs(preco - stop_estrutural)
-
-    usar_estrutural = (fonte not in ("SURGE", "BB_BREAK", "MOMENTUM") and
-                       atr * 0.3 < dist_swing < atr * 2.5 and
-                       (stop_estrutural < preco if eh_long else stop_estrutural > preco))
-
-    if usar_estrutural:
-        stop = min(stop_atr, stop_estrutural) if eh_long else max(stop_atr, stop_estrutural)
-        label_stop = "Estrutura"
-    else:
-        stop = stop_atr
-        label_stop = f"{mult_atr:.1f} ATR"
-
-    risco = abs(preco - stop)
+    # ── Stop/TP — Estratégia de Saída V2 (extraído pra notify.calcular_stop_tp,
+    # reaproveitado pelo auto_backtest.py — ver REGRA #4/CLASSIFICAÇÃO V2 no CLAUDE.md) ─
+    _stp = calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classificacao)
+    stop, tp1, final, r1, r_final = _stp["stop"], _stp["tp1"], _stp["tp2"], _stp["r1"], _stp["r_final"]
+    risco, label_stop = _stp["risco"], _stp["label_stop"]
     if risco <= 0:
         log.warning(f"⚠️ {abrev} risco=0 (stop={stop:.8f} == preco={preco:.8f}) — sinal ignorado")
         return False
     risco_pct = risco / preco * 100
-
-    # ── Alvos fixos — Estratégia de Saída V2 (autorizado 22/06) ──────────────
-    # TP1=1R fixo (sai 50%, stop→BE) | TP2 por tier (sai 30%) | resto (20%)
-    # "runner" segue MM10/MM21 + perda de estrutura (ver _checar_runners em
-    # cycles.py) — substitui a tabela antiga de R-múltiplo por grade/fonte/ADX.
-    r1      = 1.0
-    r_final = {"OURO": 4.0, "PRATA": 3.0}.get(classificacao, 3.0)
-
-    # ── Teto estrutural: TP1 não ultrapassa próximo swing high/low ────────────
-    if risco > 0:
-        if eh_long and swing_high > preco:
-            dist_r = (swing_high - preco) / risco
-            if dist_r < r1:
-                r1 = max(0.5, round(dist_r * 0.92, 1))
-        elif not eh_long and swing_low < preco:
-            dist_r = (preco - swing_low) / risco
-            if dist_r < r1:
-                r1 = max(0.5, round(dist_r * 0.92, 1))
-
-    tp1   = preco + risco * r1      if eh_long else preco - risco * r1
-    final = preco + risco * r_final if eh_long else preco - risco * r_final
 
     # ── Tamanho da posição ────────────────────────────────────────────────────
     pct_risco    = (RISK_INSTITUCIONAL_POR_GRADE.get(grade, 0.01) if SIGNAL_MODE == "INSTITUCIONAL" else

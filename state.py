@@ -221,6 +221,9 @@ def resumo_resultados(horas=24):
     n_com_r = 0
     por_fonte = {}   # fonte -> {"total": n, "stop": n, "r_soma": x, "r_n": n}
     por_grade = {}   # grade -> {"total": n, "stop": n, "r_soma": x, "r_n": n}
+    por_tf    = {}   # timeframe -> {"total": n, "stop": n, "r_soma": x, "r_n": n} —
+                      # pedido 22/06 (operar só H1 seria "mais limpo?") — mesmo padrão
+                      # de por_fonte/por_grade, dado real em vez de suposição
     try:
         with RESULTS_FILE.open(encoding="utf-8") as f:
             for row in csv.DictReader(f, delimiter=";"):
@@ -235,7 +238,7 @@ def resumo_resultados(horas=24):
                 r_val = float(row["r_realizado"]) if row.get("r_realizado") else None
                 if r_val is not None:
                     soma_r += r_val; n_com_r += 1
-                for chave, agrupador in (("fonte", por_fonte), ("grade", por_grade)):
+                for chave, agrupador in (("fonte", por_fonte), ("grade", por_grade), ("timeframe", por_tf)):
                     k = row.get(chave) or "?"
                     d = agrupador.setdefault(k, {"total": 0, "stop": 0, "r_soma": 0.0, "r_n": 0})
                     d["total"] += 1
@@ -252,4 +255,4 @@ def resumo_resultados(horas=24):
     winrate = vitorias / total * 100 if total else 0
     return {"contagem": contagem, "total": total, "winrate": winrate,
             "r_medio": soma_r / n_com_r if n_com_r else 0.0,
-            "por_fonte": por_fonte, "por_grade": por_grade}
+            "por_fonte": por_fonte, "por_grade": por_grade, "por_timeframe": por_tf}

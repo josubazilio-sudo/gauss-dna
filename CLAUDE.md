@@ -687,14 +687,17 @@ de confluência, tabela de R-múltiplo) acima foram marcadas como SUPERSEDED em 
 Usa só `score_inst_long/short` (não soma "Confiança" separado — `confiança = score_inst-10` já é o mesmo
 número, mesma redundância já corrigida uma vez no FILTRO DE EXECUÇÃO V2, ver seção acima):
 
-- 🥇 **OURO**: `score_inst>=85` + `RVOL>=1.8` + `ADX>=25` + fluxo confirmado (`dna_flow` ou `trendilo` na
+- 🥇 **OURO**: `score_inst>=90` + `RVOL>=1.2` + `ADX>=25` + fluxo confirmado (`dna_flow` ou `trendilo` na
   direção) + Kalman alinhado (`kalman_subindo`/`kalman_descendo`) + MM200 favorável (`tendencia_bull`/`bear`)
   + RSI `40-65` LONG / `35-60` SHORT + liquidez varrida (`liq_fundo_12` LONG / `liq_topo_12` SHORT) +
   distância até a MM21 `<=3%` do preço
-- 🥈 **PRATA**: `score_inst>=75` + `RVOL>=1.4` + `ADX>=22` + fluxo confirmado + Kalman alinhado + MM50
+- 🥈 **PRATA**: `score_inst>=80` + `RVOL>=0.90` + `ADX>=22` + fluxo confirmado + Kalman alinhado + MM50
   favorável (`preco>e50` LONG / `preco<e50` SHORT) + RSI `35-70` LONG / `30-65` SHORT
-- 🥉 **BRONZE**: `score_inst>=65` + `RVOL>=1.2` + fluxo confirmado
+- 🥉 **BRONZE**: `score_inst>=75` + `RVOL>=0.70` + `ADX>=20` + fluxo confirmado
 - Nenhum dos 3 pisos atingido → `None`
+- ⚠️ Pisos atualizados 22/06 (eram Score 85/75/65, RVOL 1.8/1.4/1.2) — ver "DNA+GAUSS INSTITUCIONAL V2"
+  mais abaixo. Mudança aplicada **globalmente** (FLEX/ELITE/INSTITUCIONAL, não só institucional) por escolha
+  explícita do usuário ao ser perguntado sobre o escopo.
 
 ### Regras de execução — gate real, em `cycles.py` (`executar_ciclo()` e `executar_ciclo_mtf()`)
 - **OURO**: sempre opera (nenhuma checagem extra)
@@ -751,3 +754,92 @@ número, mesma redundância já corrigida uma vez no FILTRO DE EXECUÇÃO V2, ve
 - A cascata de 12 sinais em `analyze.py:detectar_sinais()` — a classificação V2 roda **depois** que um
   sinal já foi detectado, é uma camada adicional de gate/saída, não substitui nenhuma condição de entrada
   da cascata.
+
+---
+
+## DNA+GAUSS INSTITUCIONAL V2 — RECALIBRAÇÃO DO MODO INSTITUCIONAL (autorizado 22/06)
+
+Usuário trouxe um documento próprio de especificação ("DNA+GAUSS INSTITUCIONAL V2", focado em TF 30M) pedindo
+pra recalibrar o modo `SIGNAL_MODE=INSTITUCIONAL` com objetivo declarado "menos operações, menos entradas em
+topo/fundo, maior taxa de TP2, Win Rate 45-55%, Profit Factor>1.5, drawdown reduzido". O documento tinha 3
+pontos genuinamente ambíguos/com risco de contradição com a calibração já existente (mesmo padrão de
+documentos anteriores do usuário, ver FILTRO DE EXECUÇÃO V2 acima) — perguntado ao usuário antes de aplicar:
+
+1. **RVOL/ADX de entrada caem bastante** (RVOL 150%→70%, ADX 25→20) ao mesmo tempo que o objetivo é "menos
+   operações" — confirmado que é proposital: quem filtra de fato agora é a classificação OURO/PRATA/BRONZE
+   (que exige RVOL/ADX mais altos, ver tabela acima) + Score mínimo, não o piso de entrada bruto.
+2. **Grade**: documento pedia "A, S, S+", mas o modo institucional usa grade por Score Inst (S>=90/A+>=80/
+   A>=70), nunca produz S+ — confirmado manter esse esquema e só ampliar a faixa permitida pra incluir A
+   (antes só S/A+ passavam).
+3. **Escopo do OURO/PRATA/BRONZE**: confirmado aplicar globalmente (afeta também FLEX/ELITE, não só
+   INSTITUCIONAL) — ver tabela atualizada na seção CLASSIFICAÇÃO INSTITUCIONAL V2 acima.
+
+### O que foi implementado (`analyze.py`, bloco `_base_inst_long`/`_base_inst_short` dentro de `detectar_sinais()`)
+- `ADX > 25` → `ADX > 20`
+- `RVOL > 1.5` → `RVOL > 0.70`
+- `RSI SHORT`: teto `50` → `55` (faixa agora `32-55`, RSI LONG `45-68` ficou igual)
+- **ADX subindo com tolerância**: antes exigia `adx_subindo` (estritamente `adx > adx_anterior`); agora usa
+  `_adx_subindo_tol = adx >= adx_anterior - 2` — permite uma leve queda de até 2 pontos sem bloquear (pedido
+  explícito "ADX atual >= ADX anterior - 2"). Essa tolerância é local ao piso institucional, não mudou o
+  `adx_subindo` global usado por SCOUT/BB_BREAK na cascata normal.
+- **Score Inst mínimo** dos 6 tipos (SM_SWEEP/MOMENTUM/SURGE/PULLBACK/SETUP/FLEX): `80` → `75`.
+- **Exceção de mercado lateral** (`cycles.py`, só quando `SIGNAL_MODE=="INSTITUCIONAL"`): o bloqueio
+  universal de `lateralizado` (CLASSIFICAÇÃO V2) passa a abrir excepção se `bb_expand` (BB Width expandindo)
+  **ou** `ADX > 25` — squeeze já rompendo não é mais tratado como lateral morto. `bb_expand` precisou ser
+  adicionado ao dict de retorno de `analisar()` (já existia dentro de `calcular_indicadores()`, não chegava
+  no `result` usado por `cycles.py`).
+- `config.py GRAUS_PERMITIDOS_INSTITUCIONAL`: `{"S","A+"}` → `{"S","A+","A"}`.
+- Classificação OURO/PRATA/BRONZE: ver tabela atualizada na seção anterior (mudança global, não só deste modo).
+
+### O que NÃO mudou
+- Cooldown institucional, risco por grade (`RISK_INSTITUCIONAL_POR_GRADE`), teto de ciclo/posições
+  simultâneas, circuit breaker de stops consecutivos — nenhum desses foi mencionado no documento do usuário.
+- H4 estrito (`_h4_confirma_estrito`), stop/TP/leverage (gestão) — intocados, mesma regra de só revisar
+  gestão depois de amostra suficiente de trades fechados.
+- A cascata de detecção dos 6 tipos de sinal em si (SM_SWEEP/MOMENTUM/etc.) — só o piso comum por cima.
+
+---
+
+## BACKTEST AUTOMÁTICO POR SINAL (autorizado 22/06)
+
+Pedido do usuário: "toda moeda que der sinal já faça um backtest e guarde os resultados pra ajuste do bot" —
+motivado por `resultados_log.csv` (resultado real) demorar horas/dias pra acumular amostra suficiente pra
+calibrar filtros. Objetivo: dado de calibração rápido (minutos, não dias) pra complementar o rastreamento
+real já existente, não substituí-lo.
+
+### Como funciona (`auto_backtest.py`, módulo novo)
+- Chamado por `cycles.py` logo depois que `enviar_sinal()` confirma envio com sucesso, em **ambos** os
+  pontos de disparo (`executar_ciclo()` e `executar_ciclo_mtf()`): `await backtest_sinal(session, sym, tf,
+  result["fonte_sinal"], result["sinal"])`.
+- Busca até 500 candles históricos do mesmo símbolo/timeframe (`scanner.buscar_candles`) e varre uma janela
+  deslizante (passo de 2 candles, cooldown de 6 candles entre ocorrências da mesma fonte/direção pra não
+  contar a mesma ocorrência várias vezes) procurando outras vezes que `analyze.analisar()` já teria
+  detectado o **mesmo tipo de sinal** (mesma `fonte_sinal`) na **mesma direção** no histórico recente.
+- Cada ocorrência achada é resolvida pra frente (candle a candle, olhando high/low) usando a MESMA régua de
+  stop/TP do sinal real — `notify.calcular_stop_tp()`, extraído de `enviar_sinal()` justamente pra ser
+  reaproveitado aqui sem duplicar lógica de gestão. Resultado: `STOP` / `TP1_BE` / `TP2` / não resolvido
+  (saiu da janela de candles disponível).
+- Resultado agregado (1 linha por sinal real enviado, não por ocorrência) grava em `backtest_log.csv`
+  (`;`-delimitado, novo arquivo — `config.BACKTEST_FILE`): `n_ocorrencias`, `n_stop`, `n_tp1_be`, `n_tp2`,
+  `winrate`, `r_medio`.
+- `resumo_backtest(horas=24)` agrega por `fonte` numa janela de tempo — anexado ao diagnóstico horário
+  existente (`cycles.py _enviar_diagnostico()`, linha nova `Backtest auto (24h): ...`), mesmo padrão de
+  `por_fonte`/`por_grade`/`por_timeframe` de `resumo_resultados()`. Não é mensagem nova no Telegram.
+- `bot.yml` cacheia `backtest_log.csv` junto com `last_signals.json`/`resultados_log.csv` (`actions/cache`),
+  senão o dado seria perdido a cada run isolado do GitHub Actions.
+
+### Limitação conhecida (documentada no próprio módulo)
+A saída real do bot tem 3 estágios (TP1=50%→BE, TP2=30%, 20% "runner" via MM10/MM21+estrutura, ver
+CLASSIFICAÇÃO INSTITUCIONAL V2 acima). O backtest aproxima o runner como TP2 fechando os 50% finais de uma
+vez (sem tracking candle-a-candle do trailing) — suficiente pra medir taxa de STOP e winrate de entrada,
+**não é réplica exata** do `resultados_log.csv` real. Decisão de ajuste de filtro/gestão deve sempre
+priorizar o dado real (`resumo_resultados()`) quando a amostra real for suficiente — o backtest automático é
+um indicador adiantado (*leading indicator*) pra calibração rápida enquanto a amostra real ainda é pequena.
+
+### Por timeframe (`state.py resumo_resultados()` / `cycles.py _enviar_diagnostico()`)
+Resposta à pergunta "operar só H1 fica mais limpo?" (22/06): em vez de decidir sem dado, o resumo de
+resultado real de 24h passou a também agregar por `timeframe` (campo que já existia no schema do
+`resultados_log.csv`, só não era agregado) — aparece como `por timeframe: ...` no diagnóstico horário quando
+houver mais de 1 timeframe na amostra. Quando a amostra acumular trades suficientes em 30M e 1H, esse
+detalhamento mostra objetivamente se um dos dois timeframes está puxando o winrate pra baixo, antes de
+restringir `TIMEFRAMES` pra só `1h` (mudança que hoje seria especulação, não dado).
