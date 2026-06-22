@@ -86,10 +86,17 @@ RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.80}
 
 # Piso universal de força de tendência — aplicado a TODOS os tipos de sinal,
 # além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
-ADX_MIN_GLOBAL = 20
+# CLASSIFICAÇÃO INSTITUCIONAL V3 (22/06) baixou de 20 pra 15 ("Bloquear LONG/
+# SHORT: ADX<15" do documento do usuário) — ver CLAUDE.md.
+ADX_MIN_GLOBAL = 15
 
-# Só opera grade A e S (S+ incluso) — ignora B e C/BRONZE.
-GRAUS_PERMITIDOS = {"A", "A+", "S", "S+"}
+# GRAUS_PERMITIDOS (gate por grade letra S+/S/A/B no modo padrão FLEX/ELITE)
+# foi REMOVIDO na V3 — auditoria de 3 runs reais seguidos mostrou zero sinais
+# enviados com o funil empilhado (grade + ADX_MIN_GLOBAL + RVOL_MIN_EXEC +
+# score_inst>=75 fixo), bloqueando até movimentos reais fortes (ALLO/GWEI/HUS).
+# A qualidade de entrada agora é gate da classificação OURO/PRATA/BRONZE (ver
+# CLASSIFICAÇÃO INSTITUCIONAL V3 em CLAUDE.md) — grade letra continua existindo
+# só para dimensionar risco (RISK_BY_GRADE), não bloqueia mais entrada.
 
 # Filtro de Execução V2 (autorizado 21/06 — caso real de 78% STOP em 24h, padrão
 # binário STOP-ou-TP2 sem nenhum TP1_BE, indicando problema de qualidade de
@@ -100,12 +107,15 @@ GRAUS_PERMITIDOS = {"A", "A+", "S", "S+"}
 # essa parte foi descartada por contradizer este filtro, ver CLAUDE.md), mas
 # ataca diretamente a taxa de STOP ao exigir confluência institucional bem mais
 # alta pra qualquer sinal ser executado, independente do tipo.
-# CLASSIFICAÇÃO INSTITUCIONAL V2 (autorizado 22/06) subiu o piso universal de
-# RVOL de 1.0 pra 1.2 — mesmo valor do "Bloquear LONG/SHORT: RVOL<1.2" do pedido
-# e também o piso da própria BRONZE (que fica ignorada por regra de execução,
-# mas mantém o piso coerente com o resto da cascata).
+# ⚠️ SUPERSEDED 22/06 (V3) — INST_MIN_EXEC=75 forçava score_inst>=75 pra TODO
+# sinal, contradizendo a própria classificação V3 (BRONZE>=60, PRATA>=70), que
+# agora é o gate real de qualidade (ver classificar_v2() em analyze.py e as
+# REGRAS DE EXECUÇÃO em cycles.py). Constante mantida só por compatibilidade
+# de import (não é mais lida como piso bloqueante em cycles.py).
 INST_MIN_EXEC = 75
-RVOL_MIN_EXEC = 1.2
+# RVOL_MIN_EXEC: piso universal de RVOL — caiu de 1.2 pra 1.0 ("Bloquear LONG/
+# SHORT: RVOL<1.0" da CLASSIFICAÇÃO INSTITUCIONAL V3, autorizado 22/06).
+RVOL_MIN_EXEC = 1.0
 
 # Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
 # LONG e SHORT em todas as moedas até o regime mudar.
