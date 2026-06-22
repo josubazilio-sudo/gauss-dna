@@ -63,8 +63,10 @@ MAX_POSICOES_INSTITUCIONAL   = 3     # máximo 3 posições simultâneas abertas
 COOLDOWN_INSTITUCIONAL_MESMA_DIR = 10800  # 3h mesma direção
 COOLDOWN_INSTITUCIONAL_OPOSTA    = 7200   # 2h direção oposta
 
-# Só grade S e A+ neste modo (grade A, que ainda passava antes, é bloqueada)
-GRAUS_PERMITIDOS_INSTITUCIONAL = {"S", "A+"}
+# DNA+GAUSS INSTITUCIONAL V2 (22/06): grade A volta a ser permitida (doc do
+# usuário pede "Grades permitidas: A, S, S+" — grade aqui ainda vem do Score
+# Inst, S>=90/A+>=80/A>=70, "S+" do doc não tem efeito real nesse esquema)
+GRAUS_PERMITIDOS_INSTITUCIONAL = {"S", "A+", "A"}
 
 # Circuit breaker (pedido 21/06): após N stops consecutivos no modo
 # institucional, pausa novas entradas até a primeira posição fechar como
@@ -115,3 +117,4 @@ BTC_REGIME_RSI_MAX  = 55
 STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
 RESULTS_FILE = Path(__file__).parent / "resultados_log.csv"   # rastreamento de TP/STOP por sinal
+BACKTEST_FILE = Path(__file__).parent / "backtest_log.csv"    # backtest automático por sinal (22/06)

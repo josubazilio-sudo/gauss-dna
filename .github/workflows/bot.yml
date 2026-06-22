@@ -72,6 +72,7 @@ jobs:
           path: |
             last_signals.json
             resultados_log.csv
+            backtest_log.csv
           key: last-signals-${{ github.run_id }}
           restore-keys: last-signals-
 
@@ -128,4 +129,5 @@ jobs:
           path: |
             last_signals.json
             resultados_log.csv
+            backtest_log.csv
           key: last-signals-${{ github.run_id }}

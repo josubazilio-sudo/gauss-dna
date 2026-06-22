@@ -509,7 +509,16 @@ def calcular_indicadores(candles):
 
 def classificar_v2(ind, sinal):
     """Classifica o sinal em OURO/PRATA/BRONZE/None pela CLASSIFICAÇÃO
-    INSTITUCIONAL V2. Retorna None quando nem o piso de BRONZE é atingido."""
+    INSTITUCIONAL V2. Retorna None quando nem o piso de BRONZE é atingido.
+
+    Pisos atualizados 22/06 (doc "DNA+GAUSS INSTITUCIONAL V2" do usuário,
+    aplicado globalmente — afeta FLEX/ELITE/INSTITUCIONAL, autorizado
+    explicitamente após pergunta de escopo): Score sobe (85→90 / 75→80 / 65→75)
+    mas RVOL desce bastante (1.8→1.2 / 1.4→0.90 / 1.2→0.70) — o piso de
+    qualidade migra de "precisa de volume excepcional" pra "precisa de muita
+    convicção direcional" (score_inst mais alto compensa RVOL mais baixo).
+    BRONZE ganhou piso de ADX (>=20) que não existia antes.
+    """
     if not sinal:
         return None
     eh_long = sinal == "LONG"
@@ -529,13 +538,13 @@ def classificar_v2(ind, sinal):
     else:
         rsi_ouro, rsi_prata = 35 <= rsi <= 60, 30 <= rsi <= 65
 
-    if (score_inst >= 85 and rvol >= 1.8 and adx >= 25 and fluxo_ok and kalman_ok
+    if (score_inst >= 90 and rvol >= 1.2 and adx >= 25 and fluxo_ok and kalman_ok
             and mm200_ok and rsi_ouro and liq_varrida and dist_mm21 <= 0.03):
         return "OURO"
-    if (score_inst >= 75 and rvol >= 1.4 and adx >= 22 and fluxo_ok and kalman_ok
+    if (score_inst >= 80 and rvol >= 0.90 and adx >= 22 and fluxo_ok and kalman_ok
             and mm50_ok and rsi_prata):
         return "PRATA"
-    if score_inst >= 65 and rvol >= 1.2 and fluxo_ok:
+    if score_inst >= 75 and rvol >= 0.70 and adx >= 20 and fluxo_ok:
         return "BRONZE"
     return None
 
@@ -774,39 +783,46 @@ def detectar_sinais(ind):
     # SHORT desce teto de 65→50 (evita short com RSI ainda neutro/forte,
     # i.e. perseguir topo de correção). HA passa a ser exigido no piso comum
     # (antes só vinha embutido em alguns sinais individuais, não em todos).
-    # Score Inst mínimo unificado em 80 pra todos os 6 tipos — usuário pediu
-    # "score>=75 + confiança>=70%", mas confiança=score_inst-10 (notify.py),
-    # então confiança>=70% já implica score_inst>=80 — unificado num só piso
-    # em vez de manter dois números redundantes (o mais estrito prevalecia
-    # mesmo assim).
+    #
+    # DNA+GAUSS INSTITUCIONAL V2 (autorizado 22/06 — doc próprio do usuário,
+    # objetivo "menos operações, maior taxa de TP2, winrate 45-55%"): piso de
+    # ENTRADA fica mais solto (ADX 25→20, RVOL 1.5→0.70, ADX subindo ganha
+    # tolerância de -2 em vez de exigir estritamente crescente, RSI SHORT teto
+    # 50→55) e quem passa a filtrar de fato é o Score Inst mínimo (80→75,
+    # mais solto também) combinado com a classificação OURO/PRATA/BRONZE
+    # (cycles.py, agora endurecida globalmente — ver classificar_v2 acima) e
+    # a exceção de lateralização (BB expandindo OU ADX>25, cycles.py) — esse
+    # combo é o que de fato deveria reduzir frequência sem duplicar piso de
+    # RVOL/ADX em dois lugares com números diferentes.
     _vol_inst_ok     = i["volumes"][-1] > i["vol_ma"] and not i["vol_secando"]
     _rsi_inst_long   = 45 <= i["rsi"] <= 68
-    _rsi_inst_short  = 32 <= i["rsi"] <= 50
+    _rsi_inst_short  = 32 <= i["rsi"] <= 55
     _anti_topo_long  = (1 - i["pos_bb"]) >= 0.01
     _anti_topo_short = i["pos_bb"] >= 0.01
-    _base_inst_long  = (i["tendencia_bull"] and i["adx"] > 25 and i["adx_subindo"] and
-                         i["rvol"] > 1.5 and i["dna_flow_bull"] and i["trendilo_long"] and
+    _adx_subindo_tol = i["adx"] >= i["adx_p"] - 2
+    _base_inst_long  = (i["tendencia_bull"] and i["adx"] > 20 and _adx_subindo_tol and
+                         i["rvol"] > 0.70 and i["dna_flow_bull"] and i["trendilo_long"] and
                          i["liq_fundo_12"] and _rsi_inst_long and i["stoch_rsi"] < 0.85 and
                          _vol_inst_ok and _anti_topo_long and i["estrutura_alta"] and
                          i["ha_bull"])
-    _base_inst_short = (i["tendencia_bear"] and i["adx"] > 25 and i["adx_subindo"] and
-                         i["rvol"] > 1.5 and i["dna_flow_bear"] and i["trendilo_short"] and
+    _base_inst_short = (i["tendencia_bear"] and i["adx"] > 20 and _adx_subindo_tol and
+                         i["rvol"] > 0.70 and i["dna_flow_bear"] and i["trendilo_short"] and
                          i["liq_topo_12"] and _rsi_inst_short and i["stoch_rsi"] > 0.15 and
                          _vol_inst_ok and _anti_topo_short and i["estrutura_baixa"] and
                          i["ha_bear"])
 
-    sm_inst        = _base_inst_long  and long_sm        and i["score_inst_long"]  >= 80
-    momentum_inst  = _base_inst_long  and long_momentum  and i["score_inst_long"]  >= 80
-    surge_inst     = _base_inst_long  and long_surge     and i["score_inst_long"]  >= 80
-    pullback_inst  = _base_inst_long  and long_pullback  and i["score_inst_long"]  >= 80
-    setup_inst     = _base_inst_long  and long_setup     and i["score_inst_long"]  >= 80
-    flex_inst      = _base_inst_long  and long_flex      and i["score_inst_long"]  >= 80
-    sm_inst_s      = _base_inst_short and short_sm       and i["score_inst_short"] >= 80
-    momentum_inst_s= _base_inst_short and short_momentum and i["score_inst_short"] >= 80
-    surge_inst_s   = _base_inst_short and short_surge    and i["score_inst_short"] >= 80
-    pullback_inst_s= _base_inst_short and short_pullback and i["score_inst_short"] >= 80
-    setup_inst_s   = _base_inst_short and short_setup    and i["score_inst_short"] >= 80
-    flex_inst_s    = _base_inst_short and short_flex     and i["score_inst_short"] >= 80
+    sm_inst        = _base_inst_long  and long_sm        and i["score_inst_long"]  >= 75
+    momentum_inst  = _base_inst_long  and long_momentum  and i["score_inst_long"]  >= 75
+    surge_inst     = _base_inst_long  and long_surge     and i["score_inst_long"]  >= 75
+    pullback_inst  = _base_inst_long  and long_pullback  and i["score_inst_long"]  >= 75
+    setup_inst     = _base_inst_long  and long_setup     and i["score_inst_long"]  >= 75
+    flex_inst      = _base_inst_long  and long_flex      and i["score_inst_long"]  >= 75
+    sm_inst_s      = _base_inst_short and short_sm       and i["score_inst_short"] >= 75
+    momentum_inst_s= _base_inst_short and short_momentum and i["score_inst_short"] >= 75
+    surge_inst_s   = _base_inst_short and short_surge    and i["score_inst_short"] >= 75
+    pullback_inst_s= _base_inst_short and short_pullback and i["score_inst_short"] >= 75
+    setup_inst_s   = _base_inst_short and short_setup    and i["score_inst_short"] >= 75
+    flex_inst_s    = _base_inst_short and short_flex     and i["score_inst_short"] >= 75
 
     # ── Prioridade de sinais ──────────────────────────────────────────────────
     sinal = None; fonte = ""
@@ -1040,4 +1056,5 @@ def analisar(simbolo, candles, funding_rate=None):
         "adx_subindo":    ind["adx_subindo"],
         "e21":            ind["e21"],
         "e50":            ind["e50"],
+        "bb_expand":      ind["bb_expand"],
     }

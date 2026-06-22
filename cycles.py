@@ -29,6 +29,7 @@ from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, bu
 from state import (carregar_estado, salvar_estado, registrar_posicao_aberta,
                    verificar_posicoes_abertas, registrar_resultado, resumo_resultados,
                    fechar_runner)
+from auto_backtest import backtest_sinal, resumo_backtest
 
 log = logging.getLogger("GAUSS+DNA")
 
@@ -228,11 +229,20 @@ async def _enviar_diagnostico(session) -> None:
         # Detalhamento por fonte/grade (observabilidade — não altera gestão, só
         # acelera o diagnóstico quando a amostra chegar nos 30-50 trades)
         for _rotulo, _grupo in (("fonte", _resumo.get("por_fonte", {})),
-                                 ("grade", _resumo.get("por_grade", {}))):
+                                 ("grade", _resumo.get("por_grade", {})),
+                                 ("timeframe", _resumo.get("por_timeframe", {}))):
             if len(_grupo) > 1:
                 _det = [f"{k}:{d['stop']}/{d['total']}STOP"
                         for k, d in sorted(_grupo.items(), key=lambda x: -x[1]["total"])]
                 linhas.append(f"  por {_rotulo}: {', '.join(_det)}")
+
+    # Backtest automático por sinal (22/06) — dado de calibração rápido (sliding
+    # window no histórico), não substitui o resultado real acima, é só leading indicator
+    _bt = resumo_backtest(horas=24)
+    if _bt:
+        _det_bt = [f"{f}:{d['winrate_medio']:.0f}%win/{d['r_medio']:+.2f}R({d['amostras']}am)"
+                   for f, d in sorted(_bt.items(), key=lambda x: -x[1]["amostras"])]
+        linhas.append(f"\nBacktest auto (24h): {', '.join(_det_bt)}")
 
     _texto_diag = "\n".join(linhas)
     log.info(f"[DIAG]\n{_texto_diag}")
@@ -420,8 +430,14 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  ⚠️ {abrev} bloqueado — RSI {result['rsi']:.0f} < 25 (SHORT)")
                 continue
             if result.get("lateralizado"):
-                log.info(f"  ⚠️ {abrev} bloqueado — mercado lateral (V2)")
-                continue
+                # DNA+GAUSS INSTITUCIONAL V2 (22/06): só nesse modo, lateral
+                # ainda passa se BB Width estiver expandindo OU ADX>25 (sinal
+                # de que o squeeze já está rompendo, não é mais lateral "morto")
+                _lateral_exc = (SIGNAL_MODE == "INSTITUCIONAL" and
+                                 (result.get("bb_expand") or result["adx"] > 25))
+                if not _lateral_exc:
+                    log.info(f"  ⚠️ {abrev} bloqueado — mercado lateral (V2)")
+                    continue
 
             eh_long_ = result["sinal"] == "LONG"
             score_inst = result.get("score_inst_long" if eh_long_ else "score_inst_short", 0)
@@ -563,6 +579,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                          ok["stop"], ok["tp1"], ok["tp2"], ok["r1"], ok["r_final"],
                                          grade, result["fonte_sinal"], modo=SIGNAL_MODE,
                                          classificacao=classificacao)
+                await backtest_sinal(session, sym, tf, result["fonte_sinal"], result["sinal"])
         else:
             candidatos.append((result["score"], abrev, result["score"],
                                result["rsi"], result["adx"], result.get("fonte_sinal", "sem-sinal")))
@@ -783,6 +800,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                                              ok["stop"], ok["tp1"], ok["tp2"], ok["r1"], ok["r_final"],
                                              grade, result["fonte_sinal"], modo=SIGNAL_MODE,
                                              classificacao=classificacao_mtf)
+                    await backtest_sinal(session, sym, "1h", result["fonte_sinal"], result["sinal"])
             else:
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"cooldown {mins}min"))
