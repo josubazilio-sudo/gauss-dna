@@ -107,6 +107,16 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     return motivos
 
 
+def _diag_pos_cascata(motivo: str) -> None:
+    """Registra no buffer do diagnostico horario um bloqueio que so acontece
+    DEPOIS que um sinal ja foi detectado pela cascata (grade/ADX/RVOL/inst/H4/
+    classificacao V2/regime BTC/etc, em executar_ciclo e executar_ciclo_mtf) —
+    sem isso esses motivos so apareciam no log do ciclo (stdout), nunca no
+    diagnostico enviado ao Telegram (gap documentado no CLAUDE.md, virou
+    bloqueador frequente — ex: regime BTC H1 neutro bloqueando 100% dos ciclos)."""
+    _diag_buffer["bloqueadores"][motivo] = _diag_buffer["bloqueadores"].get(motivo, 0) + 1
+
+
 async def _atualizar_resultados(session, estado) -> None:
     """Confere o preço atual das posições em acompanhamento e fecha (TP1_BE/TP2/STOP/
     EXPIRADO) as que já resolveram, gravando em resultados_log.csv — pedido 20/06,
@@ -327,6 +337,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
     if btc_neutro:
         log.info(f"[{tf}] Ciclo pulado — regime BTC H1 neutro (filtro de regime global)")
+        _diag_pos_cascata("regime BTC H1 neutro")
         return 0
     agora = time.time(); enviados = 0
     _diag_buffer["ciclos"] += 1
@@ -394,6 +405,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {_score_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"score<{_score_min}"))
+                _diag_pos_cascata(f"score<{_score_min}")
                 continue
 
             # AJUSTE PROFISSIONAL (21/06) — qualidade mínima: só grade A/S, ADX>=20
@@ -406,17 +418,20 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  ⚠️ {abrev} bloqueado — grade {grade} abaixo do mínimo ({'/'.join(sorted(_graus_ok))})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"grade={grade}"))
+                _diag_pos_cascata(f"grade={grade} insuficiente")
                 continue
             if result["adx"] < ADX_MIN_GLOBAL:
                 log.info(f"  ⚠️ {abrev} bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL}"))
+                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global)")
                 continue
             _rvol_min_tf = max(RVOL_MIN_BY_TF.get(tf, 0.80), RVOL_MIN_EXEC)
             if result.get("rvol", 1.0) < _rvol_min_tf:
                 log.info(f"  ⚠️ {abrev} bloqueado — RVOL {result.get('rvol', 0):.2f} < {_rvol_min_tf} ({tf})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"rvol<{_rvol_min_tf}"))
+                _diag_pos_cascata(f"rvol<{_rvol_min_tf} ({tf})")
                 continue
 
             # CLASSIFICAÇÃO INSTITUCIONAL V2 (autorizado 22/06) — bloqueios universais
@@ -425,9 +440,11 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             _eh_long_uni = result["sinal"] == "LONG"
             if _eh_long_uni and result["rsi"] > 75:
                 log.info(f"  ⚠️ {abrev} bloqueado — RSI {result['rsi']:.0f} > 75 (LONG)")
+                _diag_pos_cascata("RSI>75 pos-sinal (LONG)")
                 continue
             if not _eh_long_uni and result["rsi"] < 25:
                 log.info(f"  ⚠️ {abrev} bloqueado — RSI {result['rsi']:.0f} < 25 (SHORT)")
+                _diag_pos_cascata("RSI<25 pos-sinal (SHORT)")
                 continue
             if result.get("lateralizado"):
                 # DNA+GAUSS INSTITUCIONAL V2 (22/06): só nesse modo, lateral
@@ -437,6 +454,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                  (result.get("bb_expand") or result["adx"] > 25))
                 if not _lateral_exc:
                     log.info(f"  ⚠️ {abrev} bloqueado — mercado lateral (V2)")
+                    _diag_pos_cascata("mercado lateral (V2)")
                     continue
 
             eh_long_ = result["sinal"] == "LONG"
@@ -455,6 +473,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  ⚠️ {abrev} bloqueado — Score Inst {score_inst} < {_inst_min}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"inst<{_inst_min}"))
+                _diag_pos_cascata(f"inst<{_inst_min}")
                 continue
 
             _h4_check = _h4_confirma_estrito if SIGNAL_MODE == "INSTITUCIONAL" else _h4_confirma
@@ -462,6 +481,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "H4 oposto"))
+                _diag_pos_cascata("H4 oposto")
                 continue
 
             chave_dir = f"{sym}_{tf}_{result['sinal']}"
@@ -476,6 +496,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  ⏳ {abrev} [{tf}] cooldown {mins}min")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "cooldown"))
+                _diag_pos_cascata("cooldown")
                 continue
 
             eh_long  = result["sinal"] == "LONG"
@@ -518,6 +539,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  🚫 {abrev} bloqueado — sem fluxo institucional (DNA Flow/Trendilo) na direção do sinal")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "sem fluxo SMC"))
+                _diag_pos_cascata("sem fluxo SMC")
                 continue
 
             # REGRAS DE EXECUÇÃO da Classificação Institucional V2 (autorizado
@@ -529,6 +551,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 log.info(f"  🥉 {abrev} bloqueado — classificação V2 {classificacao or 'nenhuma'} (ignorado)")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"v2={classificacao or 'none'}"))
+                _diag_pos_cascata(f"v2={classificacao or 'none'}")
                 continue
             if classificacao == "PRATA":
                 # H1 alinhado pro gate PRATA (V2) — em tf=="1h" o próprio result já é
@@ -546,6 +569,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                     log.info(f"  🥈 {abrev} bloqueado — PRATA exige H1 alinhado")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
                                        result["rsi"], result["adx"], "prata sem H1"))
+                    _diag_pos_cascata("prata sem H1")
                     continue
 
             extra = {
@@ -628,8 +652,10 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
     """Ciclo multi-timeframe: analisa H4 para direção → entra na H1."""
     if btc_neutro:
         log.info("[MTF] Ciclo pulado — regime BTC H1 neutro (filtro de regime global)")
+        _diag_pos_cascata("regime BTC H1 neutro")
         return 0
     agora = time.time(); enviados = 0
+    _diag_buffer["ciclos"] += 1
     cooldown_mtf = 14400
     setups_h4 = []
 
@@ -671,16 +697,20 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
             if h4_bull and btc_bear:
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "BTC em queda"))
                 log.info(f"[MTF] {abrev:7s} | LONG bloqueado — BTC H4 em queda")
+                _diag_pos_cascata("BTC H4 em queda (bloqueia LONG)")
                 continue
             if h4_bear and btc_bull:
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "BTC em alta"))
                 log.info(f"[MTF] {abrev:7s} | SHORT bloqueado — BTC H4 em alta")
+                _diag_pos_cascata("BTC H4 em alta (bloqueia SHORT)")
                 continue
             if h4_bull and btc_rsi_quente:
                 log.info(f"[MTF] {abrev:7s} | LONG bloqueado — BTC RSI {btc_rsi:.0f} > 72 (sobrecomprado)")
+                _diag_pos_cascata("BTC RSI>72 (bloqueia LONG)")
                 continue
             if h4_bear and btc_rsi_panico:
                 log.info(f"[MTF] {abrev:7s} | SHORT bloqueado — BTC RSI {btc_rsi:.0f} < 28 (sobrevendido)")
+                _diag_pos_cascata("BTC RSI<28 (bloqueia SHORT)")
                 continue
         log.info(f"[MTF] {abrev:7s} | H4 {direcao} ✓BTC | Score {r4h['score']:+d} → buscando entrada H1...")
         filtrados.append((sym, label, abrev, r4h, h4_bull, h4_bear))
@@ -704,6 +734,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
             if not result or not result.get("sinal"):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "pullback H1 pendente"))
                 log.info(f"[MTF] {abrev:7s} | H1 sem entrada (não está no pullback)")
+                _diag_pos_cascata("H1 sem entrada (MTF)")
                 continue
 
             grade   = result.get("grade", "A")
@@ -719,6 +750,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                           else f"Score Inst {score_inst_mtf}<{_inst_min_mtf}")
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, motivo))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — {motivo}")
+                _diag_pos_cascata(f"{motivo} (MTF)")
                 continue
 
             # AJUSTE PROFISSIONAL (21/06) — mesma qualidade mínima do ciclo FLEX:
@@ -730,22 +762,26 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
             if grade not in _graus_ok_mtf:
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"grade={grade}"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — grade {grade} abaixo do mínimo ({'/'.join(sorted(_graus_ok_mtf))})")
+                _diag_pos_cascata(f"grade={grade} insuficiente (MTF)")
                 continue
             if result["adx"] < ADX_MIN_GLOBAL:
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"adx<{ADX_MIN_GLOBAL}"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
+                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global, MTF)")
                 continue
             _rvol_mtf = result.get("rvol", 1.0)
             _rvol_min_mtf = max(RVOL_MIN_BY_TF.get("1h", 0.80), RVOL_MIN_EXEC)
             if _rvol_mtf < _rvol_min_mtf:
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"rvol<{_rvol_min_mtf}"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — RVOL {_rvol_mtf:.2f} < {_rvol_min_mtf}")
+                _diag_pos_cascata(f"rvol<{_rvol_min_mtf} (1h MTF)")
                 continue
             _dna_mtf = result.get("dna_flow_bull" if eh_long_mtf else "dna_flow_bear", False)
             _trl_mtf = result.get("trendilo_long" if eh_long_mtf else "trendilo_short", False)
             if not _dna_mtf and not _trl_mtf:
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "sem fluxo SMC"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — sem fluxo institucional (DNA Flow/Trendilo)")
+                _diag_pos_cascata("sem fluxo SMC (MTF)")
                 continue
 
             # CLASSIFICAÇÃO INSTITUCIONAL V2 (autorizado 22/06) — entrada no MTF é
@@ -755,12 +791,14 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
             if classificacao_mtf not in ("OURO", "PRATA"):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"v2={classificacao_mtf or 'none'}"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — classificação V2 {classificacao_mtf or 'nenhuma'} (ignorado)")
+                _diag_pos_cascata(f"v2={classificacao_mtf or 'none'} (MTF)")
                 continue
             if classificacao_mtf == "PRATA":
                 _h1_ok_mtf = result.get("alinhado_bull") if eh_long_mtf else result.get("alinhado_bear")
                 if not _h1_ok_mtf:
                     setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "prata sem H1"))
                     log.info(f"[MTF] {abrev:7s} | bloqueado — PRATA exige H1 alinhado")
+                    _diag_pos_cascata("prata sem H1 (MTF)")
                     continue
 
             # AJUSTE INSTITUCIONAL ELITE (21/06): mesmo teto de posições simultâneas
@@ -805,6 +843,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"cooldown {mins}min"))
                 log.info(f"  ⏳ {abrev} [MTF] cooldown {mins}min")
+                _diag_pos_cascata("cooldown (MTF)")
 
     if enviados == 0 and btc_bear:
         log.info("🐻 BTC em queda — LONGs bloqueados")
