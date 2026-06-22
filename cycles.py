@@ -799,7 +799,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
     testes_enviados_mtf = 0   # estratégia de teste paralela (autorizado 23/06)
 
     # Filtro BTC macro em H4
-    btc_bull = btc_bear = btc_rsi_quente = btc_rsi_panico = False
+    btc_bull = btc_bear = btc_rsi_quente = btc_rsi_panico = btc_rsi_oversold = False
     btc_rsi  = 50; btc_p = 0
     btc_candles = await buscar_candles(session, "BTCUSDT", "4h")
     if btc_candles and len(btc_candles) >= 50:
@@ -809,9 +809,11 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
         btc_rsi  = calcular_rsi(btc_c[-50:])
         btc_bull = btc_p > btc_e21 > btc_e50 and btc_p > btc_e200 * 0.98
         btc_bear = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02 and btc_rsi < 45
-        btc_rsi_quente = btc_rsi > 72; btc_rsi_panico = btc_rsi < 28
+        btc_rsi_quente   = btc_rsi > 72
+        btc_rsi_panico   = btc_rsi < 28   # extremo — bloqueia SHORT
+        btc_rsi_oversold = btc_rsi < 35   # sobrevendido — libera LONG de força relativa
         log.info(f"[MTF] BTC H4: {'ALTA ↑' if btc_bull else 'BAIXA ↓' if btc_bear else 'NEUTRO'} | "
-                 f"RSI {btc_rsi:.0f}{'🔥' if btc_rsi_quente else '🧊' if btc_rsi_panico else ''} | ${btc_p:.0f}")
+                 f"RSI {btc_rsi:.0f}{'🔥' if btc_rsi_quente else '🧊🧊' if btc_rsi_panico else '🧊' if btc_rsi_oversold else ''} | ${btc_p:.0f}")
 
     log.info(f"[MTF] Prefetch H4 ({len(moedas)} moedas)...")
     todos_h4 = await _prefetch_lote(session, moedas, "4h")
@@ -833,7 +835,9 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
             continue
         direcao = "ALTA" if h4_bull else "BAIXA"
         if abrev not in ("BTC", "WBTC"):
-            if h4_bull and btc_bear:
+            if h4_bull and btc_bear and not btc_rsi_oversold:
+                # Força relativa: quando BTC RSI < 35 (sobrevendido), permite LONG de
+                # pares com setup H4 próprio — captura reversões de mercado em pânico.
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "BTC em queda"))
                 log.info(f"[MTF] {abrev:7s} | LONG bloqueado — BTC H4 em queda")
                 _diag_pos_cascata("BTC H4 em queda (bloqueia LONG)")
@@ -1034,7 +1038,10 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 _diag_pos_cascata("cooldown (MTF)")
 
     if enviados == 0 and btc_bear:
-        log.info("🐻 BTC em queda — LONGs bloqueados")
+        if btc_rsi_oversold:
+            log.info(f"🐻🧊 BTC queda RSI={btc_rsi:.0f} (sobrevendido) — LONGs força relativa liberados")
+        else:
+            log.info("🐻 BTC em queda — LONGs bloqueados")
     if enviados == 0 and setups_h4:
         log.info(f"[MTF] {len(setups_h4)} setup(s) H4 ativos sem entrada H1")
 
