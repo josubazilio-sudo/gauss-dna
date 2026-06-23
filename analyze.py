@@ -114,7 +114,10 @@ def calcular_indicadores(candles):
     # Exige RSI absoluto elevado/baixo também, evitando bloquear LONG/SHORT válidos por saturação técnica.
     # Afrouxado 23/06 (run pós-merge v5.0 — candidatos fortes GWEI/BDX bloqueados
     # por bb_topo+stoch combinado mesmo sem RSI extremo); REGRA #1/#5 intocadas.
-    stoch_esticado_up   = stoch_rsi > 0.90 and rsi > 65
+    # 2º ajuste 23/06 — BDX (score+145, RSI70, dentro da zona REGRA #1) ainda
+    # bloqueado isolado por stoch=0.93; sobe o teto pra exigir saturação mais
+    # extrema antes de travar um candidato que já passou todo o resto do seguro_long.
+    stoch_esticado_up   = stoch_rsi > 0.95 and rsi > 65
     stoch_esticado_down = stoch_rsi < 0.05 and rsi < 30
     stoch_extremo = stoch_rsi <= 0.001 or stoch_rsi >= 0.999
 
