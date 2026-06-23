@@ -1036,3 +1036,35 @@ variável só, mesmo padrão do fix anterior, pra poder medir o efeito de cada f
   critérios por sinal)
 - Validar com o próximo run completo (cron ou disparo manual) se a combinação dos dois fixes já é
   suficiente pra gerar pelo menos 1 sinal real, antes de seguir afrouxando outros filtros.
+
+---
+
+## "O QUE FALTA PRA DAR SINAL" — VALIDAÇÃO DOS 2 FIXES ANTERIORES + exaustao AFROUXADO (22/06)
+
+Usuário perguntou diretamente o que ainda falta pra disparar sinal. Validado com o run real seguinte aos
+2 fixes anteriores (vol_secando + BTC_REGIME_ADX_MAX, run `27990867580`, 23:24-00:19 UTC, 12 ciclos, 79
+moedas/ciclo, **305 moedas no scanner** — confirma o "300 criptomoedas" que o usuário mencionou):
+
+- **Filtro de regime BTC: 0 ocorrências neste run** (era o bloqueador #1 de ciclo inteiro antes do fix de
+  ADX_MAX 20→15) — fix anterior funcionou, BTC não ficou neutro em nenhum momento deste run.
+- Mas **ainda 0 sinais em 12/12 ciclos** — 665 candidatos bloqueados por `seguro_long/short`:
+  1. `vol_secando` — 331 (49.8%) — **mesmo após o afrouxamento anterior** (0.25/0.5→0.18/0.40), continua
+     o maior bloqueador isolado. Run caiu majoritariamente dentro da sessão perigosa (22h-08h UTC, REGRA
+     #3) — pode ser parcialmente volume genuinamente fino no overnight, não só filtro apertado demais;
+     recomendo validar num run de horário ativo (13h-21h UTC) antes de afrouxar uma 3ª vez.
+  2. `exaustao_topo/fund` — 240 (36%) — 2º maior, ainda não tinha sido tocado.
+  3. `rsi` (StochRSI absoluto) — 36 | `bb_topo/fund` — 26 | `stoch` — 20 | `ext_e21` — 12.
+- Juntos, `vol_secando`+`exaustao` somam **85.7%** de todo bloqueio de `seguro_long/short`.
+
+### Fix aplicado nesta rodada — exaustao_topo/fund (analyze.py)
+Pavio (`sombra_sup`/`sombra_inf`, proporção do range da vela) `>0.40` → `>0.55` — exige rejeição de pavio
+bem mais extrema antes de bloquear como "exaustão", mesmo padrão de mudança isolada de uma variável só.
+O buffer de preço (`bb_range*0.02`) não foi tocado.
+
+### O que NÃO foi tocado nesta rodada (de propósito)
+- `vol_secando` — já tocado 2x (incluindo a rodada anterior); preferi não tocar uma 3ª vez até validar se
+  o problema é mesmo o limiar ou se é genuinamente volume fino do horário noturno (sessão perigosa)
+- StochRSI (`stoch_esticado_up/down`), `bb_topo/fund`, `ext_acima/abaixo_e21` — bloqueadores bem menores
+  (3-5% cada), não justificam ainda outra mudança isolada
+- Validar com o próximo run real (de preferência em horário ativo, 13h-21h UTC) se os 3 fixes somados
+  (BTC regime + vol_secando + exaustao) já produzem pelo menos 1 sinal real.
