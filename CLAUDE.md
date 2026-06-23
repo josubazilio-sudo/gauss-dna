@@ -1125,3 +1125,33 @@ O buffer de preço (`bb_range*0.02`) não foi tocado.
   (3-5% cada), não justificam ainda outra mudança isolada
 - Validar com o próximo run real (de preferência em horário ativo, 13h-21h UTC) se os 3 fixes somados
   (BTC regime + vol_secando + exaustao) já produzem pelo menos 1 sinal real.
+
+---
+
+## GAUSS+DNA v5.0 — GESTÃO DE RISCO EM DÓLAR FIXO (autorizado 23/06, banca real $90)
+
+Substitui `CAPITAL`/`RISK_PCT`/`RISK_BY_GRADE`/`RISK_SCOUT`/a alavancagem dinâmica 3x-50x (REGRA #4) e a
+saída em 4 estágios (V3/V4) por uma régua mais simples pra banca pequena: lote fixo em dólar por tier
+(`classificar_v2()` PRATA/BRONZE — OURO desabilitado, exige banca>$500) e saída em 2 estágios.
+
+- **Tamanho de posição** (`notify.py enviar_sinal()`): `ALAVANCAGEM_V5=3x` fixo, `MARGEM_POR_TIER_V5` =
+  PRATA $30 / BRONZE $15 (`config.py`). 2ª posição simultânea opera com `lote_reduzido=True` (margem pela
+  metade) — parâmetro novo em `enviar_sinal()`, decidido em `cycles.py` por
+  `len(estado["_posicoes_abertas"]) >= 1` no momento do envio.
+- **Saída em 2 estágios**: TP1 = 1:1R fecha 50%, stop conceitual vai pra BE; os 50% restantes seguem em
+  trailing (50% do ganho desde o TP1, piso BE) — resolvido tick a tick em `state.py
+  verificar_posicoes_abertas()`, resultado `TP1_TRAIL`. `auto_backtest.py` usa a mesma régua.
+- **Circuit breakers globais** (`cycles.py _v5_bloqueio()`, checado em `executar_ciclo()` e
+  `executar_ciclo_mtf()` antes de qualquer envio, independente de `SIGNAL_MODE`):
+  - Sem trade nos primeiros `NO_TRADE_PRIMEIROS_MIN_V5=15min` de cada vela H1 (UTC)
+  - Perda diária acumulada >= `PERDA_MAX_DIA_V5=$5.40` (~6% da banca) bloqueia novas entradas até o dia
+    UTC virar (`estado["_v5_pnl_dia"]`, resetado por `estado["_v5_dia"]`)
+  - 2 `STOP` consecutivos → pausa de `PAUSA_2_PERDAS_V5=7200s` (2h)
+  - Máximo `MAX_POSICOES_V5=2` posições simultâneas abertas
+  - P&L em dólar de cada posição fechada = `valor_risco * r_realizado` (`valor_risco` calculado em
+    `enviar_sinal()` a partir do lote fixo e da distância real do stop, gravado na posição via
+    `registrar_posicao_aberta()`, devolvido por `registrar_resultado()` agora que essa função `return
+    r_realizado` em vez de nada) — acumulado em `cycles.py _atualizar_resultados()`.
+- Gestão (cálculo do stop em si, `mult_atr`, stop estrutural) e a cascata de 12 sinais em `analyze.py`
+  **intocadas** — este ajuste é só tamanho de posição, saída e circuit breaker, mesmo padrão dos ajustes
+  anteriores de risco já documentados acima.

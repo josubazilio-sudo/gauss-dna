@@ -124,8 +124,10 @@ def calcular_adx(candles, periodo=14, suavizacao=14):
     t = rtr[idx] or 1e-10
     pdi = (rpdm[idx] / t) * 100
     mdi = (rmdm[idx] / t) * 100
-    adx_ant = adx_arr[idx - 1] if idx > 0 else adx_arr[idx]
-    return pdi, mdi, adx_arr[idx], adx_ant
+    adx_ant  = adx_arr[idx - 1] if idx > 0 else adx_arr[idx]
+    adx_ant2 = adx_arr[idx - 2] if idx > 1 else adx_ant
+    adx_ant3 = adx_arr[idx - 3] if idx > 2 else adx_ant2
+    return pdi, mdi, adx_arr[idx], adx_ant, adx_ant2, adx_ant3
 
 
 # ── Heikin-Ashi ───────────────────────────────────────────────────────────────

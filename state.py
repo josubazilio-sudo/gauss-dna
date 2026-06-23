@@ -78,17 +78,17 @@ def salvar_estado(estado):
 # Sem isso não dá pra saber objetivamente se o problema é stop apertado, entrada
 # tardia etc. — só impressão. Resultado fechado vai pro resultados_log.csv.
 
-def registrar_posicao_aberta(estado, simbolo, tf, direcao, entrada, stop, tp1, tp2, tp3,
-                              r1, r2, r3, grade, fonte, modo="", classificacao=None):
+def registrar_posicao_aberta(estado, simbolo, tf, direcao, entrada, stop, tp1,
+                              r1, grade, fonte, modo="", classificacao=None, valor_risco=0.0):
     posicoes = estado.setdefault("_posicoes_abertas", [])
     posicoes.append({
         "simbolo": simbolo, "tf": tf, "direcao": direcao,
-        "entrada": entrada, "stop": stop, "tp1": tp1, "tp2": tp2, "tp3": tp3,
-        "r1": r1, "r2": r2, "r3": r3, "grade": grade, "fonte": fonte, "modo": modo,
+        "entrada": entrada, "stop": stop, "tp1": tp1,
+        "r1": r1, "grade": grade, "fonte": fonte, "modo": modo,
         "classificacao": classificacao,
+        "valor_risco": valor_risco,
         "tp1_atingido": False,
-        "tp2_atingido": False,
-        "tp3_atingido": False,
+        "ganho_max_pos_tp1": 0.0,
         "aberta_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "ts_abertura": time.time(),
     })
@@ -98,15 +98,13 @@ def verificar_posicoes_abertas(estado, precos):
     """precos: dict {simbolo: preco_atual}. Retorna lista de posições recém-fechadas
     (com resultado e preco_saida preenchidos) e atualiza estado["_posicoes_abertas"].
 
-    Ciclo de vida de 4 estágios (CLASSIFICAÇÃO INSTITUCIONAL V3, autorizado 22/06,
-    substitui a Estratégia de Saída V2 de 3 estágios):
-    1) aberta              → TP1=1.5R fecha 30%, stop conceitual vai pra BE
-    2) tp1_atingido        → TP2=3R fecha 40% | BE fecha o resto (30% garantido)
-    3) tp1+tp2 atingidos   → TP3=5R fecha 20% (vira "runner" pros 10% finais)
-    4) tp1+tp2+tp3 atingidos → "runner" (10% restante) — só resolve por candle/
-       MM10-MM21+fluxo+volume, não por preço de ticker isolado. Ver
-       _checar_runners() em cycles.py e fechar_runner() abaixo. Aqui só
-       acompanha até lá, ou expira em 72h."""
+    Ciclo de vida de 2 estágios (GAUSS+DNA v5.0, substitui os 4 estágios da
+    CLASSIFICAÇÃO INSTITUCIONAL V3/V4):
+    1) aberta       → STOP fecha tudo (perda total) | TP1=1:1R fecha 50% e ativa
+       trailing no restante (piso = break-even, nunca pior que TP1_TRAIL=+0.5R)
+    2) tp1_atingido → trailing stop = TP1 + 50% do ganho máximo desde o TP1
+       (nunca abaixo do BE) — fecha os 50% restantes quando o preço recua até
+       esse nível, ou expira em 72h."""
     posicoes = estado.get("_posicoes_abertas", [])
     restantes, fechados = [], []
     agora = time.time()
@@ -124,25 +122,29 @@ def verificar_posicoes_abertas(estado, precos):
         eh_long  = p["direcao"] == "LONG"
         stop_hit = preco <= p["stop"] if eh_long else preco >= p["stop"]
         tp1_hit  = preco >= p["tp1"]  if eh_long else preco <= p["tp1"]
-        tp2_hit  = preco >= p["tp2"]  if eh_long else preco <= p["tp2"]
-        tp3_hit  = preco >= p.get("tp3", p["tp2"]) if eh_long else preco <= p.get("tp3", p["tp2"])
+        # Captura ANTES de mutar — o poll que primeiro detecta TP1 só ativa o
+        # trailing, não pode fechar nele mesmo (ganho_max ainda seria 0 ali,
+        # o que faria trail==preco e fecharia a posição sem nenhum trailing real).
+        ja_em_trailing = p.get("tp1_atingido", False)
 
-        if not p.get("tp3_atingido"):
-            if not p.get("tp1_atingido"):
-                if stop_hit:
-                    fechados.append({**p, "resultado": "STOP", "preco_saida": preco})
-                    continue
-                if tp1_hit:
-                    p["tp1_atingido"] = True   # mesmo poll pode já ter passado do TP2/TP3 também
-            elif not p.get("tp2_atingido"):
-                be_hit = preco <= p["entrada"] if eh_long else preco >= p["entrada"]
-                if be_hit:   # stop já foi pro BE após TP1 — fecha com lucro parcial garantido
-                    fechados.append({**p, "resultado": "TP1_BE", "preco_saida": p["entrada"]})
-                    continue
-            if p.get("tp1_atingido") and not p.get("tp2_atingido") and tp2_hit:
-                p["tp2_atingido"] = True
-            if p.get("tp1_atingido") and p.get("tp2_atingido") and tp3_hit:
-                p["tp3_atingido"] = True   # vira "runner" — 10% final segue MM10/MM21+fluxo+volume
+        if not ja_em_trailing:
+            if stop_hit:
+                fechados.append({**p, "resultado": "STOP", "preco_saida": preco})
+                continue
+            if tp1_hit:
+                p["tp1_atingido"] = True
+
+        if ja_em_trailing:
+            ganho_atual = (preco - p["tp1"]) if eh_long else (p["tp1"] - preco)
+            if ganho_atual > p["ganho_max_pos_tp1"]:
+                p["ganho_max_pos_tp1"] = ganho_atual
+            trail = p["tp1"] + 0.5 * p["ganho_max_pos_tp1"] if eh_long else \
+                    p["tp1"] - 0.5 * p["ganho_max_pos_tp1"]
+            trail = max(trail, p["entrada"]) if eh_long else min(trail, p["entrada"])
+            trail_hit = preco <= trail if eh_long else preco >= trail
+            if trail_hit:
+                fechados.append({**p, "resultado": "TP1_TRAIL", "preco_saida": preco})
+                continue
 
         if expirou:
             fechados.append({**p, "resultado": "EXPIRADO", "preco_saida": preco})
@@ -153,44 +155,33 @@ def verificar_posicoes_abertas(estado, precos):
     return fechados
 
 
-def fechar_runner(estado, posicao, preco_saida, r_runner):
-    """Encerra o 'restante' (10%) de uma posição em estágio runner (já bateu TP1,
-    TP2 e TP3) — chamado por cycles.py:_checar_runners() quando MM10 cruza MM21
-    contra a direção E o fluxo perde força E o volume cai (CLASSIFICAÇÃO
-    INSTITUCIONAL V3). Remove de _posicoes_abertas e devolve o dict pronto pra
-    registrar_resultado()."""
-    posicoes = estado.get("_posicoes_abertas", [])
-    restantes, fechado = [], None
-    for p in posicoes:
-        if fechado is None and p is posicao:
-            fechado = {**p, "resultado": "TP3_RUNNER", "preco_saida": preco_saida, "r_runner": r_runner}
-            continue
-        restantes.append(p)
-    estado["_posicoes_abertas"] = restantes
-    return fechado
-
-
 def registrar_resultado(p):
     """Grava uma posição fechada (dict vindo de verificar_posicoes_abertas) no
     resultados_log.csv, já com o R realizado calculado."""
     resultado = p["resultado"]
     r1 = p.get("r1", 1.0)
-    # Fallback em "r_final" cobre posições abertas antes da V3 (sem r2/r3 ainda
-    # gravados em last_signals.json) — código novo sempre grava r2/r3.
+    # Fallbacks em r2/r3/r_final cobrem posições abertas antes da v5.0 (sem
+    # tp2/tp3 mais — código novo só produz STOP/TP1_TRAIL/EXPIRADO*).
     r2 = p.get("r2", p.get("r_final", 3.0))
     r3 = p.get("r3", p.get("r_final", 3.0))
+    risco_unid = abs(p["entrada"] - p["stop"]) or 1e-9
     if resultado == "STOP":
         r_realizado = -1.0
-    elif resultado == "TP1_BE":
-        # CLASSIFICAÇÃO INSTITUCIONAL V3 (22/06): TP1 realiza 30% (era 50% na V2)
+    elif resultado == "TP1_TRAIL":
+        # v5.0: TP1 realiza 50% a 1R fixo; os outros 50% saem no nível de
+        # trailing (preco_saida), nunca pior que o BE (piso do trailing) —
+        # logo todo TP1_TRAIL é, por construção, R_realizado >= r1*0.5.
+        eh_long = p["direcao"] == "LONG"
+        r_resto = ((p["preco_saida"] - p["entrada"]) if eh_long else
+                   (p["entrada"] - p["preco_saida"])) / risco_unid
+        r_realizado = r1 * 0.5 + r_resto * 0.5
+    elif resultado == "TP1_BE":   # legado (V3) — só aparece em posições legadas
         r_realizado = r1 * 0.3
-    elif resultado == "TP2":   # gestão antiga (binária 50/50) — só aparece em posições legadas
+    elif resultado == "TP2":   # legado (V1, binário) — só aparece em posições legadas
         r_realizado = r1 * 0.5 + r2 * 0.5
-    elif resultado == "TP2_RUNNER":   # Estratégia de Saída V2 (legada, 3 estágios)
+    elif resultado == "TP2_RUNNER":   # legado (V2, 3 estágios)
         r_realizado = r1 * 0.5 + r2 * 0.3 + p.get("r_runner", r2) * 0.2
-    elif resultado == "TP3_RUNNER":
-        # CLASSIFICAÇÃO INSTITUCIONAL V3: 30% TP1 + 40% TP2 + 20% TP3 + 10% runner
-        # (trailing MM10/MM21+fluxo+volume, R real do runner vem de fechar_runner())
+    elif resultado == "TP3_RUNNER":   # legado (V3/V4, 4 estágios)
         r_realizado = r1 * 0.3 + r2 * 0.4 + r3 * 0.2 + p.get("r_runner", r3) * 0.1
     else:   # EXPIRADO / EXPIRADO_SEM_DADO — sem resolução clara, fica de fora do winrate
         r_realizado = None
@@ -212,7 +203,7 @@ def registrar_resultado(p):
                 "entrada":         f"{p['entrada']:.6f}",
                 "stop":            f"{p['stop']:.6f}",
                 "tp1":             f"{p['tp1']:.6f}",
-                "tp2":             f"{p['tp2']:.6f}",
+                "tp2":             f"{p['tp2']:.6f}" if p.get("tp2") is not None else "",
                 "preco_saida":     f"{p['preco_saida']:.6f}" if p.get("preco_saida") is not None else "",
                 "resultado":       resultado,
                 "r_realizado":     f"{r_realizado:.2f}" if r_realizado is not None else "",
@@ -220,6 +211,7 @@ def registrar_resultado(p):
     except Exception as e:
         import logging
         logging.getLogger("GAUSS+DNA").warning(f"Erro ao salvar resultado: {e}")
+    return r_realizado
 
 
 def resumo_resultados(horas=24):
@@ -266,7 +258,7 @@ def resumo_resultados(horas=24):
     if not contagem:
         return None
     total   = sum(contagem.values())
-    vitorias = (contagem.get("TP1_BE", 0) + contagem.get("TP2", 0)
+    vitorias = (contagem.get("TP1_TRAIL", 0) + contagem.get("TP1_BE", 0) + contagem.get("TP2", 0)
                 + contagem.get("TP2_RUNNER", 0) + contagem.get("TP3_RUNNER", 0))
     winrate = vitorias / total * 100 if total else 0
     return {"contagem": contagem, "total": total, "winrate": winrate,

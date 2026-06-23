@@ -37,6 +37,19 @@ SCAN_EVERY   = int(os.environ.get("SCAN_EVERY", "2"))     # rescan a cada N cicl
 CAPITAL   = float(os.environ.get("CAPITAL",  "100"))    # capital total em USD
 RISK_PCT  = float(os.environ.get("RISK_PCT", "0.03"))   # risco base por trade (3%)
 
+# ── GAUSS+DNA v5.0 (23/06) — gestão de risco em dólar fixo, banca real pequena
+# ($90). Substitui CAPITAL/RISK_PCT/RISK_BY_GRADE/RISK_SCOUT acima (que ficam só
+# como fallback de outros scripts fora do bot principal, ex: bot_manual.py) pra
+# tudo que toca tamanho de posição e circuit breakers em notify.py/cycles.py.
+BANCA_V5           = 90.0    # banca real (USD)
+MARGEM_POR_TIER_V5 = {"PRATA": 30.0, "BRONZE": 15.0}   # margem fixa por tier, 3x
+ALAVANCAGEM_V5      = 3       # alavancagem fixa, sem exceção (REGRA v5.0)
+RISCO_POR_TRADE_V5  = 2.70    # referência de risco por trade (~3% da banca)
+PERDA_MAX_DIA_V5    = 5.40    # circuit breaker diário (~6% da banca) — bloqueia novas entradas no dia
+PAUSA_2_PERDAS_V5   = 7200    # 2h de pausa após 2 perdas (STOP) consecutivas
+MAX_POSICOES_V5     = 2       # máximo de posições simultâneas — a 2ª entra com lote pela metade
+NO_TRADE_PRIMEIROS_MIN_V5 = 15  # não opera nos primeiros 15min de cada vela H1 (UTC)
+
 # Risco pela metade (autorizado 21/06 — banca real em $86, winrate 26%/24h ainda sem
 # dado novo suficiente pra confirmar os 2 fixes de qualidade de entrada do mesmo dia,
 # Filtro de Execução V2 e defesa de RSI/StochRSI no BB_BREAK). Protege capital enquanto
@@ -89,9 +102,9 @@ RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.70}
 
 # Piso universal de força de tendência — aplicado a TODOS os tipos de sinal,
 # além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
-# CLASSIFICAÇÃO INSTITUCIONAL V3 (22/06) baixou de 20 pra 15 ("Bloquear LONG/
-# SHORT: ADX<15" do documento do usuário) — ver CLAUDE.md.
-ADX_MIN_GLOBAL = 15
+# GAUSS+DNA v5.0 (23/06) subiu de 15 pra 20 ("Bloquear LONG/SHORT: ADX<20" —
+# substitui a CLASSIFICAÇÃO INSTITUCIONAL V3/V4) — ver CLAUDE.md.
+ADX_MIN_GLOBAL = 20
 
 # GRAUS_PERMITIDOS (gate por grade letra S+/S/A/B no modo padrão FLEX/ELITE)
 # foi REMOVIDO na V3 — auditoria de 3 runs reais seguidos mostrou zero sinais
