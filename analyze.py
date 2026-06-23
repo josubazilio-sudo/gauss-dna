@@ -220,8 +220,13 @@ def calcular_indicadores(candles):
     range_vela = maximas[-1] - minimas[-1]
     sombra_sup = (maximas[-1] - max(aberturas[-1], preco)) / max(range_vela, 1e-10)
     sombra_inf = (min(aberturas[-1], preco) - minimas[-1]) / max(range_vela, 1e-10)
-    exaustao_topo = sombra_sup > 0.40 and preco < (maximas[-1] - bb_range * 0.02)
-    exaustao_fund = sombra_inf > 0.40 and preco > (minimas[-1] + bb_range * 0.02)
+    # Afrouxado 22/06 (pedido do usuário — "o que falta pra dar sinal"): auditoria
+    # de um run real de 55min/12 ciclos achou ZERO sinais (já com vol_secando e o
+    # filtro de regime BTC afrouxados antes); exaustao_topo/fund isolado respondia
+    # por 240/665 (~36%) de todo "seguro=F", 2º maior bloqueador depois de vol_sec.
+    # Pavio >40% do range já capturava rejeição moderada, não só exaustão extrema.
+    exaustao_topo = sombra_sup > 0.55 and preco < (maximas[-1] - bb_range * 0.02)
+    exaustao_fund = sombra_inf > 0.55 and preco > (minimas[-1] + bb_range * 0.02)
 
     bulls_5 = sum(1 for i in range(-5, 0) if fechamentos[i] > e21_arr[i])
     tend_consistente_bull = bulls_5 >= 4
