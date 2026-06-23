@@ -1,5 +1,13 @@
 # GAUSS+DNA — Regras de Prioridade Permanente
 
+## REGRA #-2 — COMUNICAÇÃO SEMPRE EM PORTUGUÊS (autorizado 23/06)
+
+Toda resposta do assistente ao usuário (chat, mensagens de status, resumos) é **sempre em português**,
+nunca em inglês — pedido explícito do usuário ("não quero nada em inglês na minha tela"). Isso não afeta
+nomes de variável/função em código (continuam em português onde já estavam, mas não é trocado código
+existente em inglês só por causa desta regra) nem texto técnico de log — é sobre o que chega pra leitura
+direta do usuário.
+
 ## REGRA #-1 — VONTADE DO USUÁRIO SEMPRE PREVALECE (autorizado 22/06, prioridade acima de todas as outras)
 
 O que o usuário pede **agora** sempre tem prioridade sobre qualquer decisão antiga documentada neste
