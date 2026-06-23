@@ -526,44 +526,40 @@ def calcular_indicadores(candles):
 
 def classificar_v2(ind, sinal):
     """Classifica o sinal em OURO/PRATA/BRONZE/None pela CLASSIFICAÇÃO
-    INSTITUCIONAL V3 (nome da função mantido por compatibilidade com todo o
-    fiação existente em cycles.py — o conteúdo é a V3). Retorna None quando
+    INSTITUCIONAL V4 (nome da função mantido por compatibilidade com todo o
+    fiação existente em cycles.py — o conteúdo é a V4). Retorna None quando
     nem o piso de BRONZE é atingido.
 
-    Mudanças V2→V3: Score_inst minimo cai bastante (90→80 OURO, 80→70 PRATA,
-    75→60 BRONZE) e RVOL sobe um pouco (1.2→1.5 OURO, 0.90→1.2 PRATA, 0.70→1.0
-    BRONZE) — a barra de qualidade migra de "score altíssimo" pra "volume real
-    + score moderado", bem menos raro. PRATA não exige mais fluxo confirmado
-    (opcional) e BRONZE ignora fluxo completamente (antes exigiam). Distância
-    MM21 da OURO sobe de <=3% pra <=6% (deixa de cortar entradas em tendência
-    já um pouco estendida).
+    V3→V4 (autorizado 22/06, tabela própria do usuário — aperta de propósito,
+    não é afrouxamento): Score_inst mínimo sobe em todos os degraus (80→85
+    OURO, 70→75 PRATA, 60→65 BRONZE). RVOL sobe em OURO/PRATA (1.5→1.8 OURO,
+    1.2 PRATA igual) mas BRONZE desce (1.0→0.7 — único afrouxamento da tabela).
+    ADX sobe nos 3 degraus (22→25 OURO, 18→20 PRATA, 15→18 BRONZE). Distância
+    MM21 da OURO volta a apertar de <=6% pra <=3% (era esse valor antes da V3).
+    "Conf" do documento do usuário é redundante com Score (`confiança =
+    score_inst-10` em notify.py) — não é checagem separada. RSI/Kalman/MM50
+    (gates da V3) saem da classificação: não estavam na tabela nova do
+    usuário, e a zona de RSI já é gate da própria cascata de sinais (REGRA #1)
+    antes de chegar aqui — não removia proteção real, só checagem redundante.
     """
     if not sinal:
         return None
     eh_long = sinal == "LONG"
     score_inst = ind["score_inst_long"] if eh_long else ind["score_inst_short"]
-    rvol, adx, rsi = ind["rvol"], ind["adx"], ind["rsi"]
+    rvol, adx = ind["rvol"], ind["adx"]
 
     fluxo_ok  = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
                 (ind["dna_flow_bear"] or ind["trendilo_short"])
-    kalman_ok = ind["kalman_subindo"] if eh_long else ind["kalman_descendo"]
     mm200_ok  = ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]
-    mm50_ok   = ind["preco"] > ind["e50"] if eh_long else ind["preco"] < ind["e50"]
     liq_varrida = ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"]
     dist_mm21 = abs(ind["preco"] - ind["e21"]) / ind["preco"] if ind["preco"] else 1.0
 
-    if eh_long:
-        rsi_ouro, rsi_prata = 35 <= rsi <= 70, 30 <= rsi <= 75
-    else:
-        rsi_ouro, rsi_prata = 30 <= rsi <= 65, 25 <= rsi <= 70
-
-    if (score_inst >= 80 and rvol >= 1.5 and adx >= 22 and fluxo_ok and kalman_ok
-            and mm200_ok and rsi_ouro and liq_varrida and dist_mm21 <= 0.06):
+    if (score_inst >= 85 and rvol >= 1.8 and adx >= 25 and fluxo_ok
+            and mm200_ok and liq_varrida and dist_mm21 <= 0.03):
         return "OURO"
-    if (score_inst >= 70 and rvol >= 1.2 and adx >= 18 and kalman_ok
-            and mm50_ok and rsi_prata):
+    if score_inst >= 75 and rvol >= 1.2 and adx >= 20:
         return "PRATA"
-    if score_inst >= 60 and rvol >= 1.0 and adx >= 15:
+    if score_inst >= 65 and rvol >= 0.7 and adx >= 18:
         return "BRONZE"
     return None
 

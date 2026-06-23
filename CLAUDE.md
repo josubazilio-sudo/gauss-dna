@@ -773,6 +773,10 @@ BRONZE (antes sempre ignorado, agora opera condicionalmente), bloqueios universa
 RVOL/MM200, e saída em 4 estágios em vez de 3.
 
 ### Classificação — `analyze.py classificar_v2()` (nome mantido por compatibilidade, conteúdo é a V3)
+⚠️ **SUPERSEDED 22/06 (V4, mesmo dia)** — usuário trouxe tabela própria com pisos mais altos em quase todos
+os critérios (não foi pedido de afrouxamento, ver seção "CLASSIFICAÇÃO INSTITUCIONAL V4" mais abaixo pro
+esquema atual). Mantida aqui só como registro histórico do que existiu entre os pedidos do mesmo dia.
+
 Usa só `score_inst_long/short`:
 
 - 🥇 **OURO**: `score_inst>=80` + `RVOL>=1.5` + `ADX>=22` + fluxo confirmado (`dna_flow` ou `trendilo` na
@@ -815,6 +819,59 @@ Usa só `score_inst_long/short`:
 - **Sessão perigosa (REGRA #3)** reimplementada: nos horários de risco (22h-08h UTC + abertura 08h/13h UTC)
   só **OURO** opera — PRATA e BRONZE são bloqueados nesses horários, independente do piso de score que
   bateriam fora deles. Substitui o mecanismo antigo de forçar `_inst_min` pra um piso fixo de 60.
+
+---
+
+## CLASSIFICAÇÃO INSTITUCIONAL V4 — TABELA PRÓPRIA DO USUÁRIO (autorizado 22/06)
+
+Substitui a CLASSIFICAÇÃO INSTITUCIONAL V3 (acima, marcada SUPERSEDED) no mesmo dia, poucas horas depois.
+Usuário trouxe tabela própria de pisos OURO/PRATA/BRONZE, explicitamente **mais apertada** que a V3 na
+maioria dos critérios — direção contrária ao resto da sessão (que tinha sido só afrouxamento: vol_secando,
+BTC_REGIME_ADX_MAX, exaustao). Como o pedido contradizia o esforço do dia, perguntei antes de aplicar
+(`AskUserQuestion`) se era intencional; resposta do usuário foi explícita: **"Não quero apertar não quero
+liberar sinal, vamos fazer isto"** — ou seja, não é pra debater aperto/afrouxamento, é pra implementar a
+tabela exatamente como veio (REGRA #-1: vontade atual do usuário prevalece sobre a trajetória da sessão).
+
+### Tabela aplicada (`analyze.py classificar_v2()`, nome da função mantido por compatibilidade)
+- 🥇 **OURO**: `score_inst>=85` + `RVOL>=1.8` + `ADX>=25` + fluxo confirmado (`dna_flow` ou `trendilo` na
+  direção, obrigatório) + MM200 favorável + liquidez varrida (`liq_fundo_12` LONG / `liq_topo_12` SHORT) +
+  distância até a MM21 `<=3%` do preço
+- 🥈 **PRATA**: `score_inst>=75` + `RVOL>=1.2` + `ADX>=20`
+- 🥉 **BRONZE**: `score_inst>=65` + `RVOL>=0.7` + `ADX>=18`
+- Nenhum piso atingido → `None`
+
+Mudanças V3→V4: Score mínimo sobe em todos os degraus (80→85 OURO, 70→75 PRATA, 60→65 BRONZE). RVOL sobe
+em OURO/PRATA (1.5→1.8 OURO, 1.2 PRATA igual) mas **desce em BRONZE** (1.0→0.7 — único afrouxamento da
+tabela, e só nesse degrau). ADX sobe nos 3 (22→25 OURO, 18→20 PRATA, 15→18 BRONZE). Distância MM21 da OURO
+volta a apertar de `<=6%` pra `<=3%` (era esse valor antes da V3). RSI absoluto, Kalman alinhado e MM50
+favorável (gates da V3 em OURO/PRATA) saíram da classificação — não estavam na tabela nova do usuário, e a
+zona de RSI já é gate da própria cascata de sinais (REGRA #1, `rsi_zona_long/short` 75/25) antes do sinal
+chegar até `classificar_v2()` — remover esse check redundante aqui não reabre brecha real. "Conf" (campo
+da tabela do usuário) não tem checagem própria: é redundante com Score (`confiança = score_inst-10` em
+`notify.py`), confirmado matematicamente equivalente em todos os 3 degraus da tabela do usuário antes de
+aplicar (ex: OURO Score≥85/Conf≥75 → 85-10=75, bate exato).
+
+### Contradição descoberta e corrigida — piso universal de RVOL pré-classificação (`config.py`/`cycles.py`)
+Antes de aplicar, auditei `cycles.py` por dependências da V3 e achei um problema real: o gate universal de
+RVOL que roda **antes** de `classificar_v2()` ser chamado (`executar_ciclo()` e `executar_ciclo_mtf()`,
+`_rvol_min_tf = max(RVOL_MIN_BY_TF.get(tf,0.80), RVOL_MIN_EXEC)`) calculava `max(0.70-0.80, 1.0) = 1.0`
+pros dois timeframes — mais alto que o novo piso de BRONZE (`RVOL>=0.7`). Sem ajuste, o único afrouxamento
+real da tabela nova (BRONZE RVOL 1.0→0.7) seria código morto: nenhum candidato com RVOL entre 0.7-1.0
+chegaria a `classificar_v2()`, sempre bloqueado antes pelo piso universal antigo.
+
+Fix: `config.py` `RVOL_MIN_EXEC` `1.0`→`0.7` e `RVOL_MIN_BY_TF["1h"]` `0.80`→`0.70` (30m já estava em 0.70)
+— alinha os dois pisos universais ao degrau mais baixo da nova tabela (BRONZE), deixando a classificação
+em si (`classificar_v2()`) ser o gate real de qualidade por tier, como já era a intenção da V3.
+
+### O que NÃO mudou
+- Regras de execução por tier em `cycles.py` (OURO sempre opera, PRATA exige H1 alinhado, BRONZE exige H1
+  alinhado OU score_inst>=70, sessão perigosa exige OURO) — só consomem a string `"OURO"/"PRATA"/"BRONZE"`
+  devolvida por `classificar_v2()`, não dependem dos números internos do tier.
+- Bloqueios universais de RSI (>80 bloqueia LONG, <20 bloqueia SHORT), `ADX_MIN_GLOBAL` (15), MM200 —
+  nenhum mencionado na tabela do usuário, mantidos como estavam na V3.
+- Saída em 4 estágios (TP1=1.5R/TP2=3R/TP3=5R/runner), gestão de stop, alavancagem, tamanho de posição —
+  nenhum tocado por este ajuste, mesma régua da V3.
+- Modo `SIGNAL_MODE=="INSTITUCIONAL"` (separado, com sua própria grade/risco/cooldown) — intocado.
 
 ### Saída — `notify.py calcular_stop_tp()`/`enviar_sinal()`, 4 estágios fixos (substitui os 3 da V2)
 - **TP1 = 1.5R fixo** → fecha 30% da posição, stop conceitual vai pra BE (break-even)
