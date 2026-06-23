@@ -267,7 +267,7 @@ async def _enviar_diagnostico(session) -> None:
                         for k, d in sorted(_grupo.items(), key=lambda x: -x[1]["total"])]
                 linhas.append(f"  por {_rotulo}: {', '.join(_det)}")
     else:
-        linhas.append("\nResultados (24h): nenhum fechado ainda")
+        linhas.append("\nResultados (24h): 0 fechados — STOP:0 TP:0 — winrate: 0% — R medio: 0.00")
 
     # Backtest automático por sinal (22/06) — dado de calibração rápido (sliding
     # window no histórico), não substitui o resultado real acima, é só leading indicator
