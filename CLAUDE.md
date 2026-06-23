@@ -1313,3 +1313,36 @@ moderado/RSI não-extremo (`pullback_bull`/`bear`, `algum_cross_bull`/`bear`, `m
 de sinal) — usar o próximo run real pra identificar qual gatilho específico falta e decidir o próximo
 ajuste cirúrgico (ex: permitir `macd_recuperando or macd_bull_r` no SETUP pra aceitar tendência já
 positiva, não só recuperação — só aplicar depois de confirmar no log real, nunca "no escuro").
+
+## REGRA #7 — RSI SÓ NA DIREÇÃO DO SINAL: COMPRA EXIGE RSI SUBINDO, VENDA EXIGE RSI CAINDO (autorizado 23/06)
+
+Pedido explícito do usuário: "só ativar compra quando rsi estiver em ponto de subida não de descer e para
+venda ai contrario". Os indicadores `rsi_subindo` (`rsi > rsi_ant`) e `rsi_caindo` (`rsi < rsi_ant`) já
+existiam em `analyze.py` (usados só dentro do `_score_inst()`, como pontuação, e em alguns sinais
+isolados — ELITE, DIV, MOMENTUM já tinham isso embutido por desenho, ver abaixo) — não existia como gate
+de entrada explícito na maioria da cascata. Diferente da REGRA #1 (`rsi_zona`, zona absoluta 75/25): isto é
+sobre a **inclinação** do RSI no candle atual, não o nível absoluto — as duas regras coexistem.
+
+### Onde foi adicionado (`analyze.py detectar_sinais()`)
+`and i["rsi_subindo"]` no LONG / `and i["rsi_caindo"]` no SHORT, adicionado em: **PULLBACK, CROSS,
+BB_BREAK, SM_SWEEP, REVERSAL, FLEX, SETUP, SCOUT** — os 8 sinais que ainda não tinham nenhuma checagem de
+inclinação do RSI embutida na própria condição.
+
+### Onde já era redundante (não precisou de mudança, já cumpria a regra por desenho)
+- **ELITE**: `rsi_bull_elite = 48<rsi<65 and rsi_subindo` / `rsi_bear_elite = ... and rsi_caindo` — já exigia.
+- **MOMENTUM**: `rsi_fresh_long = rsi_ant<65<=rsi<73` já implica `rsi>rsi_ant` (rising) matematicamente;
+  espelho simétrico no SHORT. Já cumpria.
+- **DIV**: `rsi_div_bull = ... and rsi>rsi_ant and rsi<45` / `rsi_div_bear = ... and rsi<rsi_ant and
+  rsi>55` — a própria definição de divergência bullish/bearish já embute a inclinação. Já cumpria.
+
+### Exceção deliberada — REBOUND (não tocado, contradição direta)
+`rsi_rebound_long = 54<=rsi<=62 and rsi<rsi_ant` (RSI ainda **caindo** do pico, é o recuo que define o
+próprio gatilho do sinal) / `rsi_rebound_short = 38<=rsi<=46 and rsi>rsi_ant` (subindo do fundo) — exigir
+`rsi_subindo`/`rsi_caindo` aqui geraria contradição lógica direta (sinal nunca dispararia), mesmo padrão já
+documentado do SURGE com `not liq_topo/fundo`. REBOUND continua comprando o recuo do pico (LONG) / o recuo
+do fundo (SHORT) por desenho — é uma exceção da REGRA #7, análoga às exceções já existentes da REGRA #5.
+
+### O que NÃO foi tocado
+REGRA #1 (`rsi_zona_long/short`, zona absoluta 75/25) intocada — REGRA #7 é um filtro adicional de
+inclinação, não substitui o filtro de zona. `notify.py` (stop/TP/leverage), classificação V3/V4/v5.0,
+gestão de risco — nada disso foi tocado, é só gate de entrada em `detectar_sinais()`.
