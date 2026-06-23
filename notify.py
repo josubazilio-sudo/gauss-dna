@@ -6,7 +6,7 @@ import logging
 import aiohttp
 from datetime import datetime
 from config import (TG_TOKEN, TG_CHATID, WA_PHONE, WA_APIKEY, SIGNAL_MODE,
-                    MARGEM_POR_TIER_V5, ALAVANCAGEM_V5)
+                    MARGEM_POR_TIER_V5, ALAVANCAGEM_POR_TIER_V5)
 from indicators import formatar_preco
 from state import registrar_trade
 
@@ -134,11 +134,12 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     risco_pct = risco / preco * 100
 
     # ── Tamanho da posição — lote fixo em dólar por tier (GAUSS+DNA v5.0,
-    # substitui RISK_BY_GRADE%/RISK_INSTITUCIONAL_POR_GRADE e a alavancagem
-    # dinâmica 3x-50x): PRATA=$30 margem, BRONZE=$15 margem, ambos em 3x fixo,
-    # sem exceção. OURO desabilitado (classificar_v2 nunca devolve OURO nesta
-    # versão, banca<$500) — fallback BRONZE só por segurança defensiva.
-    alavancagem = ALAVANCAGEM_V5
+    # substitui RISK_BY_GRADE%/RISK_INSTITUCIONAL_POR_GRADE): PRATA=$30 margem,
+    # BRONZE=$15 margem. Alavancagem dinâmica por tier (23/06, range 5x-20x,
+    # substituiu o fixo 3x): BRONZE=5x, PRATA=20x. OURO desabilitado
+    # (classificar_v2 nunca devolve OURO nesta versão, banca<$500) — fallback
+    # BRONZE só por segurança defensiva.
+    alavancagem = ALAVANCAGEM_POR_TIER_V5.get(classificacao, 5)
     margem    = MARGEM_POR_TIER_V5.get(classificacao, 15.0)
     if lote_reduzido:
         margem /= 2  # 2ª posição simultânea (GAUSS+DNA v5.0, MAX_POSICOES_V5)

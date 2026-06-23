@@ -1134,10 +1134,17 @@ Substitui `CAPITAL`/`RISK_PCT`/`RISK_BY_GRADE`/`RISK_SCOUT`/a alavancagem dinâm
 saída em 4 estágios (V3/V4) por uma régua mais simples pra banca pequena: lote fixo em dólar por tier
 (`classificar_v2()` PRATA/BRONZE — OURO desabilitado, exige banca>$500) e saída em 2 estágios.
 
-- **Tamanho de posição** (`notify.py enviar_sinal()`): `ALAVANCAGEM_V5=3x` fixo, `MARGEM_POR_TIER_V5` =
-  PRATA $30 / BRONZE $15 (`config.py`). 2ª posição simultânea opera com `lote_reduzido=True` (margem pela
-  metade) — parâmetro novo em `enviar_sinal()`, decidido em `cycles.py` por
-  `len(estado["_posicoes_abertas"]) >= 1` no momento do envio.
+- **Tamanho de posição** (`notify.py enviar_sinal()`): `MARGEM_POR_TIER_V5` = PRATA $30 / BRONZE $15
+  (`config.py`). 2ª posição simultânea opera com `lote_reduzido=True` (margem pela metade) — parâmetro
+  novo em `enviar_sinal()`, decidido em `cycles.py` por `len(estado["_posicoes_abertas"]) >= 1` no momento
+  do envio.
+- **Alavancagem dinâmica por tier, range 5x-20x** (autorizado 23/06, pedido "alavancagem de 5 x até 20
+  pode ativar sinal real" — substitui o `ALAVANCAGEM_V5=3x` fixo original do dia): `config.py
+  ALAVANCAGEM_POR_TIER_V5 = {"BRONZE": 5, "PRATA": 20, "OURO": 20}` — BRONZE (qualidade menor) no piso do
+  range, PRATA (tier ativo mais alto hoje, já que OURO é inatingível nesta versão) no teto. `notify.py`
+  consome via `ALAVANCAGEM_POR_TIER_V5.get(classificacao, 5)` (fallback 5x, mesmo padrão defensivo do
+  fallback de `margem`). Tamanho de margem em dólar por tier (`MARGEM_POR_TIER_V5`) não muda — só o
+  multiplicador de alavancagem deixou de ser fixo.
 - **Saída em 2 estágios**: TP1 = 1:1R fecha 50%, stop conceitual vai pra BE; os 50% restantes seguem em
   trailing (50% do ganho desde o TP1, piso BE) — resolvido tick a tick em `state.py
   verificar_posicoes_abertas()`, resultado `TP1_TRAIL`. `auto_backtest.py` usa a mesma régua.

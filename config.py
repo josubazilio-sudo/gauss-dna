@@ -42,8 +42,10 @@ RISK_PCT  = float(os.environ.get("RISK_PCT", "0.03"))   # risco base por trade (
 # como fallback de outros scripts fora do bot principal, ex: bot_manual.py) pra
 # tudo que toca tamanho de posição e circuit breakers em notify.py/cycles.py.
 BANCA_V5           = 90.0    # banca real (USD)
-MARGEM_POR_TIER_V5 = {"PRATA": 30.0, "BRONZE": 15.0}   # margem fixa por tier, 3x
-ALAVANCAGEM_V5      = 3       # alavancagem fixa, sem exceção (REGRA v5.0)
+MARGEM_POR_TIER_V5 = {"PRATA": 30.0, "BRONZE": 15.0}   # margem fixa por tier
+# Alavancagem dinâmica por tier, range 5x-20x (autorizado 23/06 — pedido "alavancagem de 5 x até 20
+# pode ativar sinal real"; substitui o fixo 3x anterior): tier melhor = mais alavancagem no range.
+ALAVANCAGEM_POR_TIER_V5 = {"BRONZE": 5, "PRATA": 20, "OURO": 20}
 RISCO_POR_TRADE_V5  = 2.70    # referência de risco por trade (~3% da banca)
 PERDA_MAX_DIA_V5    = 5.40    # circuit breaker diário (~6% da banca) — bloqueia novas entradas no dia
 PAUSA_2_PERDAS_V5   = 7200    # 2h de pausa após 2 perdas (STOP) consecutivas
