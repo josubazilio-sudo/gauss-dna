@@ -82,7 +82,10 @@ FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
 # ── AJUSTE PROFISSIONAL (21/06) — qualidade acima de quantidade ──────────────
 # RVOL mínimo por timeframe (30M tende a ter RVOL mais baixo que H1 com o
 # mesmo grau de convicção real — piso diferenciado evita bloqueio excessivo).
-RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.80}
+# 1h baixou de 0.80 pra 0.70 em 22/06 (CLASSIFICAÇÃO V4) — ver RVOL_MIN_EXEC
+# abaixo: precisa bater com o piso mais baixo dos 3 degraus (BRONZE=0.7),
+# senão o gate universal pré-classificação bloqueia BRONZE antes dele rodar.
+RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.70}
 
 # Piso universal de força de tendência — aplicado a TODOS os tipos de sinal,
 # além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
@@ -115,7 +118,12 @@ ADX_MIN_GLOBAL = 15
 INST_MIN_EXEC = 75
 # RVOL_MIN_EXEC: piso universal de RVOL — caiu de 1.2 pra 1.0 ("Bloquear LONG/
 # SHORT: RVOL<1.0" da CLASSIFICAÇÃO INSTITUCIONAL V3, autorizado 22/06).
-RVOL_MIN_EXEC = 1.0
+# Caiu de novo, 1.0→0.7, em 22/06 (CLASSIFICAÇÃO V4, tabela própria do usuário):
+# a V4 introduziu RVOL>=0.7 como piso explícito de BRONZE, mais baixo que o
+# piso universal antigo (1.0) — sem este ajuste, BRONZE nunca veria candidatos
+# com RVOL 0.7-1.0 (bloqueados aqui antes de chegar em classificar_v2()), o que
+# tornaria o afrouxamento de BRONZE pedido pelo usuário código morto na prática.
+RVOL_MIN_EXEC = 0.7
 
 # Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
 # LONG e SHORT em todas as moedas até o regime mudar.
