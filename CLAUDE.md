@@ -1314,35 +1314,41 @@ de sinal) — usar o próximo run real pra identificar qual gatilho específico 
 ajuste cirúrgico (ex: permitir `macd_recuperando or macd_bull_r` no SETUP pra aceitar tendência já
 positiva, não só recuperação — só aplicar depois de confirmar no log real, nunca "no escuro").
 
-## REGRA #7 — RSI SÓ NA DIREÇÃO DO SINAL: COMPRA EXIGE RSI SUBINDO, VENDA EXIGE RSI CAINDO (autorizado 23/06)
+## REGRA #7 — RSI ANTI-ESTICADO: NÃO COMPRAR SOBRECOMPRADO, NÃO VENDER SOBREVENDIDO (corrigida 23/06)
 
-Pedido explícito do usuário: "só ativar compra quando rsi estiver em ponto de subida não de descer e para
-venda ai contrario". Os indicadores `rsi_subindo` (`rsi > rsi_ant`) e `rsi_caindo` (`rsi < rsi_ant`) já
-existiam em `analyze.py` (usados só dentro do `_score_inst()`, como pontuação, e em alguns sinais
-isolados — ELITE, DIV, MOMENTUM já tinham isso embutido por desenho, ver abaixo) — não existia como gate
-de entrada explícito na maioria da cascata. Diferente da REGRA #1 (`rsi_zona`, zona absoluta 75/25): isto é
-sobre a **inclinação** do RSI no candle atual, não o nível absoluto — as duas regras coexistem.
+Pedido original do usuário: "só ativar compra quando rsi estiver em ponto de subida não de descer e para
+venda ai contrario". Interpretado nesta sessão, num primeiro momento, como gate de **inclinação** do RSI
+(`rsi_subindo`/`rsi_caindo`) — implementado e documentado, depois revertido no mesmo dia: o usuário
+corrigiu explicitamente ("oque quis dizer e sobre rsi sobi vendido não entra com o ponto já esticado") que
+a intenção real era sobre RSI **esticado** (sobrecomprado/sobrevendido), não sobre a inclinação do candle
+atual. `and i["rsi_subindo"]`/`and i["rsi_caindo"]` foram removidos dos 8 sinais onde tinham sido
+adicionados (PULLBACK, CROSS, BB_BREAK, SM_SWEEP, REVERSAL, FLEX, SETUP, SCOUT) — `rsi_subindo`/
+`rsi_caindo` continuam existindo em `analyze.py` só nos usos que já tinham antes (ELITE, `_score_inst()`,
+`rsi_dinamico_long/short`), sem efeito sobre a cascata de 12 sinais.
 
-### Onde foi adicionado (`analyze.py detectar_sinais()`)
-`and i["rsi_subindo"]` no LONG / `and i["rsi_caindo"]` no SHORT, adicionado em: **PULLBACK, CROSS,
-BB_BREAK, SM_SWEEP, REVERSAL, FLEX, SETUP, SCOUT** — os 8 sinais que ainda não tinham nenhuma checagem de
-inclinação do RSI embutida na própria condição.
+### Auditoria feita antes de reverter — a defesa anti-esticado já existe e é robusta
+Conferido sinal por sinal o que cada um já tem, além da REGRA #1 (`rsi_zona_long/short`, zona absoluta
+75/25, intocada):
+- **PULLBACK, CROSS, SM_SWEEP, FLEX, SETUP, SCOUT**: já têm `nao_overext_long/short` (preço não pode estar
+  >50% do range das últimas 48 velas) + `rsi_nao_chasing_long/short` (RSI não saltou >18pts numa vela) +
+  `nao_ext_long_tight/short` (teto efetivo de RSI ~65, até 75 só com ADX>32) — defesa já completa.
+- **BB_BREAK**: além do mesmo `nao_overext`/`rsi_nao_chasing`, tem teto próprio **mais apertado ainda**
+  (`rsi<65` LONG / `rsi>35` SHORT, fix "21/06 — RSI com espaço pra correr") + `not stoch_esticado_up/down`
+  — defesa mais forte que o padrão dos outros sinais.
+- **REVERSAL**: contrário por desenho (`rsi<30` LONG / `rsi>70` SHORT — entra justamente no extremo pra
+  pegar a virada, com `ha_bull`+`v_forte`+`liq_fundo/absorb`+`macd_recuperando` como confirmação), não usa
+  `rsi_zona` por desenho (já documentado) — anti-esticado não se aplica aqui do mesmo jeito, é exceção
+  deliberada, mesmo padrão de SURGE/MOMENTUM/REBOUND.
 
-### Onde já era redundante (não precisou de mudança, já cumpria a regra por desenho)
-- **ELITE**: `rsi_bull_elite = 48<rsi<65 and rsi_subindo` / `rsi_bear_elite = ... and rsi_caindo` — já exigia.
-- **MOMENTUM**: `rsi_fresh_long = rsi_ant<65<=rsi<73` já implica `rsi>rsi_ant` (rising) matematicamente;
-  espelho simétrico no SHORT. Já cumpria.
-- **DIV**: `rsi_div_bull = ... and rsi>rsi_ant and rsi<45` / `rsi_div_bear = ... and rsi<rsi_ant and
-  rsi>55` — a própria definição de divergência bullish/bearish já embute a inclinação. Já cumpria.
-
-### Exceção deliberada — REBOUND (não tocado, contradição direta)
-`rsi_rebound_long = 54<=rsi<=62 and rsi<rsi_ant` (RSI ainda **caindo** do pico, é o recuo que define o
-próprio gatilho do sinal) / `rsi_rebound_short = 38<=rsi<=46 and rsi>rsi_ant` (subindo do fundo) — exigir
-`rsi_subindo`/`rsi_caindo` aqui geraria contradição lógica direta (sinal nunca dispararia), mesmo padrão já
-documentado do SURGE com `not liq_topo/fundo`. REBOUND continua comprando o recuo do pico (LONG) / o recuo
-do fundo (SHORT) por desenho — é uma exceção da REGRA #7, análoga às exceções já existentes da REGRA #5.
+Conclusão: a proteção que o usuário pediu já existe e já é robusta em todos os 7 sinais não-contrários.
+Não havia (e ainda não há) um caso real de diagnóstico/log apontando um candidato específico travado
+isoladamente por RSI esticado — por isso não foi adicionado nenhum threshold novo nesta correção, seguindo
+o mesmo critério já estabelecido na sessão (só apertar/afrouxar threshold numérico com caso real
+concreto, nunca "no escuro", ver "AJUSTE 23/06" acima). Se um diagnóstico futuro mostrar um candidato forte
+travado especificamente por RSI esticado, é o gatilho certo pra apertar `nao_ext_long_tight`/
+`rsi_nao_chasing` ou o teto próprio do sinal envolvido — mesmo padrão cirúrgico já usado nos ajustes
+anteriores.
 
 ### O que NÃO foi tocado
-REGRA #1 (`rsi_zona_long/short`, zona absoluta 75/25) intocada — REGRA #7 é um filtro adicional de
-inclinação, não substitui o filtro de zona. `notify.py` (stop/TP/leverage), classificação V3/V4/v5.0,
-gestão de risco — nada disso foi tocado, é só gate de entrada em `detectar_sinais()`.
+REGRA #1 (`rsi_zona_long/short`, 75/25) e REGRA #5 (defesas SMC) intocadas. `notify.py` (stop/TP/
+leverage), classificação V3/V4/v5.0, gestão de risco — nada disso foi tocado.
