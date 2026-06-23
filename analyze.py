@@ -204,8 +204,8 @@ def calcular_indicadores(candles):
     # Anti-topo / Anti-fundo
     bb_range   = max(bb_sup - bb_inf, 1e-10)
     pos_bb     = (preco - bb_inf) / bb_range
-    perto_bb_topo = pos_bb > 0.97
-    perto_bb_fund = pos_bb < 0.03
+    perto_bb_topo = pos_bb > 0.99  # afrouxado 23/06 (caso real KMNO score+120 RSI64 ADX21, bloqueado isolado em bb_topo)
+    perto_bb_fund = pos_bb < 0.01
     ext_acima_e21  = (preco - e21) / atr > 3.0
     ext_abaixo_e21 = (e21 - preco) / atr > 3.0
     vol3 = [volumes[-4], volumes[-3], volumes[-2]]
