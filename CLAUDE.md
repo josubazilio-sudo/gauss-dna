@@ -1163,3 +1163,32 @@ saída em 4 estágios (V3/V4) por uma régua mais simples pra banca pequena: lot
 - Gestão (cálculo do stop em si, `mult_atr`, stop estrutural) e a cascata de 12 sinais em `analyze.py`
   **intocadas** — este ajuste é só tamanho de posição, saída e circuit breaker, mesmo padrão dos ajustes
   anteriores de risco já documentados acima.
+
+---
+
+## AJUSTES PÓS-MERGE v5.0 — vol_secando e stoch_esticado (autorizado 23/06)
+
+Pedido do usuário: zero sinais em runs reais após o merge de v5.0 — "ajuste até dar sinal, sem pergunta,
+sem gastar mais de 1min por ajuste". Dois ajustes cirúrgicos aplicados em `analyze.py`, ambos validados
+contra diagnóstico real (log do run / mensagem de diagnóstico do Telegram), nenhum dos dois toca REGRA #1
+(`rsi_zona_long/short`) nem REGRA #5 (`liq_topo`/`liq_fundo`).
+
+1. **`vol_secando`** (linha ~212): run de 11 ciclos pós-merge (`28001700665`) mostrou `vol_sec` ainda como
+   o bloqueador mais frequente de `seguro_long/short`, mesmo após o afrouxamento de 22/06 (0.25/0.50 →
+   0.18/0.40). Afrouxado de novo: `volumes[-1] < vol_ma*0.10 and volumes[-1] < min(vol3)*0.25` (era
+   `0.18`/`0.40`) — exige fade de volume ainda mais extremo antes de bloquear.
+2. **`stoch_esticado_up/down`** (linha ~115-118): mesmo run mostrou candidatos LONG fortes (GWEI +135,
+   BDX +128/+145) com RSI dentro da zona REGRA #1 (62-70, bem abaixo do teto 75) travados isoladamente por
+   StochRSI saturado em combinação com `bb_topo`. Afrouxado em 2 passos no mesmo dia: `stoch_rsi>0.80 and
+   rsi>58` → `>0.90 and rsi>65` (1º ajuste, resolveu GWEI) → `>0.95 and rsi>65` (2º ajuste, mesmo dia,
+   diagnóstico seguinte mostrou BDX RSI70/stoch=0.93 ainda bloqueado pelo teto de 0.90). `stoch_esticado_down`
+   só teve o lado RSI ajustado (`<35`→`<30`) — nenhum candidato SHORT real ficou bloqueado isoladamente por
+   esse lado nos diagnósticos auditados (os SHORT bloqueados no período eram todos por REGRA #1 genuína,
+   RSI<25 num dump, e essa parte não foi tocada).
+3. **Critério de quando afrouxar mais**: só ajustar quando o diagnóstico real (log do run ou mensagem do
+   Telegram) mostrar um candidato específico, com score relevante e RSI dentro da REGRA #1, travado
+   isoladamente por esse filtro auxiliar (stoch/vol_sec) — nunca afrouxar "no escuro" sem um caso real
+   apontado pelo diagnóstico. Padrão a seguir caso o usuário peça novo ajuste de urgência: ler o diagnóstico
+   colado, achar o motivo de bloqueio mais próximo de um candidato forte, e tocar só essa variável (mesmo
+   padrão dos 2 ajustes acima) — não os bloqueios genuínos de REGRA #1/REGRA #5/ADX lateral, que são
+   proteção de capital, não bug.
