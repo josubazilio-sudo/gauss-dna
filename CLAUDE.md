@@ -1359,3 +1359,24 @@ anteriores.
 ### O que NÃO foi tocado
 REGRA #1 (`rsi_zona_long/short`, 75/25) e REGRA #5 (defesas SMC) intocadas. `notify.py` (stop/TP/
 leverage), classificação V3/V4/v5.0, gestão de risco — nada disso foi tocado.
+
+---
+
+## vol_secando — 3ª RODADA DE AFROUXAMENTO (autorizado 23/06, run real pós-merge da alavancagem dinâmica)
+
+Run real disparado em `main` logo após o merge de `claude/strategy-improvement-LUJWU` (alavancagem 5x-20x
+por tier) mostrou, em só 2 ciclos/77 análises, dois candidatos com score bom e RSI normal bloqueados
+**isoladamente** só por `vol_sec` (nenhum outro filtro pegando): TEL LONG score+100/RSI65 e NOCK SHORT
+score-128/RSI31. Os outros candidatos do mesmo diagnóstico (BEAT RSI89 extremo, DYDX/MEGA ADX baixo, XPR/
+RAVE sem sweep de liquidez, ZAMA StochRSI saturado) são bloqueios genuínos — defesas calibradas por
+incidente real (REGRA #1/#5), não tocadas.
+
+`vol_secando` já tinha sido afrouxado 2x no dia anterior (22/06: `0.25/0.50→0.18/0.40`→depois reescrito
+direto pra `0.10/0.25` no merge da v5.0) e continuava sendo o bloqueador isolado mais frequente. Afrouxado
+de novo em `analyze.py`: `volumes[-1] < vol_ma*0.10 and < min(vol3)*0.25` → `< vol_ma*0.06 and < min(vol3)*0.15`
+— exige um esgotamento de volume ainda mais extremo antes de bloquear `seguro_long/short`.
+
+Validar com o próximo run real se TEL/NOCK (ou candidatos equivalentes) passam a disparar sinal. Se
+`vol_sec` continuar sendo o bloqueador isolado dominante mesmo depois desta 3ª rodada, é sinal de que o
+filtro talvez devesse virar penalidade no score em vez de bloqueio binário — mudança estrutural maior,
+só considerar se a abordagem atual (afrouxar o limiar) se esgotar.

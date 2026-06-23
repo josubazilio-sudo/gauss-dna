@@ -216,7 +216,10 @@ def calcular_indicadores(candles):
     # volume moderado, não só o esgotamento extremo que o filtro pretende capturar.
     # Afrouxado de novo 23/06 (run pós-merge v5.0, 11 ciclos, zero sinais — vol_sec
     # ainda era o bloqueador mais frequente mesmo após o primeiro afrouxamento).
-    vol_secando = volumes[-1] < vol_ma * 0.10 and volumes[-1] < min(vol3) * 0.25
+    # Afrouxado uma 3ª vez 23/06 (run real pós-merge da alavancagem dinâmica: TEL
+    # LONG score+100/RSI65 e NOCK SHORT score-128/RSI31, ambos com score bom e RSI
+    # normal, bloqueados isoladamente só por vol_sec — nenhum outro filtro pegou).
+    vol_secando = volumes[-1] < vol_ma * 0.06 and volumes[-1] < min(vol3) * 0.15
 
     def _minima_tocou_ema(ema_arr, n=5):
         return any(minimas[i] <= ema_arr[i] * 1.015 for i in range(-n, -1))
