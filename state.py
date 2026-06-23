@@ -79,8 +79,12 @@ def salvar_estado(estado):
 # tardia etc. — só impressão. Resultado fechado vai pro resultados_log.csv.
 
 def registrar_posicao_aberta(estado, simbolo, tf, direcao, entrada, stop, tp1,
-                              r1, grade, fonte, modo="", classificacao=None, valor_risco=0.0):
-    posicoes = estado.setdefault("_posicoes_abertas", [])
+                              r1, grade, fonte, modo="", classificacao=None, valor_risco=0.0,
+                              chave_estado="_posicoes_abertas"):
+    """chave_estado permite reaproveitar a mesma função pra rastrear a
+    estratégia de teste paralela (estado["_posicoes_teste"], autorizado 23/06)
+    sem duplicar o ciclo de vida da posição."""
+    posicoes = estado.setdefault(chave_estado, [])
     posicoes.append({
         "simbolo": simbolo, "tf": tf, "direcao": direcao,
         "entrada": entrada, "stop": stop, "tp1": tp1,
@@ -94,9 +98,11 @@ def registrar_posicao_aberta(estado, simbolo, tf, direcao, entrada, stop, tp1,
     })
 
 
-def verificar_posicoes_abertas(estado, precos):
+def verificar_posicoes_abertas(estado, precos, chave_estado="_posicoes_abertas"):
     """precos: dict {simbolo: preco_atual}. Retorna lista de posições recém-fechadas
-    (com resultado e preco_saida preenchidos) e atualiza estado["_posicoes_abertas"].
+    (com resultado e preco_saida preenchidos) e atualiza estado[chave_estado].
+    chave_estado="_posicoes_teste" reaproveita a mesma régua pra estratégia de
+    teste paralela (autorizado 23/06), isolada da posição real.
 
     Ciclo de vida de 2 estágios (GAUSS+DNA v5.0, substitui os 4 estágios da
     CLASSIFICAÇÃO INSTITUCIONAL V3/V4):
@@ -105,7 +111,7 @@ def verificar_posicoes_abertas(estado, precos):
     2) tp1_atingido → trailing stop = TP1 + 50% do ganho máximo desde o TP1
        (nunca abaixo do BE) — fecha os 50% restantes quando o preço recua até
        esse nível, ou expira em 72h."""
-    posicoes = estado.get("_posicoes_abertas", [])
+    posicoes = estado.get(chave_estado, [])
     restantes, fechados = [], []
     agora = time.time()
 
@@ -151,13 +157,15 @@ def verificar_posicoes_abertas(estado, precos):
             continue
         restantes.append(p)
 
-    estado["_posicoes_abertas"] = restantes
+    estado[chave_estado] = restantes
     return fechados
 
 
-def registrar_resultado(p):
+def registrar_resultado(p, arquivo=None):
     """Grava uma posição fechada (dict vindo de verificar_posicoes_abertas) no
-    resultados_log.csv, já com o R realizado calculado."""
+    resultados_log.csv, já com o R realizado calculado. arquivo=TESTE_RESULTS_FILE
+    reaproveita a mesma régua pra estratégia de teste paralela (autorizado 23/06)."""
+    arquivo = arquivo or RESULTS_FILE
     resultado = p["resultado"]
     r1 = p.get("r1", 1.0)
     # Fallbacks em r2/r3/r_final cobrem posições abertas antes da v5.0 (sem
@@ -187,8 +195,8 @@ def registrar_resultado(p):
         r_realizado = None
 
     try:
-        escrever_cabecalho = not RESULTS_FILE.exists() or RESULTS_FILE.stat().st_size == 0
-        with RESULTS_FILE.open("a", newline="", encoding="utf-8") as f:
+        escrever_cabecalho = not arquivo.exists() or arquivo.stat().st_size == 0
+        with arquivo.open("a", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=_CAMPOS_RESULTADOS, delimiter=";")
             if escrever_cabecalho:
                 w.writeheader()
@@ -214,13 +222,16 @@ def registrar_resultado(p):
     return r_realizado
 
 
-def resumo_resultados(horas=24):
+def resumo_resultados(horas=24, arquivo=None):
     """Lê resultados_log.csv e devolve um resumo agregado das últimas N horas
     (contagem por resultado e winrate), pra enriquecer o diagnóstico horário.
     Inclui também detalhamento por fonte (tipo de sinal) e grade — observabilidade
     pura (não altera stop/TP/entrada), pra já ter o dado pronto pra quando a
-    amostra chegar nos 30-50 trades necessários pra revisar gestão (ver CLAUDE.md)."""
-    if not RESULTS_FILE.exists():
+    amostra chegar nos 30-50 trades necessários pra revisar gestão (ver CLAUDE.md).
+    arquivo=TESTE_RESULTS_FILE reaproveita pra resumir a estratégia de teste
+    paralela (autorizado 23/06), separado do resultado real."""
+    arquivo = arquivo or RESULTS_FILE
+    if not arquivo.exists():
         return None
     limite = datetime.now().timestamp() - horas * 3600
     contagem = {}
@@ -232,7 +243,7 @@ def resumo_resultados(horas=24):
                       # pedido 22/06 (operar só H1 seria "mais limpo?") — mesmo padrão
                       # de por_fonte/por_grade, dado real em vez de suposição
     try:
-        with RESULTS_FILE.open(encoding="utf-8") as f:
+        with arquivo.open(encoding="utf-8") as f:
             for row in csv.DictReader(f, delimiter=";"):
                 try:
                     ts = datetime.strptime(row["data_fechamento"], "%Y-%m-%d %H:%M:%S").timestamp()

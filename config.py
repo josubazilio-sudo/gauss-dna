@@ -155,3 +155,8 @@ STATE_FILE   = Path("last_signals.json")
 JOURNAL_FILE = Path(__file__).parent / "signals_log.csv"
 RESULTS_FILE = Path(__file__).parent / "resultados_log.csv"   # rastreamento de TP/STOP por sinal
 BACKTEST_FILE = Path(__file__).parent / "backtest_log.csv"    # backtest automático por sinal (22/06)
+TESTE_RESULTS_FILE = Path(__file__).parent / "teste_resultados_log.csv"  # estrategia de teste paralela (23/06)
+
+# ── Estratégia de teste paralela (autorizado 23/06 — "criar uma estratégia
+# separada teste pra ver o que dá certo", enviada ao Telegram pra acompanhar) ──
+MAX_SINAIS_TESTE_POR_CICLO = 3   # cap por ciclo, só pra não inundar o Telegram

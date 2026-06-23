@@ -1199,6 +1199,65 @@ _enviar_diagnostico()`, linha "Resultados (24h)": quando `resumo_resultados()` d
 fechado na janela), a linha agora é `"0 fechados — STOP:0 TP:0 — winrate: 0% — R medio: 0.00"` em vez da
 frase antiga "nenhum fechado ainda". Quando há dado real, o formato já mostrava os 4 números (não mudou).
 
+---
+
+## ESTRATÉGIA DE TESTE PARALELA — "O QUE DÁ CERTO" (autorizado 23/06)
+
+Pedido do usuário: *"tem como criar uma estratégia separada teste pra agente testando o que dá certo"* —
+quis uma estratégia paralela à real, pra descobrir empiricamente quais sinais hoje bloqueados pela camada
+de confirmação V3 (`classificar_v2()`) teriam dado resultado bom. Perguntado se devia ser modo invisível
+(nunca chega no Telegram) ou visível — usuário respondeu explícito: **"quero que vá para o telegram para
+acompanhar"**. Implementado visível, com tag clara de "não é sinal real".
+
+### Onde entra no pipeline (`cycles.py`)
+Não é uma cascata de detecção nova — reaproveita exatamente os candidatos que `analyze.py` já decidiu serem
+sinais válidos (passaram REGRA #1 `rsi_zona`, REGRA #5 `liq_topo/fundo`, e os pisos universais
+`ADX_MIN_GLOBAL`, `RVOL_MIN_EXEC`, RSI 80/20, MM200, H4) mas que a camada de confirmação V3 ainda bloqueia
+nesses 4 pontos exatos, tanto em `executar_ciclo()` quanto em `executar_ciclo_mtf()`:
+1. `classificacao not in (OURO,PRATA,BRONZE)` — "v3=none"
+2. Sessão perigosa exige OURO e o candidato só tem PRATA/BRONZE — "sessao perigosa"
+3. PRATA sem H1 alinhado — "prata sem H1"
+4. BRONZE sem H1 alinhado — "bronze sem H1"
+
+Em cada um desses 4 pontos, em vez de só `continue`, chama `_tentar_sinal_teste()` (`cycles.py`) — que
+reenvia o mesmo candidato via `enviar_sinal()` só que com `fonte=f"TESTE:{fonte_real}:{motivo_bloqueio}"`.
+`notify.py` já tinha o tratamento `fonte.startswith("TESTE")` (usado antes só pelo `executar_teste()` de
+autoteste de conectividade) → tag fixa "🧪 TESTE — NÃO OPERAR" na mensagem, deixando claro que não é sinal
+real. Cooldown e cap por ciclo são próprios e independentes do real (chaves `teste_...`,
+`MAX_SINAIS_TESTE_POR_CICLO=3` em `config.py`) — não consome o cooldown nem os limites de sinal real.
+
+### Isolamento do dinheiro real (crítico — não pode interferir na conta real)
+- **Não passa** por nenhum gate de risco/dinheiro real: `risco_ciclo`/`MAX_CYCLE_RISK`, `_v5_bloqueio()`
+  (perda diária/circuit breaker de 2 stops), `MAX_POSICOES_INSTITUCIONAL`, `STOPS_CONSECUTIVOS_PAUSA`,
+  `MAX_SCOUT/LONG/SHORT_PER_CYCLE` — todos esses só protegem o caminho real, e o de teste roda só nos 4
+  pontos onde o sinal real já teria sido descartado de qualquer forma.
+- Tracking de posição é uma lista própria, `estado["_posicoes_teste"]` (separada de
+  `estado["_posicoes_abertas"]`) — `state.py` `registrar_posicao_aberta()`/`verificar_posicoes_abertas()`
+  ganharam o parâmetro `chave_estado` (default `"_posicoes_abertas"`, sem mudar comportamento real) pra
+  reaproveitar a mesma régua de TP1/trailing/STOP sem duplicar lógica.
+- Resultado fechado grava em `teste_resultados_log.csv` (`config.TESTE_RESULTS_FILE`), arquivo **separado**
+  de `resultados_log.csv` — `state.py` `registrar_resultado()`/`resumo_resultados()` ganharam o parâmetro
+  `arquivo` (default `RESULTS_FILE`, comportamento real intocado) pelo mesmo motivo. `cycles.py
+  _atualizar_resultados_teste()` (chamada em `main()` logo depois da real) resolve essas posições de teste
+  a cada ciclo, sem tocar em nenhum contador de dinheiro real (`_v5_pnl_dia`, `_stops_consecutivos_inst`).
+- `bot.yml`: `teste_resultados_log.csv` adicionado ao cache (`actions/cache/restore`/`save`), mesmo padrão
+  de `resultados_log.csv`/`backtest_log.csv`, senão o dado seria perdido a cada run isolado do Actions.
+
+### Diagnóstico horário
+Linha nova `🧪 Teste (24h): N fechados — winrate X% — R medio Y` (via `resumo_resultados(arquivo=
+TESTE_RESULTS_FILE)`), anexada depois do "Backtest auto" — comparável diretamente com a linha "Resultados
+(24h)" real, pra eventualmente decidir se algum dos 4 bloqueios da V3 está custando sinais bons (winrate
+teste melhor que o real sugere afrouxar aquele gate especificamente) ou se a V3 está certa em bloquear
+(winrate teste pior confirma o gate como proteção válida).
+
+### O que NÃO foi tocado
+A cascata de 12 sinais (`analyze.py`), REGRA #1/REGRA #5, os pisos universais pré-classificação (ADX/RVOL/
+RSI/MM200/H4) — a estratégia de teste só atua DEPOIS que esses já passaram, nunca os afrouxa. Tamanho de
+posição/alavancagem real (v5.0) também intocados — posições de teste usam a mesma fórmula só pra ter um R
+realizado comparável, nunca abrem posição real na corretora.
+
+---
+
 ## REGRA #6 — PRIORIDADE: PEGAR O MOVIMENTO NO COMEÇO, NUNCA ATRASADO (autorizado 23/06)
 
 Diretriz permanente pra qualquer ajuste futuro de detecção de sinal: entre dois candidatos, o sistema deve

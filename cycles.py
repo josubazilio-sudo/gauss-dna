@@ -21,6 +21,7 @@ from config import (
     BTC_REGIME_ADX_MAX, BTC_REGIME_RSI_MIN, BTC_REGIME_RSI_MAX,
     GRAUS_PERMITIDOS_INSTITUCIONAL, STOPS_CONSECUTIVOS_PAUSA,
     MAX_POSICOES_V5, PERDA_MAX_DIA_V5, PAUSA_2_PERDAS_V5, NO_TRADE_PRIMEIROS_MIN_V5,
+    TESTE_RESULTS_FILE, MAX_SINAIS_TESTE_POR_CICLO,
 )
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -178,6 +179,76 @@ async def _atualizar_resultados(session, estado) -> None:
                 estado["_v5_perdas_consecutivas"] = 0
 
 
+async def _atualizar_resultados_teste(session, estado) -> None:
+    """Mesma régua de _atualizar_resultados(), mas pra estratégia de teste
+    paralela (estado["_posicoes_teste"]) — grava em teste_resultados_log.csv,
+    isolado do rastreamento real (não toca circuit breaker nem P&L real)."""
+    posicoes = estado.get("_posicoes_teste", [])
+    if not posicoes:
+        return
+    simbolos = list({p["simbolo"] for p in posicoes})
+    tarefas  = [buscar_preco_atual(session, sym) for sym in simbolos]
+    valores  = await asyncio.gather(*tarefas)
+    precos   = {sym: val for sym, val in zip(simbolos, valores) if val is not None}
+    fechados = verificar_posicoes_abertas(estado, precos, chave_estado="_posicoes_teste")
+    for f in fechados:
+        registrar_resultado(f, arquivo=TESTE_RESULTS_FILE)
+        log.info(f"🧪 Resultado teste: {f['simbolo']} {f['direcao']} [{f['fonte']}] → {f['resultado']}")
+
+
+# ── Estratégia de teste paralela — "o que dá certo" (autorizado 23/06) ───────
+# Pedido do usuário: candidatos que já passaram REGRA #1 (rsi_zona) e REGRA #5
+# (liq_topo/fundo) + os pisos universais (ADX_MIN_GLOBAL, RVOL_MIN_EXEC, RSI
+# 80/20, MM200, H4) mas foram bloqueados só pela camada de confirmação V3
+# (classificação nenhuma, sessão perigosa exige OURO, PRATA/BRONZE sem H1
+# alinhado) são enviados como sinal de TESTE — tag "🧪 TESTE — NÃO OPERAR"
+# (notify.py já trata fonte.startswith("TESTE")). Não move dinheiro real: não
+# entra em _posicoes_abertas/risco_ciclo/circuit breakers, só acumula dado
+# (teste_resultados_log.csv) de quais sinais bloqueados pela V3 teriam dado bom
+# resultado. "quero que vá para o telegram para acompanhar" (23/06) — pedido
+# explícito de visibilidade, não modo invisível.
+async def _tentar_sinal_teste(session, estado, sym, label, abrev, result, tf, grade,
+                              motivo, agora, cooldown, cooldown_oposta, testes_enviados):
+    if testes_enviados >= MAX_SINAIS_TESTE_POR_CICLO:
+        return testes_enviados
+    chave_dir_t = f"teste_{sym}_{tf}_{result['sinal']}"
+    chave_any_t = f"teste_{sym}_{tf}"
+    if (agora - estado.get(chave_dir_t, 0) < cooldown or
+        agora - estado.get(chave_any_t, 0) < cooldown_oposta):
+        return testes_enviados
+
+    eh_long = result["sinal"] == "LONG"
+    fonte   = result.get("fonte_sinal", "")
+    extra = {
+        "rvol_label":   result.get("rvol_label", ""),
+        "rvol":         result.get("rvol", 0.0),
+        "inst_score":   result.get("score_inst_long" if eh_long else "score_inst_short", 0),
+        "inst_cls":     result.get("cls_inst_long"   if eh_long else "cls_inst_short",   ""),
+        "dna_flow":     result.get("dna_flow_bull"   if eh_long else "dna_flow_bear",  False),
+        "trendilo_dir": result.get("trendilo_long"   if eh_long else "trendilo_short", False),
+        "adx_subindo":  result.get("adx_subindo", False),
+        "liq_event":    ("LIQ FUNDO ↑" if result.get("liq_fundo") else
+                         "LIQ TOPO ↓"  if result.get("liq_topo")  else ""),
+        "funding_rate": result.get("funding_rate"),
+        "oi_change":    None,
+        "classificacao": result.get("classificacao") or "NENHUMA",
+    }
+    ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
+                            result["preco"], result["atr"], result["score"],
+                            result["rsi"], result["adx"], result["tendencia"],
+                            result["kalman_subindo"], result["swing_low"],
+                            result["swing_high"], f"TESTE:{fonte}:{motivo}", tf, grade, extra=extra)
+    if ok:
+        estado[chave_dir_t] = agora; estado[chave_any_t] = agora
+        registrar_posicao_aberta(estado, sym, tf, result["sinal"], result["preco"],
+                                 ok["stop"], ok["tp1"], ok["r1"], grade,
+                                 f"{fonte}|{motivo}", modo="TESTE",
+                                 classificacao=result.get("classificacao"),
+                                 valor_risco=ok.get("valor_risco", 0.0),
+                                 chave_estado="_posicoes_teste")
+        return testes_enviados + 1
+    return testes_enviados
+
 
 async def _enviar_diagnostico(session) -> None:
     """Envia relatório de diagnóstico de bloqueadores ao Telegram."""
@@ -277,6 +348,14 @@ async def _enviar_diagnostico(session) -> None:
                    for f, d in sorted(_bt.items(), key=lambda x: -x[1]["amostras"])]
         linhas.append(f"\nBacktest auto (24h): {', '.join(_det_bt)}")
 
+    # Estratégia de teste paralela (autorizado 23/06) — winrate/R separado do
+    # resultado real, pra comparar "o que dá certo" nos candidatos que a V3
+    # ainda bloqueia (classificação nenhuma/sessão perigosa/sem H1).
+    _resumo_t = resumo_resultados(horas=24, arquivo=TESTE_RESULTS_FILE)
+    if _resumo_t:
+        linhas.append(f"\n🧪 Teste (24h): {_resumo_t['total']} fechados — "
+                      f"winrate {_resumo_t['winrate']:.0f}% — R medio {_resumo_t['r_medio']:+.2f}")
+
     _texto_diag = "\n".join(linhas)
     log.info(f"[DIAG]\n{_texto_diag}")
     await notificar(session, _texto_diag)
@@ -371,6 +450,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
     watchlist  = []
     risco_ciclo  = 0.0; scouts_enviados = 0
     longs_enviados = 0; shorts_enviados = 0
+    testes_enviados = 0   # estratégia de teste paralela (autorizado 23/06)
 
     todos_candles = await _prefetch_lote(session, moedas, tf)
     todos_h4      = None
@@ -578,12 +658,16 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "v3=none"))
                 _diag_pos_cascata("v3=none")
+                testes_enviados = await _tentar_sinal_teste(session, estado, sym, label, abrev,
+                                    result, tf, grade, "v3=none", agora, cooldown, cooldown_oposta, testes_enviados)
                 continue
             if (_sessao_perigosa or _abertura_falsa) and classificacao != "OURO":
                 log.info(f"  🌙 {abrev} bloqueado — sessão perigosa exige OURO (REGRA #3, tem {classificacao})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "sessao perigosa"))
                 _diag_pos_cascata(f"sessao perigosa exige OURO (tem {classificacao})")
+                testes_enviados = await _tentar_sinal_teste(session, estado, sym, label, abrev,
+                                    result, tf, grade, "sessao perigosa", agora, cooldown, cooldown_oposta, testes_enviados)
                 continue
             if classificacao == "PRATA":
                 # H1 alinhado pro gate PRATA — em tf=="1h" o próprio result já é
@@ -602,6 +686,8 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                     candidatos.append((abs(result["score"]), abrev, result["score"],
                                        result["rsi"], result["adx"], "prata sem H1"))
                     _diag_pos_cascata("prata sem H1")
+                    testes_enviados = await _tentar_sinal_teste(session, estado, sym, label, abrev,
+                                        result, tf, grade, "prata sem H1", agora, cooldown, cooldown_oposta, testes_enviados)
                     continue
             if classificacao == "BRONZE":
                 # v5.0: confirmação MTF H1 é universal — sem o escape "OU Score
@@ -618,6 +704,8 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                     candidatos.append((abs(result["score"]), abrev, result["score"],
                                        result["rsi"], result["adx"], "bronze sem H1"))
                     _diag_pos_cascata("bronze sem H1")
+                    testes_enviados = await _tentar_sinal_teste(session, estado, sym, label, abrev,
+                                        result, tf, grade, "bronze sem H1", agora, cooldown, cooldown_oposta, testes_enviados)
                     continue
 
             extra = {
@@ -708,6 +796,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
     _diag_buffer["ciclos"] += 1
     cooldown_mtf = 14400
     setups_h4 = []
+    testes_enviados_mtf = 0   # estratégia de teste paralela (autorizado 23/06)
 
     # Filtro BTC macro em H4
     btc_bull = btc_bear = btc_rsi_quente = btc_rsi_panico = False
@@ -862,11 +951,15 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"v3={classificacao_mtf or 'none'}"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — classificação V3 nenhuma")
                 _diag_pos_cascata(f"v3={classificacao_mtf or 'none'} (MTF)")
+                testes_enviados_mtf = await _tentar_sinal_teste(session, estado, sym, label, abrev,
+                                    result, "1h", grade, "v3=none", agora, cooldown_mtf, cooldown_mtf, testes_enviados_mtf)
                 continue
             if (_sessao_perigosa_mtf or _abertura_falsa_mtf) and classificacao_mtf != "OURO":
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "sessao perigosa"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — sessão perigosa exige OURO (tem {classificacao_mtf})")
                 _diag_pos_cascata(f"sessao perigosa exige OURO (tem {classificacao_mtf}) (MTF)")
+                testes_enviados_mtf = await _tentar_sinal_teste(session, estado, sym, label, abrev,
+                                    result, "1h", grade, "sessao perigosa", agora, cooldown_mtf, cooldown_mtf, testes_enviados_mtf)
                 continue
             if classificacao_mtf == "PRATA":
                 _h1_ok_mtf = result.get("alinhado_bull") if eh_long_mtf else result.get("alinhado_bear")
@@ -874,6 +967,8 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                     setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "prata sem H1"))
                     log.info(f"[MTF] {abrev:7s} | bloqueado — PRATA exige H1 alinhado")
                     _diag_pos_cascata("prata sem H1 (MTF)")
+                    testes_enviados_mtf = await _tentar_sinal_teste(session, estado, sym, label, abrev,
+                                        result, "1h", grade, "prata sem H1", agora, cooldown_mtf, cooldown_mtf, testes_enviados_mtf)
                     continue
             if classificacao_mtf == "BRONZE":
                 # v5.0: sem escape "OU Score Inst>=70" — H1 alinhado é exigido
@@ -883,6 +978,8 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                     setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "bronze sem H1"))
                     log.info(f"[MTF] {abrev:7s} | bloqueado — BRONZE exige H1 alinhado")
                     _diag_pos_cascata("bronze sem H1 (MTF)")
+                    testes_enviados_mtf = await _tentar_sinal_teste(session, estado, sym, label, abrev,
+                                        result, "1h", grade, "bronze sem H1", agora, cooldown_mtf, cooldown_mtf, testes_enviados_mtf)
                     continue
 
             # AJUSTE INSTITUCIONAL ELITE (21/06): mesmo teto de posições simultâneas
@@ -1090,6 +1187,7 @@ async def main():
                     total   += enviados
                 log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
                 await _atualizar_resultados(session, estado)
+                await _atualizar_resultados_teste(session, estado)
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{ciclo}: {e}")
             finally:
