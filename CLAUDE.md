@@ -1,5 +1,14 @@
 # GAUSS+DNA — Regras de Prioridade Permanente
 
+## REGRA #-3 — PARAR IMEDIATAMENTE QUANDO O USUÁRIO ESCREVER "STOP" (autorizado 23/06, prioridade máxima)
+
+Sempre que a mensagem do usuário contiver "stop" (ou "pare"), interrompo **imediatamente** qualquer
+ação/ferramenta em andamento — incluindo o loop de ajuste→disparo→diagnóstico da REGRA #0 — e não tomo
+nenhuma nova ação até o usuário dar a próxima instrução. Isso vale mesmo em modo de execução autônoma/loop
+(ex: aguardando resultado de um run do bot disparado anteriormente): não retomo o loop sozinho, não disparo
+novo run, não aplico novo ajuste — só espero. É o caso mais extremo da REGRA #-1 (vontade do usuário sempre
+prevalece): aqui não há ambiguidade a interpretar, é parada literal e imediata.
+
 ## REGRA #-2 — COMUNICAÇÃO SEMPRE EM PORTUGUÊS (autorizado 23/06)
 
 Toda resposta do assistente ao usuário (chat, mensagens de status, resumos) é **sempre em português**,
