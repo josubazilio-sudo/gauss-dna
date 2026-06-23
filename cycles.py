@@ -20,6 +20,7 @@ from config import (
     RVOL_MIN_BY_TF, ADX_MIN_GLOBAL, RVOL_MIN_EXEC,
     BTC_REGIME_ADX_MAX, BTC_REGIME_RSI_MIN, BTC_REGIME_RSI_MAX,
     GRAUS_PERMITIDOS_INSTITUCIONAL, STOPS_CONSECUTIVOS_PAUSA,
+    MAX_POSICOES_V5, PERDA_MAX_DIA_V5, PAUSA_2_PERDAS_V5, NO_TRADE_PRIMEIROS_MIN_V5,
 )
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -46,6 +47,24 @@ _diag_buffer: dict = {
     "ultimo_sinal":     0.0,
     "ultimo_envio":     0.0,
 }
+
+
+def _v5_bloqueio(estado) -> str:
+    """GAUSS+DNA v5.0 — circuit breakers globais (banca real $90), checados
+    antes de qualquer envio em executar_ciclo()/executar_ciclo_mtf(). Devolve
+    o motivo do bloqueio ou "" se liberado pra operar."""
+    agora_dt = datetime.now(timezone.utc)
+    if agora_dt.minute < NO_TRADE_PRIMEIROS_MIN_V5:
+        return f"v5 sem trade nos 1ºs {NO_TRADE_PRIMEIROS_MIN_V5}min da vela H1"
+    hoje = agora_dt.strftime("%Y-%m-%d")
+    if estado.get("_v5_dia") == hoje and estado.get("_v5_pnl_dia", 0.0) <= -PERDA_MAX_DIA_V5:
+        return f"v5 circuit breaker diário (perda ${-estado['_v5_pnl_dia']:.2f} >= ${PERDA_MAX_DIA_V5})"
+    if time.time() < estado.get("_v5_pausa_until", 0):
+        mins = int((estado["_v5_pausa_until"] - time.time()) / 60)
+        return f"v5 pausa pós-2-perdas ({mins}min restantes)"
+    if len(estado.get("_posicoes_abertas", [])) >= MAX_POSICOES_V5:
+        return f"v5 máximo {MAX_POSICOES_V5} posições simultâneas"
+    return ""
 
 
 def _detectar_bloqueadores_diag(result: dict) -> list:
@@ -132,7 +151,7 @@ async def _atualizar_resultados(session, estado) -> None:
 
     fechados = verificar_posicoes_abertas(estado, precos)
     for f in fechados:
-        registrar_resultado(f)
+        r_realizado = registrar_resultado(f)
         log.info(f"📈 Resultado: {f['simbolo']} {f['direcao']} [{f['fonte']}] → {f['resultado']}")
         # Circuit breaker do modo INSTITUCIONAL (pedido 21/06) — só conta posições
         # abertas sob esse modo; vitória (TP1_TRAIL/TP1_BE/TP2/TP2_RUNNER/TP3_RUNNER,
@@ -142,6 +161,21 @@ async def _atualizar_resultados(session, estado) -> None:
                 estado["_stops_consecutivos_inst"] = estado.get("_stops_consecutivos_inst", 0) + 1
             elif f["resultado"] in ("TP1_TRAIL", "TP1_BE", "TP2", "TP2_RUNNER", "TP3_RUNNER"):
                 estado["_stops_consecutivos_inst"] = 0
+
+        # ── GAUSS+DNA v5.0 — circuit breakers globais (banca real $90) ──────────
+        if r_realizado is not None:
+            hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            if estado.get("_v5_dia") != hoje:
+                estado["_v5_dia"] = hoje
+                estado["_v5_pnl_dia"] = 0.0
+            pnl_usd = f.get("valor_risco", 0.0) * r_realizado
+            estado["_v5_pnl_dia"] = estado.get("_v5_pnl_dia", 0.0) + pnl_usd
+            if f["resultado"] == "STOP":
+                estado["_v5_perdas_consecutivas"] = estado.get("_v5_perdas_consecutivas", 0) + 1
+                if estado["_v5_perdas_consecutivas"] >= 2:
+                    estado["_v5_pausa_until"] = time.time() + PAUSA_2_PERDAS_V5
+            else:
+                estado["_v5_perdas_consecutivas"] = 0
 
 
 
@@ -511,6 +545,10 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             if _modo_inst and estado.get("_stops_consecutivos_inst", 0) >= STOPS_CONSECUTIVOS_PAUSA:
                 log.info(f"  🛑 {abrev} bloqueado — circuit breaker ({estado.get('_stops_consecutivos_inst', 0)} stops consecutivos, aguardando vitória)")
                 continue
+            _motivo_v5 = _v5_bloqueio(estado)
+            if _motivo_v5:
+                log.info(f"  🛑 {abrev} bloqueado — {_motivo_v5}")
+                continue
             if fonte == "SCOUT" and scouts_enviados >= MAX_SCOUT_PER_CYCLE:
                 log.info(f"  🔵 {abrev} SCOUT bloqueado — limite {MAX_SCOUT_PER_CYCLE}/ciclo")
                 continue
@@ -596,11 +634,13 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 "oi_change":    oi_change.get(sym),
                 "classificacao": classificacao,
             }
+            _lote_reduzido = len(estado.get("_posicoes_abertas", [])) >= 1  # v5.0 — 2ª posição com lote pela metade
             ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                     result["preco"], result["atr"], result["score"],
                                     result["rsi"], result["adx"], result["tendencia"],
                                     result["kalman_subindo"], result["swing_low"],
-                                    result["swing_high"], result["fonte_sinal"], tf, grade, extra=extra)
+                                    result["swing_high"], result["fonte_sinal"], tf, grade, extra=extra,
+                                    lote_reduzido=_lote_reduzido)
             if ok:
                 _diag_buffer["ultimo_sinal"] = agora
                 estado[chave_dir] = agora; estado[chave_any] = agora
@@ -612,7 +652,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 registrar_posicao_aberta(estado, sym, tf, result["sinal"], result["preco"],
                                          ok["stop"], ok["tp1"], ok["r1"],
                                          grade, result["fonte_sinal"], modo=SIGNAL_MODE,
-                                         classificacao=classificacao)
+                                         classificacao=classificacao, valor_risco=ok.get("valor_risco", 0.0))
                 await backtest_sinal(session, sym, tf, result["fonte_sinal"], result["sinal"])
         else:
             candidatos.append((result["score"], abrev, result["score"],
@@ -856,6 +896,11 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                     log.info(f"[MTF] {abrev:7s} | bloqueado — circuit breaker ({estado.get('_stops_consecutivos_inst', 0)} stops consecutivos, aguardando vitória)")
                     continue
 
+            _motivo_v5_mtf = _v5_bloqueio(estado)
+            if _motivo_v5_mtf:
+                log.info(f"[MTF] {abrev:7s} | bloqueado — {_motivo_v5_mtf}")
+                continue
+
             chave = f"{sym}_MTF"
             if agora - estado.get(chave, 0) >= cooldown_mtf:
                 eh_long = result["sinal"] == "LONG"
@@ -871,17 +916,19 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                                      "LIQ TOPO ↓"  if r4h.get("liq_topo")  else ""),
                     "classificacao": classificacao_mtf,
                 }
+                _lote_reduzido_mtf = len(estado.get("_posicoes_abertas", [])) >= 1
                 ok = await enviar_sinal(session, sym, label, abrev, result["sinal"],
                                         result["preco"], result["atr"], r4h["score"],
                                         result["rsi"], result["adx"], result["tendencia"],
                                         result["kalman_subindo"], result["swing_low"],
-                                        result["swing_high"], result["fonte_sinal"], "1h", grade, extra=extra)
+                                        result["swing_high"], result["fonte_sinal"], "1h", grade, extra=extra,
+                                        lote_reduzido=_lote_reduzido_mtf)
                 if ok:
                     estado[chave] = agora; enviados += 1
                     registrar_posicao_aberta(estado, sym, "1h", result["sinal"], result["preco"],
                                              ok["stop"], ok["tp1"], ok["r1"],
                                              grade, result["fonte_sinal"], modo=SIGNAL_MODE,
-                                             classificacao=classificacao_mtf)
+                                             classificacao=classificacao_mtf, valor_risco=ok.get("valor_risco", 0.0))
                     await backtest_sinal(session, sym, "1h", result["fonte_sinal"], result["sinal"])
             else:
                 mins = int((cooldown_mtf - (agora - estado.get(chave, 0))) / 60)

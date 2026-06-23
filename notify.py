@@ -5,7 +5,8 @@ Envio de sinais e alertas via Telegram e WhatsApp.
 import logging
 import aiohttp
 from datetime import datetime
-from config import TG_TOKEN, TG_CHATID, WA_PHONE, WA_APIKEY, SIGNAL_MODE
+from config import (TG_TOKEN, TG_CHATID, WA_PHONE, WA_APIKEY, SIGNAL_MODE,
+                    MARGEM_POR_TIER_V5, ALAVANCAGEM_V5)
 from indicators import formatar_preco
 from state import registrar_trade
 
@@ -97,7 +98,7 @@ async def enviar_whatsapp(session, texto):
 
 async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, score,
                        rsi, adx, tendencia, kalman_subindo, swing_low, swing_high,
-                       fonte, tf, grade, extra=None):
+                       fonte, tf, grade, extra=None, lote_reduzido=False):
     """Monta e envia o sinal completo para o Telegram."""
     eh_long = direcao == "LONG"
     if extra is None:
@@ -137,8 +138,10 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     # dinâmica 3x-50x): PRATA=$30 margem, BRONZE=$15 margem, ambos em 3x fixo,
     # sem exceção. OURO desabilitado (classificar_v2 nunca devolve OURO nesta
     # versão, banca<$500) — fallback BRONZE só por segurança defensiva.
-    alavancagem = 3
-    margem    = {"PRATA": 30.0, "BRONZE": 15.0}.get(classificacao, 15.0)
+    alavancagem = ALAVANCAGEM_V5
+    margem    = MARGEM_POR_TIER_V5.get(classificacao, 15.0)
+    if lote_reduzido:
+        margem /= 2  # 2ª posição simultânea (GAUSS+DNA v5.0, MAX_POSICOES_V5)
     valor_pos = margem * alavancagem
     contratos = valor_pos / preco if preco else 0
     valor_risco = contratos * risco
@@ -271,7 +274,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                 await enviar_whatsapp(session, wa_text)
                 # Dict (truthy) em vez de True puro — permite ao chamador registrar
                 # a posição pro rastreamento de resultado (TP/STOP), pedido 20/06.
-                return {"stop": stop, "tp1": tp1, "r1": r1}
+                return {"stop": stop, "tp1": tp1, "r1": r1, "valor_risco": valor_risco}
             else:
                 log.warning(f"❌ {data.get('description')}")
                 return False

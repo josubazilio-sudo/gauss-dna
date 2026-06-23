@@ -79,13 +79,14 @@ def salvar_estado(estado):
 # tardia etc. — só impressão. Resultado fechado vai pro resultados_log.csv.
 
 def registrar_posicao_aberta(estado, simbolo, tf, direcao, entrada, stop, tp1,
-                              r1, grade, fonte, modo="", classificacao=None):
+                              r1, grade, fonte, modo="", classificacao=None, valor_risco=0.0):
     posicoes = estado.setdefault("_posicoes_abertas", [])
     posicoes.append({
         "simbolo": simbolo, "tf": tf, "direcao": direcao,
         "entrada": entrada, "stop": stop, "tp1": tp1,
         "r1": r1, "grade": grade, "fonte": fonte, "modo": modo,
         "classificacao": classificacao,
+        "valor_risco": valor_risco,
         "tp1_atingido": False,
         "ganho_max_pos_tp1": 0.0,
         "aberta_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -210,6 +211,7 @@ def registrar_resultado(p):
     except Exception as e:
         import logging
         logging.getLogger("GAUSS+DNA").warning(f"Erro ao salvar resultado: {e}")
+    return r_realizado
 
 
 def resumo_resultados(horas=24):
