@@ -1198,3 +1198,19 @@ Usuário exigiu ver fechados/STOP/winrate/R médio **sempre** como número, não
 _enviar_diagnostico()`, linha "Resultados (24h)": quando `resumo_resultados()` devolve `None` (sem trade
 fechado na janela), a linha agora é `"0 fechados — STOP:0 TP:0 — winrate: 0% — R medio: 0.00"` em vez da
 frase antiga "nenhum fechado ainda". Quando há dado real, o formato já mostrava os 4 números (não mudou).
+
+## REGRA #6 — PRIORIDADE: PEGAR O MOVIMENTO NO COMEÇO, NUNCA ATRASADO (autorizado 23/06)
+
+Diretriz permanente pra qualquer ajuste futuro de detecção de sinal: entre dois candidatos, o sistema deve
+sempre priorizar pegar o movimento **no início** (primeira confirmação real) sobre esperar confirmação
+extra que só chega depois que o movimento já andou — moeda que já caiu/subiu 5-9% (ex: print real 23/06:
+SPCX -8.4%, ALLO -5.8%, HUS -9.6%) já passou da janela de entrada útil; não dá pra "resolver" isso
+retroativamente, o ganho real está em garantir que o *próximo* movimento seja pego mais cedo.
+
+Mecanismos já existentes que servem exatamente esse objetivo (não são desculpa, é o que já impede entrada
+tardia hoje): REGRA #1 (rsi_zona), `nao_overext_long/short`, `rsi_nao_chasing_long/short` (Fix 1, 21/06) —
+bloqueiam entrar DEPOIS que o movimento já esticou. O lado que falta (entrar MAIS CEDO, não só evitar
+entrar tarde) é o candidato natural pra próximo ajuste real: usar o próximo diagnóstico que mostrar um
+candidato forte (score alto, RVOL subindo) bloqueado só por confirmação de 1 candle (ex: `ha1=F` sozinho,
+sem nenhum outro bloqueio de mercado) como caso concreto pra afrouxar a exigência de confirmação nesse
+ponto específico — mesmo padrão cirúrgico já usado hoje (vol_secando, stoch_esticado).
