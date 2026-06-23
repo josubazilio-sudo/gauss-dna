@@ -112,8 +112,10 @@ def calcular_indicadores(candles):
     # StochRSI normaliza pela faixa relativa dos últimos 14 períodos e satura em
     # tendências fortes mesmo sem sobrecompra/sobrevenda real (ex: RSI 49 com stoch_rsi>0.95).
     # Exige RSI absoluto elevado/baixo também, evitando bloquear LONG/SHORT válidos por saturação técnica.
-    stoch_esticado_up   = stoch_rsi > 0.80 and rsi > 58
-    stoch_esticado_down = stoch_rsi < 0.05 and rsi < 35
+    # Afrouxado 23/06 (run pós-merge v5.0 — candidatos fortes GWEI/BDX bloqueados
+    # por bb_topo+stoch combinado mesmo sem RSI extremo); REGRA #1/#5 intocadas.
+    stoch_esticado_up   = stoch_rsi > 0.90 and rsi > 65
+    stoch_esticado_down = stoch_rsi < 0.05 and rsi < 30
     stoch_extremo = stoch_rsi <= 0.001 or stoch_rsi >= 0.999
 
     if len(_rsi_ser) >= 15:
@@ -209,7 +211,9 @@ def calcular_indicadores(candles):
     # vol_secando isolado respondia por ~40% de todo "seguro=F" (187+ ocorrências
     # de 669 candidatos LONG/SHORT bloqueados) — limiar 0.25/0.5 bloqueava fade de
     # volume moderado, não só o esgotamento extremo que o filtro pretende capturar.
-    vol_secando = volumes[-1] < vol_ma * 0.18 and volumes[-1] < min(vol3) * 0.40
+    # Afrouxado de novo 23/06 (run pós-merge v5.0, 11 ciclos, zero sinais — vol_sec
+    # ainda era o bloqueador mais frequente mesmo após o primeiro afrouxamento).
+    vol_secando = volumes[-1] < vol_ma * 0.10 and volumes[-1] < min(vol3) * 0.25
 
     def _minima_tocou_ema(ema_arr, n=5):
         return any(minimas[i] <= ema_arr[i] * 1.015 for i in range(-n, -1))
