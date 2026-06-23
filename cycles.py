@@ -363,7 +363,11 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             break
         if not candles: continue
 
-        result = analisar(sym, candles, funding_rate=funding_rates.get(sym))
+        _r4c = calcular_indicadores(h4c) if h4c else None
+        _ha4_bull = _r4c.get("ha_bull") if _r4c else None
+        _ha4_bear = _r4c.get("ha_bear") if _r4c else None
+        result = analisar(sym, candles, funding_rate=funding_rates.get(sym),
+                          ha4_bull=_ha4_bull, ha4_bear=_ha4_bear)
         if not result: continue
         grade = result.get("grade", "B")
 
@@ -735,8 +739,12 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
             direcao = "ALTA" if h4_bull else "BAIXA"
             if not candles_h1: continue
 
-            # Análise H1 — usa a função completa em modo H1
-            result = _analisar_mtf(sym, candles_h1)
+            # Análise H1 — usa a função completa em modo H1; HA4 (cor da vela
+            # Heikin Ashi do H4, já calculada em r4h) alimenta o gate opcional
+            # de BRONZE em classificar_v2() — não confundir com h4_bull/h4_bear
+            # acima (composto de score/ADX/RSI/volume, usado só pro filtro MTF).
+            result = _analisar_mtf(sym, candles_h1, ha4_bull=r4h.get("ha_bull"),
+                                   ha4_bear=r4h.get("ha_bear"))
             if not result or not result.get("sinal"):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "pullback H1 pendente"))
                 log.info(f"[MTF] {abrev:7s} | H1 sem entrada (não está no pullback)")
