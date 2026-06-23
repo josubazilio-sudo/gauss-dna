@@ -1192,3 +1192,9 @@ contra diagnóstico real (log do run / mensagem de diagnóstico do Telegram), ne
    colado, achar o motivo de bloqueio mais próximo de um candidato forte, e tocar só essa variável (mesmo
    padrão dos 2 ajustes acima) — não os bloqueios genuínos de REGRA #1/REGRA #5/ADX lateral, que são
    proteção de capital, não bug.
+
+### Diagnóstico — números de fechados/STOP/winrate/R sempre explícitos (23/06)
+Usuário exigiu ver fechados/STOP/winrate/R médio **sempre** como número, não frase — `cycles.py
+_enviar_diagnostico()`, linha "Resultados (24h)": quando `resumo_resultados()` devolve `None` (sem trade
+fechado na janela), a linha agora é `"0 fechados — STOP:0 TP:0 — winrate: 0% — R medio: 0.00"` em vez da
+frase antiga "nenhum fechado ainda". Quando há dado real, o formato já mostrava os 4 números (não mudou).
