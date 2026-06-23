@@ -344,9 +344,18 @@ def calcular_indicadores(candles):
     # Filtros de segurança compostos
     rsi_nao_topo   = rsi < 70
     rsi_nao_fundo  = rsi > 27
-    seguro_long  = (not perto_bb_topo and not ext_acima_e21 and not vol_secando and
+    # vol_secando saiu do bloqueio binário (23/06, 4ª rodada): mesmo após 3 afrouxa-
+    # mentos de limiar no mesmo dia, continuava sendo o bloqueador isolado dominante
+    # de candidatos com score alto e nada mais de errado (GRASS+145, DYDX+130, SUI-130,
+    # XPR+98 — run real pós-merge da alavancagem, todos com vol_sec como ÚNICO motivo).
+    # Em vez de afrouxar o número de novo (já documentado como esgotado, CLASSIFICAÇÃO
+    # INSTITUCIONAL V4 acima), vol_secando passa a contar só como "alerta leve" no
+    # sistema de tolerância já existente (seguro_alertas_long/short, GAUSS+DNA v5.0,
+    # `classificar_v2()` exige `seguro_alertas <= 1`) — continua penalizando entrada
+    # de baixo volume, mas não mata o sinal isoladamente na cascata de detecção.
+    seguro_long  = (not perto_bb_topo and not ext_acima_e21 and
                     not exaustao_topo and rsi_nao_topo and not stoch_esticado_up)
-    seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
+    seguro_short = (not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
 
     # SEGURO — contagem de alertas (GAUSS+DNA v5.0): cada booleano abaixo é um
     # "alerta leve" de qualidade de entrada; PRATA/BRONZE toleram no máx. 1.

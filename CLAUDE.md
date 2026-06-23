@@ -1380,3 +1380,44 @@ Validar com o próximo run real se TEL/NOCK (ou candidatos equivalentes) passam 
 `vol_sec` continuar sendo o bloqueador isolado dominante mesmo depois desta 3ª rodada, é sinal de que o
 filtro talvez devesse virar penalidade no score em vez de bloqueio binário — mudança estrutural maior,
 só considerar se a abordagem atual (afrouxar o limiar) se esgotar.
+
+---
+
+## vol_secando — 4ª RODADA: BLOQUEIO BINÁRIO → ALERTA LEVE (autorizado 23/06)
+
+A 3ª rodada (acima) não resolveu — auditoria do run seguinte (`28046849704`, main, commit `b20b17b`, 8
+ciclos completos via log) mostrou `vol_sec` ainda como o bloqueador **isolado** (nenhum outro filtro
+pegando) de vários candidatos com score alto e nada mais de errado: GRASSUSDT LONG score+145, DYDXUSDT
+LONG score+130/+125, SUIUSDT SHORT score-130, XPRUSDT LONG score+98, SHXUSDT SHORT score-115, XMRUSDT
+SHORT score-105, DNUSDT SHORT score-100 — confirma o esgotamento já previsto na nota da 3ª rodada (esses
+não são TEL/NOCK especificamente, mas o mesmo padrão generalizado: 4 rodadas de afrouxar limiar não
+eliminam o problema porque o filtro continua sendo um corte binário "tudo ou nada").
+
+### O que foi implementado (`analyze.py`)
+Em vez de afrouxar o número uma 5ª vez, `vol_secando` saiu da composição de `seguro_long`/`seguro_short`
+(linha ~347-349) — não bloqueia mais a detecção do sinal na cascata (`detectar_sinais()`, usado por
+PULLBACK/CROSS/BB_BREAK/SM_SWEEP/FLEX/SETUP/DIV/REBOUND/SCOUT/ELITE/EARLY). Continua existindo e sendo
+calculado igual, e continua contado em `seguro_alertas_long/short` (`analyze.py` linha ~353-356) — sistema
+de tolerância que já existia desde o GAUSS+DNA v5.0 mas estava sendo neutralizado: como `vol_secando`
+também hard-bloqueava `seguro_long/short` *antes* da cascata, um sinal com `vol_sec=True` nunca chegava a
+ser detectado, então `classificar_v2()` (que exige `seguro_alertas <= 1` pra PRATA/BRONZE) nunca via esse
+candidato — o "alerta leve" já existia no código mas nunca tinha chance de ser exercido especificamente
+por causa do `vol_sec`. Agora `vol_secando` sozinho não impede mais o sinal de ser detectado, mas ainda
+soma 1 ponto no contador de alertas e pode custar o tier (PRATA/BRONZE) se vier combinado com qualquer
+outro alerta leve (`perto_bb_topo`, `ext_acima_e21`, `exaustao_topo`, `stoch_esticado_up` ou os
+equivalentes _fund/_abaixo/_down do lado short) — continua penalizando entrada de baixo volume, só deixou
+de matar o candidato isoladamente.
+
+### O que NÃO foi tocado nesta rodada
+- `mom_seguro_long/short` (MOMENTUM, linha ~750-752) e `_vol_inst_ok` (modo INSTITUCIONAL, linha ~855)
+  continuam com `not vol_secando` como bloqueio binário próprio — não apareceram como o bloqueador
+  dominante neste log específico (MOMENTUM nem apareceu nos candidatos auditados), mudança isolada só
+  no composto principal (`seguro_long/short`) usado pelos outros 9-10 tipos de sinal, mesmo padrão
+  cirúrgico de só tocar o que o diagnóstico real aponta.
+- `stoch_extremo` (bloqueio absoluto 0.00/1.00 em `classificar_v2()`) — não relacionado a `vol_sec`,
+  intocado (caso real do mesmo log: NOCKUSDT travado por `stoch=0.00`, bloqueio genuíno, não bug).
+- REGRA #1/#5, gestão (stop/TP/leverage), tamanho de posição — nenhum tocado.
+
+Validar com o próximo run real se GRASS/DYDX/SUI/XPR (ou equivalentes) passam a ser classificados
+PRATA/BRONZE e disparar sinal real. Se `seguro_alertas` combinado ainda travar a maioria por outro alerta
+leve simultâneo, é o próximo ponto pra auditar — não afrouxar mais nenhum limiar isolado sem caso real novo.
