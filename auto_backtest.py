@@ -9,13 +9,13 @@ régua de stop/TP do sinal real (notify.calcular_stop_tp) e a MESMA cascata de d
 automaticamente pros dois. Objetivo: dado de calibração em minutos, não em dias (não
 precisa esperar o resultado real fechar via state.py/resultados_log.csv).
 
-Limitação conhecida: a saída real do bot tem 4 estágios (CLASSIFICAÇÃO INSTITUCIONAL
-V3 — TP1=1.5R/30%→BE, TP2=3R/40%, TP3=5R/20%, 10% final "runner" via MM10/MM21+
-fluxo+volume). Aqui o runner é aproximado como fechando junto do TP3 (sem tracking
-candle-a-candle do trailing) — suficiente pra medir STOP-rate e winrate de entrada,
-não é réplica exata do resultados_log.csv. Coluna "n_tp2" do CSV (schema legado,
-não alterado) passou a representar "bateu TP3" (fechamento final aproximado), não
-mais o TP2 literal — ver _simular_forward().
+Saída real do bot (GAUSS+DNA v5.0): 2 estágios — TP1=1:1R fecha 50% e move o stop
+conceitual pra break-even, os 50% restantes seguem em trailing stop (50% do ganho
+máximo desde o TP1, piso BE). Aqui o trailing é simulado candle a candle (high/low),
+mesma régua de `state.py:verificar_posicoes_abertas()`. Colunas "n_tp1_be"/"n_tp2" do
+CSV (schema legado, não alterado) agora separam o mesmo resultado `TP1_TRAIL` por
+tamanho do ganho: trail fechou perto do BE (`n_tp1_be`) vs trail capturou ganho
+extra além do TP1 garantido (`n_tp2`) — ver _simular_forward().
 """
 import csv
 import logging
@@ -38,44 +38,47 @@ _CAMPOS = ["data_hora", "simbolo", "timeframe", "fonte", "direcao",
 
 
 def _simular_forward(candles, i, eh_long, r, fonte):
-    """A partir do candle i (sinal detectado em i), resolve STOP/TP1_BE/TP2 (V3: TP1=
-    30%→BE, TP2/TP3+runner aproximados em conjunto como "TP2" — ver limitação no
-    cabeçalho do módulo) olhando candles[i+1:]."""
+    """A partir do candle i (sinal detectado em i), resolve STOP ou TP1_TRAIL
+    (v5.0: TP1=1:1R fecha 50%→BE, restante em trailing de 50% do ganho desde o
+    TP1, piso BE) olhando candles[i+1:] — mesma régua de state.py."""
     ind = calcular_indicadores(candles[: i + 1])
     if not ind:
         return None
     preco_entrada = ind["preco"]
     stp = calcular_stop_tp(eh_long, preco_entrada, ind["atr"], ind["swing_low"],
                             ind["swing_high"], fonte, r.get("classificacao"))
-    stop, tp1, tp3 = stp["stop"], stp["tp1"], stp["tp3"]
-    r1, r2, r3 = stp["r1"], stp["r2"], stp["r3"]
-    if stp["risco"] <= 0:
+    stop, tp1, r1, risco = stp["stop"], stp["tp1"], stp["r1"], stp["risco"]
+    if risco <= 0:
         return None
-    # Fechamento final aproxima TP3+runner como um só evento (10% final do runner
-    # some no mesmo nível do TP3, mesma simplificação já documentada no cabeçalho).
-    r_final_aprox = r1 * 0.3 + r2 * 0.4 + r3 * 0.3
 
     tp1_atingido = False
+    ganho_max = 0.0
     for j in range(i + 1, len(candles)):
-        hi, lo = candles[j]["high"], candles[j]["low"]
+        hi, lo = candles[j]["h"], candles[j]["l"]
         if eh_long:
             if not tp1_atingido and hi >= tp1:
                 tp1_atingido = True
-            if tp1_atingido and lo <= preco_entrada:
-                return ("TP1_BE", r1 * 0.3)
-            if hi >= tp3:
-                return ("TP2", r_final_aprox)
-            if lo <= stop:
-                return ("STOP", -1.0) if not tp1_atingido else ("TP1_BE", r1 * 0.3)
+                ganho_max = max(ganho_max, hi - tp1)
+            if tp1_atingido:
+                ganho_max = max(ganho_max, hi - tp1)
+                trail = max(tp1 + 0.5 * ganho_max, preco_entrada)
+                if lo <= trail:
+                    r_resto = (trail - preco_entrada) / risco
+                    return ("TP1_TRAIL", r1 * 0.5 + r_resto * 0.5)
+            elif lo <= stop:
+                return ("STOP", -1.0)
         else:
             if not tp1_atingido and lo <= tp1:
                 tp1_atingido = True
-            if tp1_atingido and hi >= preco_entrada:
-                return ("TP1_BE", r1 * 0.3)
-            if lo <= tp3:
-                return ("TP2", r_final_aprox)
-            if hi >= stop:
-                return ("STOP", -1.0) if not tp1_atingido else ("TP1_BE", r1 * 0.3)
+                ganho_max = max(ganho_max, tp1 - lo)
+            if tp1_atingido:
+                ganho_max = max(ganho_max, tp1 - lo)
+                trail = min(tp1 - 0.5 * ganho_max, preco_entrada)
+                if hi >= trail:
+                    r_resto = (preco_entrada - trail) / risco
+                    return ("TP1_TRAIL", r1 * 0.5 + r_resto * 0.5)
+            elif hi >= stop:
+                return ("STOP", -1.0)
     return None  # não resolveu dentro da janela disponível
 
 
@@ -123,10 +126,15 @@ async def backtest_sinal(session, simbolo, tf, fonte, direcao):
             soma_r += r_val
             if tag == "STOP":
                 n_stop += 1
-            elif tag == "TP1_BE":
-                n_be += 1
-            elif tag == "TP2":
-                n_tp2 += 1
+            elif tag == "TP1_TRAIL":
+                # r1 é sempre 1.0 (calcular_stop_tp) — r_val=0.5 é o piso quando o
+                # trailing fecha exatamente no BE; acima disso, ganho real foi
+                # capturado. Mesma divisão informativa que as colunas legadas
+                # n_tp1_be/n_tp2 do CSV já usavam.
+                if r_val <= 0.6:
+                    n_be += 1
+                else:
+                    n_tp2 += 1
 
         n_resolvidos = n_stop + n_be + n_tp2
         if n_resolvidos == 0:

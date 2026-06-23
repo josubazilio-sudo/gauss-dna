@@ -151,7 +151,7 @@ def _pontuar_rapido(candles):
         return 0
 
     try:
-        _, _, adx, _ = calcular_adx(candles[-60:])
+        _, _, adx, _, _, _ = calcular_adx(candles[-60:])
     except Exception:
         return 0
     if adx < 15:

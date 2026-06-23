@@ -5,9 +5,7 @@ Envio de sinais e alertas via Telegram e WhatsApp.
 import logging
 import aiohttp
 from datetime import datetime
-from config import (TG_TOKEN, TG_CHATID, WA_PHONE, WA_APIKEY,
-                    CAPITAL, RISK_PCT, RISK_BY_GRADE, RISK_SCOUT, SIGNAL_MODE,
-                    RISK_INSTITUCIONAL_POR_GRADE)
+from config import TG_TOKEN, TG_CHATID, WA_PHONE, WA_APIKEY, SIGNAL_MODE
 from indicators import formatar_preco
 from state import registrar_trade
 
@@ -44,10 +42,11 @@ def _label_tf(tf):
 # vale tanto pro sinal real quanto pro backtest automático que roda em cima dele.
 
 def calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classificacao):
-    """Stop adaptativo (ATR vs estrutural, intocado) + alvos fixos em R, V3
-    (TP1=1.5R/30%, TP2=3R/40%, TP3=5R/20%, 10% final sem alvo — segue tendência).
-    Os 3 múltiplos são fixos pelo documento do usuário, independente de
-    tier/grade/fonte — substitui a tabela por tier (OURO/PRATA) da V2."""
+    """Stop adaptativo (ATR vs estrutural, intocado) + saída em 2 estágios
+    (GAUSS+DNA v5.0, substitui os 4 estágios da V3/V4): TP1=1:1R fecha 50% da
+    posição e move o stop conceitual pra break-even; os 50% restantes seguem
+    em trailing stop (50% do ganho máximo desde o TP1), sem alvo fixo de TP2/
+    TP3 — resolvido candle a candle em cycles.py/state.py, não aqui."""
     mult_atr = (2.0 if fonte == "SURGE" else 1.8 if fonte in ("FLEX", "SETUP") else 1.5)
     stop_atr = preco - mult_atr * atr if eh_long else preco + mult_atr * atr
     stop_estrutural = swing_low - atr * 0.5 if eh_long else swing_high + atr * 0.5
@@ -65,13 +64,10 @@ def calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classifi
         label_stop = f"{mult_atr:.1f} ATR"
 
     risco = abs(preco - stop)
-    r1, r2, r3 = 1.5, 3.0, 5.0
-
+    r1 = 1.0
     tp1 = preco + risco * r1 if eh_long else preco - risco * r1
-    tp2 = preco + risco * r2 if eh_long else preco - risco * r2
-    tp3 = preco + risco * r3 if eh_long else preco - risco * r3
-    return {"stop": stop, "tp1": tp1, "tp2": tp2, "tp3": tp3,
-            "r1": r1, "r2": r2, "r3": r3,
+    return {"stop": stop, "tp1": tp1,
+            "r1": r1,
             "risco": risco, "label_stop": label_stop}
 
 
@@ -125,75 +121,36 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     confluencia_emoji = {"OURO": "🥇", "PRATA": "🥈", "BRONZE": "🥉"}.get(classificacao, "🥈")
     confluencia_label = classificacao
 
-    # ── Stop/TP — CLASSIFICAÇÃO INSTITUCIONAL V3 (extraído pra
-    # notify.calcular_stop_tp, reaproveitado pelo auto_backtest.py) ──────────
+    # ── Stop/TP — GAUSS+DNA v5.0 (extraído pra notify.calcular_stop_tp,
+    # reaproveitado pelo auto_backtest.py) ────────────────────────────────────
     _stp = calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classificacao)
-    stop, tp1, tp2, tp3 = _stp["stop"], _stp["tp1"], _stp["tp2"], _stp["tp3"]
-    r1, r2, r3 = _stp["r1"], _stp["r2"], _stp["r3"]
+    stop, tp1 = _stp["stop"], _stp["tp1"]
+    r1 = _stp["r1"]
     risco, label_stop = _stp["risco"], _stp["label_stop"]
     if risco <= 0:
         log.warning(f"⚠️ {abrev} risco=0 (stop={stop:.8f} == preco={preco:.8f}) — sinal ignorado")
         return False
     risco_pct = risco / preco * 100
 
-    # ── Tamanho da posição ────────────────────────────────────────────────────
-    pct_risco    = (RISK_INSTITUCIONAL_POR_GRADE.get(grade, 0.01) if SIGNAL_MODE == "INSTITUCIONAL" else
-                     RISK_SCOUT if fonte == "SCOUT" else RISK_BY_GRADE.get(grade, RISK_PCT))
-    valor_risco  = CAPITAL * pct_risco
-    contratos    = valor_risco / risco if risco > 0 else 0
-    valor_pos    = contratos * preco
-
-    # Alavancagem dinâmica 3x–50x por qualidade do sinal (banca $100, plano dobrar banca 20/06)
-    _lev = {"S+": 45, "S": 32, "A+": 22, "A": 14, "B": 8}.get(grade, 8)
-    if score_inst >= 80:   _lev += 4   # confirmação institucional forte
-    elif score_inst >= 70: _lev += 2   # institucional bom
-    elif score_inst < 55:  _lev -= 3   # institucional fraco
-    if rvol_val >= 1.5:    _lev += 2   # volume muito acima da média
-    elif rvol_val < 0.80:  _lev -= 1   # volume fraco
-    if fonte == "SCOUT":                 _lev = min(_lev, 6)   # sinal secundário: teto 6x
-    elif fonte == "MOMENTUM":            _lev = min(_lev, 28)  # momentum rápido/stop apertado: teto 28x
-    elif fonte == "SURGE":                _lev = min(_lev, 30)  # breakout explosivo: teto 30x
-    elif fonte in ("BREAKOUT", "PUMP"):    _lev = min(_lev, 22)  # breakout nascente: teto 22x
-    elif fonte == "DUMP":                 _lev = min(_lev, 16)  # pós-pump: alta volatilidade, conservador
-    elif fonte == "BB_BREAK":             _lev = min(_lev, 18)  # rompimento BB: risco de falso break, cap 18x
-    # Cap por confiança (prevalece sobre grade)
+    # ── Tamanho da posição — lote fixo em dólar por tier (GAUSS+DNA v5.0,
+    # substitui RISK_BY_GRADE%/RISK_INSTITUCIONAL_POR_GRADE e a alavancagem
+    # dinâmica 3x-50x): PRATA=$30 margem, BRONZE=$15 margem, ambos em 3x fixo,
+    # sem exceção. OURO desabilitado (classificar_v2 nunca devolve OURO nesta
+    # versão, banca<$500) — fallback BRONZE só por segurança defensiva.
+    alavancagem = 3
+    margem    = {"PRATA": 30.0, "BRONZE": 15.0}.get(classificacao, 15.0)
+    valor_pos = margem * alavancagem
+    contratos = valor_pos / preco if preco else 0
+    valor_risco = contratos * risco
+    pos_alav  = margem
     _confianca = max(40, min(95, score_inst - 10))
-    if   _confianca < 60: _lev = min(_lev, 6)
-    elif _confianca < 70: _lev = min(_lev, 14)
-    elif _confianca < 80: _lev = min(_lev, 22)
-    elif _confianca < 90: _lev = min(_lev, 35)
-    # conf>=90: sem cap extra aqui — decide o teto de liquidação/clamp final
 
-    # Teto de segurança por liquidação (CLAUDE.md REGRA #4): a liquidação precisa
-    # ficar >=1.3x a distância do stop, senão a corretora liquida a posição ANTES
-    # do stop disparar — troca uma perda planejada de poucos % da banca por 100%
-    # da margem do trade. liq_dist% ≈ 100/alavancagem (aprox. margem isolada/cross).
-    if risco_pct > 0:
-        _liq_cap = int(100 / (1.3 * risco_pct))
-        _lev = min(_lev, max(3, _liq_cap))
-
-    # Teto conservador por padrão (autorizado 21/06 — banca real baixa, perfil mais
-    # defensivo pedido pelo usuário): trava em 10x a não ser que o sinal bata TODOS
-    # os critérios de alta convicção (mesmos critérios pedidos: score_inst>=85,
-    # adx>=30, rvol>=2, fluxo institucional alinhado nos dois indicadores, e a favor
-    # da MM200) — nesse caso a fórmula acima continua valendo sem este teto extra.
-    _mm200_ok = (tendencia == "ALTA") if eh_long else (tendencia == "BAIXA")
-    _alta_conviccao = (score_inst >= 85 and adx >= 30 and rvol_val >= 2 and
-                       dna_flow_ok and trendilo_ok and _mm200_ok)
-    if not _alta_conviccao:
-        _lev = min(_lev, 10)
-
-    alavancagem = max(3, min(50, _lev))          # clamp 3x–50x
-
-    pos_alav     = valor_pos / alavancagem
-    # Split 30% TP1 / 40% TP2 / 20% TP3 / 10% runner (CLASSIFICAÇÃO INSTITUCIONAL
-    # V3) — ganho_total é uma estimativa-piso assumindo o "restante" (10%) sai no
-    # mesmo nível do TP3 (o runner pode rodar mais via trailing MM10/MM21+fluxo+
-    # volume, ver _checar_runners em cycles.py)
-    ganho_tp1    = valor_risco * r1 * 0.3
-    ganho_tp2    = valor_risco * r2 * 0.4
-    ganho_tp3    = valor_risco * r3 * 0.2
-    ganho_total  = ganho_tp1 + ganho_tp2 + ganho_tp3 + valor_risco * r3 * 0.1
+    # ── Saída em 2 estágios (v5.0): TP1=1:1R fecha 50% e move o stop pra BE;
+    # os 50% restantes seguem em trailing (50% do ganho máximo desde o TP1,
+    # piso = BE) — resolvido tick a tick em state.py, não tem alvo fixo de
+    # "TP2"/"TP3" pra mostrar aqui.
+    ganho_tp1   = valor_risco * r1 * 0.5
+    ganho_min_resto = 0.0   # pior caso do trailing: sai exatamente no BE
 
     # ── Labels de modo ────────────────────────────────────────────────────────
     tf_lbl = _label_tf(tf)
@@ -266,18 +223,16 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         f"{aviso_scout}\n"
         f"💰 Entrada: `${_bruto(formatar_preco(preco))}`\n"
         f"🛑 Stop \\({_escapar(label_stop)}\\): `${_bruto(_fmt(stop))}` · R\\=`{_bruto(f'{risco_pct:.1f}')}%`\n"
-        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 30% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
-        f"🎯 TP2 \\({_escapar(str(r2))}R\\): `${_bruto(_fmt(tp2))}` → fechar 40%\n"
-        f"🎯 TP3 \\({_escapar(str(r3))}R\\): `${_bruto(_fmt(tp3))}` → fechar 20%\n"
-        f"🏁 Restante \\(10%\\): segue tendência \\(MM10/MM21 \\+ fluxo \\+ volume\\)\n\n"
+        f"🎯 TP1 \\({_escapar(str(r1))}R\\): `${_bruto(_fmt(tp1))}` → fechar 50% · stop → BE `${_bruto(formatar_preco(preco))}`\n"
+        f"🏁 Restante \\(50%\\): trailing stop \\(50% do ganho desde o TP1, piso BE\\)\n\n"
         f"📊 RSI: {_escapar(f'{rsi:.0f}')}\n"
         f"{linha_rvol}"
         f"📉 ADX: {_escapar(f'{adx:.0f}')}\n"
         f"📦 Fluxo: {fluxo_emoji} {_escapar(fluxo_label)} \\| Kalman: {_escapar(k_str)}\n"
         f"📍 Tendência: {_escapar(tendencia)}\n\n"
-        f"📐 *Gestão \\({_escapar(str(int(pct_risco*100)))}% de ${_bruto(f'{CAPITAL:.0f}')}\\)*\n"
-        f"Risco: `${_bruto(f'{valor_risco:.2f}')}` \\| Pos: `${_bruto(f'{valor_pos:.2f}')}` \\| {_escapar(str(alavancagem))}x \\(`${_bruto(f'{pos_alav:.2f}')}` colateral\\)\n"
-        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` \\| TP2 \\+`${_bruto(f'{ganho_tp2:.2f}')}` \\| TP3 \\+`${_bruto(f'{ganho_tp3:.2f}')}` \\| Total\\* \\+`${_bruto(f'{ganho_total:.2f}')}`\n"
+        f"📐 *Gestão \\(lote fixo {_escapar(classificacao)}\\)*\n"
+        f"Risco: `${_bruto(f'{valor_risco:.2f}')}` \\| Pos: `${_bruto(f'{valor_pos:.2f}')}` \\| {_escapar(str(alavancagem))}x \\(`${_bruto(f'{pos_alav:.2f}')}` margem\\)\n"
+        f"💸 TP1 \\+`${_bruto(f'{ganho_tp1:.2f}')}` garantido \\| restante 50% em trailing \\(mín\\. BE\\)\n"
         f"{linha_funding}"
         f"{linha_oi}"
         f"⏰ {_escapar(agora)}"
@@ -293,8 +248,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
             data = await r.json()
             if data.get("ok"):
                 log.info(f"✅ {direcao} {abrev} Grade:{grade} Score:{score} RSI:{rsi:.0f} ADX:{adx:.0f} [{fonte}]")
-                registrar_trade(simbolo, tf, direcao, preco, stop, tp1, tp3,
-                                r1, r3, grade, score, rsi, adx, fonte)
+                registrar_trade(simbolo, tf, direcao, preco, stop, tp1, tp1,
+                                r1, r1, grade, score, rsi, adx, fonte)
                 # WhatsApp — mensagem simplificada
                 import re as _re
                 wa_tipo = _re.sub(r'[^\w\s\-→/]', '', tag_modo).strip()
@@ -303,11 +258,9 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     f"Tipo: {wa_tipo}\n\n"
                     f"Entrada: ${formatar_preco(preco)}\n"
                     f"Stop: ${_fmt(stop)} ({label_stop})\n"
-                    f"TP1 ({r1}R, 30%): ${_fmt(tp1)} -> stop BE\n"
-                    f"TP2 ({r2}R, 40%): ${_fmt(tp2)}\n"
-                    f"TP3 ({r3}R, 20%): ${_fmt(tp3)}\n"
-                    f"Restante (10%): segue tendência (MM10/MM21 + fluxo + volume)\n\n"
-                    f"Risco ${valor_risco:.2f} | {alavancagem}x ${pos_alav:.2f} colateral\n"
+                    f"TP1 ({r1}R, 50%): ${_fmt(tp1)} -> stop BE\n"
+                    f"Restante (50%): trailing stop (50% do ganho desde o TP1, piso BE)\n\n"
+                    f"Risco ${valor_risco:.2f} | {alavancagem}x ${pos_alav:.2f} margem\n"
                     f"RSI {rsi:.0f} | ADX {adx:.0f} | "
                     + (f"RVOL {rvol_val:.2f}x {rvol_lbl} | " if rvol_lbl else "")
                     + f"DNA Flow {'✅' if dna_flow_ok else '—'} | "
@@ -318,8 +271,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                 await enviar_whatsapp(session, wa_text)
                 # Dict (truthy) em vez de True puro — permite ao chamador registrar
                 # a posição pro rastreamento de resultado (TP/STOP), pedido 20/06.
-                return {"stop": stop, "tp1": tp1, "tp2": tp2, "tp3": tp3,
-                        "r1": r1, "r2": r2, "r3": r3}
+                return {"stop": stop, "tp1": tp1, "r1": r1}
             else:
                 log.warning(f"❌ {data.get('description')}")
                 return False

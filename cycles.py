@@ -27,8 +27,7 @@ from analyze import analisar, calcular_indicadores
 from notify import enviar_sinal, notificar
 from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_contract_data, buscar_preco_atual
 from state import (carregar_estado, salvar_estado, registrar_posicao_aberta,
-                   verificar_posicoes_abertas, registrar_resultado, resumo_resultados,
-                   fechar_runner)
+                   verificar_posicoes_abertas, registrar_resultado, resumo_resultados)
 from auto_backtest import backtest_sinal, resumo_backtest
 
 log = logging.getLogger("GAUSS+DNA")
@@ -136,53 +135,14 @@ async def _atualizar_resultados(session, estado) -> None:
         registrar_resultado(f)
         log.info(f"📈 Resultado: {f['simbolo']} {f['direcao']} [{f['fonte']}] → {f['resultado']}")
         # Circuit breaker do modo INSTITUCIONAL (pedido 21/06) — só conta posições
-        # abertas sob esse modo; vitória (TP1_BE/TP2/TP2_RUNNER/TP3_RUNNER) zera o
-        # contador, STOP soma.
+        # abertas sob esse modo; vitória (TP1_TRAIL/TP1_BE/TP2/TP2_RUNNER/TP3_RUNNER,
+        # os 4 últimos legados) zera o contador, STOP soma.
         if f.get("modo") == "INSTITUCIONAL":
             if f["resultado"] == "STOP":
                 estado["_stops_consecutivos_inst"] = estado.get("_stops_consecutivos_inst", 0) + 1
-            elif f["resultado"] in ("TP1_BE", "TP2", "TP2_RUNNER", "TP3_RUNNER"):
+            elif f["resultado"] in ("TP1_TRAIL", "TP1_BE", "TP2", "TP2_RUNNER", "TP3_RUNNER"):
                 estado["_stops_consecutivos_inst"] = 0
 
-
-async def _checar_runners(session, estado) -> None:
-    """Resolve posições no estágio 'runner' (já bateram TP1, TP2 e TP3 — 10%
-    final, CLASSIFICAÇÃO INSTITUCIONAL V3, autorizado 22/06): só encerra quando
-    os 3 critérios do documento batem JUNTOS — MM10 cruza MM21 contra a direção
-    E fluxo (DNA Flow/Trendilo) perde força E volume cai (RVOL<1). Ticker simples
-    (usado em _atualizar_resultados) não basta aqui — precisa de candle fresco
-    pra calcular EMA/fluxo/volume, por isso roda separado."""
-    posicoes = estado.get("_posicoes_abertas", [])
-    runners  = [p for p in posicoes
-                if p.get("tp1_atingido") and p.get("tp2_atingido") and p.get("tp3_atingido")]
-    if not runners:
-        return
-    for p in runners:
-        try:
-            candles = await buscar_candles(session, p["simbolo"], p["tf"])
-            if not candles or len(candles) < 60:
-                continue
-            ind = calcular_indicadores(candles)
-            if not ind:
-                continue
-            eh_long = p["direcao"] == "LONG"
-            preco   = ind["preco"]
-            mm_cruzou  = (ind["e10"] < ind["e21"]) if eh_long else (ind["e10"] > ind["e21"])
-            fluxo_fraco = not (ind.get("dna_flow_bull") or ind.get("trendilo_long")) if eh_long else \
-                          not (ind.get("dna_flow_bear") or ind.get("trendilo_short"))
-            volume_cai = ind.get("rvol", 1.0) < 1.0
-            if mm_cruzou and fluxo_fraco and volume_cai:
-                risco_unid = abs(p["entrada"] - p["stop"]) or 1e-9
-                r_runner = ((preco - p["entrada"]) if eh_long else (p["entrada"] - preco)) / risco_unid
-                fechado = fechar_runner(estado, p, preco, r_runner)
-                if fechado:
-                    registrar_resultado(fechado)
-                    log.info(f"🏁 Runner encerrado: {p['simbolo']} {p['direcao']} → "
-                             f"MM10/MM21+fluxo+volume | R extra {r_runner:+.2f}")
-                    if fechado.get("modo") == "INSTITUCIONAL":
-                        estado["_stops_consecutivos_inst"] = 0
-        except Exception as e:
-            log.warning(f"⚠️ Erro checando runner {p['simbolo']}: {e}")
 
 
 async def _enviar_diagnostico(session) -> None:
@@ -454,6 +414,12 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                    result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL}"))
                 _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global)")
                 continue
+            if result.get("adx_caindo_3"):
+                log.info(f"  ⚠️ {abrev} bloqueado — ADX caindo 3+ períodos (v5.0)")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], "adx_caindo_3"))
+                _diag_pos_cascata("adx caindo 3+ periodos")
+                continue
             _rvol_min_tf = max(RVOL_MIN_BY_TF.get(tf, 0.80), RVOL_MIN_EXEC)
             if result.get("rvol", 1.0) < _rvol_min_tf:
                 log.info(f"  ⚠️ {abrev} bloqueado — RVOL {result.get('rvol', 0):.2f} < {_rvol_min_tf} ({tf})")
@@ -596,18 +562,20 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                     _diag_pos_cascata("prata sem H1")
                     continue
             if classificacao == "BRONZE":
-                _score_inst_dir = result.get("score_inst_long" if eh_long else "score_inst_short", 0)
+                # v5.0: confirmação MTF H1 é universal — sem o escape "OU Score
+                # Inst>=70" que a V3 permitia, BRONZE agora exige H1 alinhado
+                # sempre, igual PRATA.
                 if tf == "1h":
                     _h1_ok = result.get("alinhado_bull" if eh_long else "alinhado_bear", False)
                 else:
                     h1c = await buscar_candles(session, sym, "1h")
                     _r1h = calcular_indicadores(h1c) if h1c else None
                     _h1_ok = _r1h.get("alinhado_bull" if eh_long else "alinhado_bear", False) if _r1h else False
-                if not (_h1_ok or _score_inst_dir >= 70):
-                    log.info(f"  🥉 {abrev} bloqueado — BRONZE exige H1 alinhado ou Score Inst>=70 (tem {_score_inst_dir})")
+                if not _h1_ok:
+                    log.info(f"  🥉 {abrev} bloqueado — BRONZE exige H1 alinhado")
                     candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], "bronze sem H1/score70"))
-                    _diag_pos_cascata("bronze sem H1/score70")
+                                       result["rsi"], result["adx"], "bronze sem H1"))
+                    _diag_pos_cascata("bronze sem H1")
                     continue
 
             extra = {
@@ -638,8 +606,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 shorts_enviados += 0 if eh_long else 1
                 enviados += 1
                 registrar_posicao_aberta(estado, sym, tf, result["sinal"], result["preco"],
-                                         ok["stop"], ok["tp1"], ok["tp2"], ok["tp3"],
-                                         ok["r1"], ok["r2"], ok["r3"],
+                                         ok["stop"], ok["tp1"], ok["r1"],
                                          grade, result["fonte_sinal"], modo=SIGNAL_MODE,
                                          classificacao=classificacao)
                 await backtest_sinal(session, sym, tf, result["fonte_sinal"], result["sinal"])
@@ -803,6 +770,11 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
                 _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global, MTF)")
                 continue
+            if result.get("adx_caindo_3"):
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "adx_caindo_3"))
+                log.info(f"[MTF] {abrev:7s} | bloqueado — ADX caindo 3+ períodos (v5.0)")
+                _diag_pos_cascata("adx caindo 3+ periodos (MTF)")
+                continue
             _rvol_mtf = result.get("rvol", 1.0)
             _rvol_min_mtf = max(RVOL_MIN_BY_TF.get("1h", 0.80), RVOL_MIN_EXEC)
             if _rvol_mtf < _rvol_min_mtf:
@@ -856,11 +828,13 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                     _diag_pos_cascata("prata sem H1 (MTF)")
                     continue
             if classificacao_mtf == "BRONZE":
+                # v5.0: sem escape "OU Score Inst>=70" — H1 alinhado é exigido
+                # sempre, igual PRATA.
                 _h1_ok_mtf_b = result.get("alinhado_bull") if eh_long_mtf else result.get("alinhado_bear")
-                if not (_h1_ok_mtf_b or score_inst_mtf >= 70):
-                    setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "bronze sem H1/score70"))
-                    log.info(f"[MTF] {abrev:7s} | bloqueado — BRONZE exige H1 alinhado ou Score Inst>=70 (tem {score_inst_mtf})")
-                    _diag_pos_cascata("bronze sem H1/score70 (MTF)")
+                if not _h1_ok_mtf_b:
+                    setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "bronze sem H1"))
+                    log.info(f"[MTF] {abrev:7s} | bloqueado — BRONZE exige H1 alinhado")
+                    _diag_pos_cascata("bronze sem H1 (MTF)")
                     continue
 
             # AJUSTE INSTITUCIONAL ELITE (21/06): mesmo teto de posições simultâneas
@@ -897,8 +871,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 if ok:
                     estado[chave] = agora; enviados += 1
                     registrar_posicao_aberta(estado, sym, "1h", result["sinal"], result["preco"],
-                                             ok["stop"], ok["tp1"], ok["tp2"], ok["tp3"],
-                                             ok["r1"], ok["r2"], ok["r3"],
+                                             ok["stop"], ok["tp1"], ok["r1"],
                                              grade, result["fonte_sinal"], modo=SIGNAL_MODE,
                                              classificacao=classificacao_mtf)
                     await backtest_sinal(session, sym, "1h", result["fonte_sinal"], result["sinal"])
@@ -1062,7 +1035,6 @@ async def main():
                     total   += enviados
                 log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
                 await _atualizar_resultados(session, estado)
-                await _checar_runners(session, estado)
             except Exception as e:
                 log.error(f"❌ FLEX erro ciclo #{ciclo}: {e}")
             finally:

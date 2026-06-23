@@ -114,14 +114,34 @@ def calcular_indicadores(candles):
     # Exige RSI absoluto elevado/baixo também, evitando bloquear LONG/SHORT válidos por saturação técnica.
     stoch_esticado_up   = stoch_rsi > 0.80 and rsi > 58
     stoch_esticado_down = stoch_rsi < 0.05 and rsi < 35
+    stoch_extremo = stoch_rsi <= 0.001 or stoch_rsi >= 0.999
+
+    if len(_rsi_ser) >= 15:
+        _r14a = _rsi_ser[-15:-1]; _rmina = min(_r14a); _rmaxa = max(_r14a)
+        stoch_rsi_ant = (_r14a[-1] - _rmina) / (_rmaxa - _rmina) if _rmaxa > _rmina else 0.5
+    else:
+        stoch_rsi_ant = stoch_rsi
+    stoch_subindo = stoch_rsi > stoch_rsi_ant
+    stoch_caindo  = stoch_rsi < stoch_rsi_ant
+    stoch_momentum_long  = 0.15 <= stoch_rsi <= 0.85 and stoch_subindo
+    stoch_momentum_short = 0.15 <= stoch_rsi <= 0.85 and stoch_caindo
+
+    # RSI dinâmico (momentum, GAUSS+DNA v5.0): exige RSI subindo/caindo 3 pontos
+    # seguidos dentro de uma janela específica de "espaço pra continuar" — não é o
+    # mesmo gate que rsi_zona_long/short (REGRA #1, extremo absoluto 75/25).
+    rsi_subindo_3 = len(_rsi_ser) >= 3 and _rsi_ser[-1] > _rsi_ser[-2] > _rsi_ser[-3]
+    rsi_caindo_3  = len(_rsi_ser) >= 3 and _rsi_ser[-1] < _rsi_ser[-2] < _rsi_ser[-3]
+    rsi_dinamico_long  = 30 <= rsi <= 55 and rsi_subindo_3
+    rsi_dinamico_short = 45 <= rsi <= 70 and rsi_caindo_3
 
     # DMI / ADX
-    pdi, mdi, adx, adx_p = calcular_adx(candles[-60:])
+    pdi, mdi, adx, adx_p, adx_p2, adx_p3 = calcular_adx(candles[-60:])
     adx_long_ok  = adx > 22 and pdi > mdi and adx > adx_p
     adx_short_ok = adx > 22 and mdi > pdi and adx > adx_p
 
     # Volume — RVOL 4 tiers (atual e anterior — pega sinal que ocorreu na vela passada)
     vol_ma = sum(volumes[-21:-1]) / 20 if len(volumes) >= 21 else sum(volumes[:-1]) / max(len(volumes)-1, 1)
+    vol_media5 = sum(volumes[-6:-1]) / 5 if len(volumes) >= 6 else vol_ma
     rvol       = volumes[-1] / max(vol_ma, 1e-10)
     rvol_prev  = volumes[-2] / max(vol_ma, 1e-10) if len(volumes) >= 2 else rvol
     rvol_max2  = max(rvol, rvol_prev)   # melhor das últimas 2 velas
@@ -318,6 +338,13 @@ def calcular_indicadores(candles):
                     not exaustao_topo and rsi_nao_topo and not stoch_esticado_up)
     seguro_short = (not vol_secando and not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
 
+    # SEGURO — contagem de alertas (GAUSS+DNA v5.0): cada booleano abaixo é um
+    # "alerta leve" de qualidade de entrada; PRATA/BRONZE toleram no máx. 1.
+    seguro_alertas_long  = sum([perto_bb_topo, ext_acima_e21, exaustao_topo,
+                                 vol_secando, stoch_esticado_up])
+    seguro_alertas_short = sum([perto_bb_fund, ext_abaixo_e21, exaustao_fund,
+                                  vol_secando, stoch_esticado_down])
+
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
     _vol_thr      = 0.20 if _FLV <= 0 else (0.50 if _FLV == 1 else (0.65 if _FLV == 2 else 0.80))
@@ -447,15 +474,21 @@ def calcular_indicadores(candles):
         "rsi_dip_short": rsi_dip_short, "rsi_rebound_short": rsi_rebound_short,
         "rsi_spike_long": rsi_spike_long, "rsi_rebound_long": rsi_rebound_long,
         "stoch_rsi": stoch_rsi, "stoch_esticado_up": stoch_esticado_up, "stoch_esticado_down": stoch_esticado_down,
+        "stoch_extremo": stoch_extremo, "stoch_momentum_long": stoch_momentum_long,
+        "stoch_momentum_short": stoch_momentum_short,
+        "rsi_dinamico_long": rsi_dinamico_long, "rsi_dinamico_short": rsi_dinamico_short,
         "rsi_nao_chasing_long": rsi_nao_chasing_long, "rsi_nao_chasing_short": rsi_nao_chasing_short,
         "rsi_zona_long": rsi_zona_long, "rsi_zona_short": rsi_zona_short,
         # ADX
         "pdi": pdi, "mdi": mdi, "adx_long_ok": adx_long_ok, "adx_short_ok": adx_short_ok,
         "adx_p": adx_p, "adx_subindo": adx > adx_p,
+        "adx_p2": adx_p2, "adx_p3": adx_p3,
+        "adx_caindo_3": adx < adx_p < adx_p2 < adx_p3,
         # Volume
         "rvol": rvol, "rvol_tier": rvol_tier, "rvol_tier_max2": rvol_tier_max2, "rvol_label": rvol_label,
         "v_bom": v_bom, "v_forte": v_forte, "v_inst": v_inst, "v_forte2": v_forte2,
-        "vol_ma": vol_ma, "volumes": volumes, "vol_nao_fade": vol_nao_fade,
+        "vol_ma": vol_ma, "vol_media5": vol_media5, "volumes": volumes, "vol_nao_fade": vol_nao_fade,
+        "vol_acima_media5": volumes[-1] > vol_media5,
         "flex_vol_ok": flex_vol_ok, "flex_vol_ok_s": flex_vol_ok_s,
         # Flow
         "f_bull": f_bull, "f_bear": f_bear, "f_forte": f_forte,
@@ -496,6 +529,7 @@ def calcular_indicadores(candles):
         "trendilo_long": trendilo_long, "trendilo_short": trendilo_short,
         # Filtros compostos
         "seguro_long": seguro_long, "seguro_short": seguro_short,
+        "seguro_alertas_long": seguro_alertas_long, "seguro_alertas_short": seguro_alertas_short,
         "perto_bb_topo": perto_bb_topo, "perto_bb_fund": perto_bb_fund,
         "ext_acima_e21": ext_acima_e21, "ext_abaixo_e21": ext_abaixo_e21,
         "vol_secando": vol_secando,
@@ -524,42 +558,41 @@ def calcular_indicadores(candles):
 # (ver "Saída em 4 estágios" em notify.py/state.py, também V3).
 # ══════════════════════════════════════════════════════════════════════════════
 
-def classificar_v2(ind, sinal):
-    """Classifica o sinal em OURO/PRATA/BRONZE/None pela CLASSIFICAÇÃO
-    INSTITUCIONAL V4 (nome da função mantido por compatibilidade com todo o
-    fiação existente em cycles.py — o conteúdo é a V4). Retorna None quando
-    nem o piso de BRONZE é atingido.
-
-    V3→V4 (autorizado 22/06, tabela própria do usuário — aperta de propósito,
-    não é afrouxamento): Score_inst mínimo sobe em todos os degraus (80→85
-    OURO, 70→75 PRATA, 60→65 BRONZE). RVOL sobe em OURO/PRATA (1.5→1.8 OURO,
-    1.2 PRATA igual) mas BRONZE desce (1.0→0.7 — único afrouxamento da tabela).
-    ADX sobe nos 3 degraus (22→25 OURO, 18→20 PRATA, 15→18 BRONZE). Distância
-    MM21 da OURO volta a apertar de <=6% pra <=3% (era esse valor antes da V3).
-    "Conf" do documento do usuário é redundante com Score (`confiança =
-    score_inst-10` em notify.py) — não é checagem separada. RSI/Kalman/MM50
-    (gates da V3) saem da classificação: não estavam na tabela nova do
-    usuário, e a zona de RSI já é gate da própria cascata de sinais (REGRA #1)
-    antes de chegar aqui — não removia proteção real, só checagem redundante.
+def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
+    """Classifica o sinal em PRATA/BRONZE/None pela CLASSIFICAÇÃO GAUSS+DNA
+    v5.0 (nome da função mantido por compatibilidade — substitui a V4).
+    OURO desabilitado (banca < $500). `ha4_bull`/`ha4_bear` (HA do H4) são
+    opcionais — quando não vierem (None), o piso de HA4 do BRONZE não bloqueia
+    (chamador ainda não tem o dado), só HA1 é exigido nesse caso.
     """
     if not sinal:
+        return None
+    if ind.get("stoch_extremo"):   # 0.00/1.00 — bloqueio absoluto, sem exceção
         return None
     eh_long = sinal == "LONG"
     score_inst = ind["score_inst_long"] if eh_long else ind["score_inst_short"]
     rvol, adx = ind["rvol"], ind["adx"]
 
-    fluxo_ok  = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
-                (ind["dna_flow_bear"] or ind["trendilo_short"])
-    mm200_ok  = ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]
+    fluxo_ok    = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
+                  (ind["dna_flow_bear"] or ind["trendilo_short"])
+    mm200_ok    = ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]
     liq_varrida = ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"]
-    dist_mm21 = abs(ind["preco"] - ind["e21"]) / ind["preco"] if ind["preco"] else 1.0
+    dist_mm21   = abs(ind["preco"] - ind["e21"]) / ind["preco"] if ind["preco"] else 1.0
+    rsi_din     = ind["rsi_dinamico_long"] if eh_long else ind["rsi_dinamico_short"]
+    stoch_mom   = ind["stoch_momentum_long"] if eh_long else ind["stoch_momentum_short"]
+    seguro_alertas = ind["seguro_alertas_long"] if eh_long else ind["seguro_alertas_short"]
+    ha1_ok      = ind["ha_bull"] if eh_long else ind["ha_bear"]
+    vol_ok      = ind["vol_acima_media5"]
 
-    if (score_inst >= 85 and rvol >= 1.8 and adx >= 25 and fluxo_ok
-            and mm200_ok and liq_varrida and dist_mm21 <= 0.03):
-        return "OURO"
-    if score_inst >= 75 and rvol >= 1.2 and adx >= 20:
+    _base = (rsi_din and stoch_mom and fluxo_ok and mm200_ok and liq_varrida and
+             seguro_alertas <= 1 and ha1_ok and vol_ok)
+
+    if (_base and score_inst >= 85 and rvol >= 1.5 and adx >= 25 and dist_mm21 <= 0.02):
         return "PRATA"
-    if score_inst >= 65 and rvol >= 0.7 and adx >= 18:
+
+    ha4_ok = True if (ha4_bull is None and ha4_bear is None) else \
+             (ha4_bull if eh_long else ha4_bear)
+    if (_base and ha4_ok and score_inst >= 75 and rvol >= 1.0 and adx >= 22):
         return "BRONZE"
     return None
 
@@ -956,7 +989,7 @@ def graduar_sinal(ind, sinal):
 # FUNÇÃO PÚBLICA — ponto de entrada
 # ══════════════════════════════════════════════════════════════════════════════
 
-def analisar(simbolo, candles, funding_rate=None):
+def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
     """
     Analisa um ativo e retorna dict com sinal, fonte, grade e todos os indicadores.
     Retorna None se não houver candles suficientes.
@@ -974,7 +1007,7 @@ def analisar(simbolo, candles, funding_rate=None):
         _si = ind["score_inst_long"] if sinal == "LONG" else ind["score_inst_short"]
         grade = "S" if _si >= 90 else "A+" if _si >= 80 else "A"
 
-    classificacao = classificar_v2(ind, sinal)
+    classificacao = classificar_v2(ind, sinal, ha4_bull, ha4_bear)
 
     # Log de diagnóstico quando há score mas sem sinal — o mesmo detalhamento
     # (bloqueio_detalhe) também vai pro dict de retorno, pra cycles.py poder

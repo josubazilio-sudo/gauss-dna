@@ -89,9 +89,9 @@ RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.70}
 
 # Piso universal de força de tendência — aplicado a TODOS os tipos de sinal,
 # além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
-# CLASSIFICAÇÃO INSTITUCIONAL V3 (22/06) baixou de 20 pra 15 ("Bloquear LONG/
-# SHORT: ADX<15" do documento do usuário) — ver CLAUDE.md.
-ADX_MIN_GLOBAL = 15
+# GAUSS+DNA v5.0 (23/06) subiu de 15 pra 20 ("Bloquear LONG/SHORT: ADX<20" —
+# substitui a CLASSIFICAÇÃO INSTITUCIONAL V3/V4) — ver CLAUDE.md.
+ADX_MIN_GLOBAL = 20
 
 # GRAUS_PERMITIDOS (gate por grade letra S+/S/A/B no modo padrão FLEX/ELITE)
 # foi REMOVIDO na V3 — auditoria de 3 runs reais seguidos mostrou zero sinais
