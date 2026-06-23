@@ -1042,6 +1042,17 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
             if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
+            if not b:
+                # candidato passa em todos os checks genéricos acima mas nenhum dos 12
+                # sinais tipados disparou — expõe o gatilho específico que falta
+                # (pullback/cross/setup/flex/scout), 23/06, casos reais KMNO/ZRO "sem detalhe"
+                _trig = []
+                if not ind.get("pullback_bull"):    _trig.append("pullback=F")
+                if not ind.get("algum_cross_bull"):  _trig.append("cross=F")
+                if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
+                if not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
+                if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
+                b.append("gatilho:" + ",".join(_trig) if _trig else "sem detalhe real")
             bloqueio_detalhe = "; ".join(b) or "sem detalhe"
             log.info(f"  LONG-BLOQ {simbolo}: score={sc:+d} | {bloqueio_detalhe}")
         elif sc < -25:
@@ -1060,6 +1071,14 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
             if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
+            if not b:
+                _trig = []
+                if not ind.get("pullback_bear"):    _trig.append("pullback=F")
+                if not ind.get("algum_cross_bear"):  _trig.append("cross=F")
+                if not ind.get("macd_esgotando"):    _trig.append("macd_esg=F")
+                if not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
+                if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
+                b.append("gatilho:" + ",".join(_trig) if _trig else "sem detalhe real")
             bloqueio_detalhe = "; ".join(b) or "sem detalhe"
             log.info(f"  SHORT-BLOQ {simbolo}: score={sc:+d} | {bloqueio_detalhe}")
         else:

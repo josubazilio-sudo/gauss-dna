@@ -1273,3 +1273,34 @@ entrar tarde) é o candidato natural pra próximo ajuste real: usar o próximo d
 candidato forte (score alto, RVOL subindo) bloqueado só por confirmação de 1 candle (ex: `ha1=F` sozinho,
 sem nenhum outro bloqueio de mercado) como caso concreto pra afrouxar a exigência de confirmação nesse
 ponto específico — mesmo padrão cirúrgico já usado hoje (vol_secando, stoch_esticado).
+
+## AJUSTE 23/06 — perto_bb_topo/fund afrouxado (caso real KMNO)
+
+Run real (`28023405483`, 2 ciclos): KMNO score+120 RSI64.2 ADX21.1 Kalman UP travado isoladamente em
+`seguro=F(bb_topo)` — único filtro bloqueando esse candidato (não é REGRA #1 nem REGRA #5). `analyze.py`:
+`perto_bb_topo` (`pos_bb>0.97`) → `pos_bb>0.99`; `perto_bb_fund` (`pos_bb<0.03`) → `pos_bb<0.01`. OPG
+(score+128) também era candidato forte mas travava em `bb_topo`+`stoch=1.00` junto — bloqueio duplo, não
+isolado, não tocado nesta rodada. Confirmado no run seguinte que o fix funcionou (KMNO saiu de
+`seguro=F(bb_topo)` pra `sem detalhe`) — mas ainda não disparou sinal real: `sem detalhe` indica que o
+bloqueio real está dentro da própria condição de algum dos 12 sinais tipados (`detectar_sinais()`), não
+nos checks genéricos que `analisar()` decompõe (ver ajuste seguinte).
+
+## AJUSTE 23/06 — diagnóstico "sem detalhe" decomposto em gatilho real
+
+Mesmo caso KMNO (e ZRO, RSI~56-57 ADX~18.3 K:UP, mesmo padrão): depois do fix de `perto_bb_topo`, o
+candidato passa em todos os checks genéricos de `analisar()` (macd_bull_r, ha_bull_1, adx>=15, não
+lateralizado, seguro_long, rsi_zona, fluxo>=2) mas ainda não produz sinal — ou seja, o bloqueio real está
+escondido dentro de uma das 12 condições tipadas de `detectar_sinais()` (PULLBACK precisa de toque recente
+na EMA10/21; CROSS precisa de cruzamento de médias; SETUP precisa de `macd_recuperando`, ou seja MACD
+*recuperando* de negativo, não apenas positivo contínuo; FLEX/SCOUT exigem ADX>=25 fixo) — nenhuma dessas
+é satisfeita por uma tendência já estabelecida e contínua (ADX moderado 18-21, sem gatilho de entrada
+fresco), e o diagnóstico genérico de `analisar()` não decompunha isso, só caía no fallback `"sem detalhe"`.
+
+Fix: quando nenhum dos checks genéricos acima sinaliza nada (`not b`), `analyze.py:analisar()` agora
+decompõe o motivo real testando os gatilhos específicos dos sinais mais plausíveis pro perfil ADX
+moderado/RSI não-extremo (`pullback_bull`/`bear`, `algum_cross_bull`/`bear`, `macd_recuperando`/
+`macd_esgotando`, `liq_long`/`fundo` ou `liq_short`/`topo`, `adx<25`) — log passa a mostrar
+`gatilho:pullback=F,cross=F,...` em vez de `sem detalhe`. É só observabilidade (não muda nenhuma condição
+de sinal) — usar o próximo run real pra identificar qual gatilho específico falta e decidir o próximo
+ajuste cirúrgico (ex: permitir `macd_recuperando or macd_bull_r` no SETUP pra aceitar tendência já
+positiva, não só recuperação — só aplicar depois de confirmar no log real, nunca "no escuro").
