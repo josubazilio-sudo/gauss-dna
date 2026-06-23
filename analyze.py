@@ -603,8 +603,19 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
     ha1_ok      = ind["ha_bull"] if eh_long else ind["ha_bear"]
     vol_ok      = ind["vol_acima_media5"]
 
-    _base = (rsi_din and stoch_mom and fluxo_ok and mm200_ok and liq_varrida and
-             seguro_alertas <= 1 and ha1_ok and vol_ok)
+    # Tolerância de 1 miss (23/06, caso real DNUSDT): a cadeia original exigia
+    # TODOS os 8 fatores simultâneos — mesmo padrão de funil empilhado já
+    # documentado acima (V2→V3) e já corrigido uma vez hoje pra vol_secando
+    # (bloqueio binário → alerta leve). DN tinha score_inst=90 ELITE, ADX=47,
+    # RVOL=1.55 STRONG, fluxo confirmado, tendência baixa — e foi bloqueado
+    # sozinho por `rsi_din` (RSI=29 fora da janela 45-70). `mm200_ok` (alinhado
+    # com a tendência macro) continua absoluto — é a linha de risco que não se
+    # negocia (ver "Lógica institucional" no CLAUDE.md). Os outros 6 fatores
+    # (rsi_din, stoch_mom, fluxo_ok, liq_varrida, ha1_ok, vol_ok) agora toleram
+    # 1 miss — `seguro_alertas<=1` já é seu próprio sistema de tolerância.
+    _misses = sum([not rsi_din, not stoch_mom, not fluxo_ok, not liq_varrida,
+                   not ha1_ok, not vol_ok])
+    _base = (mm200_ok and seguro_alertas <= 1 and _misses <= 1)
 
     if (_base and score_inst >= 85 and rvol >= 1.5 and adx >= 25 and dist_mm21 <= 0.02):
         return "PRATA"

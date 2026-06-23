@@ -1421,3 +1421,42 @@ de matar o candidato isoladamente.
 Validar com o próximo run real se GRASS/DYDX/SUI/XPR (ou equivalentes) passam a ser classificados
 PRATA/BRONZE e disparar sinal real. Se `seguro_alertas` combinado ainda travar a maioria por outro alerta
 leve simultâneo, é o próximo ponto pra auditar — não afrouxar mais nenhum limiar isolado sem caso real novo.
+
+---
+
+## `classificar_v2()` — TOLERÂNCIA DE 1 MISS NO `_base` (autorizado 23/06 — caso real DNUSDT)
+
+Pedido do usuário: "quero sinal reais pode resolver agora" — depois do fix de `vol_secando` (rodada acima)
+confirmado funcionando (sinal de teste DNUSDT SHORT chegou ao Telegram via `_tentar_sinal_teste()`, prova
+que passou a cascata de `detectar_sinais()`), o mesmo candidato ainda voltou `classificacao=None` em
+`classificar_v2()`. Métricas reais do DN: `score_inst=90` (ELITE), `RVOL=1.55x` (STRONG), `ADX=47`, fluxo
+confirmado, tendência baixa — excelente em praticamente todo eixo. Causa raiz isolada: `rsi_dinamico_short`
+(`45<=rsi<=70 and rsi_caindo_3`) é `False` porque `RSI=29` (já abaixo do piso 45) — único fator do `_base`
+que falhou.
+
+`_base` original exigia **8 fatores simultâneos** (`rsi_din`, `stoch_mom`, `fluxo_ok`, `mm200_ok`,
+`liq_varrida`, `seguro_alertas<=1`, `ha1_ok`, `vol_ok`) — mesmo padrão de funil empilhado já documentado
+no comentário da CLASSIFICAÇÃO INSTITUCIONAL V3 (`analyze.py`, acima de `classificar_v2()`): "acumulado
+filtro sobre filtro a cada incidente até o funil ficar bom demais pra deixar passar qualquer coisa,
+incluindo movimentos reais e fortes" — e já corrigido uma vez no mesmo dia pra `vol_secando` (bloqueio
+binário → alerta leve). DN é a evidência concreta de que o mesmo problema estrutural também existe aqui,
+só que com `rsi_dinamico` como o elo isolado que quebra a cadeia.
+
+Não toquei na **janela** de `rsi_dinamico_long/short` em si (decidido deliberadamente: RSI=29 com ADX=47
+é uma tendência já madura/estendida — bloquear esse caso especificamente é consistente com a REGRA #6,
+"pegar o movimento no começo, nunca atrasado", não é bug). Em vez disso, o `_base` agora tolera 1 miss
+entre os 6 fatores "secundários" (`rsi_din`, `stoch_mom`, `fluxo_ok`, `liq_varrida`, `ha1_ok`, `vol_ok`) —
+mesmo padrão de tolerância já usado em `seguro_alertas<=1` dentro do próprio `_base`. `mm200_ok`
+(alinhamento com a tendência macro via MM200) continua **absoluto**, sem tolerância — é a linha de risco
+que a seção "Lógica Institucional" deste arquivo já trata como não-negociável. `stoch_extremo` (bloqueio
+0.00/1.00) também continua absoluto, intocado.
+
+### O que NÃO foi tocado
+- Pisos de score_inst/RVOL/ADX/dist_mm21 por tier (PRATA 85/1.5/25/2% — BRONZE 75/1.0/22) — continuam
+  exigidos por cima do `_base`, são o controle de qualidade compensatório quando 1 dos 6 fatores falha.
+- `rsi_dinamico_long/short` (janela 30-55/45-70) — intocado, ver justificativa acima.
+- REGRA #1 (`rsi_zona`), REGRA #5, gestão (stop/TP/leverage/lote) — nenhum tocado.
+
+Validar com o próximo run real se candidatos fortes com 1 fator secundário fraco (não `mm200_ok`) passam
+a classificar PRATA/BRONZE e disparar sinal real de fato (não só teste). Se ainda travar, auditar qual dos
+6 fatores está faltando com mais frequência nos próximos diagnósticos antes de tocar a tolerância de novo.
