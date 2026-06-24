@@ -1460,3 +1460,32 @@ que a seção "Lógica Institucional" deste arquivo já trata como não-negociá
 Validar com o próximo run real se candidatos fortes com 1 fator secundário fraco (não `mm200_ok`) passam
 a classificar PRATA/BRONZE e disparar sinal real de fato (não só teste). Se ainda travar, auditar qual dos
 6 fatores está faltando com mais frequência nos próximos diagnósticos antes de tocar a tolerância de novo.
+
+---
+
+## `exaustao_topo/fund` — BLOQUEIO BINÁRIO → ALERTA LEVE (autorizado 24/06, mesmo padrão do `vol_secando`)
+
+Auditoria do run real `28063085264` (12 ciclos completos, log linha a linha via `mcp__github__get_job_logs`)
+mostrou `seguro=F(exaustao)` como o **único** motivo de bloqueio (nenhum outro filtro concorrente) de várias
+candidatas com score forte: XPRUSDT score+128, STARUSDT -93, ZECUSDT -85, XTZUSDT -70, NEARUSDT -70 — mesmo
+padrão já visto e corrigido uma vez no mesmo dia anterior pra `vol_secando` (CLASSIFICAÇÃO/4ª RODADA acima).
+`exaustao_topo`/`exaustao_fund` (pavio de rejeição, `sombra_sup/inf > 0.55`) já tinha sido afrouxado uma vez
+(pavio 0.40→0.55, "O QUE FALTA PRA DAR SINAL" 22/06) e continuava sendo o bloqueador isolado dominante.
+
+### O que foi implementado (`analyze.py`, linha ~356-365)
+`exaustao_topo`/`exaustao_fund` saiu da composição de `seguro_long`/`seguro_short` — não bloqueia mais
+sozinho a detecção na cascata (PULLBACK/CROSS/SM_SWEEP/FLEX/SETUP/SCOUT/REBOUND, que usam `seguro_long/short`).
+Continua calculado igual e continua somando em `seguro_alertas_long/short` (já existia, GAUSS+DNA v5.0) —
+ainda penaliza e pode custar o tier PRATA/BRONZE se vier combinado com outro alerta (`perto_bb_topo`,
+`ext_acima_e21`, `vol_secando`, `stoch_esticado_up`, ou equivalentes _fund/_abaixo/_down), só deixou de matar
+o candidato isoladamente.
+
+### O que NÃO foi tocado
+- Usos diretos e independentes de `exaustao_topo/fund` fora do composto `seguro_long/short`: SURGE
+  (`long_surge`/`short_surge`, by design entra perto de extremo, exceção deliberada), `mom_seguro_long/short`
+  (MOMENTUM), `long_div`/`short_div` (DIV) — não apareceram como bloqueador dominante neste log, mudança
+  isolada só no composto principal, mesmo critério cirúrgico de sempre.
+- `stoch_esticado_up/down`, `rsi_zona` (REGRA #1), REGRA #5, gestão — intocados.
+
+Validar com o próximo run real se XPR/STAR/ZEC/XTZ/NEAR (ou equivalentes) passam a classificar PRATA/BRONZE
+e disparar sinal real.

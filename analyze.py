@@ -353,9 +353,16 @@ def calcular_indicadores(candles):
     # sistema de tolerância já existente (seguro_alertas_long/short, GAUSS+DNA v5.0,
     # `classificar_v2()` exige `seguro_alertas <= 1`) — continua penalizando entrada
     # de baixo volume, mas não mata o sinal isoladamente na cascata de detecção.
+    # exaustao_topo/fund saiu do bloqueio binário (23/06, mesmo padrão do vol_secando
+    # acima): run real pós-merge da alavancagem (run 28063085264) mostrou candidatos
+    # fortes bloqueados ISOLADAMENTE por exaustão (XPRUSDT score+128, STARUSDT -93,
+    # ZECUSDT -85, XTZUSDT -70, NEARUSDT -70 — nenhum outro motivo concorrente), mesmo
+    # após o afrouxamento de pavio 0.40→0.55 já feito no mesmo dia. Continua contando
+    # em seguro_alertas_long/short (linha abaixo) — ainda penaliza, só não mata o
+    # sinal isoladamente.
     seguro_long  = (not perto_bb_topo and not ext_acima_e21 and
-                    not exaustao_topo and rsi_nao_topo and not stoch_esticado_up)
-    seguro_short = (not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
+                    rsi_nao_topo and not stoch_esticado_up)
+    seguro_short = (rsi_nao_fundo and not stoch_esticado_down)
 
     # SEGURO — contagem de alertas (GAUSS+DNA v5.0): cada booleano abaixo é um
     # "alerta leve" de qualidade de entrada; PRATA/BRONZE toleram no máx. 1.
