@@ -23,6 +23,7 @@ from config import (
     MAX_POSICOES_V5, PERDA_MAX_DIA_V5, PAUSA_2_PERDAS_V5, NO_TRADE_PRIMEIROS_MIN_V5,
     TESTE_RESULTS_FILE, MAX_SINAIS_TESTE_POR_CICLO,
     ADX_NAO_SUBINDO_BLOQUEIA, ADX_FLEX_MARGIN,
+    H1_OBRIGATORIO_OURO, H1_OBRIGATORIO_PRATA, H1_OBRIGATORIO_BRONZE,
 )
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -666,6 +667,23 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                    result["rsi"], result["adx"], "sessao perigosa"))
                 _diag_pos_cascata(f"sessao perigosa exige OURO (tem {classificacao})")
                 continue
+
+            _h1_required = (classificacao == "OURO" and H1_OBRIGATORIO_OURO) or \
+                           (classificacao == "PRATA" and H1_OBRIGATORIO_PRATA) or \
+                           (classificacao == "BRONZE" and H1_OBRIGATORIO_BRONZE)
+            if _h1_required:
+                h1_candles = await buscar_candles(session, sym, "1h", 100)
+                if h1_candles and len(h1_candles) > 50:
+                    h1_ind = calcular_indicadores(h1_candles)
+                    if h1_ind:
+                        h1_score = h1_ind.get("score", 0)
+                        h1_ok = (eh_long and h1_score > 0) or (not eh_long and h1_score < 0)
+                        if not h1_ok:
+                            log.info(f"  ⚠️ {abrev} bloqueado — {classificacao} exige H1 alinhado")
+                            candidatos.append((abs(result["score"]), abrev, result["score"],
+                                               result["rsi"], result["adx"], f"{classificacao} sem H1"))
+                            _diag_pos_cascata(f"{classificacao} sem H1")
+                            continue
 
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
