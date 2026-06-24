@@ -18,7 +18,7 @@ on:
     # matematicamente que, em qualquer run que dure o timeout completo, pelo menos um
     # tick agendado vai cair "no meio" do runner ocupado e ser descartado. Fix abaixo
     # (timeout-minutes do job/step) ataca a causa, não só o sintoma.
-    - cron: '0 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       tg_token:
@@ -121,7 +121,7 @@ jobs:
           WA_PHONE: ${{ secrets.WA_PHONE }}
           WA_APIKEY: ${{ secrets.WA_APIKEY }}
           TIMEFRAMES: ${{ github.event.inputs.timeframes || '30m,1h' }}
-          FILTER_LEVEL: ${{ github.event.inputs.filter_level || '1' }}
+          FILTER_LEVEL: ${{ github.event.inputs.filter_level || '3' }}
           CYCLE_INTERVAL: '300'
           SIGNAL_MODE: ${{ github.event.inputs.signal_mode || 'FLEX' }}
           DYNAMIC_SCAN: 'true'
