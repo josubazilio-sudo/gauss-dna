@@ -527,11 +527,11 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                    result["rsi"], result["adx"], f"grade={grade}"))
                 _diag_pos_cascata(f"grade={grade} insuficiente")
                 continue
-            if result["adx"] < ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:
-                log.info(f"  ⚠️ {abrev} bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL - ADX_FLEX_MARGIN}")
+            if result["adx"] < ADX_MIN_GLOBAL:
+                log.info(f"  ⚠️ {abrev} bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f}"))
-                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f} (piso global c/ margem)")
+                                   result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL}"))
+                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global)")
                 continue
             if result.get("adx_caindo_3"):
                 log.info(f"  ⚠️ {abrev} bloqueado — ADX caindo 3+ períodos (v5.0)")
@@ -865,10 +865,10 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 log.info(f"[MTF] {abrev:7s} | bloqueado — grade {grade} abaixo do mínimo institucional")
                 _diag_pos_cascata(f"grade={grade} insuficiente (MTF)")
                 continue
-            if result["adx"] < ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"adx<{ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f}"))
-                log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f}")
-                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f} (piso global c/ margem, MTF)")
+            if result["adx"] < ADX_MIN_GLOBAL:
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"adx<{ADX_MIN_GLOBAL}"))
+                log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
+                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global, MTF)")
                 continue
             if result.get("adx_caindo_3"):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "adx_caindo_3"))

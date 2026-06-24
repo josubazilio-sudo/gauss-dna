@@ -395,8 +395,8 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    rsi_zona_long  = 40 <= rsi <= 78
-    rsi_zona_short = 22 <= rsi <= 60
+    rsi_zona_long  = 40 <= rsi <= 75
+    rsi_zona_short = 25 <= rsi <= 60
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -603,11 +603,11 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     if sweep_ok:   score_eff += BONUS_SWEEP
     if h1_aligned: score_eff += BONUS_H1
 
-    if score_eff >= SCORE_OURO and rvol >= RVOL_OURO and adx >= ADX_OURO - ADX_FLEX_MARGIN and fluxo_ok:
+    if score_eff >= SCORE_OURO and rvol >= RVOL_OURO and adx >= ADX_OURO and fluxo_ok:
         return "OURO"
-    if score_eff >= SCORE_PRATA and rvol >= 0.80 and adx >= ADX_PRATA - ADX_FLEX_MARGIN:
+    if score_eff >= SCORE_PRATA and rvol >= 0.70 and adx >= ADX_PRATA:
         return "PRATA"
-    if score_eff >= SCORE_BRONZE and rvol >= RVOL_MIN and adx >= ADX_MIN - ADX_FLEX_MARGIN:
+    if score_eff >= SCORE_BRONZE and rvol >= RVOL_MIN and adx >= ADX_MIN:
         return "BRONZE"
     return None
 

@@ -94,14 +94,14 @@ STOPS_CONSECUTIVOS_PAUSA = 3
 # 3: vol 80%, todas as defesas SMC ativas (padrão)
 FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
 
-# ── GAUSS+DNA V3 PROFISSIONAL (24/06 AJUSTE) — configuração do usuário ──────
-RVOL_MIN = 0.50
-RVOL_OURO = 1.50
+# ── GAUSS+DNA V3 PROFISSIONAL (AJUSTE OPERACIONAL) — configuração do usuário ──
+RVOL_MIN = 0.45
+RVOL_OURO = 1.60
 
-ADX_MIN = 12
+ADX_MIN = 14
 ADX_SCOUT = 15
 ADX_PRATA = 18
-ADX_OURO = 22
+ADX_OURO = 25
 
 ADX_NAO_SUBINDO_BLOQUEIA = False
 
@@ -110,16 +110,19 @@ ADX_FLEX_MARGIN = 1.5
 HA_CONFIRM_BARS = 1
 HA_REVERSAL_OK = True
 
-LATERAL_MAX_BARS = 10
+LATERAL_MAX_BARS = 14
 
-RVOL_MIN_BY_TF = {"30m": 0.50, "1h": 0.50}
-ADX_MIN_GLOBAL = 12
+RVOL_MIN_BY_TF = {"30m": 0.45, "1h": 0.45}
+ADX_MIN_GLOBAL = 14
 
-RVOL_MIN_EXEC = 0.50
+RVOL_MIN_EXEC = 0.45
 
 SCORE_BRONZE = 60
 SCORE_PRATA  = 70
-SCORE_OURO   = 80
+SCORE_OURO   = 82
+
+LONG_MM200  = True
+SHORT_MM200 = True
 
 # Bônus (não obrigatórios, somam ao score se confirmados)
 BONUS_FLUXO  = 10
