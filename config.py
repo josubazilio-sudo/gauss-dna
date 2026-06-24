@@ -94,56 +94,58 @@ STOPS_CONSECUTIVOS_PAUSA = 3
 # 3: vol 80%, todas as defesas SMC ativas (padrão)
 FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
 
-# ── GAUSS+DNA V3 PROFISSIONAL (AJUSTE OPERACIONAL) — configuração do usuário ──
-RVOL_MIN = 0.40
-RVOL_OURO = 1.60
+# ── CONFIGURAÇÃO DO USUÁRIO ────────────────────────────────────────────────────
 
-ADX_MIN = 14
-ADX_SCOUT = 14
-ADX_PRATA = 17
-ADX_OURO = 25
-
-ADX_NAO_SUBINDO_BLOQUEIA = False
-
-ADX_FLEX_MARGIN = 1.5
-
+# Legado (preservado por compatibilidade com analyze.py)
 HA_CONFIRM_BARS = 1
 HA_REVERSAL_OK = True
+ADX_NAO_SUBINDO_BLOQUEIA = False
+ADX_FLEX_MARGIN = 1.5
 
-LATERAL_MAX_BARS = 18
+# Filtros principais
+RVOL_MIN = 0.45
 
-RVOL_MIN_BY_TF = {"30m": 0.40, "1h": 0.40}
-ADX_MIN_GLOBAL = 14
+ADX_MIN_SURGE = 18
+ADX_MIN_PULLBACK = 18
+ADX_MIN_FLEX = 20
+ADX_MIN_BB = 18
+ADX_MIN_SCOUT = 20
 
-RVOL_MIN_EXEC = 0.40
+MIN_FLUXO_LONG = 2
+MIN_FLUXO_SHORT = 2
 
-SCORE_BRONZE = 60
-SCORE_PRATA  = 68
-SCORE_OURO   = 82
+LATERAL_BARS = 12
 
-LONG_MM200  = True
-SHORT_MM200 = True
+H1_OBRIGATORIO = False
 
-H1_OBRIGATORIO_OURO   = True
-H1_OBRIGATORIO_PRATA  = False
-H1_OBRIGATORIO_BRONZE = False
+# Alinhados ao menor tier (BRONZE) — o gate real de qualidade é classificar_v2()
+ADX_MIN_GLOBAL = 22
+RVOL_MIN_BY_TF = {"30m": 0.80, "1h": 0.80}
+RVOL_MIN_EXEC = 0.80
+
+# Score — thresholds fixos por tier (config 24/06)
+SCORE_OURO = 90
+SCORE_PRATA = 80
+SCORE_BRONZE = 72
+
+# RSI por direção
+RSI_LONG_MIN = 35
+RSI_LONG_MAX = 78
+RSI_SHORT_MIN = 25
+RSI_SHORT_MAX = 65
+
+# Segurança — BTC
+BTC_BLOQUEIA_SHORT_ABAIXO = 25
+
+# BB (Bollinger Bands)
+BLOQUEAR_LONG_BB_TOPO = True
+BLOQUEAR_SHORT_BB_FUNDO = True
+PENALIDADE_BB_EXTREMO = 10
 
 # Bônus (não obrigatórios, somam ao score se confirmados)
 BONUS_FLUXO  = 10
 BONUS_SWEEP  = 10
 BONUS_H1     = 8
-
-# Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
-# LONG e SHORT em todas as moedas até o regime mudar.
-# AJUSTE 22/06 (auditoria de dia inteiro sem sinal — ver CLAUDE.md "AUDITORIA
-# DE OPORTUNIDADES PERDIDAS"): ADX_MAX 20→15, alinhado ao piso global
-# ADX_MIN_GLOBAL já usado no resto do sistema — exige BTC genuinamente mais
-# flat antes de zerar o ciclo inteiro (esse filtro sozinho zerou ciclos por
-# horas seguidas hoje: 00:27-08:48 e 20:18-21:52 UTC, sem nenhum sinal em
-# nenhuma moeda nesses horários). RSI 45-55 intocado — mudança isolada.
-BTC_REGIME_ADX_MAX  = 15
-BTC_REGIME_RSI_MIN  = 45
-BTC_REGIME_RSI_MAX  = 55
 
 # ── Arquivos de estado ────────────────────────────────────────────────────────
 STATE_FILE   = Path("last_signals.json")

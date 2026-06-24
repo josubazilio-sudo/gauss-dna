@@ -13,11 +13,12 @@ from indicators import (
 from config import (
     SIGNAL_MODE, FILTER_LEVEL as _FLV,
     SCORE_BRONZE, SCORE_PRATA, SCORE_OURO,
-    RVOL_OURO, ADX_SCOUT, ADX_PRATA, ADX_OURO,
-    ADX_MIN, RVOL_MIN,
-    BONUS_FLUXO, BONUS_SWEEP, BONUS_H1,
-    HA_CONFIRM_BARS, ADX_NAO_SUBINDO_BLOQUEIA,
-    ADX_FLEX_MARGIN, HA_REVERSAL_OK,
+    RVOL_MIN, ADX_MIN_GLOBAL,
+    MIN_FLUXO_LONG, MIN_FLUXO_SHORT,
+    RSI_LONG_MIN, RSI_LONG_MAX, RSI_SHORT_MIN, RSI_SHORT_MAX,
+    BLOQUEAR_LONG_BB_TOPO, BLOQUEAR_SHORT_BB_FUNDO, PENALIDADE_BB_EXTREMO,
+    HA_CONFIRM_BARS, HA_REVERSAL_OK, ADX_NAO_SUBINDO_BLOQUEIA, ADX_FLEX_MARGIN,
+    ADX_MIN_FLEX, ADX_MIN_SCOUT,
 )
 
 log = logging.getLogger("GAUSS+DNA")
@@ -359,7 +360,8 @@ def calcular_indicadores(candles):
     # sistema de tolerância já existente (seguro_alertas_long/short, GAUSS+DNA v5.0,
     # `classificar_v2()` exige `seguro_alertas <= 1`) — continua penalizando entrada
     # de baixo volume, mas não mata o sinal isoladamente na cascata de detecção.
-    seguro_long  = (not perto_bb_topo and not ext_acima_e21 and
+    _bloq_bb_topo = not perto_bb_topo if BLOQUEAR_LONG_BB_TOPO else True
+    seguro_long  = (_bloq_bb_topo and not ext_acima_e21 and
                     not exaustao_topo and rsi_nao_topo)
     seguro_short = (not exaustao_fund and rsi_nao_fundo)
 
@@ -395,8 +397,8 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    rsi_zona_long  = 40 <= rsi <= 75
-    rsi_zona_short = 25 <= rsi <= 60
+    rsi_zona_long  = RSI_LONG_MIN <= rsi <= RSI_LONG_MAX
+    rsi_zona_short = RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -440,6 +442,10 @@ def calcular_indicadores(candles):
     # piso universal pós-cascata que mudou.
     if lateralizado:
         score = score - 10 if score > 0 else score + 10 if score < 0 else score
+    if not BLOQUEAR_LONG_BB_TOPO and perto_bb_topo:
+        score = score - PENALIDADE_BB_EXTREMO if score > 0 else score + PENALIDADE_BB_EXTREMO if score < 0 else score
+    if not BLOQUEAR_SHORT_BB_FUNDO and perto_bb_fund:
+        score = score - PENALIDADE_BB_EXTREMO if score > 0 else score + PENALIDADE_BB_EXTREMO if score < 0 else score
     score = max(-145, min(145, score))
 
     # Score institucional 0-100
@@ -581,34 +587,55 @@ def calcular_indicadores(candles):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
-    """Classifica o sinal em OURO/PRATA/BRONZE/None pela configuração V3
-    PROFISSIONAL. MM200 obrigatório. HA, fluxo, sweep não são obrigatórios —
-    fluxo e sweep dão bônus de +10 cada ao score efetivo. H1 alinhado dá +8.
+    """Classifica o sinal em OURO/PRATA/BRONZE/None pela configuração do
+    usuário (24/06). Tiers com thresholds absolutos, sem bônus.
     """
     if not sinal:
         return None
     eh_long = sinal == "LONG"
     score_inst = ind["score_inst_long"] if eh_long else ind["score_inst_short"]
-    rvol, adx = ind["rvol"], ind["adx"]
+    rvol, adx, rsi = ind["rvol"], ind["adx"], ind["rsi"]
+    preco = ind["preco"]
+    e21 = ind["e21"]
+    dist_pct = abs((preco - e21) / e21) * 100 if e21 else 999
 
+    # GLOBAIS (aplicam a todos os tiers)
     if not (ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]):
         return None
+    if not (ind["ha_bull_1"] if eh_long else ind["ha_bear_1"]):
+        return None
+    macd_ok = (ind.get("macd_bull_r", False) or ind.get("macd_recuperando", False)) if eh_long else \
+              (ind.get("macd_bear_r", False) or ind.get("macd_esgotando", False))
+    if not macd_ok:
+        return None
 
-    fluxo_ok = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
-               (ind["dna_flow_bear"] or ind["trendilo_short"])
-    sweep_ok = ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"]
+    fluxo = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
+            (ind["dna_flow_bear"] or ind["trendilo_short"])
+    liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
+    ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
 
-    score_eff = score_inst
-    if fluxo_ok:   score_eff += BONUS_FLUXO
-    if sweep_ok:   score_eff += BONUS_SWEEP
-    if h1_aligned: score_eff += BONUS_H1
-
-    if score_eff >= SCORE_OURO and rvol >= RVOL_OURO and adx >= ADX_OURO and fluxo_ok:
+    # ── OURO ──
+    if (score_inst >= 90 and rvol >= 1.50 and adx >= 28
+            and ind.get("adx_subindo", False)
+            and (45 <= rsi <= 62 if eh_long else 38 <= rsi <= 55)
+            and dist_pct <= 2.5
+            and fluxo and liq and not ex):
         return "OURO"
-    if score_eff >= SCORE_PRATA and rvol >= 0.70 and adx >= ADX_PRATA:
+
+    # ── PRATA ──
+    if (score_inst >= 80 and rvol >= 1.00 and adx >= 25
+            and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
+            and dist_pct <= 3.5
+            and fluxo and liq and not ex):
         return "PRATA"
-    if score_eff >= SCORE_BRONZE and rvol >= RVOL_MIN and adx >= ADX_MIN:
+
+    # ── BRONZE ──
+    if (score_inst >= 72 and rvol >= 0.80 and adx >= 22
+            and (40 <= rsi <= 68 if eh_long else 35 <= rsi <= 60)
+            and dist_pct <= 4.0
+            and not ex):
         return "BRONZE"
+
     return None
 
 
@@ -766,9 +793,11 @@ def detectar_sinais(ind):
     rsi_fresh_short = i["rsi_ant"] > 42 >= i["rsi"] > 30
     # Exaustão de curtíssimo prazo (sem checagem de teto de RSI — o MOMENTUM entra
     # propositalmente na faixa 65-73, então só barra se já estiver esticado/exausto)
-    mom_seguro_long  = (not i["perto_bb_topo"] and not i["ext_acima_e21"] and not i["vol_secando"] and
+    mom_seguro_long  = ((not i["perto_bb_topo"] if BLOQUEAR_LONG_BB_TOPO else True) and
+                        not i["ext_acima_e21"] and not i["vol_secando"] and
                         not i["exaustao_topo"] and not i["stoch_esticado_up"])
-    mom_seguro_short = (not i["perto_bb_fund"] and not i["ext_abaixo_e21"] and not i["vol_secando"] and
+    mom_seguro_short = ((not i["perto_bb_fund"] if BLOQUEAR_SHORT_BB_FUNDO else True) and
+                        not i["ext_abaixo_e21"] and not i["vol_secando"] and
                         not i["exaustao_fund"] and not i["stoch_esticado_down"])
     long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
                       i["adx"] > 22 and i["v_forte"] and i["trendilo_long"]  and i["score_inst_long"]  >= 60 and
@@ -804,13 +833,13 @@ def detectar_sinais(ind):
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
     # RVOL>=1.2 e ADX>=25 (pedido 20/06 — caso TIA/USDT BRONZE 2/5 com RVOL 0.65/ADX 24 era fraco demais)
-    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= 25 and
+    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= ADX_MIN_FLEX and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 1.2 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
                   (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
-    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= 25 and
+    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= ADX_MIN_FLEX and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 1.2 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
@@ -835,12 +864,12 @@ def detectar_sinais(ind):
     _sc_min  = 25 if _FLV <= 0 else 40
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
-    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= 25 and
+    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= ADX_MIN_SCOUT and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and i["vol_nao_fade"] and i["rvol"] >= 1.2 and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
-    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= 25 and
+    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= ADX_MIN_SCOUT and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and i["vol_nao_fade"] and i["rvol"] >= 1.2 and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and

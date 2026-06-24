@@ -17,13 +17,12 @@ from config import (
     FILTER_LEVEL,
     RISK_INSTITUCIONAL_POR_GRADE, MAX_CYCLE_RISK_INSTITUCIONAL, MAX_POSICOES_INSTITUCIONAL,
     COOLDOWN_INSTITUCIONAL_MESMA_DIR, COOLDOWN_INSTITUCIONAL_OPOSTA,
-    RVOL_MIN_BY_TF, ADX_MIN_GLOBAL, RVOL_MIN_EXEC,
-    BTC_REGIME_ADX_MAX, BTC_REGIME_RSI_MIN, BTC_REGIME_RSI_MAX,
+    SCORE_BRONZE, RVOL_MIN_BY_TF, ADX_MIN_GLOBAL, RVOL_MIN_EXEC,
     GRAUS_PERMITIDOS_INSTITUCIONAL, STOPS_CONSECUTIVOS_PAUSA,
     MAX_POSICOES_V5, PERDA_MAX_DIA_V5, PAUSA_2_PERDAS_V5, NO_TRADE_PRIMEIROS_MIN_V5,
     TESTE_RESULTS_FILE, MAX_SINAIS_TESTE_POR_CICLO,
     ADX_NAO_SUBINDO_BLOQUEIA, ADX_FLEX_MARGIN,
-    H1_OBRIGATORIO_OURO, H1_OBRIGATORIO_PRATA, H1_OBRIGATORIO_BRONZE,
+    H1_OBRIGATORIO, BTC_BLOQUEIA_SHORT_ABAIXO,
 )
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -374,22 +373,20 @@ def dentro_horario_operacao():
 
 # ── Filtro de Regime Global (AJUSTE PROFISSIONAL 21/06) ──────────────────────
 
-async def _btc_h1_regime_neutro(session) -> bool:
-    """BTC H1 sem direção clara (ADX baixo + RSI no meio da faixa) = mercado
-    neutro de mercado total — bloqueia TODAS as moedas, LONG e SHORT, até o
-    regime mudar. Sem dado de BTC, falha aberto (não bloqueia)."""
+async def _btc_bloqueia_short(session) -> bool:
+    """Bloqueia SHORT em todas as moedas se BTC RSI abaixo do limiar
+    (BTC_BLOQUEIA_SHORT_ABAIXO). Falha aberta: sem dado, não bloqueia."""
     candles = await buscar_candles(session, "BTCUSDT", "1h")
     if not candles:
         return False
     r = calcular_indicadores(candles)
     if not r:
         return False
-    neutro = (r["adx"] < BTC_REGIME_ADX_MAX and
-              BTC_REGIME_RSI_MIN <= r["rsi"] <= BTC_REGIME_RSI_MAX)
-    if neutro:
-        log.info(f"🧊 BTC H1 regime NEUTRO — ADX {r['adx']:.1f} | RSI {r['rsi']:.1f} — "
-                 f"LONG e SHORT bloqueados neste ciclo")
-    return neutro
+    if r["rsi"] < BTC_BLOQUEIA_SHORT_ABAIXO:
+        log.info(f"🛡️ BTC RSI {r['rsi']:.1f} < {BTC_BLOQUEIA_SHORT_ABAIXO} — "
+                 f"SHORT bloqueados neste ciclo")
+        return True
+    return False
 
 
 # ── Filtro H4 ─────────────────────────────────────────────────────────────────
@@ -437,12 +434,8 @@ def _h4_confirma_estrito(candles_h4, direcao):
 
 # ── Ciclo FLEX (por timeframe) ────────────────────────────────────────────────
 
-async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
+async def executar_ciclo(session, estado, tf, moedas, btc_bloq_short=False):
     """Executa um ciclo completo de análise em todas as moedas para um timeframe."""
-    if btc_neutro:
-        log.info(f"[{tf}] Ciclo pulado — regime BTC H1 neutro (filtro de regime global)")
-        _diag_pos_cascata("regime BTC H1 neutro")
-        return 0
     agora = time.time(); enviados = 0
     _diag_buffer["ciclos"] += 1
     cooldown = (COOLDOWN_INSTITUCIONAL_MESMA_DIR if SIGNAL_MODE == "INSTITUCIONAL"
@@ -509,13 +502,11 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
 
         if result["sinal"]:
             fonte    = result.get("fonte_sinal", "")
-            # Sinais de reversão extrema têm piso de score menor (mercado em pânico/euforia)
-            _score_min = 30 if fonte in ("REVERSAL", "SM_SWEEP", "DIV") else 40
-            if abs(result["score"]) < _score_min:
-                log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {_score_min}")
+            if abs(result["score"]) < SCORE_BRONZE:
+                log.info(f"  ⚠️ {abrev} bloqueado — score {result['score']:+d} < {SCORE_BRONZE}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"score<{_score_min}"))
-                _diag_pos_cascata(f"score<{_score_min}")
+                                   result["rsi"], result["adx"], f"score<{SCORE_BRONZE}"))
+                _diag_pos_cascata(f"score<{SCORE_BRONZE}")
                 continue
 
             # AJUSTE INSTITUCIONAL ELITE (21/06): no modo SIGNAL_MODE=="INSTITUCIONAL"
@@ -533,12 +524,6 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL}"))
                 _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global)")
-                continue
-            if result.get("adx_caindo_3"):
-                log.info(f"  ⚠️ {abrev} bloqueado — ADX caindo 3+ períodos (v5.0)")
-                candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "adx_caindo_3"))
-                _diag_pos_cascata("adx caindo 3+ periodos")
                 continue
             _rvol_min_tf = max(RVOL_MIN_BY_TF.get(tf, 0.80), RVOL_MIN_EXEC)
             if result.get("rvol", 1.0) < _rvol_min_tf:
@@ -570,8 +555,12 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                    result["rsi"], result["adx"], "rsi<20"))
                 _diag_pos_cascata("RSI<20 pos-sinal (SHORT, V3)")
                 continue
-            # Mercado lateral: V3 explicitamente NÃO bloqueia mais aqui — a
-            # penalidade de -10 no score já é aplicada dentro de analyze.py.
+            if result["rsi"] > 75 and result.get("rvol", 1.0) < 1.0:
+                log.info(f"  ⚠️ {abrev} bloqueado — RSI {result['rsi']:.0f}>75 + RVOL {result.get('rvol', 1.0):.2f}<1.0")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], "rsi>75+rvol<1"))
+                _diag_pos_cascata("RSI>75 + RVOL<1.0")
+                continue
 
             eh_long_ = result["sinal"] == "LONG"
             _mm200_ok = result["tendencia"] == "ALTA" if eh_long_ else result["tendencia"] == "BAIXA"
@@ -586,13 +575,19 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             _sessao_perigosa = _hora_c >= 22 or _hora_c < 8   # Asian / madrugada UTC
             _abertura_falsa  = _hora_c in (8, 13)             # abertura Londres/NY (primeiros 30min)
 
-            _h4_check = _h4_confirma_estrito if SIGNAL_MODE == "INSTITUCIONAL" else _h4_confirma
-            if tf in ("1h", "15m", "30m") and not _h4_check(h4c, result["sinal"]):
-                log.info(f"  🚫 {abrev} [{tf}] {result['sinal']} bloqueado — H4 oposto")
-                candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "H4 oposto"))
-                _diag_pos_cascata("H4 oposto")
-                continue
+            if tf in ("15m", "30m"):
+                h1_candles = await buscar_candles(session, sym, "1h", 100)
+                if h1_candles and len(h1_candles) > 50:
+                    h1_ind = calcular_indicadores(h1_candles)
+                    if h1_ind:
+                        h1_score = h1_ind.get("score", 0)
+                        h1_contrario = (eh_long and h1_score < -15) or (not eh_long and h1_score > 15)
+                        if h1_contrario:
+                            log.info(f"  🚫 {abrev} [{tf}] bloqueado — H1 contrario (score {h1_score:+d})")
+                            candidatos.append((abs(result["score"]), abrev, result["score"],
+                                               result["rsi"], result["adx"], "H1 contrario"))
+                            _diag_pos_cascata("H1 contrario")
+                            continue
 
             chave_dir = f"{sym}_{tf}_{result['sinal']}"
             chave_any = f"{sym}_{tf}"
@@ -664,13 +659,18 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             if (_sessao_perigosa or _abertura_falsa) and classificacao != "OURO":
                 log.info(f"  🌙 {abrev} bloqueado — sessão perigosa exige OURO (REGRA #3, tem {classificacao})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "sessao perigosa"))
-                _diag_pos_cascata(f"sessao perigosa exige OURO (tem {classificacao})")
+                                   result["rsi"], result["adx"], f"{classificacao} sem sessão"))
+                _diag_pos_cascata(f"{classificacao} sem OURO (sessão perigosa)")
                 continue
 
-            _h1_required = (classificacao == "OURO" and H1_OBRIGATORIO_OURO) or \
-                           (classificacao == "PRATA" and H1_OBRIGATORIO_PRATA) or \
-                           (classificacao == "BRONZE" and H1_OBRIGATORIO_BRONZE)
+            if btc_bloq_short and not eh_long:
+                log.info(f"  🛡️ {abrev} SHORT bloqueado — BTC RSI < {BTC_BLOQUEIA_SHORT_ABAIXO} (filtro de regime)")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], "btc_bloq_short"))
+                _diag_pos_cascata("BTC bloqueia SHORT")
+                continue
+
+            _h1_required = H1_OBRIGATORIO
             if _h1_required:
                 h1_candles = await buscar_candles(session, sym, "1h", 100)
                 if h1_candles and len(h1_candles) > 50:
@@ -763,12 +763,8 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
 
 # ── Ciclo MTF (H4 → H1) ──────────────────────────────────────────────────────
 
-async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
+async def executar_ciclo_mtf(session, estado, moedas, btc_bloq_short=False):
     """Ciclo multi-timeframe: analisa H4 para direção → entra na H1."""
-    if btc_neutro:
-        log.info("[MTF] Ciclo pulado — regime BTC H1 neutro (filtro de regime global)")
-        _diag_pos_cascata("regime BTC H1 neutro")
-        return 0
     agora = time.time(); enviados = 0
     _diag_buffer["ciclos"] += 1
     cooldown_mtf = 14400
@@ -787,7 +783,7 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
         btc_bull = btc_p > btc_e21 > btc_e50 and btc_p > btc_e200 * 0.98
         btc_bear = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02 and btc_rsi < 45
         btc_rsi_quente   = btc_rsi > 72
-        btc_rsi_panico   = btc_rsi < 28   # extremo — bloqueia SHORT
+        btc_rsi_panico   = btc_rsi < BTC_BLOQUEIA_SHORT_ABAIXO   # extremo — bloqueia SHORT
         btc_rsi_oversold = btc_rsi < 35   # sobrevendido — libera LONG de força relativa
         log.info(f"[MTF] BTC H4: {'ALTA ↑' if btc_bull else 'BAIXA ↓' if btc_bear else 'NEUTRO'} | "
                  f"RSI {btc_rsi:.0f}{'🔥' if btc_rsi_quente else '🧊🧊' if btc_rsi_panico else '🧊' if btc_rsi_oversold else ''} | ${btc_p:.0f}")
@@ -887,11 +883,6 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"adx<{ADX_MIN_GLOBAL}"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
                 _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global, MTF)")
-                continue
-            if result.get("adx_caindo_3"):
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "adx_caindo_3"))
-                log.info(f"[MTF] {abrev:7s} | bloqueado — ADX caindo 3+ períodos (v5.0)")
-                _diag_pos_cascata("adx caindo 3+ periodos (MTF)")
                 continue
             _rvol_mtf = result.get("rvol", 1.0)
             _rvol_min_mtf = max(RVOL_MIN_BY_TF.get("1h", 0.80), RVOL_MIN_EXEC)
@@ -1123,16 +1114,16 @@ async def main():
             # Filtro de Regime Global (AJUSTE PROFISSIONAL 21/06) — calculado uma
             # vez por ciclo e repassado pros dois caminhos (MTF e FLEX) abaixo.
             try:
-                btc_neutro = await _btc_h1_regime_neutro(session)
+                btc_bloq_short = await _btc_bloqueia_short(session)
             except Exception as e:
-                log.warning(f"⚠️ Filtro de regime BTC H1 falhou — não bloqueando: {e}")
-                btc_neutro = False
+                log.warning(f"⚠️ Filtro BTC SHORT falhou — não bloqueando: {e}")
+                btc_bloq_short = False
 
             try:
                 tem_mtf = (("4h" in TIMEFRAMES and "1h" in TIMEFRAMES) or
                            ("1h" in TIMEFRAMES and ("30m" in TIMEFRAMES or "15m" in TIMEFRAMES)))
                 if tem_mtf:
-                    enviados_mtf = await executar_ciclo_mtf(session, estado, moedas_ativas, btc_neutro)
+                    enviados_mtf = await executar_ciclo_mtf(session, estado, moedas_ativas, btc_bloq_short)
                     total += enviados_mtf
             except Exception as e:
                 log.error(f"❌ MTF erro ciclo #{ciclo}: {e}")
@@ -1143,7 +1134,7 @@ async def main():
                 if not _tfs_flex:
                     _tfs_flex = [t for t in TIMEFRAMES if t != "4h"] or [TIMEFRAMES[0]]
                 for tf_base in _tfs_flex:
-                    enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas, btc_neutro)
+                    enviados = await executar_ciclo(session, estado, tf_base, moedas_ativas, btc_bloq_short)
                     total   += enviados
                 log.info(f"✅ Ciclo #{ciclo} concluído. Sinais: {total}")
                 await _atualizar_resultados(session, estado)

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Model Picker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">C</div>
+      <h1>Modelos do Claude Code</h1>
+      <span class="badge">openrouter.ai</span>
+    </header>
+
+    <section class="config-section">
+      <h2>Configurar Identidade</h2>
+      <p>Selecione seu modo de implantação e o LLM preferido para gerar o script de configuração.</p>
+      <div class="actions">
+        <button id="initBtn" class="btn btn-primary">Inicializar</button>
+        <button id="swapBtn" class="btn btn-secondary">Troca Rápida</button>
+      </div>
+      <div class="api-row">
+        <label>🔑 API Key:</label>
+        <input type="password" id="apiKey" placeholder="sk-or-v1-...">
+        <a href="https://openrouter.ai/keys" target="_blank" class="link">Obter chave →</a>
+      </div>
+      <div class="status-row">
+        <span class="status-dot"></span>
+        <span>Conexão: <strong id="connStatus">Pendente</strong></span>
+        <button id="copyBtn" class="btn btn-ghost">Copiar</button>
+      </div>
+      <div class="prompt-area" id="promptArea" style="display:none">
+        <label>Prompt de Configuração:</label>
+        <textarea id="promptOutput" readonly></textarea>
+      </div>
+    </section>
+
+    <section class="models-section">
+      <h2>Visão Geral</h2>
+      <p class="subtitle">Clique no card para alternar entre os modelos gratuitos.</p>
+      <div class="tabs">
+        <button class="tab active" data-tab="custo">$ Custo</button>
+        <button class="tab" data-tab="qualidade">⚡ Qualidade</button>
+        <button class="tab" data-tab="info">◎ Informações</button>
+      </div>
+      <div class="model-grid" id="modelGrid"></div>
+    </section>
+
+    <section class="summary-section">
+      <h2>Resumo</h2>
+      <p class="subtitle">Alterne entre as abas para comparar os modelos disponíveis.</p>
+      <div class="tabs">
+        <button class="tab active" data-tab="custo">$ Custo</button>
+        <button class="tab" data-tab="desempenho">⚡ Desempenho</button>
+        <button class="tab" data-tab="velocidade">◎ Velocidade</button>
+      </div>
+      <div class="summary-content">
+        <div class="engine-display">
+          <span class="engine-label">Motor Ativo:</span>
+          <span id="activeEngine" class="engine-name">Gemini 3 Pro</span>
+        </div>
+        <div class="engine-display">
+          <span class="engine-label">Motor Anterior:</span>
+          <span id="prevEngine" class="engine-name muted">—</span>
+        </div>
+      </div>
+      <div class="summary-actions">
+        <button id="trocarMotorBtn" class="btn btn-primary">🔄 Trocar Motor</button>
+        <button id="reverterBtn" class="btn btn-secondary" disabled>⏪ Reverter</button>
+      </div>
+      <p class="footnote">Métricas baseadas em testes da comunidade e médias de preços.</p>
+      <p class="footnote">Valores referentes a Março de 2026 · openrouter.ai</p>
+      <p class="credit">Criado por Marcelo Anders · <a href="https://claude-economy.vercel.app" target="_blank">Claude Economy</a></p>
+    </section>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
