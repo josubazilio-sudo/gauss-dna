@@ -611,19 +611,17 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
     ha1_ok      = ind["ha_bull"] if eh_long else ind["ha_bear"]
     vol_ok      = ind["vol_acima_media5"]
 
-    # Tolerância de 1 miss (23/06, caso real DNUSDT): a cadeia original exigia
-    # TODOS os 8 fatores simultâneos — mesmo padrão de funil empilhado já
-    # documentado acima (V2→V3) e já corrigido uma vez hoje pra vol_secando
-    # (bloqueio binário → alerta leve). DN tinha score_inst=90 ELITE, ADX=47,
-    # RVOL=1.55 STRONG, fluxo confirmado, tendência baixa — e foi bloqueado
-    # sozinho por `rsi_din` (RSI=29 fora da janela 45-70). `mm200_ok` (alinhado
-    # com a tendência macro) continua absoluto — é a linha de risco que não se
-    # negocia (ver "Lógica institucional" no CLAUDE.md). Os outros 6 fatores
-    # (rsi_din, stoch_mom, fluxo_ok, liq_varrida, ha1_ok, vol_ok) agora toleram
-    # 1 miss — `seguro_alertas<=1` já é seu próprio sistema de tolerância.
+    # Tolerância de 2 misses (24/06 — auditoria de 3 dias sem sinal real: 14 runs
+    # completos, ZERO sinais reais, 39 ocorrências de "classificação V3 nenhuma"
+    # vs só 13 de "MM200 V3" — confirma que o funil empilhado do próprio `_base`,
+    # não o gate de H1 pós-classificação, é o bloqueador dominante hoje). Subiu
+    # de 1 miss (23/06, caso DNUSDT) pra 2 — mesmo padrão incremental já usado,
+    # mesmos 6 fatores secundários. `mm200_ok` continua absoluto (linha de risco,
+    # ver "Lógica institucional" no CLAUDE.md) — só a tolerância dos outros 6
+    # subiu, nada de novo permitido passar contra a tendência macro.
     _misses = sum([not rsi_din, not stoch_mom, not fluxo_ok, not liq_varrida,
                    not ha1_ok, not vol_ok])
-    _base = (mm200_ok and seguro_alertas <= 1 and _misses <= 1)
+    _base = (mm200_ok and seguro_alertas <= 1 and _misses <= 2)
 
     # OURO reativado — antes desabilitado por banca<$500, mas essencial porque
     # sessão perigosa (22h-08h + 08h/13h UTC = ~50% do dia) exige OURO.
@@ -638,6 +636,15 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
              (ha4_bull if eh_long else ha4_bear)
     if (_base and ha4_ok and score_inst >= 65 and rvol >= 0.8 and adx >= 18):
         return "BRONZE"
+
+    # Diagnóstico real (24/06) — antes "classificação V3 nenhuma" não dizia POR
+    # QUE, obrigando reauditoria completa de log a cada vez. Agora expõe os
+    # fatores exatos pro próximo diagnóstico, sem precisar adivinhar de novo.
+    _miss_names = [n for n, v in [("rsi_din", rsi_din), ("stoch_mom", stoch_mom),
+                                   ("fluxo", fluxo_ok), ("liq_varrida", liq_varrida),
+                                   ("ha1", ha1_ok), ("vol", vol_ok)] if not v]
+    log.info(f"  [V3=None] mm200={mm200_ok} alertas={seguro_alertas} misses={_miss_names} "
+             f"score_inst={score_inst:.0f} rvol={rvol:.2f} adx={adx:.1f} dist_mm21={dist_mm21*100:.1f}%")
     return None
 
 

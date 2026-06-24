@@ -1489,3 +1489,45 @@ o candidato isoladamente.
 
 Validar com o próximo run real se XPR/STAR/ZEC/XTZ/NEAR (ou equivalentes) passam a classificar PRATA/BRONZE
 e disparar sinal real.
+
+---
+
+## AUDITORIA DE 3 DIAS SEM SINAL REAL — `_base` TOLERÂNCIA 1→2 MISSES + DIAGNÓSTICO (24/06)
+
+Usuário reportou 3 dias sem nenhum sinal real, apesar de 300 moedas escaneadas, e apontou contradição real:
+"no teste dava sinal, no real não". Auditoria (não suposição) via `mcp__github__get_job_logs` em 14 runs
+completos (não cancelados) de 22-23/06, ~2.5 dias: **ZERO sinais reais enviados em todos os 14 runs.**
+Só 12 sinais `🧪 TESTE` saíram no período — confirmando que candidatos reais e fortes (ex: GWEI score+130/
+RSI70/ADX21, CYS Grade S score-125) estavam passando pela cascata de 12 sinais e sendo bloqueados
+**exatamente no mesmo ponto**: `classificar_v2()` devolvendo `None` ("classificação V3 nenhuma" — 39
+ocorrências, o maior motivo isolado dentro da etapa de classificação) — maior até que `mm200_ok` falhando
+(13 ocorrências). `prata sem H1`/`bronze sem H1` (gate pós-classificação, `cycles.py`) quase não apareceram
+— ou seja, o funil que está matando o sinal é o `_base`/pisos **dentro** de `classificar_v2()`, não o gate
+de H1 que vem depois.
+
+Achado paralelo (não é causa raiz, mas agrava): a maioria dos runs de 20/06 a 23/06 aparece como `cancelled`
+no Actions — disparos manuais em sequência cancelando o run anterior via concurrency group, reduzindo bem
+o tempo real de scan no período.
+
+### O que foi implementado (`analyze.py classificar_v2()`)
+- Tolerância de miss nos 6 fatores secundários (`rsi_din`, `stoch_mom`, `fluxo_ok`, `liq_varrida`, `ha1_ok`,
+  `vol_ok`) subiu de `<=1` (23/06, caso DNUSDT) pra `<=2` — mesmo padrão incremental já validado, mesmos 6
+  fatores, só o dial. `mm200_ok` continua **absoluto** (linha de risco que não se negocia) e
+  `seguro_alertas<=1` também intocado — só a tolerância dos 6 fatores secundários mudou.
+- **Diagnóstico real**: antes, quando `classificar_v2()` devolvia `None`, o log só dizia "classificação V3
+  nenhuma" sem dizer por quê — obrigando reauditoria completa de log inteiro pra saber o motivo (como esta
+  auditoria precisou fazer). Agora, no momento do `return None`, loga `mm200`, `alertas`, a lista exata de
+  quais dos 6 fatores falharam (`misses=[...]`), `score_inst`, `rvol`, `adx`, `dist_mm21` — então o próximo
+  run já mostra o fator exato, sem precisar de outra varredura de 14 runs pra decidir o próximo ajuste.
+
+### O que NÃO foi tocado
+- Pisos explícitos de score_inst/RVOL/ADX/dist_mm21 por tier (OURO 80/1.3/22/3% — PRATA 75/1.2/20/3% —
+  BRONZE 65/0.8/18) — são a tabela do usuário (V4), não tocados sem pedido específico apontando um deles
+  isoladamente.
+- Gate de H1 pós-classificação (`cycles.py`, PRATA/BRONZE exigem H1 sempre desde o v5.0) — não apareceu como
+  bloqueador dominante nesta auditoria (quase nenhum candidato chegou até esse ponto), não tocado agora.
+- `stoch_extremo` (bloqueio absoluto), REGRA #1, REGRA #5, gestão — intocados.
+
+Validar com o próximo run real se a tolerância 2 já é suficiente (sinal real saindo) ou se o log novo
+`[V3=None] misses=[...]` aponta um fator específico ainda travando a maioria — nesse caso, o próximo ajuste
+cirúrgico é esse fator nomeado, não mais um chute.
