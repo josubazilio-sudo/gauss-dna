@@ -100,26 +100,40 @@ O bot só envia 2 tipos de mensagem ao Telegram a partir de agora:
 
 ## REGRA #1 — RSI: ZONA DE ENTRADA (PRIORIDADE MÁXIMA)
 
-**Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.**
+⚠️ **SUPERSEDED 24/06** — substituída pela janela da CONFIGURAÇÃO GAUSS+DNA V3 (ver seção dedicada mais
+abaixo) por pedido explícito do usuário ("faça exatamente do jeito que mandei esqueca substitua regra
+faça isto funcionar" — REGRA #-1, vontade atual prevalece sobre regra antiga documentada). Mantida aqui
+só como registro histórico do que existiu entre 15/06 e 24/06.
+
+**Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.** *(válido enquanto
+vigorou — a V3 abaixo é a autorização explícita que supersede isso)*
 
 ### LONG (compra):
-- RSI deve ser **< 75** no momento do sinal *(FLEX PRO — autorizado 15/06)*
+- RSI deve ser **< 75** no momento do sinal *(FLEX PRO — autorizado 15/06, superseded 24/06 → ver V3)*
 - Objetivo: bloquear apenas extremo sobrecomprado (>75), permite entradas em tendência 55-74
 
 ### SHORT (venda):
-- RSI deve ser **> 25** no momento do sinal *(FLEX PRO — autorizado 15/06)*
+- RSI deve ser **> 25** no momento do sinal *(FLEX PRO — autorizado 15/06, superseded 24/06 → ver V3)*
 - Objetivo: bloquear apenas extremo sobrevendido (<25), permite entradas em correção 26-40
 
-### Aplicação:
+### Aplicação (histórica):
 - Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP
 - REVERSAL, SURGE, MOMENTUM, REBOUND não usam `rsi_zona` — têm janela de RSI própria embutida na condição do sinal
 - Implementado em `analyze.py` como `rsi_zona_long` e `rsi_zona_short`
 
 ```python
-# analyze.py — FLEX PRO 15/06 (bloqueia apenas extremos absolutos)
+# analyze.py — FLEX PRO 15/06 (bloqueava apenas extremos absolutos) — SUPERSEDED 24/06
 rsi_zona_long  = rsi < 75
 rsi_zona_short = rsi > 25
 ```
+
+### Estado atual (24/06)
+```python
+# analyze.py — CONFIGURAÇÃO V3 (24/06)
+rsi_zona_long  = 40 <= rsi <= 80
+rsi_zona_short = 20 <= rsi <= 60
+```
+Continua valendo pros mesmos sinais da lista de "Aplicação" acima — só a janela numérica mudou.
 
 ---
 
@@ -1460,3 +1474,291 @@ que a seção "Lógica Institucional" deste arquivo já trata como não-negociá
 Validar com o próximo run real se candidatos fortes com 1 fator secundário fraco (não `mm200_ok`) passam
 a classificar PRATA/BRONZE e disparar sinal real de fato (não só teste). Se ainda travar, auditar qual dos
 6 fatores está faltando com mais frequência nos próximos diagnósticos antes de tocar a tolerância de novo.
+
+---
+
+## `exaustao_topo/fund` — BLOQUEIO BINÁRIO → ALERTA LEVE (autorizado 24/06, mesmo padrão do `vol_secando`)
+
+Auditoria do run real `28063085264` (12 ciclos completos, log linha a linha via `mcp__github__get_job_logs`)
+mostrou `seguro=F(exaustao)` como o **único** motivo de bloqueio (nenhum outro filtro concorrente) de várias
+candidatas com score forte: XPRUSDT score+128, STARUSDT -93, ZECUSDT -85, XTZUSDT -70, NEARUSDT -70 — mesmo
+padrão já visto e corrigido uma vez no mesmo dia anterior pra `vol_secando` (CLASSIFICAÇÃO/4ª RODADA acima).
+`exaustao_topo`/`exaustao_fund` (pavio de rejeição, `sombra_sup/inf > 0.55`) já tinha sido afrouxado uma vez
+(pavio 0.40→0.55, "O QUE FALTA PRA DAR SINAL" 22/06) e continuava sendo o bloqueador isolado dominante.
+
+### O que foi implementado (`analyze.py`, linha ~356-365)
+`exaustao_topo`/`exaustao_fund` saiu da composição de `seguro_long`/`seguro_short` — não bloqueia mais
+sozinho a detecção na cascata (PULLBACK/CROSS/SM_SWEEP/FLEX/SETUP/SCOUT/REBOUND, que usam `seguro_long/short`).
+Continua calculado igual e continua somando em `seguro_alertas_long/short` (já existia, GAUSS+DNA v5.0) —
+ainda penaliza e pode custar o tier PRATA/BRONZE se vier combinado com outro alerta (`perto_bb_topo`,
+`ext_acima_e21`, `vol_secando`, `stoch_esticado_up`, ou equivalentes _fund/_abaixo/_down), só deixou de matar
+o candidato isoladamente.
+
+### O que NÃO foi tocado
+- Usos diretos e independentes de `exaustao_topo/fund` fora do composto `seguro_long/short`: SURGE
+  (`long_surge`/`short_surge`, by design entra perto de extremo, exceção deliberada), `mom_seguro_long/short`
+  (MOMENTUM), `long_div`/`short_div` (DIV) — não apareceram como bloqueador dominante neste log, mudança
+  isolada só no composto principal, mesmo critério cirúrgico de sempre.
+- `stoch_esticado_up/down`, `rsi_zona` (REGRA #1), REGRA #5, gestão — intocados.
+
+Validar com o próximo run real se XPR/STAR/ZEC/XTZ/NEAR (ou equivalentes) passam a classificar PRATA/BRONZE
+e disparar sinal real.
+
+---
+
+## AUDITORIA DE 3 DIAS SEM SINAL REAL — `_base` TOLERÂNCIA 1→2 MISSES + DIAGNÓSTICO (24/06)
+
+Usuário reportou 3 dias sem nenhum sinal real, apesar de 300 moedas escaneadas, e apontou contradição real:
+"no teste dava sinal, no real não". Auditoria (não suposição) via `mcp__github__get_job_logs` em 14 runs
+completos (não cancelados) de 22-23/06, ~2.5 dias: **ZERO sinais reais enviados em todos os 14 runs.**
+Só 12 sinais `🧪 TESTE` saíram no período — confirmando que candidatos reais e fortes (ex: GWEI score+130/
+RSI70/ADX21, CYS Grade S score-125) estavam passando pela cascata de 12 sinais e sendo bloqueados
+**exatamente no mesmo ponto**: `classificar_v2()` devolvendo `None` ("classificação V3 nenhuma" — 39
+ocorrências, o maior motivo isolado dentro da etapa de classificação) — maior até que `mm200_ok` falhando
+(13 ocorrências). `prata sem H1`/`bronze sem H1` (gate pós-classificação, `cycles.py`) quase não apareceram
+— ou seja, o funil que está matando o sinal é o `_base`/pisos **dentro** de `classificar_v2()`, não o gate
+de H1 que vem depois.
+
+Achado paralelo (não é causa raiz, mas agrava): a maioria dos runs de 20/06 a 23/06 aparece como `cancelled`
+no Actions — disparos manuais em sequência cancelando o run anterior via concurrency group, reduzindo bem
+o tempo real de scan no período.
+
+### O que foi implementado (`analyze.py classificar_v2()`)
+- Tolerância de miss nos 6 fatores secundários (`rsi_din`, `stoch_mom`, `fluxo_ok`, `liq_varrida`, `ha1_ok`,
+  `vol_ok`) subiu de `<=1` (23/06, caso DNUSDT) pra `<=2` — mesmo padrão incremental já validado, mesmos 6
+  fatores, só o dial. `mm200_ok` continua **absoluto** (linha de risco que não se negocia) e
+  `seguro_alertas<=1` também intocado — só a tolerância dos 6 fatores secundários mudou.
+- **Diagnóstico real**: antes, quando `classificar_v2()` devolvia `None`, o log só dizia "classificação V3
+  nenhuma" sem dizer por quê — obrigando reauditoria completa de log inteiro pra saber o motivo (como esta
+  auditoria precisou fazer). Agora, no momento do `return None`, loga `mm200`, `alertas`, a lista exata de
+  quais dos 6 fatores falharam (`misses=[...]`), `score_inst`, `rvol`, `adx`, `dist_mm21` — então o próximo
+  run já mostra o fator exato, sem precisar de outra varredura de 14 runs pra decidir o próximo ajuste.
+
+### O que NÃO foi tocado
+- Pisos explícitos de score_inst/RVOL/ADX/dist_mm21 por tier (OURO 80/1.3/22/3% — PRATA 75/1.2/20/3% —
+  BRONZE 65/0.8/18) — são a tabela do usuário (V4), não tocados sem pedido específico apontando um deles
+  isoladamente.
+- Gate de H1 pós-classificação (`cycles.py`, PRATA/BRONZE exigem H1 sempre desde o v5.0) — não apareceu como
+  bloqueador dominante nesta auditoria (quase nenhum candidato chegou até esse ponto), não tocado agora.
+- `stoch_extremo` (bloqueio absoluto), REGRA #1, REGRA #5, gestão — intocados.
+
+Validar com o próximo run real se a tolerância 2 já é suficiente (sinal real saindo) ou se o log novo
+`[V3=None] misses=[...]` aponta um fator específico ainda travando a maioria — nesse caso, o próximo ajuste
+cirúrgico é esse fator nomeado, não mais um chute.
+
+---
+
+## `rsi_nao_topo` — CONTRADIÇÃO COM `nao_ext_long_tight` CORRIGIDA (autorizado 24/06, caso real DYDXUSDT)
+
+Diagnóstico horário real (run `28071247780`, commit `cd5e750`, 2 ciclos/74 análises) mostrou DYDXUSDT
+LONG score+110 RSI71 bloqueado isoladamente por `seguro=F(rsi=71)` — nenhum outro filtro concorrendo.
+Auditoria (`analyze.py`) achou um bloqueador oculto real, exatamente o padrão da REGRA #0 item 3 ("filtros
+que se contradizem, bloqueiam o próprio gatilho"): `seguro_long` usa `rsi_nao_topo = rsi < 70` (teto fixo,
+sem exceção) **E** é combinado via AND com `nao_ext_long_tight` em PULLBACK, CROSS, SM_SWEEP, FLEX, SETUP,
+DIV e REBOUND (Fix 1b, 21/06, generalizou `nao_ext_long_tight` pra esses sinais). Mas `nao_ext_long_tight`
+já tem sua própria exceção deliberada: `rsi<65 ou (adx>32 e rsi<75)` — i.e., em tendência forte (ADX>32) o
+próprio código já decidiu liberar RSI até 75 (mesmo teto da REGRA #1). Só que `rsi_nao_topo` (70 fixo,
+sem condição de ADX) vetava o candidato **antes** dessa exceção ter qualquer chance de valer — a exceção
+de ADX>32 da linha `nao_ext_long_tight` virava código morto pra todo RSI entre 70-75, em todos os 7 sinais
+que combinam os dois filtros.
+
+### Fix aplicado (`analyze.py`, linha ~345)
+`rsi_nao_topo = rsi < 70` → `rsi < 70 or (adx > 32 and rsi < 75)` — réplica exata da mesma exceção que
+`nao_ext_long_tight` já usa, só destravando a contradição (não inventei um número novo, reusei o mesmo
+ADX>32 já calibrado). Teto padrão (70) continua intocado pra ADX≤32; REGRA #1 (`rsi_zona_long<75`)
+continua sendo o teto absoluto em qualquer caso, intocada. `rsi_nao_fundo` (SHORT, `rsi>27`) **não** foi
+tocado — nenhum candidato SHORT no diagnóstico real estava bloqueado isoladamente por esse lado (os SHORT
+bloqueados eram `adx<15/25` ou `gatilho:cross=F`, motivos genuínos diferentes); seguindo a mesma regra de
+nunca ajustar threshold sem caso real apontando especificamente aquele lado.
+
+### Operacional — sem disparo manual desta vez
+Commit feito com um run já em andamento (`28071247780`, cron/`workflow_dispatch` anterior, LOOP_MODE) —
+seguindo a nota de consistência já registrada em "TIMEOUT DO JOB MENOR QUE O CRON" (22/06): não disparar
+de novo quando já há run rodando, pra não cancelar via concurrency group um run que já está coletando
+diagnóstico real. Validação fica pro próximo ciclo dentro do próprio run em andamento (LOOP_MODE) ou pro
+próximo tick de cron.
+
+### O que NÃO foi tocado
+`vol_secando`/`exaustao_topo` (já convertidos em alerta leve), `stoch_esticado_up/down`, REGRA #1, REGRA
+#5, `classificar_v2()` (fix da rodada anterior, ainda sem amostra suficiente pra validar), gestão.
+
+---
+
+## CONFIGURAÇÃO GAUSS+DNA V3 — DOCUMENTO COMPLETO DO USUÁRIO (autorizado 24/06)
+
+Usuário trouxe um documento próprio ("CONFIGURAÇÃO GAUSS+DNA V3 — OTIMIZADA PARA GERAR MAIS SINAIS SEM
+DESTRUIR A QUALIDADE") pedindo uma rodada ampla de afrouxamento/reestruturação, com meta declarada de
+3-10 sinais/dia, winrate 45-55%, R médio +0.20 a +0.60, Profit Factor 1.30-2.00. Diferente das rodadas
+anteriores (sempre 1 variável isolada com caso real de log), este documento foi aplicado **por instrução
+direta do usuário de seguir o documento como veio**, não por auditoria de log isolado — duas perguntas
+genuinamente ambíguas foram levantadas via `AskUserQuestion` antes de aplicar:
+
+1. **RSI**: o documento pede LONG 40-80 / SHORT 20-60, range bem mais largo que a REGRA #1 (75/25) então
+   pergunta era se isso *substituía* a REGRA #1 ou seria uma camada adicional. Resposta do usuário, verbatim:
+   **"faça exatamente do jeito que mandei esqueca substitua regra faça isto funcionar"** — substituição
+   direta, sem preservar o comportamento antigo (REGRA #-1: vontade atual prevalece).
+2. **HA/Fluxo/Liquidez por tier**: o documento pede que esses 3 fatores deixem de ser "tolerância
+   compartilhada" (pool de misses) e passem a ser regra absoluta por tier (OURO exige os 3, PRATA exige
+   HA-ou-MACD, BRONZE ignora). Resposta do usuário: sem preferência — interpretado como seguir a
+   reestruturação literal do documento.
+
+### RSI — substitui REGRA #1 (`analyze.py`)
+```python
+rsi_zona_long  = 40 <= rsi <= 80
+rsi_zona_short = 20 <= rsi <= 60
+```
+Era `rsi < 75` / `rsi > 25` (FLEX PRO, 15/06) — ver seção REGRA #1 acima, marcada SUPERSEDED. Vale pros
+mesmos sinais que já usavam `rsi_zona_long/short` (lista intocada, ver "Aplicação" na REGRA #1).
+
+### `classificar_v2()` reestruturada — HA/Fluxo/Liquidez absolutos por tier (`analyze.py`)
+Antes (V4, 23/06): HA1/Fluxo/Liquidez faziam parte de um pool de 6 fatores com tolerância de até 2 misses
+(`rsi_din`, `stoch_mom`, `fluxo_ok`, `liq_varrida`, `ha1_ok`, `vol_ok`). Agora, por pedido do documento:
+- 🥇 **OURO**: `score_inst>=80` + `RVOL>=1.20` + `ADX>=22` + `dist_mm21<=3%` + **Fluxo obrigatório** +
+  **HA obrigatório** + **Liquidez varrida obrigatória** (`liq_fundo_12`/`liq_topo_12`) — todos absolutos,
+  sem tolerância.
+- 🥈 **PRATA**: `score_inst>=75` + `RVOL>=0.80` + `ADX>=18` + **HA-ou-MACD** (basta um dos dois, não exige
+  os 2 juntos) — Fluxo e Liquidez deixam de ser checados.
+- 🥉 **BRONZE**: `score_inst>=65` + `RVOL>=0.60` + `ADX>=15` + **só MACD confirmado** — HA/Fluxo/Liquidez
+  ignorados por completo. Ganhou também um piso de HA4 (H4) opcional: se o chamador passar `ha4_bull`/
+  `ha4_bear` (já existia em `analisar()`, parâmetro opcional), BRONZE exige o HA do H4 alinhado; se não
+  vier (`None`), não bloqueia (mesma filosofia "sem dado, não bloqueia" do resto do sistema).
+- O pool de tolerância que resta (`rsi_din`, `stoch_mom`, `vol_ok` — 3 fatores, não citados no documento)
+  caiu de tolerância 2 pra 1 miss, mantendo a mesma proporção (~1/3) que já existia. `mm200_ok` continua
+  **absoluto**, sem tolerância (linha de risco, ver seção "Lógica Institucional"). `stoch_extremo`
+  (0.00/1.00) continua bloqueio absoluto, intocado.
+- **Diagnóstico ampliado**: quando devolve `None`, o log agora também expõe misses de `fluxo`, `ha1`,
+  `liq_varrida`, `macd` (além de `rsi_din`/`stoch_mom`/`vol`/`mm200`/`alertas`/`score_inst`/`rvol`/`adx`/
+  `dist_mm21` que já existiam desde 24/06) — pra apontar exatamente qual fator tier-específico travou,
+  sem precisar de nova auditoria de log inteiro.
+
+### Pisos universais alinhados (`config.py`) — mesmo padrão de alinhamento já documentado na V4
+`RVOL_MIN_BY_TF` (`0.70/0.70`→`0.60/0.60`), `RVOL_MIN_EXEC` (`0.7`→`0.60`), `ADX_MIN_GLOBAL` (`18`→`15`) —
+alinhados ao novo piso do degrau BRONZE (RVOL≥0.60, ADX≥15), senão o único afrouxamento real da tabela
+ficaria como código morto (mesmo problema já corrigido uma vez na CLASSIFICAÇÃO V4, 22/06): nenhum
+candidato com RVOL/ADX entre o piso antigo e o novo piso de BRONZE chegaria a `classificar_v2()`.
+
+### "ADX obrigatoriamente subindo" → "ADX > Média ADX" (`analyze.py` + `cycles.py`)
+O documento pede substituir o bloqueio binário de ADX subindo estritamente por uma comparação com a
+própria média recente (tolera ADX estável/oscilando). Implementado como campos novos em `analyze.py`:
+```python
+"adx_media3": (adx_p + adx_p2 + adx_p3) / 3,
+"adx_acima_media": adx > (adx_p + adx_p2 + adx_p3) / 3,
+```
+**Achado paralelo durante a implementação**: o bloqueio binário antigo (`adx_caindo_3`, baseado em
+`cycles.py` checando `result.get("adx_caindo_3")`) nunca teve efeito real — `analyze.py:analisar()` nunca
+propagava `adx_caindo_3` do dict interno `ind` pro dict final devolvido, então `result.get(...)` em
+`cycles.py` sempre devolvia `None`/falsy. Era código morto desde que foi escrito, mesmo padrão de bug já
+documentado outras vezes nesta sessão (ex: `RVOL_MIN_EXEC` desalinhado na V4). Corrigido ao implementar o
+substituto: `adx_acima_media`/`adx_media3` **são** propagados corretamente no dict final de `analisar()`
+(`analyze.py`, bloco de retorno), e `cycles.py` (`executar_ciclo()` e `executar_ciclo_mtf()`, os dois
+pontos que tinham o bloqueio antigo) agora checam `result.get("adx_acima_media", True)` em vez do campo
+morto antigo.
+
+### Novo — FILTRO DE VOLATILIDADE / FILTRO ANTI-STOP (ATR vs própria média)
+Documento pede bloquear entrada quando o ATR atual estiver comprimido demais frente à própria média
+recente (stop/TP calculados em múltiplos desse ATR ficariam apertados demais pro movimento real — risco
+de stop por compressão, não por estrutura). Implementado em `analyze.py` (`calcular_indicadores()`):
+```python
+atr_media14    = sum(atr_arr[-14:]) / len(atr_arr[-14:])
+atr_vol_ok     = atr >= atr_media14 * 0.90
+```
+Propagado no dict final e checado como novo gate universal em `cycles.py` (`executar_ciclo()` e
+`executar_ciclo_mtf()`, logo após o gate de RVOL): bloqueia com motivo `"atr<media90"`/`"atr comprimido
+(V3)"` quando `atr_vol_ok` é falso. A sub-cláusula vaga do documento ("Spread ATR muito baixo", sem
+definição objetiva no texto) foi tratada como redundante com este mesmo check — não foi inventada uma
+métrica nova separada pra ela, seguindo a convenção da sessão de nunca inventar fórmula "no escuro" pra
+algo indefinido.
+
+### FILTRO BTC H4 — reescrito pra lógica literal do documento (`cycles.py`, `executar_ciclo_mtf()`)
+Antes: proxy via RSI (`<45`/`>55`) + buffer de 2% na comparação com a MM200 (`btc_e200*0.98/1.02`).
+Documento pede literalmente: bloquear LONG só quando **3 condições batem juntas** — "BTC H4 abaixo MM200
+E MM21 abaixo MM50 E Fluxo BTC negativo" (espelho pra SHORT). Reescrito:
+```python
+btc_ind  = calcular_indicadores(btc_candles)
+btc_fluxo_pos = btc_ind["dna_flow_bull"] or btc_ind["trendilo_long"]
+btc_fluxo_neg = btc_ind["dna_flow_bear"] or btc_ind["trendilo_short"]
+btc_bull = btc_p > btc_e200 and btc_e21 > btc_e50 and btc_fluxo_pos
+btc_bear = btc_p < btc_e200 and btc_e21 < btc_e50 and btc_fluxo_neg
+```
+"Fluxo BTC" passou a usar o mesmo `dna_flow`/`trendilo` já calculado pra qualquer ativo (via
+`calcular_indicadores(btc_candles)` completo), não mais um proxy de RSI. O buffer de 2% foi removido —
+raciocínio: sem buffer, `btc_bull`/`btc_bear` ficam **mais difíceis** de ficar verdadeiros (exigem cruzar
+a MM200 sem margem de tolerância), o que **reduz** a frequência com que o sinal real na direção oposta é
+bloqueado — alinhado ao objetivo do documento de mais sinais, não menos. `serie_ema`/`calcular_rsi`
+(usados só pelo cálculo manual antigo) ficaram sem nenhum call site em `cycles.py` — removidos do import
+(`from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi` → sem os 2
+últimos). O bloco consumidor (decide bloquear LONG/SHORT a partir de `btc_bull`/`btc_bear`/`btc_rsi_*`)
+não foi alterado, só a forma como essas variáveis são calculadas.
+
+### Mercado lateral — confirmado já equivalente, não tocado
+Documento pede lateral só quando "ADX<15 E BB Width abaixo da média" — `analyze.py` já tinha
+`lateralizado = bb_squeeze and adx < 15` com `bb_squeeze = bb_bw < bb_bw_p * 0.95` (BB width atual abaixo
+do período anterior, proxy equivalente de "abaixo da média/referência recente"). Avaliado como já
+satisfazendo a intenção do documento — não alterado pra evitar reescrever algo que já funciona igual.
+
+### O que NÃO foi tocado
+- `vol_secando`/`exaustao_topo` (já convertidos em alerta leve, não em escopo deste documento)
+- REGRA #5 (defesas SMC), `stoch_esticado_up/down`, `rsi_nao_topo` (fix do dia anterior)
+- Stop/TP/leverage/lote (gestão), v5.0, modo `SIGNAL_MODE=="INSTITUCIONAL"` (piso próprio, separado)
+- `_btc_h1_regime_neutro()` (filtro de regime H1, função separada do filtro macro H4 reescrito aqui — já
+  usa `calcular_indicadores()`, não dependia de `serie_ema`/`calcular_rsi`)
+
+### Validação
+Sintaxe validada (`ast.parse`) nos 3 arquivos tocados (`analyze.py`, `config.py`, `cycles.py`) antes do
+commit. Validar com o próximo run real se a combinação de mudanças (RSI mais largo + tiers reestruturados
++ pisos alinhados + ADX/ATR/BTC H4 mais permissivos) produz sinal real — e se o novo log `[V3=None]
+misses=[...]` (agora incluindo fluxo/ha1/liq_varrida/macd) aponta um fator tier-específico ainda
+dominante, esse é o próximo ajuste cirúrgico, não mais um chute.
+
+---
+
+## DIAGNÓSTICO GENÉRICO — `ha1=F` CHECAVA CAMPO ERRADO (autorizado 24/06, run de validação da V3)
+
+Usuário reportou "bot não está rodando e não está dando sinal, restaure até o ponto onde estava dando
+mais sinais". Auditoria em 2 frentes:
+
+### Frente 1 — "bot não está rodando"
+Confirmado real: último run (`28074835927`, commit `850d052`, validação da V3) terminou `05:13:57Z` e não
+havia nenhum run novo (nem `schedule` nem `workflow_dispatch`) até a checagem (`09:08 UTC`, gap de ~3h51min).
+Causa: cron do GitHub Actions é best-effort (já documentado em `bot.yml`) — olhando o histórico completo de
+runs `schedule`, os intervalos entre ticks reais variam de 1h a 8h+ mesmo fora de qualquer bug de timeout
+(ex: 23/06 teve gaps de 5.5h e 8.5h entre ticks). `timeout-minutes` do job/step (58/55, fix de 22/06)
+**continua intocado e correto** — não é regressão desse fix, é a variabilidade já conhecida e aceita do
+cron da plataforma. Não há ajuste de código possível pra isso; ação tomada foi disparo manual (ver
+"Operacional" abaixo) pra não esperar o próximo tick incerto.
+
+### Frente 2 — "não está dando sinal" — bug real encontrado na decomposição de diagnóstico
+Auditoria do log completo do run de validação (`grep`/contagem real, não estimativa): 745 linhas
+`LONG-BLOQ`/`SHORT-BLOQ`, das quais **147 tinham `ha1=F` como ÚNICO motivo listado** — vários com score
+altíssimo (ZECUSDT -135, XTZUSDT -110/-108, XRPUSDT -100/-90, TRUMPUSDT -100). Investigado por que um
+candidato tão forte ficaria bloqueado só por isso.
+
+Achado: `analyze.py:analisar()`, na decomposição genérica de bloqueio (linha ~1115/1146, escrita no fix
+"sem detalhe → gatilho" de 23/06), checava `ind["ha_bull_1"]`/`ind["ha_bear_1"]` — mas esse campo é usado
+**só pelo SCOUT** (`long_scout`/`short_scout`, linha 899/904). Os outros 11 sinais da cascata usam
+`ha_bull2`/`ha_bear2` (FLEX, SETUP) ou nenhum check de HA (PULLBACK, CROSS, SM_SWEEP, BB_BREAK, REVERSAL,
+SURGE, MOMENTUM, REBOUND, DIV, ELITE). Como a lista `b` da decomposição só avança pro fallback `gatilho:`
+(que revela o motivo real por sinal específico) quando `b` está **vazia**, esses 147 candidatos nunca
+chegavam a mostrar o motivo real — o diagnóstico parava cedo demais num campo (`ha_bull_1`) que não tem
+relação com a maioria dos 12 sinais, escondendo a causa verdadeira de bloqueio.
+
+### Fix aplicado (`analyze.py`, linha ~1115/1146)
+`ind["ha_bull_1"]`/`ind["ha_bear_1"]` → `ind["ha_bull2"]`/`ind["ha_bear2"]` (label do log também trocado de
+`ha1=F` pra `ha2=F`, pra refletir o campo real checado). **Isso é só correção de diagnóstico** — nenhum
+gate real de nenhum dos 12 sinais foi alterado (SCOUT continua exigindo `ha_bull_1`/`ha_bear_1` na própria
+condição, linha 899/904, intocada); a mudança só afeta o que é logado pra esses 147+ candidatos quando
+nenhum sinal dispara, deixando o `gatilho:` real aparecer em vez de parar em "ha1=F" enganoso.
+
+### "Restaurar pro ponto que dava mais sinais" — abordagem escolhida
+Não foi identificado um commit único anterior pra reverter em bloco — o histórico deste arquivo mostra que
+o afrouxamento sempre foi incremental e evidenciado por log real (`vol_secando`, `exaustao`, `stoch`,
+`rsi_nao_topo`, etc.), e reverter em bloco desfaria essas calibrações por incidente real (BB_BREAK CVX/
+ASTER/WUSDT, etc.) sem necessariamente trazer mais sinal de volta. Em vez disso, a resposta a "restaure até
+onde dava mais sinais" é continuar exatamente esse processo cirúrgico (REGRA #0) até o pipeline voltar a
+emitir sinal real — este fix de diagnóstico é o primeiro passo necessário pra revelar QUAL é o próximo
+bloqueador genuíno desses 147 candidatos fortes (antes esse motivo ficava escondido).
+
+### Operacional
+Sem run em andamento no momento (gap confirmado na Frente 1) — disparo manual seguro, sem risco de cancelar
+um run real coletando diagnóstico. Validar no próximo log se os candidatos que antes paravam em `ha1=F`
+agora mostram `gatilho:...` real, e aplicar o próximo ajuste cirúrgico com base nesse motivo nomeado.
