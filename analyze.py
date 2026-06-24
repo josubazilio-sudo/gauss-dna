@@ -14,7 +14,9 @@ from config import (
     SIGNAL_MODE, FILTER_LEVEL as _FLV,
     SCORE_BRONZE, SCORE_PRATA, SCORE_OURO,
     RVOL_OURO, ADX_SCOUT, ADX_PRATA, ADX_OURO,
+    ADX_MIN, RVOL_MIN,
     BONUS_FLUXO, BONUS_SWEEP, BONUS_H1,
+    HA_CONFIRM_BARS, ADX_NAO_SUBINDO_BLOQUEIA,
 )
 
 log = logging.getLogger("GAUSS+DNA")
@@ -77,15 +79,14 @@ def calcular_indicadores(candles):
 
     # Heikin-Ashi: corpo mínimo (0.2 ATR) filtra dojis
     ha_corpo_ok = abs(fechamentos[-1] - aberturas[-1]) > atr * 0.2
-    ha_bull  = fechamentos[-1] > aberturas[-1] and fechamentos[-2] > aberturas[-2] and ha_corpo_ok
-    ha_bear  = fechamentos[-1] < aberturas[-1] and fechamentos[-2] < aberturas[-2] and ha_corpo_ok
-    ha_bull3 = ha_bull and fechamentos[-3] > aberturas[-3]
-    ha_bear3 = ha_bear and fechamentos[-3] < aberturas[-3]
-    ha_bull2 = ha_bull and ha_corpo_ok
-    ha_bear2 = ha_bear and ha_corpo_ok
-    # Versão mais permissiva: apenas a última vela HA precisa ser bullish/bearish
     ha_bull_1 = fechamentos[-1] > aberturas[-1] and ha_corpo_ok
     ha_bear_1 = fechamentos[-1] < aberturas[-1] and ha_corpo_ok
+    ha_bull  = ha_bull_1 and (True if HA_CONFIRM_BARS <= 1 else fechamentos[-2] > aberturas[-2])
+    ha_bear  = ha_bear_1 and (True if HA_CONFIRM_BARS <= 1 else fechamentos[-2] < aberturas[-2])
+    ha_bull2 = ha_bull and ha_corpo_ok
+    ha_bear2 = ha_bear and ha_corpo_ok
+    ha_bull3 = ha_bull2 and (True if HA_CONFIRM_BARS <= 2 else fechamentos[-3] > aberturas[-3])
+    ha_bear3 = ha_bear2 and (True if HA_CONFIRM_BARS <= 2 else fechamentos[-3] < aberturas[-3])
 
     # RSI
     rsi       = calcular_rsi(fechamentos[-50:])
@@ -394,7 +395,7 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
     rsi_zona_long  = 40 <= rsi <= 78
-    rsi_zona_short = 22 <= rsi <= 60
+    rsi_zona_short = 25 <= rsi <= 60
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -601,11 +602,11 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     if sweep_ok:   score_eff += BONUS_SWEEP
     if h1_aligned: score_eff += BONUS_H1
 
-    if score_eff >= SCORE_OURO and rvol >= RVOL_OURO and adx >= ADX_OURO:
+    if score_eff >= SCORE_OURO and rvol >= RVOL_OURO and adx >= ADX_OURO and fluxo_ok:
         return "OURO"
-    if score_eff >= SCORE_PRATA and adx >= ADX_PRATA:
+    if score_eff >= SCORE_PRATA and rvol >= 0.80 and adx >= ADX_PRATA:
         return "PRATA"
-    if score_eff >= SCORE_BRONZE and adx >= ADX_SCOUT:
+    if score_eff >= SCORE_BRONZE and rvol >= RVOL_MIN and adx >= ADX_MIN:
         return "BRONZE"
     return None
 
@@ -682,7 +683,7 @@ def detectar_sinais(ind):
 
     # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
     _fluxo_min   = 0 if _FLV <= 0 else (1 if _FLV == 1 else 2)
-    _adx_sub_ok  = i["adx_subindo"] if _FLV >= 2 else True
+    _adx_sub_ok  = i["adx_subindo"] if (_FLV >= 2 and ADX_NAO_SUBINDO_BLOQUEIA) else True
     _no_liq_topo = (not i["liq_topo"])  if _FLV >= 3 else True
     _no_liq_fund = (not i["liq_fundo"]) if _FLV >= 3 else True
 

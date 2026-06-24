@@ -22,6 +22,7 @@ from config import (
     GRAUS_PERMITIDOS_INSTITUCIONAL, STOPS_CONSECUTIVOS_PAUSA,
     MAX_POSICOES_V5, PERDA_MAX_DIA_V5, PAUSA_2_PERDAS_V5, NO_TRADE_PRIMEIROS_MIN_V5,
     TESTE_RESULTS_FILE, MAX_SINAIS_TESTE_POR_CICLO,
+    ADX_NAO_SUBINDO_BLOQUEIA,
 )
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -104,7 +105,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
 
     if adx < (10 if FILTER_LEVEL <= 0 else 15):
         motivos.append("ADX baixo")
-    if FILTER_LEVEL >= 2 and not adx_s:
+    if ADX_NAO_SUBINDO_BLOQUEIA and FILTER_LEVEL >= 2 and not adx_s:
         motivos.append("ADX nao subindo")
     if lat:
         motivos.append("mercado lateral")
