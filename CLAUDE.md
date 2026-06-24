@@ -1709,3 +1709,56 @@ commit. Validar com o próximo run real se a combinação de mudanças (RSI mais
 + pisos alinhados + ADX/ATR/BTC H4 mais permissivos) produz sinal real — e se o novo log `[V3=None]
 misses=[...]` (agora incluindo fluxo/ha1/liq_varrida/macd) aponta um fator tier-específico ainda
 dominante, esse é o próximo ajuste cirúrgico, não mais um chute.
+
+---
+
+## DIAGNÓSTICO GENÉRICO — `ha1=F` CHECAVA CAMPO ERRADO (autorizado 24/06, run de validação da V3)
+
+Usuário reportou "bot não está rodando e não está dando sinal, restaure até o ponto onde estava dando
+mais sinais". Auditoria em 2 frentes:
+
+### Frente 1 — "bot não está rodando"
+Confirmado real: último run (`28074835927`, commit `850d052`, validação da V3) terminou `05:13:57Z` e não
+havia nenhum run novo (nem `schedule` nem `workflow_dispatch`) até a checagem (`09:08 UTC`, gap de ~3h51min).
+Causa: cron do GitHub Actions é best-effort (já documentado em `bot.yml`) — olhando o histórico completo de
+runs `schedule`, os intervalos entre ticks reais variam de 1h a 8h+ mesmo fora de qualquer bug de timeout
+(ex: 23/06 teve gaps de 5.5h e 8.5h entre ticks). `timeout-minutes` do job/step (58/55, fix de 22/06)
+**continua intocado e correto** — não é regressão desse fix, é a variabilidade já conhecida e aceita do
+cron da plataforma. Não há ajuste de código possível pra isso; ação tomada foi disparo manual (ver
+"Operacional" abaixo) pra não esperar o próximo tick incerto.
+
+### Frente 2 — "não está dando sinal" — bug real encontrado na decomposição de diagnóstico
+Auditoria do log completo do run de validação (`grep`/contagem real, não estimativa): 745 linhas
+`LONG-BLOQ`/`SHORT-BLOQ`, das quais **147 tinham `ha1=F` como ÚNICO motivo listado** — vários com score
+altíssimo (ZECUSDT -135, XTZUSDT -110/-108, XRPUSDT -100/-90, TRUMPUSDT -100). Investigado por que um
+candidato tão forte ficaria bloqueado só por isso.
+
+Achado: `analyze.py:analisar()`, na decomposição genérica de bloqueio (linha ~1115/1146, escrita no fix
+"sem detalhe → gatilho" de 23/06), checava `ind["ha_bull_1"]`/`ind["ha_bear_1"]` — mas esse campo é usado
+**só pelo SCOUT** (`long_scout`/`short_scout`, linha 899/904). Os outros 11 sinais da cascata usam
+`ha_bull2`/`ha_bear2` (FLEX, SETUP) ou nenhum check de HA (PULLBACK, CROSS, SM_SWEEP, BB_BREAK, REVERSAL,
+SURGE, MOMENTUM, REBOUND, DIV, ELITE). Como a lista `b` da decomposição só avança pro fallback `gatilho:`
+(que revela o motivo real por sinal específico) quando `b` está **vazia**, esses 147 candidatos nunca
+chegavam a mostrar o motivo real — o diagnóstico parava cedo demais num campo (`ha_bull_1`) que não tem
+relação com a maioria dos 12 sinais, escondendo a causa verdadeira de bloqueio.
+
+### Fix aplicado (`analyze.py`, linha ~1115/1146)
+`ind["ha_bull_1"]`/`ind["ha_bear_1"]` → `ind["ha_bull2"]`/`ind["ha_bear2"]` (label do log também trocado de
+`ha1=F` pra `ha2=F`, pra refletir o campo real checado). **Isso é só correção de diagnóstico** — nenhum
+gate real de nenhum dos 12 sinais foi alterado (SCOUT continua exigindo `ha_bull_1`/`ha_bear_1` na própria
+condição, linha 899/904, intocada); a mudança só afeta o que é logado pra esses 147+ candidatos quando
+nenhum sinal dispara, deixando o `gatilho:` real aparecer em vez de parar em "ha1=F" enganoso.
+
+### "Restaurar pro ponto que dava mais sinais" — abordagem escolhida
+Não foi identificado um commit único anterior pra reverter em bloco — o histórico deste arquivo mostra que
+o afrouxamento sempre foi incremental e evidenciado por log real (`vol_secando`, `exaustao`, `stoch`,
+`rsi_nao_topo`, etc.), e reverter em bloco desfaria essas calibrações por incidente real (BB_BREAK CVX/
+ASTER/WUSDT, etc.) sem necessariamente trazer mais sinal de volta. Em vez disso, a resposta a "restaure até
+onde dava mais sinais" é continuar exatamente esse processo cirúrgico (REGRA #0) até o pipeline voltar a
+emitir sinal real — este fix de diagnóstico é o primeiro passo necessário pra revelar QUAL é o próximo
+bloqueador genuíno desses 147 candidatos fortes (antes esse motivo ficava escondido).
+
+### Operacional
+Sem run em andamento no momento (gap confirmado na Frente 1) — disparo manual seguro, sem risco de cancelar
+um run real coletando diagnóstico. Validar no próximo log se os candidatos que antes paravam em `ha1=F`
+agora mostram `gatilho:...` real, e aplicar o próximo ajuste cirúrgico com base nesse motivo nomeado.

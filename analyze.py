@@ -1112,7 +1112,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
         if sc > 25:
             b = []
             if not ind["macd_bull_r"]:  b.append("macd_r=F")
-            if not ind["ha_bull_1"]:    b.append("ha1=F")
+            if not ind["ha_bull2"]:     b.append("ha2=F")
             if ind["adx"] < 15:         b.append(f"adx={ind['adx']:.1f}<15")
             if ind["lateralizado"]:     b.append("lateral")
             if not ind["seguro_long"]:
@@ -1143,7 +1143,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
         elif sc < -25:
             b = []
             if not ind["macd_bear_r"]:   b.append("macd_r=F")
-            if not ind["ha_bear_1"]:     b.append("ha1=F")
+            if not ind["ha_bear2"]:      b.append("ha2=F")
             if ind["adx"] < 15:          b.append(f"adx={ind['adx']:.1f}<15")
             if ind["lateralizado"]:      b.append("lateral")
             if not ind["seguro_short"]:
