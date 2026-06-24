@@ -22,7 +22,7 @@ from config import (
     GRAUS_PERMITIDOS_INSTITUCIONAL, STOPS_CONSECUTIVOS_PAUSA,
     MAX_POSICOES_V5, PERDA_MAX_DIA_V5, PAUSA_2_PERDAS_V5, NO_TRADE_PRIMEIROS_MIN_V5,
     TESTE_RESULTS_FILE, MAX_SINAIS_TESTE_POR_CICLO,
-    ADX_NAO_SUBINDO_BLOQUEIA,
+    ADX_NAO_SUBINDO_BLOQUEIA, ADX_FLEX_MARGIN,
 )
 from coins import COINS, PRIORITY_WATCHLIST
 from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
@@ -527,11 +527,11 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                    result["rsi"], result["adx"], f"grade={grade}"))
                 _diag_pos_cascata(f"grade={grade} insuficiente")
                 continue
-            if result["adx"] < ADX_MIN_GLOBAL:
-                log.info(f"  ⚠️ {abrev} bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
+            if result["adx"] < ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:
+                log.info(f"  ⚠️ {abrev} bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL - ADX_FLEX_MARGIN}")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL}"))
-                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global)")
+                                   result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f}"))
+                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f} (piso global c/ margem)")
                 continue
             if result.get("adx_caindo_3"):
                 log.info(f"  ⚠️ {abrev} bloqueado — ADX caindo 3+ períodos (v5.0)")
@@ -865,10 +865,10 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 log.info(f"[MTF] {abrev:7s} | bloqueado — grade {grade} abaixo do mínimo institucional")
                 _diag_pos_cascata(f"grade={grade} insuficiente (MTF)")
                 continue
-            if result["adx"] < ADX_MIN_GLOBAL:
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"adx<{ADX_MIN_GLOBAL}"))
-                log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
-                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global, MTF)")
+            if result["adx"] < ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"adx<{ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f}"))
+                log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f}")
+                _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL - ADX_FLEX_MARGIN:.0f} (piso global c/ margem, MTF)")
                 continue
             if result.get("adx_caindo_3"):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "adx_caindo_3"))

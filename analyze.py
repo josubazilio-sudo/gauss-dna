@@ -17,6 +17,7 @@ from config import (
     ADX_MIN, RVOL_MIN,
     BONUS_FLUXO, BONUS_SWEEP, BONUS_H1,
     HA_CONFIRM_BARS, ADX_NAO_SUBINDO_BLOQUEIA,
+    ADX_FLEX_MARGIN, HA_REVERSAL_OK,
 )
 
 log = logging.getLogger("GAUSS+DNA")
@@ -395,7 +396,7 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
     rsi_zona_long  = 40 <= rsi <= 78
-    rsi_zona_short = 25 <= rsi <= 60
+    rsi_zona_short = 22 <= rsi <= 60
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -602,11 +603,11 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     if sweep_ok:   score_eff += BONUS_SWEEP
     if h1_aligned: score_eff += BONUS_H1
 
-    if score_eff >= SCORE_OURO and rvol >= RVOL_OURO and adx >= ADX_OURO and fluxo_ok:
+    if score_eff >= SCORE_OURO and rvol >= RVOL_OURO and adx >= ADX_OURO - ADX_FLEX_MARGIN and fluxo_ok:
         return "OURO"
-    if score_eff >= SCORE_PRATA and rvol >= 0.80 and adx >= ADX_PRATA:
+    if score_eff >= SCORE_PRATA and rvol >= 0.80 and adx >= ADX_PRATA - ADX_FLEX_MARGIN:
         return "PRATA"
-    if score_eff >= SCORE_BRONZE and rvol >= RVOL_MIN and adx >= ADX_MIN:
+    if score_eff >= SCORE_BRONZE and rvol >= RVOL_MIN and adx >= ADX_MIN - ADX_FLEX_MARGIN:
         return "BRONZE"
     return None
 
@@ -733,11 +734,11 @@ def detectar_sinais(ind):
                 i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
 
     # ── Reversão extrema ──────────────────────────────────────────────────────
-    long_reversal  = (i["rsi"] < 30 and i["ha_bull"] and i["v_forte"] and
+    long_reversal  = (i["rsi"] < 30 and (HA_REVERSAL_OK or i["ha_bull"]) and i["v_forte"] and
                       (i["liq_fundo"] or i["absorb_bull"]) and i["macd_recuperando"] and
                       i["adx"] > 12 and i["preco"] > i["e200"] * 0.96 and
                       (i["dna_flow_bull"] or i["obv_bull"]))
-    short_reversal = (i["rsi"] > 70 and i["ha_bear"] and i["v_forte"] and
+    short_reversal = (i["rsi"] > 70 and (HA_REVERSAL_OK or i["ha_bear"]) and i["v_forte"] and
                       (i["liq_topo"] or i["absorb_bear"]) and i["macd_esgotando"] and
                       i["adx"] > 12 and i["preco"] < i["e200"] * 1.04 and
                       (i["dna_flow_bear"] or i["obv_bear"]))
