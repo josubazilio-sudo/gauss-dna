@@ -342,7 +342,15 @@ def calcular_indicadores(candles):
     tbear_loose = e10 < e21 and e21 < e50
 
     # Filtros de segurança compostos
-    rsi_nao_topo   = rsi < 70
+    # rsi_nao_topo (24/06 — caso real DYDXUSDT score+110/RSI71, único bloqueio:
+    # "seguro=F(rsi=71)"): o teto fixo 70 contradizia o próprio nao_ext_long_tight
+    # (linha abaixo, "rsi<65 ou (adx>32 e rsi<75)") — quando ADX>32 já libera RSI até
+    # 75 por design (tendência forte o bastante pra justificar), mas seguro_long
+    # (combinado com nao_ext_long_tight via AND em PULLBACK/CROSS/SM_SWEEP/FLEX/SETUP/
+    # DIV/REBOUND) vetava antes mesmo dessa exceção ter chance de valer — mesma classe
+    # de "filtro que bloqueia o próprio gatilho" da REGRA #0. Replicado o mesmo escape
+    # de ADX aqui, sem mudar o teto padrão de 70 nem a REGRA #1 (rsi_zona<75, intocada).
+    rsi_nao_topo   = rsi < 70 or (adx > 32 and rsi < 75)
     rsi_nao_fundo  = rsi > 27
     # vol_secando saiu do bloqueio binário (23/06, 4ª rodada): mesmo após 3 afrouxa-
     # mentos de limiar no mesmo dia, continuava sendo o bloqueador isolado dominante

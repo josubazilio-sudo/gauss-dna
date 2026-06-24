@@ -1531,3 +1531,39 @@ o tempo real de scan no período.
 Validar com o próximo run real se a tolerância 2 já é suficiente (sinal real saindo) ou se o log novo
 `[V3=None] misses=[...]` aponta um fator específico ainda travando a maioria — nesse caso, o próximo ajuste
 cirúrgico é esse fator nomeado, não mais um chute.
+
+---
+
+## `rsi_nao_topo` — CONTRADIÇÃO COM `nao_ext_long_tight` CORRIGIDA (autorizado 24/06, caso real DYDXUSDT)
+
+Diagnóstico horário real (run `28071247780`, commit `cd5e750`, 2 ciclos/74 análises) mostrou DYDXUSDT
+LONG score+110 RSI71 bloqueado isoladamente por `seguro=F(rsi=71)` — nenhum outro filtro concorrendo.
+Auditoria (`analyze.py`) achou um bloqueador oculto real, exatamente o padrão da REGRA #0 item 3 ("filtros
+que se contradizem, bloqueiam o próprio gatilho"): `seguro_long` usa `rsi_nao_topo = rsi < 70` (teto fixo,
+sem exceção) **E** é combinado via AND com `nao_ext_long_tight` em PULLBACK, CROSS, SM_SWEEP, FLEX, SETUP,
+DIV e REBOUND (Fix 1b, 21/06, generalizou `nao_ext_long_tight` pra esses sinais). Mas `nao_ext_long_tight`
+já tem sua própria exceção deliberada: `rsi<65 ou (adx>32 e rsi<75)` — i.e., em tendência forte (ADX>32) o
+próprio código já decidiu liberar RSI até 75 (mesmo teto da REGRA #1). Só que `rsi_nao_topo` (70 fixo,
+sem condição de ADX) vetava o candidato **antes** dessa exceção ter qualquer chance de valer — a exceção
+de ADX>32 da linha `nao_ext_long_tight` virava código morto pra todo RSI entre 70-75, em todos os 7 sinais
+que combinam os dois filtros.
+
+### Fix aplicado (`analyze.py`, linha ~345)
+`rsi_nao_topo = rsi < 70` → `rsi < 70 or (adx > 32 and rsi < 75)` — réplica exata da mesma exceção que
+`nao_ext_long_tight` já usa, só destravando a contradição (não inventei um número novo, reusei o mesmo
+ADX>32 já calibrado). Teto padrão (70) continua intocado pra ADX≤32; REGRA #1 (`rsi_zona_long<75`)
+continua sendo o teto absoluto em qualquer caso, intocada. `rsi_nao_fundo` (SHORT, `rsi>27`) **não** foi
+tocado — nenhum candidato SHORT no diagnóstico real estava bloqueado isoladamente por esse lado (os SHORT
+bloqueados eram `adx<15/25` ou `gatilho:cross=F`, motivos genuínos diferentes); seguindo a mesma regra de
+nunca ajustar threshold sem caso real apontando especificamente aquele lado.
+
+### Operacional — sem disparo manual desta vez
+Commit feito com um run já em andamento (`28071247780`, cron/`workflow_dispatch` anterior, LOOP_MODE) —
+seguindo a nota de consistência já registrada em "TIMEOUT DO JOB MENOR QUE O CRON" (22/06): não disparar
+de novo quando já há run rodando, pra não cancelar via concurrency group um run que já está coletando
+diagnóstico real. Validação fica pro próximo ciclo dentro do próprio run em andamento (LOOP_MODE) ou pro
+próximo tick de cron.
+
+### O que NÃO foi tocado
+`vol_secando`/`exaustao_topo` (já convertidos em alerta leve), `stoch_esticado_up/down`, REGRA #1, REGRA
+#5, `classificar_v2()` (fix da rodada anterior, ainda sem amostra suficiente pra validar), gestão.
