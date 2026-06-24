@@ -1,24 +1,6 @@
 name: GAUSS+DNA Bot de Sinais
 
 on:
-  schedule:
-    # Era */2h — caso real 22/06: run iniciado 01:11 (LOOP_MODE=true, nunca sai sozinho)
-    # rodou ininterrupto até bater o timeout do step "Rodar bot" (325min) às 06:37 e
-    # terminou em failure. Os ticks de cron esperados em 02h/04h/06h simplesmente não
-    # dispararam (cron do GitHub Actions é best-effort, pode atrasar/pular sob carga) —
-    # sem eles, o concurrency group (cancel-in-progress) nunca reiniciou o job, e o bot
-    # ficou "parado" de 06:37 até o usuário notar. Reduzido pra 1h pra encurtar o buraco
-    # se algum tick futuro também for perdido.
-    # 2º caso real 22/06 (mesmo dia, ~14h depois): reduzir o cron pra 1h não foi
-    # suficiente — o run das 01:11 ocupou o runner até 06:37 (325min), e os ticks de
-    # 07h/08h foram pulados igual (mesmo motivo: GitHub pula tick agendado se o runner
-    # anterior ainda está rodando), abrindo um buraco de 2h11min sem nenhum diagnóstico
-    # até o próximo workflow_dispatch manual às 08:48. Causa raiz real: o timeout do
-    # step "Rodar bot" (325min) é MAIOR que o intervalo do cron (1h=60min) — garante
-    # matematicamente que, em qualquer run que dure o timeout completo, pelo menos um
-    # tick agendado vai cair "no meio" do runner ocupado e ser descartado. Fix abaixo
-    # (timeout-minutes do job/step) ataca a causa, não só o sintoma.
-    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       tg_token:
@@ -53,6 +35,10 @@ on:
 # disparado depois em main. Qualquer novo trigger, manual ou agendado, em qualquer branch,
 # agora cancela TODO run anterior deste workflow — elimina a possibilidade de logica antiga
 # rodar em paralelo com codigo ja corrigido.
+permissions:
+  actions: write
+  contents: read
+
 concurrency:
   group: bot-sinais
   cancel-in-progress: false
@@ -141,3 +127,9 @@ jobs:
             backtest_log.csv
             teste_resultados_log.csv
           key: last-signals-${{ github.run_id }}
+
+      - name: Auto-trigger (continuidade)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run bot.yml --ref main
