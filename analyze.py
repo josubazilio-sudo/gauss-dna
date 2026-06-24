@@ -10,7 +10,12 @@ from indicators import (
     serie_heikin_ashi, calcular_bb, calcular_obv, calcular_vwap,
     filtro_kalman,
 )
-from config import SIGNAL_MODE, FILTER_LEVEL as _FLV
+from config import (
+    SIGNAL_MODE, FILTER_LEVEL as _FLV,
+    SCORE_BRONZE, SCORE_PRATA, SCORE_OURO,
+    RVOL_OURO, ADX_SCOUT, ADX_PRATA, ADX_OURO,
+    BONUS_FLUXO, BONUS_SWEEP, BONUS_H1,
+)
 
 log = logging.getLogger("GAUSS+DNA")
 
@@ -341,9 +346,8 @@ def calcular_indicadores(candles):
     tbull_loose = e10 > e21 and e21 > e50
     tbear_loose = e10 < e21 and e21 < e50
 
-    # Filtros de segurança compostos
-    rsi_nao_topo   = rsi < 70
-    rsi_nao_fundo  = rsi > 27
+    rsi_nao_topo   = rsi < 78
+    rsi_nao_fundo  = rsi > 22
     # vol_secando saiu do bloqueio binário (23/06, 4ª rodada): mesmo após 3 afrouxa-
     # mentos de limiar no mesmo dia, continuava sendo o bloqueador isolado dominante
     # de candidatos com score alto e nada mais de errado (GRASS+145, DYDX+130, SUI-130,
@@ -354,15 +358,13 @@ def calcular_indicadores(candles):
     # `classificar_v2()` exige `seguro_alertas <= 1`) — continua penalizando entrada
     # de baixo volume, mas não mata o sinal isoladamente na cascata de detecção.
     seguro_long  = (not perto_bb_topo and not ext_acima_e21 and
-                    not exaustao_topo and rsi_nao_topo and not stoch_esticado_up)
-    seguro_short = (not exaustao_fund and rsi_nao_fundo and not stoch_esticado_down)
+                    not exaustao_topo and rsi_nao_topo)
+    seguro_short = (not exaustao_fund and rsi_nao_fundo)
 
     # SEGURO — contagem de alertas (GAUSS+DNA v5.0): cada booleano abaixo é um
     # "alerta leve" de qualidade de entrada; PRATA/BRONZE toleram no máx. 1.
-    seguro_alertas_long  = sum([perto_bb_topo, ext_acima_e21, exaustao_topo,
-                                 vol_secando, stoch_esticado_up])
-    seguro_alertas_short = sum([perto_bb_fund, ext_abaixo_e21, exaustao_fund,
-                                  vol_secando, stoch_esticado_down])
+    seguro_alertas_long  = sum([perto_bb_topo, ext_acima_e21, exaustao_topo, vol_secando])
+    seguro_alertas_short = sum([perto_bb_fund, ext_abaixo_e21, exaustao_fund, vol_secando])
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
@@ -391,9 +393,8 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI zona de entrada — FLEX PRO 15/06 (CLAUDE.md REGRA #1): bloqueia só extremos absolutos
-    rsi_zona_long  = rsi < 75
-    rsi_zona_short = rsi > 25
+    rsi_zona_long  = 40 <= rsi <= 78
+    rsi_zona_short = 22 <= rsi <= 60
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -577,59 +578,34 @@ def calcular_indicadores(candles):
 # (ver "Saída em 4 estágios" em notify.py/state.py, também V3).
 # ══════════════════════════════════════════════════════════════════════════════
 
-def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
-    """Classifica o sinal em OURO/PRATA/BRONZE/None pela CLASSIFICAÇÃO GAUSS+DNA
-    v5.0 (nome da função mantido por compatibilidade). OURO reativado (23/06)
-    — essencial pra sessão perigosa não virar bloqueio total (~12h/dia).
-    `ha4_bull`/`ha4_bear` (HA do H4) são opcionais — quando não vierem (None),
-    o piso de HA4 do BRONZE não bloqueia (chamador ainda não tem o dado), só
-    HA1 é exigido nesse caso.
+def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
+    """Classifica o sinal em OURO/PRATA/BRONZE/None pela configuração V3
+    PROFISSIONAL. MM200 obrigatório. HA, fluxo, sweep não são obrigatórios —
+    fluxo e sweep dão bônus de +10 cada ao score efetivo. H1 alinhado dá +8.
     """
     if not sinal:
-        return None
-    if ind.get("stoch_extremo"):   # 0.00/1.00 — bloqueio absoluto, sem exceção
         return None
     eh_long = sinal == "LONG"
     score_inst = ind["score_inst_long"] if eh_long else ind["score_inst_short"]
     rvol, adx = ind["rvol"], ind["adx"]
 
-    fluxo_ok    = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
-                  (ind["dna_flow_bear"] or ind["trendilo_short"])
-    mm200_ok    = ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]
-    liq_varrida = ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"]
-    dist_mm21   = abs(ind["preco"] - ind["e21"]) / ind["preco"] if ind["preco"] else 1.0
-    rsi_din     = ind["rsi_dinamico_long"] if eh_long else ind["rsi_dinamico_short"]
-    stoch_mom   = ind["stoch_momentum_long"] if eh_long else ind["stoch_momentum_short"]
-    seguro_alertas = ind["seguro_alertas_long"] if eh_long else ind["seguro_alertas_short"]
-    ha1_ok      = ind["ha_bull"] if eh_long else ind["ha_bear"]
-    vol_ok      = ind["vol_acima_media5"]
+    if not (ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]):
+        return None
 
-    # Tolerância de 1 miss (23/06, caso real DNUSDT): a cadeia original exigia
-    # TODOS os 8 fatores simultâneos — mesmo padrão de funil empilhado já
-    # documentado acima (V2→V3) e já corrigido uma vez hoje pra vol_secando
-    # (bloqueio binário → alerta leve). DN tinha score_inst=90 ELITE, ADX=47,
-    # RVOL=1.55 STRONG, fluxo confirmado, tendência baixa — e foi bloqueado
-    # sozinho por `rsi_din` (RSI=29 fora da janela 45-70). `mm200_ok` (alinhado
-    # com a tendência macro) continua absoluto — é a linha de risco que não se
-    # negocia (ver "Lógica institucional" no CLAUDE.md). Os outros 6 fatores
-    # (rsi_din, stoch_mom, fluxo_ok, liq_varrida, ha1_ok, vol_ok) agora toleram
-    # 1 miss — `seguro_alertas<=1` já é seu próprio sistema de tolerância.
-    _misses = sum([not rsi_din, not stoch_mom, not fluxo_ok, not liq_varrida,
-                   not ha1_ok, not vol_ok])
-    _base = (mm200_ok and seguro_alertas <= 1 and _misses <= 1)
+    fluxo_ok = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
+               (ind["dna_flow_bear"] or ind["trendilo_short"])
+    sweep_ok = ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"]
 
-    # OURO reativado — antes desabilitado por banca<$500, mas essencial porque
-    # sessão perigosa (22h-08h + 08h/13h UTC = ~50% do dia) exige OURO.
-    if (_base and score_inst >= 80 and rvol >= 1.3 and adx >= 22 and
-        dist_mm21 <= 0.03 and fluxo_ok and liq_varrida):
+    score_eff = score_inst
+    if fluxo_ok:   score_eff += BONUS_FLUXO
+    if sweep_ok:   score_eff += BONUS_SWEEP
+    if h1_aligned: score_eff += BONUS_H1
+
+    if score_eff >= SCORE_OURO and rvol >= RVOL_OURO and adx >= ADX_OURO:
         return "OURO"
-
-    if (_base and score_inst >= 75 and rvol >= 1.2 and adx >= 20 and dist_mm21 <= 0.03):
+    if score_eff >= SCORE_PRATA and adx >= ADX_PRATA:
         return "PRATA"
-
-    ha4_ok = True if (ha4_bull is None and ha4_bear is None) else \
-             (ha4_bull if eh_long else ha4_bear)
-    if (_base and ha4_ok and score_inst >= 65 and rvol >= 0.8 and adx >= 18):
+    if score_eff >= SCORE_BRONZE and adx >= ADX_SCOUT:
         return "BRONZE"
     return None
 

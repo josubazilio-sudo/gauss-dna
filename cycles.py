@@ -654,59 +654,17 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
             # OURO, nem PRATA nem BRONZE passam nesses horários.
             classificacao = result.get("classificacao")
             if classificacao not in ("OURO", "PRATA", "BRONZE"):
-                log.info(f"  🥉 {abrev} bloqueado — classificação V3 nenhuma")
+                log.info(f"  🥉 {abrev} bloqueado — classificação nenhuma")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "v3=none"))
                 _diag_pos_cascata("v3=none")
-                testes_enviados = await _tentar_sinal_teste(session, estado, sym, label, abrev,
-                                    result, tf, grade, "v3=none", agora, cooldown, cooldown_oposta, testes_enviados)
                 continue
             if (_sessao_perigosa or _abertura_falsa) and classificacao != "OURO":
                 log.info(f"  🌙 {abrev} bloqueado — sessão perigosa exige OURO (REGRA #3, tem {classificacao})")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], "sessao perigosa"))
                 _diag_pos_cascata(f"sessao perigosa exige OURO (tem {classificacao})")
-                testes_enviados = await _tentar_sinal_teste(session, estado, sym, label, abrev,
-                                    result, tf, grade, "sessao perigosa", agora, cooldown, cooldown_oposta, testes_enviados)
                 continue
-            if classificacao == "PRATA":
-                # H1 alinhado pro gate PRATA — em tf=="1h" o próprio result já é
-                # H1. Em 30m, busca H1 só pra este símbolo aqui (lazy — antes era
-                # prefetch de TODAS as moedas do ciclo, autorizado 22/06 a remover
-                # após caso real de HTTP 429 em excesso: a maioria das moedas nem
-                # chega até esta checagem, prefetch em massa desperdiçava chamada).
-                if tf == "1h":
-                    _h1_ok = result.get("alinhado_bull" if eh_long else "alinhado_bear", False)
-                else:
-                    h1c = await buscar_candles(session, sym, "1h")
-                    _r1h = calcular_indicadores(h1c) if h1c else None
-                    _h1_ok = _r1h.get("alinhado_bull" if eh_long else "alinhado_bear", False) if _r1h else False
-                if not _h1_ok:
-                    log.info(f"  🥈 {abrev} bloqueado — PRATA exige H1 alinhado")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], "prata sem H1"))
-                    _diag_pos_cascata("prata sem H1")
-                    testes_enviados = await _tentar_sinal_teste(session, estado, sym, label, abrev,
-                                        result, tf, grade, "prata sem H1", agora, cooldown, cooldown_oposta, testes_enviados)
-                    continue
-            if classificacao == "BRONZE":
-                # v5.0: confirmação MTF H1 é universal — sem o escape "OU Score
-                # Inst>=70" que a V3 permitia, BRONZE agora exige H1 alinhado
-                # sempre, igual PRATA.
-                if tf == "1h":
-                    _h1_ok = result.get("alinhado_bull" if eh_long else "alinhado_bear", False)
-                else:
-                    h1c = await buscar_candles(session, sym, "1h")
-                    _r1h = calcular_indicadores(h1c) if h1c else None
-                    _h1_ok = _r1h.get("alinhado_bull" if eh_long else "alinhado_bear", False) if _r1h else False
-                if not _h1_ok:
-                    log.info(f"  🥉 {abrev} bloqueado — BRONZE exige H1 alinhado")
-                    candidatos.append((abs(result["score"]), abrev, result["score"],
-                                       result["rsi"], result["adx"], "bronze sem H1"))
-                    _diag_pos_cascata("bronze sem H1")
-                    testes_enviados = await _tentar_sinal_teste(session, estado, sym, label, abrev,
-                                        result, tf, grade, "bronze sem H1", agora, cooldown, cooldown_oposta, testes_enviados)
-                    continue
 
             extra = {
                 "rvol_label":   result.get("rvol_label", ""),
@@ -953,38 +911,14 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
             classificacao_mtf = result.get("classificacao")
             if classificacao_mtf not in ("OURO", "PRATA", "BRONZE"):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"v3={classificacao_mtf or 'none'}"))
-                log.info(f"[MTF] {abrev:7s} | bloqueado — classificação V3 nenhuma")
+                log.info(f"[MTF] {abrev:7s} | bloqueado — classificação nenhuma")
                 _diag_pos_cascata(f"v3={classificacao_mtf or 'none'} (MTF)")
-                testes_enviados_mtf = await _tentar_sinal_teste(session, estado, sym, label, abrev,
-                                    result, "1h", grade, "v3=none", agora, cooldown_mtf, cooldown_mtf, testes_enviados_mtf)
                 continue
             if (_sessao_perigosa_mtf or _abertura_falsa_mtf) and classificacao_mtf != "OURO":
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "sessao perigosa"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — sessão perigosa exige OURO (tem {classificacao_mtf})")
                 _diag_pos_cascata(f"sessao perigosa exige OURO (tem {classificacao_mtf}) (MTF)")
-                testes_enviados_mtf = await _tentar_sinal_teste(session, estado, sym, label, abrev,
-                                    result, "1h", grade, "sessao perigosa", agora, cooldown_mtf, cooldown_mtf, testes_enviados_mtf)
                 continue
-            if classificacao_mtf == "PRATA":
-                _h1_ok_mtf = result.get("alinhado_bull") if eh_long_mtf else result.get("alinhado_bear")
-                if not _h1_ok_mtf:
-                    setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "prata sem H1"))
-                    log.info(f"[MTF] {abrev:7s} | bloqueado — PRATA exige H1 alinhado")
-                    _diag_pos_cascata("prata sem H1 (MTF)")
-                    testes_enviados_mtf = await _tentar_sinal_teste(session, estado, sym, label, abrev,
-                                        result, "1h", grade, "prata sem H1", agora, cooldown_mtf, cooldown_mtf, testes_enviados_mtf)
-                    continue
-            if classificacao_mtf == "BRONZE":
-                # v5.0: sem escape "OU Score Inst>=70" — H1 alinhado é exigido
-                # sempre, igual PRATA.
-                _h1_ok_mtf_b = result.get("alinhado_bull") if eh_long_mtf else result.get("alinhado_bear")
-                if not _h1_ok_mtf_b:
-                    setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "bronze sem H1"))
-                    log.info(f"[MTF] {abrev:7s} | bloqueado — BRONZE exige H1 alinhado")
-                    _diag_pos_cascata("bronze sem H1 (MTF)")
-                    testes_enviados_mtf = await _tentar_sinal_teste(session, estado, sym, label, abrev,
-                                        result, "1h", grade, "bronze sem H1", agora, cooldown_mtf, cooldown_mtf, testes_enviados_mtf)
-                    continue
 
             # AJUSTE INSTITUCIONAL ELITE (21/06): mesmo teto de posições simultâneas
             # e circuit breaker de stops consecutivos do ciclo FLEX, aplicado também

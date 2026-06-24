@@ -94,51 +94,30 @@ STOPS_CONSECUTIVOS_PAUSA = 3
 # 3: vol 80%, todas as defesas SMC ativas (padrão)
 FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
 
-# ── AJUSTE PROFISSIONAL (21/06) — qualidade acima de quantidade ──────────────
-# RVOL mínimo por timeframe (30M tende a ter RVOL mais baixo que H1 com o
-# mesmo grau de convicção real — piso diferenciado evita bloqueio excessivo).
-# 1h baixou de 0.80 pra 0.70 em 22/06 (CLASSIFICAÇÃO V4) — ver RVOL_MIN_EXEC
-# abaixo: precisa bater com o piso mais baixo dos 3 degraus (BRONZE=0.7),
-# senão o gate universal pré-classificação bloqueia BRONZE antes dele rodar.
-RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.70}
+# ── GAUSS+DNA V3 PROFISSIONAL (24/06) — configuração limpa do usuário ──────
+RVOL_MIN = 0.30
+RVOL_OURO = 1.50
 
-# Piso universal de força de tendência — aplicado a TODOS os tipos de sinal,
-# além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
-# GAUSS+DNA v5.0 (23/06) subiu de 15 pra 20 ("Bloquear LONG/SHORT: ADX<20" —
-# substitui a CLASSIFICAÇÃO INSTITUCIONAL V3/V4) — ver CLAUDE.md.
-ADX_MIN_GLOBAL = 18
+ADX_MIN = 12
+ADX_SCOUT = 15
+ADX_PRATA = 18
+ADX_OURO = 22
 
-# GRAUS_PERMITIDOS (gate por grade letra S+/S/A/B no modo padrão FLEX/ELITE)
-# foi REMOVIDO na V3 — auditoria de 3 runs reais seguidos mostrou zero sinais
-# enviados com o funil empilhado (grade + ADX_MIN_GLOBAL + RVOL_MIN_EXEC +
-# score_inst>=75 fixo), bloqueando até movimentos reais fortes (ALLO/GWEI/HUS).
-# A qualidade de entrada agora é gate da classificação OURO/PRATA/BRONZE (ver
-# CLASSIFICAÇÃO INSTITUCIONAL V3 em CLAUDE.md) — grade letra continua existindo
-# só para dimensionar risco (RISK_BY_GRADE), não bloqueia mais entrada.
+LATERAL_MAX_BARS = 15
 
-# Filtro de Execução V2 (autorizado 21/06 — caso real de 78% STOP em 24h, padrão
-# binário STOP-ou-TP2 sem nenhum TP1_BE, indicando problema de qualidade de
-# entrada). Camada final acima dos pisos por tipo de sinal já existentes (que
-# variam 35-60 — ver _inst_min em cycles.py) — "confiança" exibida no Telegram
-# é score_inst-10 (notify.py), então confiança>=65% equivale a score_inst>=75.
-# Reduz frequência (não é o "aumentar frequência" do V2 original do usuário —
-# essa parte foi descartada por contradizer este filtro, ver CLAUDE.md), mas
-# ataca diretamente a taxa de STOP ao exigir confluência institucional bem mais
-# alta pra qualquer sinal ser executado, independente do tipo.
-# ⚠️ SUPERSEDED 22/06 (V3) — INST_MIN_EXEC=75 forçava score_inst>=75 pra TODO
-# sinal, contradizendo a própria classificação V3 (BRONZE>=60, PRATA>=70), que
-# agora é o gate real de qualidade (ver classificar_v2() em analyze.py e as
-# REGRAS DE EXECUÇÃO em cycles.py). Constante mantida só por compatibilidade
-# de import (não é mais lida como piso bloqueante em cycles.py).
-INST_MIN_EXEC = 75
-# RVOL_MIN_EXEC: piso universal de RVOL — caiu de 1.2 pra 1.0 ("Bloquear LONG/
-# SHORT: RVOL<1.0" da CLASSIFICAÇÃO INSTITUCIONAL V3, autorizado 22/06).
-# Caiu de novo, 1.0→0.7, em 22/06 (CLASSIFICAÇÃO V4, tabela própria do usuário):
-# a V4 introduziu RVOL>=0.7 como piso explícito de BRONZE, mais baixo que o
-# piso universal antigo (1.0) — sem este ajuste, BRONZE nunca veria candidatos
-# com RVOL 0.7-1.0 (bloqueados aqui antes de chegar em classificar_v2()), o que
-# tornaria o afrouxamento de BRONZE pedido pelo usuário código morto na prática.
-RVOL_MIN_EXEC = 0.7
+RVOL_MIN_BY_TF = {"30m": 0.30, "1h": 0.30}
+ADX_MIN_GLOBAL = 12
+
+RVOL_MIN_EXEC = 0.30
+
+SCORE_BRONZE = 60
+SCORE_PRATA  = 70
+SCORE_OURO   = 80
+
+# Bônus (não obrigatórios, somam ao score se confirmados)
+BONUS_FLUXO  = 10
+BONUS_SWEEP  = 10
+BONUS_H1     = 8
 
 # Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
 # LONG e SHORT em todas as moedas até o regime mudar.
