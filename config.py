@@ -97,16 +97,19 @@ FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
 # ── AJUSTE PROFISSIONAL (21/06) — qualidade acima de quantidade ──────────────
 # RVOL mínimo por timeframe (30M tende a ter RVOL mais baixo que H1 com o
 # mesmo grau de convicção real — piso diferenciado evita bloqueio excessivo).
-# 1h baixou de 0.80 pra 0.70 em 22/06 (CLASSIFICAÇÃO V4) — ver RVOL_MIN_EXEC
-# abaixo: precisa bater com o piso mais baixo dos 3 degraus (BRONZE=0.7),
+# 1h baixou de 0.80 pra 0.70 em 22/06 (CLASSIFICAÇÃO V4) — depois pra 0.60 em
+# 24/06 (CONFIGURAÇÃO GAUSS+DNA V3, documento do usuário) — ver RVOL_MIN_EXEC
+# abaixo: precisa bater com o piso mais baixo dos 3 degraus (BRONZE=0.60),
 # senão o gate universal pré-classificação bloqueia BRONZE antes dele rodar.
-RVOL_MIN_BY_TF = {"30m": 0.70, "1h": 0.70}
+RVOL_MIN_BY_TF = {"30m": 0.60, "1h": 0.60}
 
 # Piso universal de força de tendência — aplicado a TODOS os tipos de sinal,
 # além do ADX próprio de cada condição em analyze.py (que pode ser mais alto).
 # GAUSS+DNA v5.0 (23/06) subiu de 15 pra 20 ("Bloquear LONG/SHORT: ADX<20" —
-# substitui a CLASSIFICAÇÃO INSTITUCIONAL V3/V4) — ver CLAUDE.md.
-ADX_MIN_GLOBAL = 18
+# substitui a CLASSIFICAÇÃO INSTITUCIONAL V3/V4) — caiu pra 15 em 24/06
+# (CONFIGURAÇÃO GAUSS+DNA V3, documento do usuário, alinhado ao novo piso de
+# BRONZE) — ver CLAUDE.md.
+ADX_MIN_GLOBAL = 15
 
 # GRAUS_PERMITIDOS (gate por grade letra S+/S/A/B no modo padrão FLEX/ELITE)
 # foi REMOVIDO na V3 — auditoria de 3 runs reais seguidos mostrou zero sinais
@@ -133,12 +136,12 @@ ADX_MIN_GLOBAL = 18
 INST_MIN_EXEC = 75
 # RVOL_MIN_EXEC: piso universal de RVOL — caiu de 1.2 pra 1.0 ("Bloquear LONG/
 # SHORT: RVOL<1.0" da CLASSIFICAÇÃO INSTITUCIONAL V3, autorizado 22/06).
-# Caiu de novo, 1.0→0.7, em 22/06 (CLASSIFICAÇÃO V4, tabela própria do usuário):
-# a V4 introduziu RVOL>=0.7 como piso explícito de BRONZE, mais baixo que o
-# piso universal antigo (1.0) — sem este ajuste, BRONZE nunca veria candidatos
-# com RVOL 0.7-1.0 (bloqueados aqui antes de chegar em classificar_v2()), o que
-# tornaria o afrouxamento de BRONZE pedido pelo usuário código morto na prática.
-RVOL_MIN_EXEC = 0.7
+# Caiu de novo, 1.0→0.7, em 22/06 (CLASSIFICAÇÃO V4, tabela própria do usuário).
+# Caiu de novo, 0.7→0.60, em 24/06 (CONFIGURAÇÃO GAUSS+DNA V3, documento do
+# usuário): BRONZE agora exige RVOL>=0.60 — mesmo motivo das vezes anteriores,
+# sem este ajuste o piso universal bloquearia candidatos 0.60-0.70 antes de
+# `classificar_v2()` rodar, tornando o afrouxamento de BRONZE código morto.
+RVOL_MIN_EXEC = 0.60
 
 # Filtro de Regime Global — BTC H1 neutro (sem direção clara) bloqueia
 # LONG e SHORT em todas as moedas até o regime mudar.

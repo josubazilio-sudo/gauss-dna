@@ -100,26 +100,40 @@ O bot só envia 2 tipos de mensagem ao Telegram a partir de agora:
 
 ## REGRA #1 — RSI: ZONA DE ENTRADA (PRIORIDADE MÁXIMA)
 
-**Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.**
+⚠️ **SUPERSEDED 24/06** — substituída pela janela da CONFIGURAÇÃO GAUSS+DNA V3 (ver seção dedicada mais
+abaixo) por pedido explícito do usuário ("faça exatamente do jeito que mandei esqueca substitua regra
+faça isto funcionar" — REGRA #-1, vontade atual prevalece sobre regra antiga documentada). Mantida aqui
+só como registro histórico do que existiu entre 15/06 e 24/06.
+
+**Nunca remover, relaxar ou criar exceções sem autorização explícita do usuário.** *(válido enquanto
+vigorou — a V3 abaixo é a autorização explícita que supersede isso)*
 
 ### LONG (compra):
-- RSI deve ser **< 75** no momento do sinal *(FLEX PRO — autorizado 15/06)*
+- RSI deve ser **< 75** no momento do sinal *(FLEX PRO — autorizado 15/06, superseded 24/06 → ver V3)*
 - Objetivo: bloquear apenas extremo sobrecomprado (>75), permite entradas em tendência 55-74
 
 ### SHORT (venda):
-- RSI deve ser **> 25** no momento do sinal *(FLEX PRO — autorizado 15/06)*
+- RSI deve ser **> 25** no momento do sinal *(FLEX PRO — autorizado 15/06, superseded 24/06 → ver V3)*
 - Objetivo: bloquear apenas extremo sobrevendido (<25), permite entradas em correção 26-40
 
-### Aplicação:
+### Aplicação (histórica):
 - Válido para **TODOS** os tipos de sinal: SCOUT, FLEX, BB_BREAK, PULLBACK, CROSS, SM_SWEEP, DIV, SETUP
 - REVERSAL, SURGE, MOMENTUM, REBOUND não usam `rsi_zona` — têm janela de RSI própria embutida na condição do sinal
 - Implementado em `analyze.py` como `rsi_zona_long` e `rsi_zona_short`
 
 ```python
-# analyze.py — FLEX PRO 15/06 (bloqueia apenas extremos absolutos)
+# analyze.py — FLEX PRO 15/06 (bloqueava apenas extremos absolutos) — SUPERSEDED 24/06
 rsi_zona_long  = rsi < 75
 rsi_zona_short = rsi > 25
 ```
+
+### Estado atual (24/06)
+```python
+# analyze.py — CONFIGURAÇÃO V3 (24/06)
+rsi_zona_long  = 40 <= rsi <= 80
+rsi_zona_short = 20 <= rsi <= 60
+```
+Continua valendo pros mesmos sinais da lista de "Aplicação" acima — só a janela numérica mudou.
 
 ---
 
@@ -1567,3 +1581,131 @@ próximo tick de cron.
 ### O que NÃO foi tocado
 `vol_secando`/`exaustao_topo` (já convertidos em alerta leve), `stoch_esticado_up/down`, REGRA #1, REGRA
 #5, `classificar_v2()` (fix da rodada anterior, ainda sem amostra suficiente pra validar), gestão.
+
+---
+
+## CONFIGURAÇÃO GAUSS+DNA V3 — DOCUMENTO COMPLETO DO USUÁRIO (autorizado 24/06)
+
+Usuário trouxe um documento próprio ("CONFIGURAÇÃO GAUSS+DNA V3 — OTIMIZADA PARA GERAR MAIS SINAIS SEM
+DESTRUIR A QUALIDADE") pedindo uma rodada ampla de afrouxamento/reestruturação, com meta declarada de
+3-10 sinais/dia, winrate 45-55%, R médio +0.20 a +0.60, Profit Factor 1.30-2.00. Diferente das rodadas
+anteriores (sempre 1 variável isolada com caso real de log), este documento foi aplicado **por instrução
+direta do usuário de seguir o documento como veio**, não por auditoria de log isolado — duas perguntas
+genuinamente ambíguas foram levantadas via `AskUserQuestion` antes de aplicar:
+
+1. **RSI**: o documento pede LONG 40-80 / SHORT 20-60, range bem mais largo que a REGRA #1 (75/25) então
+   pergunta era se isso *substituía* a REGRA #1 ou seria uma camada adicional. Resposta do usuário, verbatim:
+   **"faça exatamente do jeito que mandei esqueca substitua regra faça isto funcionar"** — substituição
+   direta, sem preservar o comportamento antigo (REGRA #-1: vontade atual prevalece).
+2. **HA/Fluxo/Liquidez por tier**: o documento pede que esses 3 fatores deixem de ser "tolerância
+   compartilhada" (pool de misses) e passem a ser regra absoluta por tier (OURO exige os 3, PRATA exige
+   HA-ou-MACD, BRONZE ignora). Resposta do usuário: sem preferência — interpretado como seguir a
+   reestruturação literal do documento.
+
+### RSI — substitui REGRA #1 (`analyze.py`)
+```python
+rsi_zona_long  = 40 <= rsi <= 80
+rsi_zona_short = 20 <= rsi <= 60
+```
+Era `rsi < 75` / `rsi > 25` (FLEX PRO, 15/06) — ver seção REGRA #1 acima, marcada SUPERSEDED. Vale pros
+mesmos sinais que já usavam `rsi_zona_long/short` (lista intocada, ver "Aplicação" na REGRA #1).
+
+### `classificar_v2()` reestruturada — HA/Fluxo/Liquidez absolutos por tier (`analyze.py`)
+Antes (V4, 23/06): HA1/Fluxo/Liquidez faziam parte de um pool de 6 fatores com tolerância de até 2 misses
+(`rsi_din`, `stoch_mom`, `fluxo_ok`, `liq_varrida`, `ha1_ok`, `vol_ok`). Agora, por pedido do documento:
+- 🥇 **OURO**: `score_inst>=80` + `RVOL>=1.20` + `ADX>=22` + `dist_mm21<=3%` + **Fluxo obrigatório** +
+  **HA obrigatório** + **Liquidez varrida obrigatória** (`liq_fundo_12`/`liq_topo_12`) — todos absolutos,
+  sem tolerância.
+- 🥈 **PRATA**: `score_inst>=75` + `RVOL>=0.80` + `ADX>=18` + **HA-ou-MACD** (basta um dos dois, não exige
+  os 2 juntos) — Fluxo e Liquidez deixam de ser checados.
+- 🥉 **BRONZE**: `score_inst>=65` + `RVOL>=0.60` + `ADX>=15` + **só MACD confirmado** — HA/Fluxo/Liquidez
+  ignorados por completo. Ganhou também um piso de HA4 (H4) opcional: se o chamador passar `ha4_bull`/
+  `ha4_bear` (já existia em `analisar()`, parâmetro opcional), BRONZE exige o HA do H4 alinhado; se não
+  vier (`None`), não bloqueia (mesma filosofia "sem dado, não bloqueia" do resto do sistema).
+- O pool de tolerância que resta (`rsi_din`, `stoch_mom`, `vol_ok` — 3 fatores, não citados no documento)
+  caiu de tolerância 2 pra 1 miss, mantendo a mesma proporção (~1/3) que já existia. `mm200_ok` continua
+  **absoluto**, sem tolerância (linha de risco, ver seção "Lógica Institucional"). `stoch_extremo`
+  (0.00/1.00) continua bloqueio absoluto, intocado.
+- **Diagnóstico ampliado**: quando devolve `None`, o log agora também expõe misses de `fluxo`, `ha1`,
+  `liq_varrida`, `macd` (além de `rsi_din`/`stoch_mom`/`vol`/`mm200`/`alertas`/`score_inst`/`rvol`/`adx`/
+  `dist_mm21` que já existiam desde 24/06) — pra apontar exatamente qual fator tier-específico travou,
+  sem precisar de nova auditoria de log inteiro.
+
+### Pisos universais alinhados (`config.py`) — mesmo padrão de alinhamento já documentado na V4
+`RVOL_MIN_BY_TF` (`0.70/0.70`→`0.60/0.60`), `RVOL_MIN_EXEC` (`0.7`→`0.60`), `ADX_MIN_GLOBAL` (`18`→`15`) —
+alinhados ao novo piso do degrau BRONZE (RVOL≥0.60, ADX≥15), senão o único afrouxamento real da tabela
+ficaria como código morto (mesmo problema já corrigido uma vez na CLASSIFICAÇÃO V4, 22/06): nenhum
+candidato com RVOL/ADX entre o piso antigo e o novo piso de BRONZE chegaria a `classificar_v2()`.
+
+### "ADX obrigatoriamente subindo" → "ADX > Média ADX" (`analyze.py` + `cycles.py`)
+O documento pede substituir o bloqueio binário de ADX subindo estritamente por uma comparação com a
+própria média recente (tolera ADX estável/oscilando). Implementado como campos novos em `analyze.py`:
+```python
+"adx_media3": (adx_p + adx_p2 + adx_p3) / 3,
+"adx_acima_media": adx > (adx_p + adx_p2 + adx_p3) / 3,
+```
+**Achado paralelo durante a implementação**: o bloqueio binário antigo (`adx_caindo_3`, baseado em
+`cycles.py` checando `result.get("adx_caindo_3")`) nunca teve efeito real — `analyze.py:analisar()` nunca
+propagava `adx_caindo_3` do dict interno `ind` pro dict final devolvido, então `result.get(...)` em
+`cycles.py` sempre devolvia `None`/falsy. Era código morto desde que foi escrito, mesmo padrão de bug já
+documentado outras vezes nesta sessão (ex: `RVOL_MIN_EXEC` desalinhado na V4). Corrigido ao implementar o
+substituto: `adx_acima_media`/`adx_media3` **são** propagados corretamente no dict final de `analisar()`
+(`analyze.py`, bloco de retorno), e `cycles.py` (`executar_ciclo()` e `executar_ciclo_mtf()`, os dois
+pontos que tinham o bloqueio antigo) agora checam `result.get("adx_acima_media", True)` em vez do campo
+morto antigo.
+
+### Novo — FILTRO DE VOLATILIDADE / FILTRO ANTI-STOP (ATR vs própria média)
+Documento pede bloquear entrada quando o ATR atual estiver comprimido demais frente à própria média
+recente (stop/TP calculados em múltiplos desse ATR ficariam apertados demais pro movimento real — risco
+de stop por compressão, não por estrutura). Implementado em `analyze.py` (`calcular_indicadores()`):
+```python
+atr_media14    = sum(atr_arr[-14:]) / len(atr_arr[-14:])
+atr_vol_ok     = atr >= atr_media14 * 0.90
+```
+Propagado no dict final e checado como novo gate universal em `cycles.py` (`executar_ciclo()` e
+`executar_ciclo_mtf()`, logo após o gate de RVOL): bloqueia com motivo `"atr<media90"`/`"atr comprimido
+(V3)"` quando `atr_vol_ok` é falso. A sub-cláusula vaga do documento ("Spread ATR muito baixo", sem
+definição objetiva no texto) foi tratada como redundante com este mesmo check — não foi inventada uma
+métrica nova separada pra ela, seguindo a convenção da sessão de nunca inventar fórmula "no escuro" pra
+algo indefinido.
+
+### FILTRO BTC H4 — reescrito pra lógica literal do documento (`cycles.py`, `executar_ciclo_mtf()`)
+Antes: proxy via RSI (`<45`/`>55`) + buffer de 2% na comparação com a MM200 (`btc_e200*0.98/1.02`).
+Documento pede literalmente: bloquear LONG só quando **3 condições batem juntas** — "BTC H4 abaixo MM200
+E MM21 abaixo MM50 E Fluxo BTC negativo" (espelho pra SHORT). Reescrito:
+```python
+btc_ind  = calcular_indicadores(btc_candles)
+btc_fluxo_pos = btc_ind["dna_flow_bull"] or btc_ind["trendilo_long"]
+btc_fluxo_neg = btc_ind["dna_flow_bear"] or btc_ind["trendilo_short"]
+btc_bull = btc_p > btc_e200 and btc_e21 > btc_e50 and btc_fluxo_pos
+btc_bear = btc_p < btc_e200 and btc_e21 < btc_e50 and btc_fluxo_neg
+```
+"Fluxo BTC" passou a usar o mesmo `dna_flow`/`trendilo` já calculado pra qualquer ativo (via
+`calcular_indicadores(btc_candles)` completo), não mais um proxy de RSI. O buffer de 2% foi removido —
+raciocínio: sem buffer, `btc_bull`/`btc_bear` ficam **mais difíceis** de ficar verdadeiros (exigem cruzar
+a MM200 sem margem de tolerância), o que **reduz** a frequência com que o sinal real na direção oposta é
+bloqueado — alinhado ao objetivo do documento de mais sinais, não menos. `serie_ema`/`calcular_rsi`
+(usados só pelo cálculo manual antigo) ficaram sem nenhum call site em `cycles.py` — removidos do import
+(`from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi` → sem os 2
+últimos). O bloco consumidor (decide bloquear LONG/SHORT a partir de `btc_bull`/`btc_bear`/`btc_rsi_*`)
+não foi alterado, só a forma como essas variáveis são calculadas.
+
+### Mercado lateral — confirmado já equivalente, não tocado
+Documento pede lateral só quando "ADX<15 E BB Width abaixo da média" — `analyze.py` já tinha
+`lateralizado = bb_squeeze and adx < 15` com `bb_squeeze = bb_bw < bb_bw_p * 0.95` (BB width atual abaixo
+do período anterior, proxy equivalente de "abaixo da média/referência recente"). Avaliado como já
+satisfazendo a intenção do documento — não alterado pra evitar reescrever algo que já funciona igual.
+
+### O que NÃO foi tocado
+- `vol_secando`/`exaustao_topo` (já convertidos em alerta leve, não em escopo deste documento)
+- REGRA #5 (defesas SMC), `stoch_esticado_up/down`, `rsi_nao_topo` (fix do dia anterior)
+- Stop/TP/leverage/lote (gestão), v5.0, modo `SIGNAL_MODE=="INSTITUCIONAL"` (piso próprio, separado)
+- `_btc_h1_regime_neutro()` (filtro de regime H1, função separada do filtro macro H4 reescrito aqui — já
+  usa `calcular_indicadores()`, não dependia de `serie_ema`/`calcular_rsi`)
+
+### Validação
+Sintaxe validada (`ast.parse`) nos 3 arquivos tocados (`analyze.py`, `config.py`, `cycles.py`) antes do
+commit. Validar com o próximo run real se a combinação de mudanças (RSI mais largo + tiers reestruturados
++ pisos alinhados + ADX/ATR/BTC H4 mais permissivos) produz sinal real — e se o novo log `[V3=None]
+misses=[...]` (agora incluindo fluxo/ha1/liq_varrida/macd) aponta um fator tier-específico ainda
+dominante, esse é o próximo ajuste cirúrgico, não mais um chute.

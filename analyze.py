@@ -47,6 +47,13 @@ def calcular_indicadores(candles):
     # ATR
     atr_arr = serie_atr(candles, 14)
     atr     = max(atr_arr[-1], 1e-10)
+    # CONFIGURAÇÃO V3 (24/06, documento do usuário) — "FILTRO DE VOLATILIDADE":
+    # bloqueia entrada se o ATR atual estiver fraco demais frente à própria
+    # média recente (mercado comprimido demais pra sustentar o stop/TP calculado
+    # em múltiplos desse mesmo ATR — risco de stop apertado por compressão, não
+    # por estrutura real). Média simples das últimas 14 leituras de ATR.
+    atr_media14    = sum(atr_arr[-14:]) / len(atr_arr[-14:])
+    atr_vol_ok     = atr >= atr_media14 * 0.90
 
     # Kalman (spread crescendo = momentum se fortalecendo)
     ks = filtro_kalman(fechamentos, 50)
@@ -406,9 +413,11 @@ def calcular_indicadores(candles):
     rsi_nao_chasing_long  = (rsi - rsi_ant) < 18
     rsi_nao_chasing_short = (rsi_ant - rsi) < 18
 
-    # RSI zona de entrada — FLEX PRO 15/06 (CLAUDE.md REGRA #1): bloqueia só extremos absolutos
-    rsi_zona_long  = rsi < 75
-    rsi_zona_short = rsi > 25
+    # RSI zona de entrada — CONFIGURAÇÃO V3 (24/06, substitui REGRA #1/"FLEX PRO" 15/06
+    # por pedido explícito do usuário: "faça exatamente do jeito que mandei esqueca
+    # substitua regra faça isto funcionar"). Janela em vez de teto/piso único.
+    rsi_zona_long  = 40 <= rsi <= 80
+    rsi_zona_short = 20 <= rsi <= 60
 
     # SURGE
     candle_bull_pct = (preco - aberturas[-1]) / max(aberturas[-1], 1e-10)
@@ -477,6 +486,7 @@ def calcular_indicadores(candles):
     return {
         # Preço e estrutura
         "preco": preco, "atr": atr, "score": score, "rsi": rsi, "adx": adx,
+        "atr_media14": atr_media14, "atr_vol_ok": atr_vol_ok,
         "swing_low": swing_low, "swing_high": swing_high,
         "estrutura_alta": estrutura_alta, "estrutura_baixa": estrutura_baixa,
         # Tendência
@@ -518,6 +528,12 @@ def calcular_indicadores(candles):
         "adx_p": adx_p, "adx_subindo": adx > adx_p,
         "adx_p2": adx_p2, "adx_p3": adx_p3,
         "adx_caindo_3": adx < adx_p < adx_p2 < adx_p3,
+        # CONFIGURAÇÃO V3 (24/06, documento do usuário): substitui o bloqueio
+        # binário "ADX obrigatoriamente subindo" (adx_caindo_3 acima, removido
+        # de cycles.py) por "ADX > Média ADX" — média simples dos 3 períodos
+        # anteriores, tolera ADX estável/oscilando sem exigir subida estrita.
+        "adx_media3": (adx_p + adx_p2 + adx_p3) / 3,
+        "adx_acima_media": adx > (adx_p + adx_p2 + adx_p3) / 3,
         # Volume
         "rvol": rvol, "rvol_tier": rvol_tier, "rvol_tier_max2": rvol_tier_max2, "rvol_label": rvol_label,
         "v_bom": v_bom, "v_forte": v_forte, "v_inst": v_inst, "v_forte2": v_forte2,
@@ -593,12 +609,14 @@ def calcular_indicadores(candles):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
-    """Classifica o sinal em OURO/PRATA/BRONZE/None pela CLASSIFICAÇÃO GAUSS+DNA
-    v5.0 (nome da função mantido por compatibilidade). OURO reativado (23/06)
-    — essencial pra sessão perigosa não virar bloqueio total (~12h/dia).
+    """Classifica o sinal em OURO/PRATA/BRONZE/None. Nome da função mantido por
+    compatibilidade (já passou por v5.0/V3/V4 internas, ver histórico no
+    CLAUDE.md) — versão atual é a "CONFIGURAÇÃO GAUSS+DNA V3" (24/06, documento
+    do usuário, não confundir com a "CLASSIFICAÇÃO INSTITUCIONAL V3" de 22/06
+    que só mudava pisos numéricos): HA/Fluxo/Liquidez deixam de ser um pool de
+    tolerância compartilhado e passam a ser regra absoluta por tier.
     `ha4_bull`/`ha4_bear` (HA do H4) são opcionais — quando não vierem (None),
-    o piso de HA4 do BRONZE não bloqueia (chamador ainda não tem o dado), só
-    HA1 é exigido nesse caso.
+    o piso de HA4 do BRONZE não bloqueia (chamador ainda não tem o dado).
     """
     if not sinal:
         return None
@@ -618,39 +636,38 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None):
     seguro_alertas = ind["seguro_alertas_long"] if eh_long else ind["seguro_alertas_short"]
     ha1_ok      = ind["ha_bull"] if eh_long else ind["ha_bear"]
     vol_ok      = ind["vol_acima_media5"]
+    macd_ok     = ind["macd_bull_r"] if eh_long else ind["macd_bear_r"]
 
-    # Tolerância de 2 misses (24/06 — auditoria de 3 dias sem sinal real: 14 runs
-    # completos, ZERO sinais reais, 39 ocorrências de "classificação V3 nenhuma"
-    # vs só 13 de "MM200 V3" — confirma que o funil empilhado do próprio `_base`,
-    # não o gate de H1 pós-classificação, é o bloqueador dominante hoje). Subiu
-    # de 1 miss (23/06, caso DNUSDT) pra 2 — mesmo padrão incremental já usado,
-    # mesmos 6 fatores secundários. `mm200_ok` continua absoluto (linha de risco,
-    # ver "Lógica institucional" no CLAUDE.md) — só a tolerância dos outros 6
-    # subiu, nada de novo permitido passar contra a tendência macro.
-    _misses = sum([not rsi_din, not stoch_mom, not fluxo_ok, not liq_varrida,
-                   not ha1_ok, not vol_ok])
-    _base = (mm200_ok and seguro_alertas <= 1 and _misses <= 2)
+    # CONFIGURAÇÃO V3 (24/06): HA/Fluxo/Liquidez saem do pool de tolerância e
+    # viram regra absoluta por tier (ver condições OURO/PRATA/BRONZE abaixo).
+    # `mm200_ok` continua absoluto (linha de risco, "Lógica institucional" no
+    # CLAUDE.md). O pool de tolerância (rsi_din/stoch_mom/vol_ok — não citados
+    # no documento do usuário, mantidos como antes) cai de 6 pra 3 fatores;
+    # tolerância ajustada de 2 pra 1 miss pra manter a mesma proporção (~1/3).
+    _misses = sum([not rsi_din, not stoch_mom, not vol_ok])
+    _base = (mm200_ok and seguro_alertas <= 1 and _misses <= 1)
 
-    # OURO reativado — antes desabilitado por banca<$500, mas essencial porque
-    # sessão perigosa (22h-08h + 08h/13h UTC = ~50% do dia) exige OURO.
-    if (_base and score_inst >= 80 and rvol >= 1.3 and adx >= 22 and
-        dist_mm21 <= 0.03 and fluxo_ok and liq_varrida):
+    # OURO: Fluxo + HA + Liquidez todos obrigatórios (absolutos, sem tolerância).
+    if (_base and score_inst >= 80 and rvol >= 1.20 and adx >= 22 and
+        dist_mm21 <= 0.03 and fluxo_ok and ha1_ok and liq_varrida):
         return "OURO"
 
-    if (_base and score_inst >= 75 and rvol >= 1.2 and adx >= 20 and dist_mm21 <= 0.03):
+    # PRATA: HA-ou-MACD confirmado (não exige os 2 juntos, nem Fluxo/Liquidez).
+    if (_base and score_inst >= 75 and rvol >= 0.80 and adx >= 18 and
+        (ha1_ok or macd_ok)):
         return "PRATA"
 
+    # BRONZE: só MACD confirmado — HA/Fluxo/Liquidez ignorados por completo.
     ha4_ok = True if (ha4_bull is None and ha4_bear is None) else \
              (ha4_bull if eh_long else ha4_bear)
-    if (_base and ha4_ok and score_inst >= 65 and rvol >= 0.8 and adx >= 18):
+    if (_base and ha4_ok and score_inst >= 65 and rvol >= 0.60 and adx >= 15 and macd_ok):
         return "BRONZE"
 
-    # Diagnóstico real (24/06) — antes "classificação V3 nenhuma" não dizia POR
-    # QUE, obrigando reauditoria completa de log a cada vez. Agora expõe os
-    # fatores exatos pro próximo diagnóstico, sem precisar adivinhar de novo.
+    # Diagnóstico real — expõe os fatores exatos pro próximo diagnóstico.
     _miss_names = [n for n, v in [("rsi_din", rsi_din), ("stoch_mom", stoch_mom),
-                                   ("fluxo", fluxo_ok), ("liq_varrida", liq_varrida),
-                                   ("ha1", ha1_ok), ("vol", vol_ok)] if not v]
+                                   ("vol", vol_ok), ("fluxo", fluxo_ok),
+                                   ("ha1", ha1_ok), ("liq_varrida", liq_varrida),
+                                   ("macd", macd_ok)] if not v]
     log.info(f"  [V3=None] mm200={mm200_ok} alertas={seguro_alertas} misses={_miss_names} "
              f"score_inst={score_inst:.0f} rvol={rvol:.2f} adx={adx:.1f} dist_mm21={dist_mm21*100:.1f}%")
     return None
@@ -1205,6 +1222,10 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
         "alinhado_bull":  ind["alinhado_bull"],
         "alinhado_bear":  ind["alinhado_bear"],
         "adx_subindo":    ind["adx_subindo"],
+        "adx_acima_media": ind["adx_acima_media"],
+        "adx_media3":      ind["adx_media3"],
+        "atr_vol_ok":      ind["atr_vol_ok"],
+        "atr_media14":     ind["atr_media14"],
         "e21":            ind["e21"],
         "e50":            ind["e50"],
         "bb_expand":      ind["bb_expand"],

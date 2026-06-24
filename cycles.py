@@ -24,7 +24,7 @@ from config import (
     TESTE_RESULTS_FILE, MAX_SINAIS_TESTE_POR_CICLO,
 )
 from coins import COINS, PRIORITY_WATCHLIST
-from indicators import tf_para_minutos, segundos_ate_fechamento, serie_ema, calcular_rsi
+from indicators import tf_para_minutos, segundos_ate_fechamento
 from analyze import analisar, calcular_indicadores
 from notify import enviar_sinal, notificar
 from scanner import buscar_candles, escanear_melhores_moedas, _prefetch_lote, buscar_contract_data, buscar_preco_atual
@@ -532,11 +532,15 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                                    result["rsi"], result["adx"], f"adx<{ADX_MIN_GLOBAL}"))
                 _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global)")
                 continue
-            if result.get("adx_caindo_3"):
-                log.info(f"  ⚠️ {abrev} bloqueado — ADX caindo 3+ períodos (v5.0)")
+            # CONFIGURAÇÃO V3 (24/06): "ADX obrigatoriamente subindo" (adx_caindo_3,
+            # bloqueio binário) substituído por "ADX > Média ADX" (documento do
+            # usuário) — tolera ADX estável/oscilando, só bloqueia se estiver
+            # genuinamente abaixo da própria média recente.
+            if not result.get("adx_acima_media", True):
+                log.info(f"  ⚠️ {abrev} bloqueado — ADX {result['adx']:.1f} < média {result.get('adx_media3', 0):.1f} (V3)")
                 candidatos.append((abs(result["score"]), abrev, result["score"],
-                                   result["rsi"], result["adx"], "adx_caindo_3"))
-                _diag_pos_cascata("adx caindo 3+ periodos")
+                                   result["rsi"], result["adx"], "adx<media"))
+                _diag_pos_cascata("adx<media (V3)")
                 continue
             _rvol_min_tf = max(RVOL_MIN_BY_TF.get(tf, 0.80), RVOL_MIN_EXEC)
             if result.get("rvol", 1.0) < _rvol_min_tf:
@@ -544,6 +548,16 @@ async def executar_ciclo(session, estado, tf, moedas, btc_neutro=False):
                 candidatos.append((abs(result["score"]), abrev, result["score"],
                                    result["rsi"], result["adx"], f"rvol<{_rvol_min_tf}"))
                 _diag_pos_cascata(f"rvol<{_rvol_min_tf} ({tf})")
+                continue
+            # CONFIGURAÇÃO V3 (24/06) — "FILTRO DE VOLATILIDADE"/"FILTRO ANTI-STOP"
+            # do documento do usuário: bloqueia se o ATR atual estiver comprimido
+            # demais frente à própria média recente (stop/TP calculados em
+            # múltiplos desse ATR ficariam apertados demais pro movimento real).
+            if not result.get("atr_vol_ok", True):
+                log.info(f"  ⚠️ {abrev} bloqueado — ATR comprimido < 90% da média (V3)")
+                candidatos.append((abs(result["score"]), abrev, result["score"],
+                                   result["rsi"], result["adx"], "atr<media90"))
+                _diag_pos_cascata("atr comprimido (V3)")
                 continue
 
             # CLASSIFICAÇÃO INSTITUCIONAL V3 (autorizado 22/06 — substitui a V2).
@@ -798,17 +812,24 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
     setups_h4 = []
     testes_enviados_mtf = 0   # estratégia de teste paralela (autorizado 23/06)
 
-    # Filtro BTC macro em H4
+    # Filtro BTC macro em H4 — CONFIGURAÇÃO V3 (24/06, documento do usuário):
+    # só bloqueia LONG quando os 3 batem juntos — "BTC H4 abaixo MM200 E MM21
+    # abaixo MM50 E Fluxo BTC negativo" (espelho pra bloquear SHORT) — sem o
+    # buffer de 2% que existia antes (btc_e200*0.98/1.02), que tornava o
+    # bloqueio mais fácil de disparar (contrário ao objetivo de mais sinais).
+    # Fluxo BTC usa o mesmo dna_flow/trendilo já calculado pra qualquer ativo
+    # (calcular_indicadores), não mais um proxy de RSI<45/>55.
     btc_bull = btc_bear = btc_rsi_quente = btc_rsi_panico = btc_rsi_oversold = False
     btc_rsi  = 50; btc_p = 0
     btc_candles = await buscar_candles(session, "BTCUSDT", "4h")
     if btc_candles and len(btc_candles) >= 50:
-        btc_c   = [c["c"] for c in btc_candles]
-        btc_e21 = serie_ema(btc_c, 21)[-1]; btc_e50 = serie_ema(btc_c, 50)[-1]
-        btc_e200 = serie_ema(btc_c, 200)[-1]; btc_p = btc_c[-1]
-        btc_rsi  = calcular_rsi(btc_c[-50:])
-        btc_bull = btc_p > btc_e21 > btc_e50 and btc_p > btc_e200 * 0.98
-        btc_bear = btc_p < btc_e21 < btc_e50 and btc_p < btc_e200 * 1.02 and btc_rsi < 45
+        btc_ind  = calcular_indicadores(btc_candles)
+        btc_p    = btc_ind["preco"]; btc_rsi = btc_ind["rsi"]
+        btc_e21  = btc_ind["e21"]; btc_e50 = btc_ind["e50"]; btc_e200 = btc_ind["e200"]
+        btc_fluxo_pos = btc_ind["dna_flow_bull"] or btc_ind["trendilo_long"]
+        btc_fluxo_neg = btc_ind["dna_flow_bear"] or btc_ind["trendilo_short"]
+        btc_bull = btc_p > btc_e200 and btc_e21 > btc_e50 and btc_fluxo_pos
+        btc_bear = btc_p < btc_e200 and btc_e21 < btc_e50 and btc_fluxo_neg
         btc_rsi_quente   = btc_rsi > 72
         btc_rsi_panico   = btc_rsi < 28   # extremo — bloqueia SHORT
         btc_rsi_oversold = btc_rsi < 35   # sobrevendido — libera LONG de força relativa
@@ -911,10 +932,12 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < piso global {ADX_MIN_GLOBAL}")
                 _diag_pos_cascata(f"adx<{ADX_MIN_GLOBAL} (piso global, MTF)")
                 continue
-            if result.get("adx_caindo_3"):
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "adx_caindo_3"))
-                log.info(f"[MTF] {abrev:7s} | bloqueado — ADX caindo 3+ períodos (v5.0)")
-                _diag_pos_cascata("adx caindo 3+ periodos (MTF)")
+            # CONFIGURAÇÃO V3 (24/06): mesma substituição do ciclo FLEX acima —
+            # "ADX > Média ADX" no lugar do bloqueio binário de ADX caindo.
+            if not result.get("adx_acima_media", True):
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "adx<media"))
+                log.info(f"[MTF] {abrev:7s} | bloqueado — ADX {result['adx']:.1f} < média {result.get('adx_media3', 0):.1f} (V3)")
+                _diag_pos_cascata("adx<media (V3, MTF)")
                 continue
             _rvol_mtf = result.get("rvol", 1.0)
             _rvol_min_mtf = max(RVOL_MIN_BY_TF.get("1h", 0.80), RVOL_MIN_EXEC)
@@ -922,6 +945,12 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_neutro=False):
                 setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, f"rvol<{_rvol_min_mtf}"))
                 log.info(f"[MTF] {abrev:7s} | bloqueado — RVOL {_rvol_mtf:.2f} < {_rvol_min_mtf}")
                 _diag_pos_cascata(f"rvol<{_rvol_min_mtf} (1h MTF)")
+                continue
+            # CONFIGURAÇÃO V3 (24/06): mesmo filtro de volatilidade do ciclo FLEX.
+            if not result.get("atr_vol_ok", True):
+                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "atr<media90"))
+                log.info(f"[MTF] {abrev:7s} | bloqueado — ATR comprimido < 90% da média (V3)")
+                _diag_pos_cascata("atr comprimido (V3, MTF)")
                 continue
 
             # CLASSIFICAÇÃO INSTITUCIONAL V3 (autorizado 22/06, substitui a V2) —
