@@ -55,12 +55,12 @@ on:
 # rodar em paralelo com codigo ja corrigido.
 concurrency:
   group: bot-sinais
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   scanner:
     runs-on: ubuntu-latest
-    timeout-minutes: 58
+    timeout-minutes: 360
 
     steps:
       - name: Checkout
@@ -114,7 +114,6 @@ jobs:
         run: python test_bot.py
 
       - name: Rodar bot
-        timeout-minutes: 55
         env:
           TG_TOKEN: ${{ github.event.inputs.tg_token != '' && github.event.inputs.tg_token || secrets.TG_TOKEN }}
           TG_CHATID: ${{ github.event.inputs.tg_chatid != '' && github.event.inputs.tg_chatid || secrets.TG_CHATID }}
