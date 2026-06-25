@@ -266,6 +266,8 @@ async def _enviar_diagnostico(session) -> None:
     # Detecta contexto de mercado pelos candidatos acumulados
     _rsi_vals = [c[3] for c in cand] if cand else []
     _rsi_med  = sum(_rsi_vals) / len(_rsi_vals) if _rsi_vals else 50
+    _adx_vals = [c[4] for c in cand] if cand else []
+    _adx_med  = sum(_adx_vals) / len(_adx_vals) if _adx_vals else 15
     _n_long   = sum(1 for c in cand if c[2] > 0)
     _n_short  = sum(1 for c in cand if c[2] < 0)
     if _rsi_med < 35 and _n_short > _n_long * 2:
@@ -277,8 +279,19 @@ async def _enviar_diagnostico(session) -> None:
     else:
         _ctx = "RSI medio {:.0f}".format(_rsi_med)
 
+    # Status de saude do mercado (RVOL + ADX)
+    _rvol_ok  = blq.get("RVOL < 50%", 0) / max(tot, 1)
+    if _adx_med >= 20 and _rvol_ok < 0.30:
+        _status = "MERCADO BOM"
+    elif _adx_med >= 18 and _rvol_ok < 0.45:
+        _status = "Mercado melhorando"
+    elif _adx_med >= 16 and _rvol_ok < 0.55:
+        _status = "Mercado fraco mas viavel"
+    else:
+        _status = "Mercado desfavoravel"
+
     linhas = [f"DIAGNOSTICO GAUSS+DNA — sem sinais ha {sem_min}min",
-              _ctx, ""]
+              f"{_ctx} | ADX medio {_adx_med:.0f} | {_status}", ""]
 
     if blq:
         top_blq = sorted(blq.items(), key=lambda x: x[1], reverse=True)[:6]
