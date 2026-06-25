@@ -18,7 +18,7 @@ from config import (
     RSI_LONG_MIN, RSI_LONG_MAX, RSI_SHORT_MIN, RSI_SHORT_MAX,
     BLOQUEAR_LONG_BB_TOPO, BLOQUEAR_SHORT_BB_FUNDO, PENALIDADE_BB_EXTREMO,
     HA_CONFIRM_BARS, HA_REVERSAL_OK, ADX_NAO_SUBINDO_BLOQUEIA, ADX_FLEX_MARGIN,
-    ADX_MIN_FLEX, ADX_MIN_SCOUT,
+    ADX_MIN_FLEX, ADX_MIN_SCOUT, FLEX_RVOL_MIN,
     STOCH_EXTREMO_BLOQUEAR, VOLUME_SECANDO_BLOQUEAR, MERCADO_LATERAL_BLOQUEAR,
     FLOW_CONFIRMADO, LIQ_SWEEP, DIST_MM21_MAX, BTC_H4_BLOQUEIA_LONG,
     MM200_OBRIGATORIA, FLEX_SCOUT_SEM_LIQ, MACD_R_OBRIGATORIO,
@@ -864,13 +864,13 @@ def detectar_sinais(ind):
     _liq_ok_s  = FLEX_SCOUT_SEM_LIQ or i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])
     long_flex  = (i["score"] >= 40 and i["ha_bull2"] and _macd_ok_l and i["adx"] >= ADX_MIN_FLEX and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
-                  i["flex_vol_ok"] and i["rvol"] >= 1.2 and i["rsi_zona_long"] and
+                  i["flex_vol_ok"] and i["rvol"] >= FLEX_RVOL_MIN and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
                   _liq_ok_l and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
     short_flex = (i["score"] <= -40 and i["ha_bear2"] and _macd_ok_s and i["adx"] >= ADX_MIN_FLEX and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
-                  i["flex_vol_ok_s"] and i["rvol"] >= 1.2 and i["rsi_zona_short"] and
+                  i["flex_vol_ok_s"] and i["rvol"] >= FLEX_RVOL_MIN and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
                   _liq_ok_s and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
