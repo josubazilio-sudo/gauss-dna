@@ -19,6 +19,9 @@ from config import (
     BLOQUEAR_LONG_BB_TOPO, BLOQUEAR_SHORT_BB_FUNDO, PENALIDADE_BB_EXTREMO,
     HA_CONFIRM_BARS, HA_REVERSAL_OK, ADX_NAO_SUBINDO_BLOQUEIA, ADX_FLEX_MARGIN,
     ADX_MIN_FLEX, ADX_MIN_SCOUT,
+    STOCH_EXTREMO_BLOQUEAR, VOLUME_SECANDO_BLOQUEAR, MERCADO_LATERAL_BLOQUEAR,
+    FLOW_CONFIRMADO, LIQ_SWEEP, DIST_MM21_MAX, BTC_H4_BLOQUEIA_LONG,
+    MM200_OBRIGATORIA,
 )
 
 log = logging.getLogger("GAUSS+DNA")
@@ -125,9 +128,9 @@ def calcular_indicadores(candles):
     # 2º ajuste 23/06 — BDX (score+145, RSI70, dentro da zona REGRA #1) ainda
     # bloqueado isolado por stoch=0.93; sobe o teto pra exigir saturação mais
     # extrema antes de travar um candidato que já passou todo o resto do seguro_long.
-    stoch_esticado_up   = stoch_rsi > 0.95 and rsi > 65
-    stoch_esticado_down = stoch_rsi < 0.05 and rsi < 30
-    stoch_extremo = stoch_rsi <= 0.001 or stoch_rsi >= 0.999
+    stoch_esticado_up   = STOCH_EXTREMO_BLOQUEAR and stoch_rsi > 0.95 and rsi > 65
+    stoch_esticado_down = STOCH_EXTREMO_BLOQUEAR and stoch_rsi < 0.05 and rsi < 30
+    stoch_extremo = STOCH_EXTREMO_BLOQUEAR and (stoch_rsi <= 0.001 or stoch_rsi >= 0.999)
 
     if len(_rsi_ser) >= 15:
         _r14a = _rsi_ser[-15:-1]; _rmina = min(_r14a); _rmaxa = max(_r14a)
@@ -367,8 +370,9 @@ def calcular_indicadores(candles):
 
     # SEGURO — contagem de alertas (GAUSS+DNA v5.0): cada booleano abaixo é um
     # "alerta leve" de qualidade de entrada; PRATA/BRONZE toleram no máx. 1.
-    seguro_alertas_long  = sum([perto_bb_topo, ext_acima_e21, exaustao_topo, vol_secando])
-    seguro_alertas_short = sum([perto_bb_fund, ext_abaixo_e21, exaustao_fund, vol_secando])
+    _vol_alerta = vol_secando if VOLUME_SECANDO_BLOQUEAR else False
+    seguro_alertas_long  = sum([perto_bb_topo, ext_acima_e21, exaustao_topo, _vol_alerta])
+    seguro_alertas_short = sum([perto_bb_fund, ext_abaixo_e21, exaustao_fund, _vol_alerta])
 
     # Volume FLEX
     vol_avg       = volumes[-1] > vol_ma * 1.1 and volumes[-2] > vol_ma * 0.9
@@ -386,7 +390,7 @@ def calcular_indicadores(candles):
     dna_flex_bear = (macd_bear_r and pressao_bear and v_bom) or dna_flow_bear
 
     # Filtros anti-overextension (FLEX)
-    lateralizado       = bb_squeeze and adx < 15
+    lateralizado       = bb_squeeze and adx < 15 and MERCADO_LATERAL_BLOQUEAR
     nao_ext_long_tight = (preco - e21) / atr < 2.5 and (rsi < 65 or (adx > 32 and rsi < 75))
     nao_ext_short_tight = (e21 - preco) / atr < 3.5 and rsi > 27
 
@@ -686,14 +690,15 @@ def detectar_sinais(ind):
                       i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
 
     # ── CORE — 11 critérios institucionais (adicionado 14/06) ────────────────
+    _vol_ok_core = not i["vol_secando"] if VOLUME_SECANDO_BLOQUEAR else True
     long_core  = (45 <= i["rsi"] <= 58 and i["rsi_subindo"] and
-                  i["adx"] >= 18 and i["vol_nao_fade"] and not i["vol_secando"] and
+                  i["adx"] >= 18 and i["vol_nao_fade"] and _vol_ok_core and
                   i["kalman_subindo"] and i["trendilo_long"] and
                   i["tbull_loose"] and i["ha_bull"] and
                   not i["liq_topo"] and i["preco"] > i["e200"] and
                   i["preco"] <= i["e21"] * 1.02)
     short_core = (42 <= i["rsi"] <= 55 and i["rsi_caindo"] and
-                  i["adx"] >= 18 and i["vol_nao_fade"] and not i["vol_secando"] and
+                  i["adx"] >= 18 and i["vol_nao_fade"] and _vol_ok_core and
                   not i["kalman_subindo"] and i["trendilo_short"] and
                   i["tbear_loose"] and i["ha_bear"] and
                   not i["liq_fundo"] and i["preco"] < i["e200"] and
@@ -793,11 +798,13 @@ def detectar_sinais(ind):
     rsi_fresh_short = i["rsi_ant"] > 42 >= i["rsi"] > 30
     # Exaustão de curtíssimo prazo (sem checagem de teto de RSI — o MOMENTUM entra
     # propositalmente na faixa 65-73, então só barra se já estiver esticado/exausto)
+    _mom_vol_ok_l = not i["vol_secando"] if VOLUME_SECANDO_BLOQUEAR else True
+    _mom_vol_ok_s = not i["vol_secando"] if VOLUME_SECANDO_BLOQUEAR else True
     mom_seguro_long  = ((not i["perto_bb_topo"] if BLOQUEAR_LONG_BB_TOPO else True) and
-                        not i["ext_acima_e21"] and not i["vol_secando"] and
+                        not i["ext_acima_e21"] and _mom_vol_ok_l and
                         not i["exaustao_topo"] and not i["stoch_esticado_up"])
     mom_seguro_short = ((not i["perto_bb_fund"] if BLOQUEAR_SHORT_BB_FUNDO else True) and
-                        not i["ext_abaixo_e21"] and not i["vol_secando"] and
+                        not i["ext_abaixo_e21"] and _mom_vol_ok_s and
                         not i["exaustao_fund"] and not i["stoch_esticado_down"])
     long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
                       i["adx"] > 22 and i["v_forte"] and i["trendilo_long"]  and i["score_inst_long"]  >= 60 and
@@ -900,7 +907,7 @@ def detectar_sinais(ind):
     # a exceção de lateralização (BB expandindo OU ADX>25, cycles.py) — esse
     # combo é o que de fato deveria reduzir frequência sem duplicar piso de
     # RVOL/ADX em dois lugares com números diferentes.
-    _vol_inst_ok     = i["volumes"][-1] > i["vol_ma"] and not i["vol_secando"]
+    _vol_inst_ok     = i["volumes"][-1] > i["vol_ma"] and (not i["vol_secando"] if VOLUME_SECANDO_BLOQUEAR else True)
     _rsi_inst_long   = 45 <= i["rsi"] <= 68
     _rsi_inst_short  = 32 <= i["rsi"] <= 55
     _anti_topo_long  = (1 - i["pos_bb"]) >= 0.01
