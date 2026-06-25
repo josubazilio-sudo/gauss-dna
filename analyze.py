@@ -22,6 +22,8 @@ from config import (
     STOCH_EXTREMO_BLOQUEAR, VOLUME_SECANDO_BLOQUEAR, MERCADO_LATERAL_BLOQUEAR,
     FLOW_CONFIRMADO, LIQ_SWEEP, DIST_MM21_MAX, BTC_H4_BLOQUEIA_LONG,
     MM200_OBRIGATORIA, FLEX_SCOUT_SEM_LIQ, MACD_R_OBRIGATORIO,
+    CROSS_OBRIGATORIO, CROSS_PONTUA, H1_MTF_OBRIGATORIO,
+    EXAUSTAO_BLOQUEAR, BB_TOPO_BLOQUEAR, BB_FUNDO_BLOQUEAR,
 )
 
 log = logging.getLogger("GAUSS+DNA")
@@ -363,10 +365,13 @@ def calcular_indicadores(candles):
     # sistema de tolerância já existente (seguro_alertas_long/short, GAUSS+DNA v5.0,
     # `classificar_v2()` exige `seguro_alertas <= 1`) — continua penalizando entrada
     # de baixo volume, mas não mata o sinal isoladamente na cascata de detecção.
-    _bloq_bb_topo = not perto_bb_topo if BLOQUEAR_LONG_BB_TOPO else True
+    _bloq_bb_topo   = not perto_bb_topo if BB_TOPO_BLOQUEAR else True
+    _bloq_bb_fundo  = not perto_bb_fund if BB_FUNDO_BLOQUEAR else True
+    _bloq_exaustao  = not exaustao_topo if EXAUSTAO_BLOQUEAR else True
+    _bloq_exaustao_s = not exaustao_fund if EXAUSTAO_BLOQUEAR else True
     seguro_long  = (_bloq_bb_topo and not ext_acima_e21 and
-                    not exaustao_topo and rsi_nao_topo)
-    seguro_short = (not exaustao_fund and rsi_nao_fundo)
+                    _bloq_exaustao and rsi_nao_topo)
+    seguro_short = (_bloq_bb_fundo and _bloq_exaustao_s and rsi_nao_fundo)
 
     # SEGURO — contagem de alertas (GAUSS+DNA v5.0): cada booleano abaixo é um
     # "alerta leve" de qualidade de entrada; PRATA/BRONZE toleram no máx. 1.
@@ -426,7 +431,8 @@ def calcular_indicadores(candles):
         (10 if ha_bull else -10 if ha_bear else 0) +
         (5  if kalman_accel_up else -5 if kalman_accel_down else 0) +
         (5  if tend_consistente_bull else -5 if tend_consistente_bear else 0) +
-        (10 if trendilo_long else -10 if trendilo_short else 0)
+        (10 if trendilo_long else -10 if trendilo_short else 0) +
+        (CROSS_PONTUA if algum_cross_bull else -CROSS_PONTUA if algum_cross_bear else 0)
     )
     # AJUSTE PROFISSIONAL (21/06) — RSI Flex Pro: não bloqueia (REGRA #1 intacta,
     # rsi_zona_long/short continuam <75/>25), só penaliza gradualmente entrada
