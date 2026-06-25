@@ -105,11 +105,11 @@ ADX_FLEX_MARGIN = 1.5
 # Filtros principais
 RVOL_MIN = 0.35
 
-ADX_MIN_SURGE = 20
-ADX_MIN_PULLBACK = 20
-ADX_MIN_FLEX = 20
-ADX_MIN_BB = 20
-ADX_MIN_SCOUT = 20
+ADX_MIN_SURGE = 15
+ADX_MIN_PULLBACK = 15
+ADX_MIN_FLEX = 15
+ADX_MIN_BB = 15
+ADX_MIN_SCOUT = 15
 
 MIN_FLUXO_LONG = 1
 MIN_FLUXO_SHORT = 1
@@ -121,7 +121,7 @@ HA_H1_CONFIRMAR = False
 HA_H1_PESO = 10
 
 # V4 — alinhados ao piso do usuário
-ADX_MIN_GLOBAL = 20
+ADX_MIN_GLOBAL = 15
 RVOL_MIN_BY_TF = {"30m": 0.35, "1h": 0.35}
 RVOL_MIN_EXEC = 0.35
 
@@ -147,15 +147,19 @@ BLOQUEAR_SHORT_BB_FUNDO = True
 PENALIDADE_BB_EXTREMO = 10
 
 # ── Filtros SCOUT CONTROLADO ────────────────────────────────────────────────
-FLEX_SCOUT_ADX       = 18     # ADX mínimo para FLEX/SCOUT
+FLEX_SCOUT_ADX       = 15     # ADX mínimo para FLEX/SCOUT
 FLEX_SCOUT_SEM_LIQ   = True   # FLEX/SCOUT sem exigir liquidez
 MACD_R_OBRIGATORIO   = False  # MACD não obrigatório para sinais
 
 # ── Filtros V4 (AJUSTE DE FREQUENCIA CONTROLADA) ────────────────────────────
 CROSS_OBRIGATORIO   = False   # CROSS não obrigatório para sinais
 PONTOS_CROSS        = 10      # pontuação do CROSS no score
+MACD_ESG_OBRIGATORIO = False  # MACD esgotando não obrigatório
+MACD_ESG_PONTOS     = 8       # pontuação do MACD esgotando no score
 PONTOS_MACD_REC     = 8       # pontuação do MACD recuperando no score
 PONTOS_PULLBACK     = 8       # pontuação do pullback no score
+SEM_LIQ_BLOQUEAR    = False   # sem liquidez não bloqueia sinal
+SEM_LIQ_PONTOS      = -5      # penalidade por falta de liquidez
 FLOW_CONFIRMADO     = True    # fluxo (dna_flow/trendilo) obrigatório
 LIQ_SWEEP           = False   # sweep de liquidez não exigido
 H1_MTF_OBRIGATORIO  = False   # H1 MTF não obrigatório

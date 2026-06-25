@@ -23,6 +23,7 @@ from config import (
     FLOW_CONFIRMADO, LIQ_SWEEP, DIST_MM21_MAX, BTC_H4_BLOQUEIA_LONG,
     MM200_OBRIGATORIA, FLEX_SCOUT_SEM_LIQ, MACD_R_OBRIGATORIO,
     CROSS_OBRIGATORIO, PONTOS_CROSS, PONTOS_MACD_REC, PONTOS_PULLBACK,
+    MACD_ESG_OBRIGATORIO, MACD_ESG_PONTOS, SEM_LIQ_BLOQUEAR, SEM_LIQ_PONTOS,
     H1_MTF_OBRIGATORIO,
     EXAUSTAO_BLOQUEAR, BB_TOPO_BLOQUEAR, BB_FUNDO_BLOQUEAR,
 )
@@ -434,7 +435,7 @@ def calcular_indicadores(candles):
         (5  if tend_consistente_bull else -5 if tend_consistente_bear else 0) +
         (10 if trendilo_long else -10 if trendilo_short else 0) +
         (PONTOS_CROSS if algum_cross_bull else -PONTOS_CROSS if algum_cross_bear else 0) +
-        (PONTOS_MACD_REC if macd_recuperando else -PONTOS_MACD_REC if macd_esgotando else 0) +
+        (PONTOS_MACD_REC if macd_recuperando else -MACD_ESG_PONTOS if macd_esgotando else 0) +
         (PONTOS_PULLBACK if pullback_bull else -PONTOS_PULLBACK if pullback_bear else 0)
     )
     # AJUSTE PROFISSIONAL (21/06) — RSI Flex Pro: não bloqueia (REGRA #1 intacta,
@@ -459,6 +460,13 @@ def calcular_indicadores(candles):
         score = score - PENALIDADE_BB_EXTREMO if score > 0 else score + PENALIDADE_BB_EXTREMO if score < 0 else score
     if not BLOQUEAR_SHORT_BB_FUNDO and perto_bb_fund:
         score = score - PENALIDADE_BB_EXTREMO if score > 0 else score + PENALIDADE_BB_EXTREMO if score < 0 else score
+    if not SEM_LIQ_BLOQUEAR:
+        sem_liq_long  = not (liq_long or liq_fundo)
+        sem_liq_short = not (liq_short or liq_topo)
+        if sem_liq_long and score > 0:
+            score += SEM_LIQ_PONTOS
+        elif sem_liq_short and score < 0:
+            score += abs(SEM_LIQ_PONTOS)
     score = max(-145, min(145, score))
 
     # Score institucional 0-100
@@ -1102,7 +1110,6 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
         if sc > 25:
             b = []
             if MACD_R_OBRIGATORIO and not ind["macd_bull_r"]:  b.append("macd_r=F")
-            if not ind["ha_bull_1"]:    b.append("ha1=F")
             if ind["adx"] < ADX_MIN_GLOBAL: b.append(f"adx={ind['adx']:.1f}<{ADX_MIN_GLOBAL}")
             if ind["lateralizado"]:         b.append("lateral")
             if not ind["seguro_long"]:
@@ -1117,6 +1124,17 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if not ind["rsi_zona_long"]:b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
             if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
+            # gatilho específico sempre, mesmo quando b não está vazio
+            _trig = []
+            if not ind.get("pullback_bull"):    _trig.append("pullback=F")
+            if not ind.get("algum_cross_bull"):  _trig.append("cross=F")
+            if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
+            if SEM_LIQ_BLOQUEAR and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
+            if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
+            if not ind.get("macd_bull_r"):        _trig.append("macd_r=F")
+            if ind.get("nao_overext_long") is False: _trig.append("overext")
+            if ind.get("rsi_nao_chasing_long") is False: _trig.append("rsi_chase")
+            b.append("gatilho:" + ",".join(_trig) if _trig else "tudo ok")
             if not b:
                 # candidato passa em todos os checks genéricos acima mas nenhum dos 12
                 # sinais tipados disparou — expõe o gatilho específico que falta
@@ -1125,7 +1143,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
                 if not ind.get("pullback_bull"):    _trig.append("pullback=F")
                 if not ind.get("algum_cross_bull"):  _trig.append("cross=F")
                 if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
-                if not FLEX_SCOUT_SEM_LIQ and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
+                if SEM_LIQ_BLOQUEAR and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
                 if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
                 b.append("gatilho:" + ",".join(_trig) if _trig else "sem detalhe real")
             bloqueio_detalhe = "; ".join(b) or "sem detalhe"
@@ -1133,7 +1151,6 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
         elif sc < -25:
             b = []
             if MACD_R_OBRIGATORIO and not ind["macd_bear_r"]:   b.append("macd_r=F")
-            if not ind["ha_bear_1"]:     b.append("ha1=F")
             if ind["adx"] < ADX_MIN_GLOBAL: b.append(f"adx={ind['adx']:.1f}<{ADX_MIN_GLOBAL}")
             if ind["lateralizado"]:      b.append("lateral")
             if not ind["seguro_short"]:
@@ -1146,12 +1163,22 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
             if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
+            _trig = []
+            if not ind.get("pullback_bear"):    _trig.append("pullback=F")
+            if not ind.get("algum_cross_bear"):  _trig.append("cross=F")
+            if MACD_ESG_OBRIGATORIO and not ind.get("macd_esgotando"): _trig.append("macd_esg=F")
+            if SEM_LIQ_BLOQUEAR and not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
+            if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
+            if not ind.get("macd_bear_r"):        _trig.append("macd_r=F")
+            if ind.get("nao_overext_short") is False: _trig.append("overext")
+            if ind.get("rsi_nao_chasing_short") is False: _trig.append("rsi_chase")
+            b.append("gatilho:" + ",".join(_trig) if _trig else "tudo ok")
             if not b:
                 _trig = []
                 if not ind.get("pullback_bear"):    _trig.append("pullback=F")
                 if not ind.get("algum_cross_bear"):  _trig.append("cross=F")
-                if not ind.get("macd_esgotando"):    _trig.append("macd_esg=F")
-                if not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
+                if MACD_ESG_OBRIGATORIO and not ind.get("macd_esgotando"): _trig.append("macd_esg=F")
+                if SEM_LIQ_BLOQUEAR and not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
                 if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
                 b.append("gatilho:" + ",".join(_trig) if _trig else "sem detalhe real")
             bloqueio_detalhe = "; ".join(b) or "sem detalhe"
