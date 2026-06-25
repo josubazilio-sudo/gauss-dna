@@ -389,14 +389,14 @@ def calcular_indicadores(candles):
     vol_nao_fade  = max(volumes[-1], volumes[-2]) >= vol_ma * _vol_thr  # usa melhor das 2 últimas velas
     vol_ok        = v_forte or obv_bull
     vol_ok_s      = v_forte or obv_bear
-    flex_vol_ok   = v_bom or (obv_bull and trendilo_long)
-    flex_vol_ok_s = v_bom or (obv_bear and trendilo_short)
+    flex_vol_ok   = (rvol >= FLEX_RVOL_MIN) or (obv_bull and trendilo_long)
+    flex_vol_ok_s = (rvol >= FLEX_RVOL_MIN) or (obv_bear and trendilo_short)
 
     # DNA Flow relaxado (FLEX)
     macd_bull_r  = (ml > sl_v) or (hist > hist_p)
     macd_bear_r  = (ml < sl_v) or (hist < hist_p)
-    dna_flex_bull = (macd_bull_r and pressao_bull and v_bom) or dna_flow_bull
-    dna_flex_bear = (macd_bear_r and pressao_bear and v_bom) or dna_flow_bear
+    dna_flex_bull = (macd_bull_r and pressao_bull and (rvol >= FLEX_RVOL_MIN)) or dna_flow_bull
+    dna_flex_bear = (macd_bear_r and pressao_bear and (rvol >= FLEX_RVOL_MIN)) or dna_flow_bear
 
     # Filtros anti-overextension (FLEX)
     lateralizado       = bb_squeeze and adx < 15 and MERCADO_LATERAL_BLOQUEAR
