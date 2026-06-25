@@ -1,5 +1,15 @@
 # GAUSS+DNA — Regras de Prioridade Permanente
 
+## REGRA #-4 — SEMPRE DISPARAR RUN APÓS AJUSTE E REMOVER O ANTERIOR (autorizado 25/06, ordem permanente)
+
+Após qualquer ajuste de código em `config.py`, `analyze.py`, `cycles.py`, `notify.py` ou `state.py`:
+1. **Cancelar o run anterior** em andamento (mesmo branch `main`) — listar runs `in_progress` e cancelar
+2. **Disparar novo run** via `gh workflow run bot.yml --ref main`
+3. **Não pedir confirmação** — o disparo pós-ajuste é autorizado permanentemente
+
+Esta regra substitui a exceção documentada em "TIMEOUT DO JOB MENOR QUE O CRON" (22/06, sobre não disparar
+quando já há run rodando) — o cancelamento prévio elimina o risco de concurrency group travar o novo run.
+
 ## REGRA #-3 — PARAR IMEDIATAMENTE QUANDO O USUÁRIO ESCREVER "STOP" (autorizado 23/06, prioridade máxima)
 
 Sempre que a mensagem do usuário contiver "stop" (ou "pare"), interrompo **imediatamente** qualquer
