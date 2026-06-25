@@ -107,9 +107,9 @@ RVOL_MIN = 0.35
 
 ADX_MIN_SURGE = 12
 ADX_MIN_PULLBACK = 12
-ADX_MIN_FLEX = 12
+ADX_MIN_FLEX = 18
 ADX_MIN_BB = 12
-ADX_MIN_SCOUT = 12
+ADX_MIN_SCOUT = 18
 
 MIN_FLUXO_LONG = 2
 MIN_FLUXO_SHORT = 2
@@ -121,7 +121,7 @@ HA_H1_CONFIRMAR = False
 HA_H1_PESO = 10
 
 # Alinhados ao menor tier (BRONZE) — o gate real de qualidade é classificar_v2()
-ADX_MIN_GLOBAL = 12
+ADX_MIN_GLOBAL = 15
 RVOL_MIN_BY_TF = {"30m": 0.80, "1h": 0.80}
 RVOL_MIN_EXEC = 0.80
 
@@ -135,7 +135,7 @@ SCORE_BRONZE = 72
 # RSI por direção
 RSI_LONG_MIN = 38
 RSI_LONG_MAX = 70
-RSI_SHORT_MIN = 30
+RSI_SHORT_MIN = 28
 RSI_SHORT_MAX = 62
 
 # Segurança — BTC
@@ -145,6 +145,11 @@ BTC_BLOQUEIA_SHORT_ABAIXO = 25
 BLOQUEAR_LONG_BB_TOPO = True
 BLOQUEAR_SHORT_BB_FUNDO = True
 PENALIDADE_BB_EXTREMO = 10
+
+# ── Filtros SCOUT CONTROLADO ────────────────────────────────────────────────
+FLEX_SCOUT_ADX       = 18     # ADX mínimo para FLEX/SCOUT
+FLEX_SCOUT_SEM_LIQ   = True   # FLEX/SCOUT sem exigir liquidez
+MACD_R_OBRIGATORIO   = False  # MACD não obrigatório para sinais
 
 # ── Filtros V4 (AJUSTE FINAL) ────────────────────────────────────────────────
 FLOW_CONFIRMADO   = True     # fluxo (dna_flow/trendilo) obrigatório

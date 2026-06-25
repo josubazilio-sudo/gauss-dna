@@ -21,7 +21,7 @@ from config import (
     ADX_MIN_FLEX, ADX_MIN_SCOUT,
     STOCH_EXTREMO_BLOQUEAR, VOLUME_SECANDO_BLOQUEAR, MERCADO_LATERAL_BLOQUEAR,
     FLOW_CONFIRMADO, LIQ_SWEEP, DIST_MM21_MAX, BTC_H4_BLOQUEIA_LONG,
-    MM200_OBRIGATORIA,
+    MM200_OBRIGATORIA, FLEX_SCOUT_SEM_LIQ, MACD_R_OBRIGATORIO,
 )
 
 log = logging.getLogger("GAUSS+DNA")
@@ -840,17 +840,21 @@ def detectar_sinais(ind):
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
     # RVOL>=1.2 e ADX>=25 (pedido 20/06 — caso TIA/USDT BRONZE 2/5 com RVOL 0.65/ADX 24 era fraco demais)
-    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and i["macd_bull_r"] and i["adx"] >= ADX_MIN_FLEX and
+    _macd_ok_l = not MACD_R_OBRIGATORIO or i["macd_bull_r"]
+    _macd_ok_s = not MACD_R_OBRIGATORIO or i["macd_bear_r"]
+    _liq_ok_l  = FLEX_SCOUT_SEM_LIQ or i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])
+    _liq_ok_s  = FLEX_SCOUT_SEM_LIQ or i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])
+    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and _macd_ok_l and i["adx"] >= ADX_MIN_FLEX and
                   not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
                   i["flex_vol_ok"] and i["rvol"] >= 1.2 and i["rsi_zona_long"] and
                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  (i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])) and
+                  _liq_ok_l and
                   (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
-    short_flex = (i["score"] <= -40 and i["ha_bear2"] and i["macd_bear_r"] and i["adx"] >= ADX_MIN_FLEX and
+    short_flex = (i["score"] <= -40 and i["ha_bear2"] and _macd_ok_s and i["adx"] >= ADX_MIN_FLEX and
                   not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
                   i["flex_vol_ok_s"] and i["rvol"] >= 1.2 and i["rsi_zona_short"] and
                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  (i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])) and
+                  _liq_ok_s and
                   (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
@@ -871,12 +875,14 @@ def detectar_sinais(ind):
     _sc_min  = 25 if _FLV <= 0 else 40
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
-    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and i["macd_bull_r"] and i["adx"] >= ADX_MIN_SCOUT and
+    _macd_scout_l = not MACD_R_OBRIGATORIO or i["macd_bull_r"]
+    _macd_scout_s = not MACD_R_OBRIGATORIO or i["macd_bear_r"]
+    long_scout  = (i["score"] >= _sc_min and i["ha_bull_1"] and _macd_scout_l and i["adx"] >= ADX_MIN_SCOUT and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_long_tight"] and
                    _seg_l and i["vol_nao_fade"] and i["rvol"] >= 1.2 and i["nao_overext_long"] and
                    i["rsi_nao_chasing_long"] and i["rsi_zona_long"] and _no_liq_topo and
                    sum([i["dna_flow_bull"], i["f_bull"], i["trendilo_long"], i["kalman_subindo"]]) >= _fluxo_min)
-    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and i["macd_bear_r"] and i["adx"] >= ADX_MIN_SCOUT and
+    short_scout = (i["score"] <= -_sc_min and i["ha_bear_1"] and _macd_scout_s and i["adx"] >= ADX_MIN_SCOUT and
                    _adx_sub_ok and not i["lateralizado"] and i["nao_ext_short_tight"] and
                    _seg_s and i["vol_nao_fade"] and i["rvol"] >= 1.2 and i["nao_overext_short"] and
                    i["rsi_nao_chasing_short"] and i["rsi_zona_short"] and _no_liq_fund and
@@ -1086,10 +1092,10 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
         sc = ind["score"]
         if sc > 25:
             b = []
-            if not ind["macd_bull_r"]:  b.append("macd_r=F")
+            if MACD_R_OBRIGATORIO and not ind["macd_bull_r"]:  b.append("macd_r=F")
             if not ind["ha_bull_1"]:    b.append("ha1=F")
-            if ind["adx"] < 15:         b.append(f"adx={ind['adx']:.1f}<15")
-            if ind["lateralizado"]:     b.append("lateral")
+            if ind["adx"] < ADX_MIN_GLOBAL: b.append(f"adx={ind['adx']:.1f}<{ADX_MIN_GLOBAL}")
+            if ind["lateralizado"]:         b.append("lateral")
             if not ind["seguro_long"]:
                 _sg = []
                 if ind["perto_bb_topo"]:       _sg.append("bb_topo")
@@ -1110,16 +1116,16 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
                 if not ind.get("pullback_bull"):    _trig.append("pullback=F")
                 if not ind.get("algum_cross_bull"):  _trig.append("cross=F")
                 if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
-                if not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
+                if not FLEX_SCOUT_SEM_LIQ and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
                 if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
                 b.append("gatilho:" + ",".join(_trig) if _trig else "sem detalhe real")
             bloqueio_detalhe = "; ".join(b) or "sem detalhe"
             log.info(f"  LONG-BLOQ {simbolo}: score={sc:+d} | {bloqueio_detalhe}")
         elif sc < -25:
             b = []
-            if not ind["macd_bear_r"]:   b.append("macd_r=F")
+            if MACD_R_OBRIGATORIO and not ind["macd_bear_r"]:   b.append("macd_r=F")
             if not ind["ha_bear_1"]:     b.append("ha1=F")
-            if ind["adx"] < 15:          b.append(f"adx={ind['adx']:.1f}<15")
+            if ind["adx"] < ADX_MIN_GLOBAL: b.append(f"adx={ind['adx']:.1f}<{ADX_MIN_GLOBAL}")
             if ind["lateralizado"]:      b.append("lateral")
             if not ind["seguro_short"]:
                 _sg = []
