@@ -12,8 +12,8 @@ from indicators import (
 )
 from config import (
     SIGNAL_MODE, FILTER_LEVEL as _FLV,
-    SCORE_BRONZE, SCORE_PRATA, SCORE_OURO,
-    RVOL_MIN, ADX_MIN_GLOBAL,
+    SCORE_BRONZE, SCORE_PRATA, SCORE_OURO, SCORE_MIN,
+    RVOL_MIN, RVOL_MIN_EXEC, ADX_MIN_GLOBAL,
     MIN_FLUXO_LONG, MIN_FLUXO_SHORT,
     RSI_LONG_MIN, RSI_LONG_MAX, RSI_SHORT_MIN, RSI_SHORT_MAX,
     BLOQUEAR_LONG_BB_TOPO, BLOQUEAR_SHORT_BB_FUNDO, PENALIDADE_BB_EXTREMO,
@@ -638,23 +638,22 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
 
     # ── OURO ──
-    if (score_inst >= 90 and rvol >= 1.50 and adx >= 28
-            and ind.get("adx_subindo", False)
+    if (score_inst >= 90 and rvol >= 1.50 and adx >= 25
             and (45 <= rsi <= 62 if eh_long else 38 <= rsi <= 55)
             and dist_pct <= 2.5
             and fluxo and liq and not ex):
         return "OURO"
 
     # ── PRATA ──
-    if (score_inst >= 80 and rvol >= 1.00 and adx >= 25
+    if (score_inst >= 80 and rvol >= 1.00 and adx >= 20
             and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
             and dist_pct <= 3.5
             and fluxo and liq and not ex):
         return "PRATA"
 
-    # ── BRONZE ──
-    if (score_inst >= 72 and rvol >= 0.80 and adx >= 22
-            and (40 <= rsi <= 68 if eh_long else 35 <= rsi <= 60)
+    # ── BRONZE — alinhado às configs do usuário ──
+    if (score_inst >= SCORE_MIN and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
+            and (RSI_LONG_MIN <= rsi <= RSI_LONG_MAX if eh_long else RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX)
             and dist_pct <= 4.0
             and not ex):
         return "BRONZE"
