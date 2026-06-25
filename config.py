@@ -152,12 +152,14 @@ FLEX_SCOUT_SEM_LIQ   = True   # FLEX/SCOUT sem exigir liquidez
 MACD_R_OBRIGATORIO   = False  # MACD não obrigatório para sinais
 
 # ── Filtros V4 (AJUSTE DE FREQUENCIA CONTROLADA) ────────────────────────────
-CROSS_OBRIGATORIO   = False   # CROSS não obrigatório para sinais
-PONTOS_CROSS        = 10      # pontuação do CROSS no score
+CROSS_OBRIGATORIO    = False  # CROSS não obrigatório para sinais
+PONTOS_CROSS         = 10     # pontuação do CROSS no score
+PULLBACK_OBRIGATORIO = False  # PULLBACK não obrigatório para sinais
+PULLBACK_PONTOS      = 8      # pontuação do PULLBACK no score
+MACD_REC_OBRIGATORIO = False  # MACD recuperando não obrigatório
+MACD_REC_PONTOS      = 8      # pontuação do MACD recuperando no score
 MACD_ESG_OBRIGATORIO = False  # MACD esgotando não obrigatório
-MACD_ESG_PONTOS     = 8       # pontuação do MACD esgotando no score
-PONTOS_MACD_REC     = 8       # pontuação do MACD recuperando no score
-PONTOS_PULLBACK     = 8       # pontuação do pullback no score
+MACD_ESG_PONTOS      = 8      # pontuação do MACD esgotando no score
 SEM_LIQ_BLOQUEAR    = False   # sem liquidez não bloqueia sinal
 SEM_LIQ_PONTOS      = -5      # penalidade por falta de liquidez
 FLOW_CONFIRMADO     = True    # fluxo (dna_flow/trendilo) obrigatório
