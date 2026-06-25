@@ -153,7 +153,9 @@ MACD_R_OBRIGATORIO   = False  # MACD não obrigatório para sinais
 
 # ── Filtros V4 (AJUSTE DE FREQUENCIA CONTROLADA) ────────────────────────────
 CROSS_OBRIGATORIO   = False   # CROSS não obrigatório para sinais
-CROSS_PONTUA        = 10      # pontuação do CROSS no score
+PONTOS_CROSS        = 10      # pontuação do CROSS no score
+PONTOS_MACD_REC     = 8       # pontuação do MACD recuperando no score
+PONTOS_PULLBACK     = 8       # pontuação do pullback no score
 FLOW_CONFIRMADO     = True    # fluxo (dna_flow/trendilo) obrigatório
 LIQ_SWEEP           = False   # sweep de liquidez não exigido
 H1_MTF_OBRIGATORIO  = False   # H1 MTF não obrigatório

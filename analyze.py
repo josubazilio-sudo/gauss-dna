@@ -22,7 +22,8 @@ from config import (
     STOCH_EXTREMO_BLOQUEAR, VOLUME_SECANDO_BLOQUEAR, MERCADO_LATERAL_BLOQUEAR,
     FLOW_CONFIRMADO, LIQ_SWEEP, DIST_MM21_MAX, BTC_H4_BLOQUEIA_LONG,
     MM200_OBRIGATORIA, FLEX_SCOUT_SEM_LIQ, MACD_R_OBRIGATORIO,
-    CROSS_OBRIGATORIO, CROSS_PONTUA, H1_MTF_OBRIGATORIO,
+    CROSS_OBRIGATORIO, PONTOS_CROSS, PONTOS_MACD_REC, PONTOS_PULLBACK,
+    H1_MTF_OBRIGATORIO,
     EXAUSTAO_BLOQUEAR, BB_TOPO_BLOQUEAR, BB_FUNDO_BLOQUEAR,
 )
 
@@ -432,7 +433,9 @@ def calcular_indicadores(candles):
         (5  if kalman_accel_up else -5 if kalman_accel_down else 0) +
         (5  if tend_consistente_bull else -5 if tend_consistente_bear else 0) +
         (10 if trendilo_long else -10 if trendilo_short else 0) +
-        (CROSS_PONTUA if algum_cross_bull else -CROSS_PONTUA if algum_cross_bear else 0)
+        (PONTOS_CROSS if algum_cross_bull else -PONTOS_CROSS if algum_cross_bear else 0) +
+        (PONTOS_MACD_REC if macd_recuperando else -PONTOS_MACD_REC if macd_esgotando else 0) +
+        (PONTOS_PULLBACK if pullback_bull else -PONTOS_PULLBACK if pullback_bear else 0)
     )
     # AJUSTE PROFISSIONAL (21/06) — RSI Flex Pro: não bloqueia (REGRA #1 intacta,
     # rsi_zona_long/short continuam <75/>25), só penaliza gradualmente entrada
