@@ -103,13 +103,13 @@ ADX_NAO_SUBINDO_BLOQUEIA = False
 ADX_FLEX_MARGIN = 1.5
 
 # Filtros principais
-RVOL_MIN = 0.45
+RVOL_MIN = 0.35
 
-ADX_MIN_SURGE = 18
-ADX_MIN_PULLBACK = 18
-ADX_MIN_FLEX = 20
-ADX_MIN_BB = 18
-ADX_MIN_SCOUT = 20
+ADX_MIN_SURGE = 12
+ADX_MIN_PULLBACK = 12
+ADX_MIN_FLEX = 12
+ADX_MIN_BB = 12
+ADX_MIN_SCOUT = 12
 
 MIN_FLUXO_LONG = 2
 MIN_FLUXO_SHORT = 2
@@ -117,22 +117,26 @@ MIN_FLUXO_SHORT = 2
 LATERAL_BARS = 12
 
 H1_OBRIGATORIO = False
+HA_H1_CONFIRMAR = False
+HA_H1_PESO = 10
 
 # Alinhados ao menor tier (BRONZE) — o gate real de qualidade é classificar_v2()
-ADX_MIN_GLOBAL = 22
+ADX_MIN_GLOBAL = 12
 RVOL_MIN_BY_TF = {"30m": 0.80, "1h": 0.80}
 RVOL_MIN_EXEC = 0.80
 
 # Score — thresholds fixos por tier (config 24/06)
+SCORE_MIN = 78
+CONFIANCA_MIN = 68
 SCORE_OURO = 90
 SCORE_PRATA = 80
 SCORE_BRONZE = 72
 
 # RSI por direção
-RSI_LONG_MIN = 35
-RSI_LONG_MAX = 78
-RSI_SHORT_MIN = 25
-RSI_SHORT_MAX = 65
+RSI_LONG_MIN = 38
+RSI_LONG_MAX = 70
+RSI_SHORT_MIN = 30
+RSI_SHORT_MAX = 62
 
 # Segurança — BTC
 BTC_BLOQUEIA_SHORT_ABAIXO = 25
@@ -141,6 +145,16 @@ BTC_BLOQUEIA_SHORT_ABAIXO = 25
 BLOQUEAR_LONG_BB_TOPO = True
 BLOQUEAR_SHORT_BB_FUNDO = True
 PENALIDADE_BB_EXTREMO = 10
+
+# ── Filtros V4 (AJUSTE FINAL) ────────────────────────────────────────────────
+FLOW_CONFIRMADO   = True     # fluxo (dna_flow/trendilo) obrigatório
+LIQ_SWEEP         = False    # sweep de liquidez não exigido
+DIST_MM21_MAX     = 7        # distância máxima da MM21 em %
+BTC_H4_BLOQUEIA_LONG = False # BTC H4 não bloqueia LONG
+MM200_OBRIGATORIA = True     # MM200 obrigatória
+STOCH_EXTREMO_BLOQUEAR = False
+VOLUME_SECANDO_BLOQUEAR = False
+MERCADO_LATERAL_BLOQUEAR = False
 
 # Bônus (não obrigatórios, somam ao score se confirmados)
 BONUS_FLUXO  = 10
