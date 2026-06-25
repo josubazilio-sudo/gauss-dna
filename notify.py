@@ -3,6 +3,7 @@ GAUSS+DNA — Notificações
 Envio de sinais e alertas via Telegram e WhatsApp.
 """
 import logging
+import asyncio
 import aiohttp
 from datetime import datetime
 from config import (TG_TOKEN, TG_CHATID, WA_PHONE, WA_APIKEY, SIGNAL_MODE,
@@ -93,6 +94,19 @@ async def enviar_whatsapp(session, texto):
 
 
 # ── Watchlist ─────────────────────────────────────────────────────────────────
+
+async def adicionar_watchlist(simbolo):
+    """Adiciona símbolo à watchlist do TradingView via MCP CLI (best-effort)."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "node", "C:/Users/josue/tradingview-mcp/src/cli/index.js",
+            "watchlist", "add", simbolo,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(proc.wait(), timeout=10)
+    except Exception:
+        pass  # falha silenciosa — não pode travar o sinal
 
 # ── Telegram — sinal principal ────────────────────────────────────────────────
 
@@ -273,6 +287,8 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
                     + agora
                 )
                 await enviar_whatsapp(session, wa_text)
+                # TradingView watchlist — adiciona símbolo (best-effort)
+                asyncio.ensure_future(adicionar_watchlist(simbolo))
                 # Dict (truthy) em vez de True puro — permite ao chamador registrar
                 # a posição pro rastreamento de resultado (TP/STOP), pedido 20/06.
                 return {"stop": stop, "tp1": tp1, "r1": r1, "valor_risco": valor_risco}
