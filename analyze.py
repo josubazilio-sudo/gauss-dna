@@ -188,8 +188,8 @@ def calcular_indicadores(candles):
     meio_corpo  = (maximas[-1] + minimas[-1]) / 2
     pressao_bull = preco > meio_corpo
     pressao_bear = preco < meio_corpo
-    dna_flow_bull = macd_bull and pressao_bull and v_bom
-    dna_flow_bear = macd_bear and pressao_bear and v_bom
+    dna_flow_bull = (macd_bull or pressao_bull) and v_bom
+    dna_flow_bear = (macd_bear or pressao_bear) and v_bom
 
     # Bollinger Bands
     bb_sup, bb_inf, bb_base, bb_bw, bb_bw_p = calcular_bb(fechamentos)
@@ -422,8 +422,8 @@ def calcular_indicadores(candles):
     tbull_loose = e10 > e21 and e21 > e50
     tbear_loose = e10 < e21 and e21 < e50
 
-    rsi_nao_topo   = rsi < 72
-    rsi_nao_fundo  = rsi > 28
+    rsi_nao_topo   = rsi < 75
+    rsi_nao_fundo  = rsi > 25
     # vol_secando saiu do bloqueio binário (23/06, 4ª rodada): mesmo após 3 afrouxa-
     # mentos de limiar no mesmo dia, continuava sendo o bloqueador isolado dominante
     # de candidatos com score alto e nada mais de errado (GRASS+145, DYDX+130, SUI-130,
