@@ -1099,6 +1099,22 @@ def detectar_sinais(ind):
             if condição:
                 sinal = dir_; fonte = src; break
 
+        # 4/5 gates: se nenhum sinal especifico disparou mas 4/5 gatilhos
+        # principais passam, libera FLEX (o filtro safe/overext é ignorado)
+        if not sinal:
+            for _dir, _gates in [
+                ("LONG", [i.get("dna_flow_bull", False),
+                          i.get("adx", 0) >= ADX_MIN_GLOBAL,
+                          i.get("rsi_zona_long", False),
+                          i.get("score_inst_long", 0) >= 40]),
+                ("SHORT", [i.get("dna_flow_bear", False),
+                           i.get("adx", 0) >= ADX_MIN_GLOBAL,
+                           i.get("rsi_zona_short", False),
+                           i.get("score_inst_short", 0) >= 40])
+            ]:
+                if sum(_gates) >= 4 and abs(i.get("score", 0)) >= 40:
+                    sinal = _dir; fonte = "FLEX"; break
+
     return sinal, fonte
 
 
