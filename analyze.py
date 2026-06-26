@@ -693,31 +693,29 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     # GLOBAIS (aplicam a todos os tiers)
     if not (ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]):
         return None
-    if not (ind["ha_bull_1"] if eh_long else ind["ha_bear_1"]):
-        return None
 
     fluxo = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
             (ind["dna_flow_bear"] or ind["trendilo_short"])
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
     # ── OURO ──
-    if (score_inst >= SCORE_OURO and rvol >= 1.50 and adx >= 24
-            and (45 <= rsi <= 62 if eh_long else 38 <= rsi <= 55)
+    if (score_inst >= 75 and rvol >= 1.20 and adx >= 22
+            and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
             and dist_pct <= 5.0
             and fluxo and liq and not ex):
         return "OURO"
 
     # ── PRATA ──
-    if (score_inst >= SCORE_PRATA and rvol >= 1.00 and adx >= 20
-            and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
-            and dist_pct <= 3.0
-            and fluxo and liq and not ex):
+    if (score_inst >= 65 and rvol >= 0.80 and adx >= 18
+            and (40 <= rsi <= 68 if eh_long else 33 <= rsi <= 58)
+            and dist_pct <= 5.0
+            and fluxo):
         return "PRATA"
 
     # ── BRONZE ──
-    if (score_inst >= SCORE_BRONZE and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
+    if (score_inst >= 55 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
             and (RSI_LONG_MIN <= rsi <= RSI_LONG_MAX if eh_long else RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX)
-            and dist_pct <= 3.0
+            and dist_pct <= 5.0
             and not ex):
         return "BRONZE"
 
