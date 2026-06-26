@@ -188,8 +188,8 @@ def calcular_indicadores(candles):
     meio_corpo  = (maximas[-1] + minimas[-1]) / 2
     pressao_bull = preco > meio_corpo
     pressao_bear = preco < meio_corpo
-    dna_flow_bull = (macd_bull or pressao_bull) and v_bom
-    dna_flow_bear = (macd_bear or pressao_bear) and v_bom
+    dna_flow_bull = macd_bull or pressao_bull
+    dna_flow_bear = macd_bear or pressao_bear
 
     # Bollinger Bands
     bb_sup, bb_inf, bb_base, bb_bw, bb_bw_p = calcular_bb(fechamentos)
@@ -461,8 +461,8 @@ def calcular_indicadores(candles):
 
     # Filtros anti-overextension (FLEX)
     lateralizado       = bb_squeeze and adx < SIDEWAYS_ADX_OVERRIDE and MERCADO_LATERAL_BLOQUEAR
-    nao_ext_long_tight = (preco - e21) / atr < 2.5 and (rsi < 65 or (adx > 32 and rsi < 75))
-    nao_ext_short_tight = (e21 - preco) / atr < 3.5 and rsi > 27
+    nao_ext_long_tight = (preco - e21) / atr < 2.5 and (rsi < 68 or (adx > 25 and rsi < 78))
+    nao_ext_short_tight = (e21 - preco) / atr < 3.5 and rsi > 25
 
     # Anti-pump / anti-dump
     raw_c48 = [c["c"] for c in candles[-50:-1]]
