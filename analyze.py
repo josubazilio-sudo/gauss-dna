@@ -281,6 +281,69 @@ def calcular_indicadores(candles):
 
     impulso_bull  = preco > maximas[-2] and preco > aberturas[-1] and (preco - aberturas[-1]) > atr * 0.2
     impulso_bear  = preco < minimas[-2] and preco < aberturas[-1] and (aberturas[-1] - preco) > atr * 0.2
+
+    # ── FLEX V3 — Continuation Pattern (Impulso → Pullback → Rompimento) ──────
+    flex_v3_impulso_recente_bull = False
+    flex_v3_impulso_recente_bear = False
+    flex_v3_pullback_valido_bull = False
+    flex_v3_pullback_valido_bear = False
+    flex_v3_rompeu_estrutura_bull = False
+    flex_v3_rompeu_estrutura_bear = False
+
+    for k in range(2, min(12, n)):
+        i = -k
+        body_ha = fechamentos[i] - aberturas[i]
+        high_i = maximas[i]
+        low_i = minimas[i]
+        prev_high = maximas[i-1]
+        prev_low = minimas[i-1]
+
+        # BULL — impulse found: strong green HA candle breaking previous high, above avg volume
+        if (body_ha > atr * 0.35 and high_i > prev_high and
+            volumes[i] > vol_ma * 0.8 and body_ha > 0):
+            after_slice = slice(i+1, -1)
+            after_highs = maximas[after_slice]
+            after_lows = minimas[after_slice]
+            after_closes = fechamentos[after_slice]
+            after_vols = volumes[after_slice]
+            if len(after_highs) >= 1:
+                topo = max(after_highs)
+                flex_v3_impulso_recente_bull = True
+                ma_ref = max(e21, kl[-1])
+                tocou_ma = any(
+                    min(c, l) <= ma_ref * 1.015
+                    for c, l in zip(after_closes, after_lows)
+                )
+                vol_medio_pb = sum(after_vols) / len(after_vols)
+                volume_menor = vol_medio_pb < vol_ma * 0.85
+                flex_v3_pullback_valido_bull = tocou_ma and volume_menor
+                if preco > topo:
+                    flex_v3_rompeu_estrutura_bull = True
+            break
+
+        # BEAR — impulse found: strong red HA candle breaking previous low, above avg volume
+        if (-body_ha > atr * 0.35 and low_i < prev_low and
+            volumes[i] > vol_ma * 0.8 and body_ha < 0):
+            after_slice = slice(i+1, -1)
+            after_highs = maximas[after_slice]
+            after_lows = minimas[after_slice]
+            after_closes = fechamentos[after_slice]
+            after_vols = volumes[after_slice]
+            if len(after_lows) >= 1:
+                fundo = min(after_lows)
+                flex_v3_impulso_recente_bear = True
+                ma_ref = min(e21, kl[-1])
+                tocou_ma = any(
+                    max(c, h) >= ma_ref * 0.985
+                    for c, h in zip(after_closes, after_highs)
+                )
+                vol_medio_pb = sum(after_vols) / len(after_vols)
+                volume_menor = vol_medio_pb < vol_ma * 0.85
+                flex_v3_pullback_valido_bear = tocou_ma and volume_menor
+                if preco < fundo:
+                    flex_v3_rompeu_estrutura_bear = True
+            break
+
     liq_long  = minimas[-1] < minimas[-2] and preco > minimas[-2] and preco > aberturas[-1]
     liq_short = maximas[-1] > maximas[-2] and preco < maximas[-2] and preco < aberturas[-1]
 
@@ -562,6 +625,13 @@ def calcular_indicadores(candles):
         "correcao_bull": correcao_bull, "correcao_bear": correcao_bear,
         "pullback_bull": pullback_bull, "pullback_bear": pullback_bear,
         "impulso_bull": impulso_bull, "impulso_bear": impulso_bear,
+        # FLEX V3 — Continuation pattern
+        "flex_v3_impulso_recente_bull": flex_v3_impulso_recente_bull,
+        "flex_v3_impulso_recente_bear": flex_v3_impulso_recente_bear,
+        "flex_v3_pullback_valido_bull": flex_v3_pullback_valido_bull,
+        "flex_v3_pullback_valido_bear": flex_v3_pullback_valido_bear,
+        "flex_v3_rompeu_estrutura_bull": flex_v3_rompeu_estrutura_bull,
+        "flex_v3_rompeu_estrutura_bear": flex_v3_rompeu_estrutura_bear,
         "liq_long": liq_long, "liq_short": liq_short,
         "liq_topo": liq_topo, "liq_fundo": liq_fundo,
         "liq_topo_12": liq_topo_12, "liq_fundo_12": liq_fundo_12,
@@ -856,24 +926,47 @@ def detectar_sinais(ind):
                  i["score_inst_short"] >= 55 and
                  i["nao_overext_short"] and i["rsi_nao_chasing_short"])
 
-    # ── FLEX geral ────────────────────────────────────────────────────────────
-    # RVOL>=1.2 e ADX>=22 (autorizado 25/06 — flex/scout de 25 pra 22)
-    _macd_ok_l = not MACD_R_OBRIGATORIO or i["macd_bull_r"]
-    _macd_ok_s = not MACD_R_OBRIGATORIO or i["macd_bear_r"]
-    _liq_ok_l  = FLEX_SCOUT_SEM_LIQ or i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])
-    _liq_ok_s  = FLEX_SCOUT_SEM_LIQ or i["liq_short"] or i["liq_topo"] or (i["trendilo_short"] and not i["kalman_subindo"])
-    long_flex  = (i["score"] >= 40 and i["ha_bull2"] and _macd_ok_l and i["adx"] >= ADX_MIN_FLEX and
-                  not i["lateralizado"] and i["nao_ext_long_tight"] and i["seguro_long"] and
-                  i["flex_vol_ok"] and i["rvol"] >= FLEX_RVOL_MIN and i["rsi_zona_long"] and
-                  i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["score_inst_long"] >= 50 and
-                  _liq_ok_l and
-                  (i["trendilo_long"] or i["kalman_subindo"] or i["dna_flex_bull"]))
-    short_flex = (i["score"] <= -40 and i["ha_bear2"] and _macd_ok_s and i["adx"] >= ADX_MIN_FLEX and
-                  not i["lateralizado"] and i["nao_ext_short_tight"] and i["seguro_short"] and
-                  i["flex_vol_ok_s"] and i["rvol"] >= FLEX_RVOL_MIN and i["rsi_zona_short"] and
-                  i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["score_inst_short"] >= 50 and
-                  _liq_ok_s and
-                  (i["trendilo_short"] or not i["kalman_subindo"] or i["dna_flex_bear"]))
+    # ── FLEX V3 — Continuação de Tendência (Impulso → Pullback → Rompimento) ──
+    # Substitui o FLEX geral (gatilho de alinhamento de indicadores) por um
+    # modelo de 3 estágios: 1) impulso comprador/vendedor forte, 2) pullback
+    # até a média (MM20/MM21/Kalman) com volume menor, 3) rompimento do topo/
+    # fundo do pullback com RVOL crescente + fluxo + ADX > 22 subindo.
+    # Score Institucional, Kalman, RVOL, ADX, Fluxo, gestão de risco, TP
+    # parcial, trailing e classificação Ouro/Prata/Bronze continuam intactos.
+    long_flex  = (i["flex_v3_impulso_recente_bull"] and
+                  i["flex_v3_pullback_valido_bull"] and
+                  i["flex_v3_rompeu_estrutura_bull"] and
+                  i["score"] >= 40 and
+                  i["kalman_subindo"] and
+                  i["e10"] > i["e21"] and
+                  i["e21"] > i["e50"] and
+                  i["preco"] > i["e21"] and
+                  i["adx"] > ADX_MIN_FLEX and
+                  i["adx_subindo"] and
+                  i["rvol"] >= FLEX_RVOL_MIN and
+                  (i["dna_flow_bull"] or i["trendilo_long"]) and
+                  i["rsi_zona_long"] and
+                  i["seguro_long"] and
+                  not i["lateralizado"] and
+                  i["nao_overext_long"] and
+                  i["rsi_nao_chasing_long"])
+    short_flex = (i["flex_v3_impulso_recente_bear"] and
+                  i["flex_v3_pullback_valido_bear"] and
+                  i["flex_v3_rompeu_estrutura_bear"] and
+                  i["score"] <= -40 and
+                  not i["kalman_subindo"] and
+                  i["e10"] < i["e21"] and
+                  i["e21"] < i["e50"] and
+                  i["preco"] < i["e21"] and
+                  i["adx"] > ADX_MIN_FLEX and
+                  i["adx_subindo"] and
+                  i["rvol"] >= FLEX_RVOL_MIN and
+                  (i["dna_flow_bear"] or i["trendilo_short"]) and
+                  i["rsi_zona_short"] and
+                  i["seguro_short"] and
+                  not i["lateralizado"] and
+                  i["nao_overext_short"] and
+                  i["rsi_nao_chasing_short"])
 
     # ── Setup (acumulação antecipada) ─────────────────────────────────────────
     long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > 18 and
