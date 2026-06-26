@@ -700,21 +700,20 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
     # ── OURO ──
-    if (score_inst >= 65 and rvol >= 1.0 and adx >= 20
+    if (score_inst >= 55 and rvol >= 0.80 and adx >= 18
             and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
             and dist_pct <= 5.0
             and fluxo and liq and not ex):
         return "OURO"
 
     # ── PRATA ──
-    if (score_inst >= 55 and rvol >= 0.70 and adx >= 16
+    if (score_inst >= 45 and rvol >= 0.60 and adx >= 15
             and (40 <= rsi <= 68 if eh_long else 33 <= rsi <= 58)
-            and dist_pct <= 5.0
-            and fluxo):
+            and dist_pct <= 5.0):
         return "PRATA"
 
     # ── BRONZE ──
-    if (score_inst >= 45 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
+    if (score_inst >= 35 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
             and (RSI_LONG_MIN <= rsi <= RSI_LONG_MAX if eh_long else RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX)
             and dist_pct <= 5.0
             and not ex):
