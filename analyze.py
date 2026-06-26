@@ -174,7 +174,7 @@ def calcular_indicadores(candles):
                       2 if rvol_max2 >= 1.5 else 1 if rvol_max2 >= 1.2 else 0)
     rvol_label = ("INST" if rvol_tier==4 else "VSTRONG" if rvol_tier==3 else
                   "STRONG" if rvol_tier==2 else "BOM"    if rvol_tier==1 else "BAIXO")
-    v_bom    = rvol_tier >= 1
+    v_bom    = rvol_tier >= 1 or rvol >= RVOL_MIN_EXEC
     v_forte  = rvol_tier >= 2
     v_inst   = rvol_tier >= 4
     v_forte2 = v_forte and volumes[-2] > vol_ma * 0.9
@@ -1086,6 +1086,14 @@ def detectar_sinais(ind):
             (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
             (long_bb_break,  "LONG",  "BREAKOUT"),
             (short_bb_break, "SHORT", "BREAKOUT"),
+            (long_reversal,  "LONG",  "REVERSAL"),
+            (short_reversal, "SHORT", "REVERSAL"),
+            (long_div,       "LONG",  "DIV"),
+            (short_div,      "SHORT", "DIV"),
+            (long_flex,      "LONG",  "FLEX"),
+            (short_flex,     "SHORT", "FLEX"),
+            (long_setup,     "LONG",  "SETUP"),
+            (short_setup,    "SHORT", "SETUP"),
         ]
         for condição, dir_, src in ordem:
             if condição:
