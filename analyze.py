@@ -20,6 +20,7 @@ from config import (
     HA_CONFIRM_BARS, HA_REVERSAL_OK, ADX_NAO_SUBINDO_BLOQUEIA, ADX_FLEX_MARGIN,
     ADX_MIN_FLEX, ADX_MIN_SCOUT, FLEX_RVOL_MIN,
     STOCH_EXTREMO_BLOQUEAR, VOLUME_SECANDO_BLOQUEAR, MERCADO_LATERAL_BLOQUEAR,
+    SIDEWAYS_ADX_OVERRIDE, BTC_FILTER_MODE,
     FLOW_CONFIRMADO, LIQ_SWEEP, DIST_MM21_MAX, BTC_H4_BLOQUEIA_LONG,
     MM200_OBRIGATORIA, FLEX_SCOUT_SEM_LIQ, MACD_R_OBRIGATORIO,
     CROSS_OBRIGATORIO, PONTOS_CROSS,
@@ -462,7 +463,7 @@ def calcular_indicadores(candles):
     dna_flex_bear = (macd_bear_r and pressao_bear and (rvol >= FLEX_RVOL_MIN)) or dna_flow_bear
 
     # Filtros anti-overextension (FLEX)
-    lateralizado       = bb_squeeze and adx < 15 and MERCADO_LATERAL_BLOQUEAR
+    lateralizado       = bb_squeeze and adx < SIDEWAYS_ADX_OVERRIDE and MERCADO_LATERAL_BLOQUEAR
     nao_ext_long_tight = (preco - e21) / atr < 2.5 and (rsi < 65 or (adx > 32 and rsi < 75))
     nao_ext_short_tight = (e21 - preco) / atr < 3.5 and rsi > 27
 
@@ -702,13 +703,11 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
             (ind["dna_flow_bear"] or ind["trendilo_short"])
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
-    _macd_rec = ind.get("macd_recuperando" if eh_long else "macd_esgotando", False)
-
-    # ── OURO (dist 5%) — exige macd_rec ──
+    # ── OURO (dist 5%) ──
     if (score_inst >= 82 and rvol >= 1.50 and adx >= 24
             and (45 <= rsi <= 62 if eh_long else 38 <= rsi <= 55)
             and dist_pct <= 5.0
-            and fluxo and liq and not ex and _macd_rec):
+            and fluxo and liq and not ex):
         return "OURO"
 
     # ── PRATA (dist 3%) ──
@@ -1082,30 +1081,10 @@ def detectar_sinais(ind):
         ordem = [
             (long_pullback,  "LONG",  "PULLBACK"),
             (short_pullback, "SHORT", "PULLBACK"),
-            (long_core,      "LONG",  "CORE"),
-            (short_core,     "SHORT", "CORE"),
             (long_cross,     "LONG",  f"CROSS:{i['label_cross']}"),
             (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
             (long_bb_break,  "LONG",  "BB_BREAK"),
             (short_bb_break, "SHORT", "BB_BREAK"),
-            (long_sm,        "LONG",  "SM_SWEEP"),
-            (short_sm,       "SHORT", "SM_SWEEP"),
-            (long_reversal,  "LONG",  "REVERSAL"),
-            (short_reversal, "SHORT", "REVERSAL"),
-            (long_surge,     "LONG",  "SURGE"),
-            (short_surge,    "SHORT", "SURGE"),
-            (long_momentum,  "LONG",  "MOMENTUM"),
-            (short_momentum, "SHORT", "MOMENTUM"),
-            (long_rebound,   "LONG",  "REBOUND"),
-            (short_rebound,  "SHORT", "REBOUND"),
-            (long_div,       "LONG",  "DIV"),
-            (short_div,      "SHORT", "DIV"),
-            (long_flex,      "LONG",  "FLEX"),
-            (short_flex,     "SHORT", "FLEX"),
-            (long_setup,     "LONG",  "SETUP"),
-            (short_setup,    "SHORT", "SETUP"),
-            (long_scout,     "LONG",  "SCOUT"),
-            (short_scout,    "SHORT", "SCOUT"),
         ]
         for condição, dir_, src in ordem:
             if condição:

@@ -22,7 +22,7 @@ from config import (
     MAX_POSICOES_V5, PERDA_MAX_DIA_V5, PAUSA_2_PERDAS_V5, NO_TRADE_PRIMEIROS_MIN_V5,
     TESTE_RESULTS_FILE, MAX_SINAIS_TESTE_POR_CICLO,
     ADX_NAO_SUBINDO_BLOQUEIA, ADX_FLEX_MARGIN,
-    H1_OBRIGATORIO, BTC_BLOQUEIA_SHORT_ABAIXO,
+    H1_OBRIGATORIO, BTC_BLOQUEIA_SHORT_ABAIXO, BTC_FILTER_MODE,
     H1_MTF_OBRIGATORIO, CROSS_OBRIGATORIO, PONTOS_CROSS, MACD_REC_PONTOS, PULLBACK_PONTOS,
     EXAUSTAO_BLOQUEAR, BB_TOPO_BLOQUEAR, BB_FUNDO_BLOQUEAR,
 )
@@ -389,17 +389,18 @@ def dentro_horario_operacao():
 # ── Filtro de Regime Global (AJUSTE PROFISSIONAL 21/06) ──────────────────────
 
 async def _btc_bloqueia_short(session) -> bool:
-    """Bloqueia SHORT em todas as moedas se BTC RSI abaixo do limiar
-    (BTC_BLOQUEIA_SHORT_ABAIXO). Falha aberta: sem dado, não bloqueia."""
+    """Bloqueia SHORT em todas as moedas se BTC RSI abaixo do limiar.
+    SOFT: só bloqueia abaixo de 20 (extremo). Falha aberta: sem dado, não bloqueia."""
+    _limiar = 20 if BTC_FILTER_MODE == "SOFT" else BTC_BLOQUEIA_SHORT_ABAIXO
     candles = await buscar_candles(session, "BTCUSDT", "1h")
     if not candles:
         return False
     r = calcular_indicadores(candles)
     if not r:
         return False
-    if r["rsi"] < BTC_BLOQUEIA_SHORT_ABAIXO:
-        log.info(f"🛡️ BTC RSI {r['rsi']:.1f} < {BTC_BLOQUEIA_SHORT_ABAIXO} — "
-                 f"SHORT bloqueados neste ciclo")
+    if r["rsi"] < _limiar:
+        log.info(f"🛡️ BTC RSI {r['rsi']:.1f} < {_limiar} — "
+                 f"SHORT bloqueados neste ciclo ({BTC_FILTER_MODE})")
         return True
     return False
 
@@ -823,26 +824,35 @@ async def executar_ciclo_mtf(session, estado, moedas, btc_bloq_short=False):
             continue
         direcao = "ALTA" if h4_bull else "BAIXA"
         if abrev not in ("BTC", "WBTC"):
-            if h4_bull and btc_bear and not btc_rsi_oversold:
-                # Força relativa: quando BTC RSI < 35 (sobrevendido), permite LONG de
-                # pares com setup H4 próprio — captura reversões de mercado em pânico.
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "BTC em queda"))
-                log.info(f"[MTF] {abrev:7s} | LONG bloqueado — BTC H4 em queda")
-                _diag_pos_cascata("BTC H4 em queda (bloqueia LONG)")
-                continue
-            if h4_bear and btc_bull:
-                setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "BTC em alta"))
-                log.info(f"[MTF] {abrev:7s} | SHORT bloqueado — BTC H4 em alta")
-                _diag_pos_cascata("BTC H4 em alta (bloqueia SHORT)")
-                continue
-            if h4_bull and btc_rsi_quente:
-                log.info(f"[MTF] {abrev:7s} | LONG bloqueado — BTC RSI {btc_rsi:.0f} > 72 (sobrecomprado)")
-                _diag_pos_cascata("BTC RSI>72 (bloqueia LONG)")
-                continue
-            if h4_bear and btc_rsi_panico:
-                log.info(f"[MTF] {abrev:7s} | SHORT bloqueado — BTC RSI {btc_rsi:.0f} < 28 (sobrevendido)")
-                _diag_pos_cascata("BTC RSI<28 (bloqueia SHORT)")
-                continue
+            _btc_mode = BTC_FILTER_MODE
+            if _btc_mode == "SOFT":
+                if h4_bull and btc_rsi_quente:
+                    log.info(f"[MTF] {abrev:7s} | LONG bloqueado — BTC RSI {btc_rsi:.0f} > 72")
+                    _diag_pos_cascata("BTC RSI>72 (bloqueia LONG)")
+                    continue
+                if h4_bear and btc_rsi_panico:
+                    log.info(f"[MTF] {abrev:7s} | SHORT bloqueado — BTC RSI {btc_rsi:.0f} < 28")
+                    _diag_pos_cascata("BTC RSI<28 (bloqueia SHORT)")
+                    continue
+            else:
+                if h4_bull and btc_bear and not btc_rsi_oversold:
+                    setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "BTC em queda"))
+                    log.info(f"[MTF] {abrev:7s} | LONG bloqueado — BTC H4 em queda")
+                    _diag_pos_cascata("BTC H4 em queda (bloqueia LONG)")
+                    continue
+                if h4_bear and btc_bull:
+                    setups_h4.append((abrev, direcao, r4h["score"], h4_rsi, "BTC em alta"))
+                    log.info(f"[MTF] {abrev:7s} | SHORT bloqueado — BTC H4 em alta")
+                    _diag_pos_cascata("BTC H4 em alta (bloqueia SHORT)")
+                    continue
+                if h4_bull and btc_rsi_quente:
+                    log.info(f"[MTF] {abrev:7s} | LONG bloqueado — BTC RSI {btc_rsi:.0f} > 72")
+                    _diag_pos_cascata("BTC RSI>72 (bloqueia LONG)")
+                    continue
+                if h4_bear and btc_rsi_panico:
+                    log.info(f"[MTF] {abrev:7s} | SHORT bloqueado — BTC RSI {btc_rsi:.0f} < 28")
+                    _diag_pos_cascata("BTC RSI<28 (bloqueia SHORT)")
+                    continue
         log.info(f"[MTF] {abrev:7s} | H4 {direcao} ✓BTC | Score {r4h['score']:+d} → buscando entrada H1...")
         filtrados.append((sym, label, abrev, r4h, h4_bull, h4_bear))
 
