@@ -348,8 +348,8 @@ def analyze_flex(candles):
     elif short_pullback: sig = "SHORT"; sig_source = "PULLBACK"
     elif long_cross:    sig = "LONG";  sig_source = f"CROSS:{cross_label}"
     elif short_cross:   sig = "SHORT"; sig_source = f"CROSS:{cross_label}"
-    elif long_bb_break:  sig = "LONG";  sig_source = "BB_BREAK"
-    elif short_bb_break: sig = "SHORT"; sig_source = "BB_BREAK"
+    elif long_bb_break:  sig = "LONG";  sig_source = "BREAKOUT"
+    elif short_bb_break: sig = "SHORT"; sig_source = "BREAKOUT"
     elif long_flex:     sig = "LONG";  sig_source = "FLEX"
     elif short_flex:    sig = "SHORT"; sig_source = "FLEX"
 

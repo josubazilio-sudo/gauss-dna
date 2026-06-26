@@ -97,20 +97,24 @@ FILTER_LEVEL = int(os.environ.get("FILTER_LEVEL", "3"))
 
 # Legado (preservado por compatibilidade com analyze.py)
 HA_CONFIRM_BARS = 1
+HA_ALLOW_STRONG_BODY = True
 HA_REVERSAL_OK = True
 ADX_NAO_SUBINDO_BLOQUEIA = False
 ADX_FLEX_MARGIN = 1.5
 
 # Filtros principais
 RVOL_MIN = 0.45
+RVOL_BREAKOUT = 0.50
 
 ADX_MIN_SURGE = 15
 ADX_MIN_PULLBACK = 15
-ADX_MIN_FLEX = 21
+ADX_MIN_FLEX = 20
 ADX_MIN_BB = 15
+ADX_GROWING_BONUS = True
 SIDEWAYS_ADX_OVERRIDE = 22
+SIDEWAYS_FILTER = True
 BTC_FILTER_MODE = "SOFT"
-ADX_MIN_SCOUT = 22
+ADX_MIN_SCOUT = 20
 FLEX_RVOL_MIN = 0.50
 
 MIN_FLUXO_LONG = 1
@@ -130,25 +134,35 @@ RVOL_MIN_EXEC = 0.45
 # V4 — thresholds do usuário
 SCORE_MIN = 72
 CONFIANCA_MIN = 60
-SCORE_OURO = 82
-SCORE_PRATA = 76
-SCORE_BRONZE = 70
+SCORE_OURO = 85
+SCORE_PRATA = 75
+SCORE_BRONZE = 65
 
 # RSI por direção
-RSI_LONG_MIN = 38
+RSI_LONG_MIN = 52
 RSI_LONG_MAX = 70
 RSI_SHORT_MIN = 30
-RSI_SHORT_MAX = 62
+RSI_SHORT_MAX = 48
+BLOCK_LONG_RSI_OVER = 72
+BLOCK_SHORT_RSI_UNDER = 28
 
 # Segurança — BTC
 BTC_BLOQUEIA_SHORT_ABAIXO = 25
 
 # BB (Bollinger Bands)
+BLOCK_TOP_BUY = True
+BLOCK_BOTTOM_SELL = True
 BLOQUEAR_LONG_BB_TOPO = True
 BLOQUEAR_SHORT_BB_FUNDO = True
 PENALIDADE_BB_EXTREMO = 10
+ALLOW_RSI_BREAKOUT = False
+ALLOW_CHASE_LONG = False
+ALLOW_CHASE_SHORT = False
 
 # ── Filtros SCOUT CONTROLADO ────────────────────────────────────────────────
+ENABLE_FLEX = True
+FLEX_ALLOW_CONTINUATION = True
+ENABLE_SCOUT = False
 FLEX_SCOUT_ADX       = 15     # ADX mínimo para FLEX/SCOUT
 FLEX_SCOUT_SEM_LIQ   = True   # FLEX/SCOUT sem exigir liquidez
 MACD_R_OBRIGATORIO   = False  # MACD não obrigatório para sinais
@@ -165,8 +179,12 @@ MACD_ESG_PONTOS      = 8      # pontuação do MACD esgotando no score
 SEM_LIQ_BLOQUEAR    = False   # sem liquidez não bloqueia sinal
 SEM_LIQ_PONTOS      = -5      # penalidade por falta de liquidez
 FLOW_CONFIRMADO     = True    # fluxo (dna_flow/trendilo) obrigatório
+FLOW_REQUIRED_LONG  = True
+FLOW_REQUIRED_SHORT = True
 LIQ_SWEEP           = False   # sweep de liquidez não exigido
 H1_MTF_OBRIGATORIO  = False   # H1 MTF não obrigatório
+USE_H1_CONFIRMATION  = True
+USE_H4_TREND         = True
 HA_H1_CONFIRMAR     = False   # HA H1 não obrigatório para confirmar
 DIST_MM21_MAX       = 7       # distância máxima da MM21 em %
 BTC_H4_BLOQUEIA_LONG = False  # BTC H4 não bloqueia LONG
@@ -177,6 +195,11 @@ BB_FUNDO_BLOQUEAR   = True    # bb_fundo bloqueia SHORT
 STOCH_EXTREMO_BLOQUEAR = False
 VOLUME_SECANDO_BLOQUEAR = False
 MERCADO_LATERAL_BLOQUEAR = True
+
+# Exit strategy
+EXIT_ON_MA10_MA21 = True
+EXIT_REQUIRE_VOLUME_DROP = True
+EXIT_REQUIRE_STRUCTURE_LOSS = True
 
 # ── Arquivos de estado ────────────────────────────────────────────────────────
 STATE_FILE   = Path("last_signals.json")

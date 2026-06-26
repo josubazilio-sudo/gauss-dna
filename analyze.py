@@ -703,22 +703,22 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
             (ind["dna_flow_bear"] or ind["trendilo_short"])
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
-    # ── OURO (dist 5%) ──
-    if (score_inst >= 82 and rvol >= 1.50 and adx >= 24
+    # ── OURO ──
+    if (score_inst >= SCORE_OURO and rvol >= 1.50 and adx >= 24
             and (45 <= rsi <= 62 if eh_long else 38 <= rsi <= 55)
             and dist_pct <= 5.0
             and fluxo and liq and not ex):
         return "OURO"
 
-    # ── PRATA (dist 3%) ──
-    if (score_inst >= 76 and rvol >= 1.00 and adx >= 20
+    # ── PRATA ──
+    if (score_inst >= SCORE_PRATA and rvol >= 1.00 and adx >= 20
             and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
             and dist_pct <= 3.0
             and fluxo and liq and not ex):
         return "PRATA"
 
-    # ── BRONZE (dist 3%) ──
-    if (score_inst >= 70 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
+    # ── BRONZE ──
+    if (score_inst >= SCORE_BRONZE and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
             and (RSI_LONG_MIN <= rsi <= RSI_LONG_MAX if eh_long else RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX)
             and dist_pct <= 3.0
             and not ex):
@@ -1083,8 +1083,8 @@ def detectar_sinais(ind):
             (short_pullback, "SHORT", "PULLBACK"),
             (long_cross,     "LONG",  f"CROSS:{i['label_cross']}"),
             (short_cross,    "SHORT", f"CROSS:{i['label_cross']}"),
-            (long_bb_break,  "LONG",  "BB_BREAK"),
-            (short_bb_break, "SHORT", "BB_BREAK"),
+            (long_bb_break,  "LONG",  "BREAKOUT"),
+            (short_bb_break, "SHORT", "BREAKOUT"),
         ]
         for condição, dir_, src in ordem:
             if condição:

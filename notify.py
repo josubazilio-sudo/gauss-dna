@@ -54,7 +54,7 @@ def calcular_stop_tp(eh_long, preco, atr, swing_low, swing_high, fonte, classifi
     stop_estrutural = swing_low - atr * 0.5 if eh_long else swing_high + atr * 0.5
     dist_swing = abs(preco - stop_estrutural)
 
-    usar_estrutural = (fonte not in ("SURGE", "BB_BREAK", "MOMENTUM") and
+    usar_estrutural = (fonte not in ("SURGE", "BREAKOUT", "MOMENTUM") and
                        atr * 0.3 < dist_swing < atr * 2.5 and
                        (stop_estrutural < preco if eh_long else stop_estrutural > preco))
 
@@ -182,7 +182,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
         "REVERSAL":  "🔄 REVERSÃO EXTREMA",
         "SETUP":     "🔭 DNA SETUP",
         "SCOUT":     "🔵 DNA SCOUT",
-        "BB_BREAK":  "💥 BB BREAKOUT",
+        "BREAKOUT":  "💥 BREAKOUT",
         "INSTITUCIONAL": "🏛 DNA INSTITUCIONAL",
     }
     if fonte.startswith("TESTE"):
