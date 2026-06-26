@@ -423,7 +423,7 @@ def calcular_indicadores(candles):
     tbear_loose = e10 < e21 and e21 < e50
 
     rsi_nao_topo   = rsi < 75
-    rsi_nao_fundo  = rsi > 25
+    rsi_nao_fundo  = rsi >= 20
     # vol_secando saiu do bloqueio binário (23/06, 4ª rodada): mesmo após 3 afrouxa-
     # mentos de limiar no mesmo dia, continuava sendo o bloqueador isolado dominante
     # de candidatos com score alto e nada mais de errado (GRASS+145, DYDX+130, SUI-130,
@@ -462,7 +462,7 @@ def calcular_indicadores(candles):
     # Filtros anti-overextension (FLEX)
     lateralizado       = bb_squeeze and adx < SIDEWAYS_ADX_OVERRIDE and MERCADO_LATERAL_BLOQUEAR
     nao_ext_long_tight = (preco - e21) / atr < 2.5 and (rsi < 68 or (adx > 25 and rsi < 78))
-    nao_ext_short_tight = (e21 - preco) / atr < 3.5 and rsi > 25
+    nao_ext_short_tight = (e21 - preco) / atr < 3.5 and rsi > 20
 
     # Anti-pump / anti-dump
     raw_c48 = [c["c"] for c in candles[-50:-1]]
