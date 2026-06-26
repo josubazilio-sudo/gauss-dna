@@ -421,8 +421,8 @@ def calcular_indicadores(candles):
     tbull_loose = e10 > e21 and e21 > e50
     tbear_loose = e10 < e21 and e21 < e50
 
-    rsi_nao_topo   = rsi < 78
-    rsi_nao_fundo  = rsi > 22
+    rsi_nao_topo   = rsi < 72
+    rsi_nao_fundo  = rsi > 28
     # vol_secando saiu do bloqueio binário (23/06, 4ª rodada): mesmo após 3 afrouxa-
     # mentos de limiar no mesmo dia, continuava sendo o bloqueador isolado dominante
     # de candidatos com score alto e nada mais de errado (GRASS+145, DYDX+130, SUI-130,
@@ -697,21 +697,18 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
         return None
     if not (ind["ha_bull_1"] if eh_long else ind["ha_bear_1"]):
         return None
-    macd_ok = (ind.get("macd_bull_r", False) or ind.get("macd_recuperando", False)) if eh_long else \
-              (ind.get("macd_bear_r", False) or ind.get("macd_esgotando", False))
-    if not macd_ok:
-        return None
 
     fluxo = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
             (ind["dna_flow_bear"] or ind["trendilo_short"])
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
+    _macd_rec = ind.get("macd_recuperando" if eh_long else "macd_esgotando", False)
 
-    # ── OURO (dist 5%) ──
+    # ── OURO (dist 5%) — exige macd_rec ──
     if (score_inst >= 82 and rvol >= 1.50 and adx >= 24
             and (45 <= rsi <= 62 if eh_long else 38 <= rsi <= 55)
             and dist_pct <= 5.0
-            and fluxo and liq and not ex):
+            and fluxo and liq and not ex and _macd_rec):
         return "OURO"
 
     # ── PRATA (dist 3%) ──
@@ -793,10 +790,10 @@ def detectar_sinais(ind):
                   i["preco"] >= i["e21"] * 0.98)
 
     # ── Cross / continuação da tendência ─────────────────────────────────────
-    _tend_continuation_long = (i["tendencia_bull"] and i["dna_flow_bull"] and i["adx_long_ok"]
-                               and i["macd_bull_r"] and (i["trendilo_long"] or i["kalman_subindo"]))
-    _tend_continuation_short = (i["tendencia_bear"] and i["dna_flow_bear"] and i["adx_short_ok"]
-                                and i["macd_bear_r"] and (i["trendilo_short"] or not i["kalman_subindo"]))
+    _tend_continuation_long = (i["preco"] > i["e21"] and i["e10"] > i["e10_p"]
+                               and i["preco"] > i["maximas"][-2])
+    _tend_continuation_short = (i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
+                                and i["preco"] < i["minimas"][-2])
     long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long) and i["dna_flow_bull"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
