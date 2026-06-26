@@ -790,14 +790,14 @@ def detectar_sinais(ind):
     _tend_continuation_short = i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
     _score_trig_long  = i["score"] >= 100
     _score_trig_short = i["score"] <= -100
-    long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long or _score_trig_long) and i["dna_flow_bull"] and
-                   i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
-                   i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
-                   i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
-    short_cross = ((i["algum_cross_bear"] or _tend_continuation_short or _score_trig_short) and i["dna_flow_bear"] and
-                   i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
-                   i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]) and
-                   i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
+    _sr_long = _score_trig_long or i["algum_cross_bull"] or _tend_continuation_long
+    _sr_short = _score_trig_short or i["algum_cross_bear"] or _tend_continuation_short
+    _cross_extra_long  = i["dna_flow_bull"] and i["score_inst_long"] >= 50 and (i["trendilo_long"] or i["kalman_subindo"])
+    _cross_extra_short = i["dna_flow_bear"] and i["score_inst_short"] >= 50 and (i["trendilo_short"] or not i["kalman_subindo"])
+    long_cross  = (_sr_long and i["preco"] > i["e200"] and i["rsi_zona_long"] and i["seguro_long"] and
+                   (_score_trig_long or (_cross_extra_long and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])))
+    short_cross = (_sr_short and i["preco"] < i["e200"] and i["rsi_zona_short"] and i["seguro_short"] and
+                   (_score_trig_short or (_cross_extra_short and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])))
 
     # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
     _fluxo_min   = 0 if _FLV <= 0 else (1 if _FLV == 1 else 2)
@@ -1195,15 +1195,20 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             fluxo = sum([ind["dna_flow_bull"], ind["f_bull"], ind["trendilo_long"], ind["kalman_subindo"]])
             if fluxo < 2:               b.append(f"fluxo={fluxo}/4")
             # gatilho específico sempre, mesmo quando b não está vazio
+            _score_trig = sc >= 100
             _trig = []
             if not ind.get("pullback_bull"):    _trig.append("pullback=F")
-            if not ind.get("algum_cross_bull"):  _trig.append("cross=F")
+            if not (_score_trig or ind.get("algum_cross_bull")): _trig.append("cross=F")
             if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
             if SEM_LIQ_BLOQUEAR and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
             if ind["adx"] < ADX_MIN_FLEX:           _trig.append(f"adx={ind['adx']:.1f}<{ADX_MIN_FLEX}(flex/scout)")
             if not ind.get("macd_bull_r"):        _trig.append("macd_r=F")
             if ind.get("nao_overext_long") is False: _trig.append("overext")
             if ind.get("rsi_nao_chasing_long") is False: _trig.append("rsi_chase")
+            if not ind.get("dna_flow_bull"):        _trig.append("dna_flow=F")
+            if ind.get("score_inst_long", 0) < 50:  _trig.append(f"inst={ind['score_inst_long']:.0f}<50")
+            if not (ind.get("trendilo_long") or ind.get("kalman_subindo")): _trig.append("sem_trendilo")
+            if ind.get("nao_ext_long_tight") is False: _trig.append("ext_tight")
             b.append("gatilho:" + ",".join(_trig) if _trig else "tudo ok")
             if not b:
                 # candidato passa em todos os checks genéricos acima mas nenhum dos 12
@@ -1233,15 +1238,20 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if not ind["rsi_zona_short"]: b.append(f"rsi_zona=F(rsi={ind['rsi']:.0f})")
             fluxo = sum([ind["dna_flow_bear"], ind["f_bear"], ind["trendilo_short"], not ind["kalman_subindo"]])
             if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
+            _score_trig = sc <= -100
             _trig = []
             if not ind.get("pullback_bear"):    _trig.append("pullback=F")
-            if not ind.get("algum_cross_bear"):  _trig.append("cross=F")
+            if not (_score_trig or ind.get("algum_cross_bear")): _trig.append("cross=F")
             if MACD_ESG_OBRIGATORIO and not ind.get("macd_esgotando"): _trig.append("macd_esg=F")
             if SEM_LIQ_BLOQUEAR and not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
             if ind["adx"] < ADX_MIN_FLEX:           _trig.append(f"adx={ind['adx']:.1f}<{ADX_MIN_FLEX}(flex/scout)")
             if not ind.get("macd_bear_r"):        _trig.append("macd_r=F")
             if ind.get("nao_overext_short") is False: _trig.append("overext")
             if ind.get("rsi_nao_chasing_short") is False: _trig.append("rsi_chase")
+            if not ind.get("dna_flow_bear"):        _trig.append("dna_flow=F")
+            if ind.get("score_inst_short", 0) < 50: _trig.append(f"inst={ind['score_inst_short']:.0f}<50")
+            if not (ind.get("trendilo_short") or not ind.get("kalman_subindo")): _trig.append("sem_trendilo")
+            if ind.get("nao_ext_short_tight") is False: _trig.append("ext_tight")
             b.append("gatilho:" + ",".join(_trig) if _trig else "tudo ok")
             if not b:
                 _trig = []
