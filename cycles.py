@@ -1176,8 +1176,8 @@ async def main():
             else:
                 if total > 0:
                     _diag_buffer["ultimo_sinal"] = _agora_d
-                _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 3600
-                if _agora_d - _diag_buffer["ultimo_envio"] >= 3600 and _sem_sinal:
+                _sem_sinal = _agora_d - _diag_buffer["ultimo_sinal"] >= 1800
+                if _agora_d - _diag_buffer["ultimo_envio"] >= 1800 and _sem_sinal:
                     _enviar_diag = True
             if _enviar_diag:
                 try:
