@@ -127,7 +127,7 @@ HA_H1_CONFIRMAR = False
 HA_H1_PESO = 10
 
 # V4 — alinhados ao piso do usuário
-ADX_MIN_GLOBAL = 15
+ADX_MIN_GLOBAL = 14
 RVOL_MIN_BY_TF = {"30m": 0.40, "1h": 0.40}
 RVOL_MIN_EXEC = 0.40
 
