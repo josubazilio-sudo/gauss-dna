@@ -10,6 +10,14 @@ Após qualquer ajuste de código em `config.py`, `analyze.py`, `cycles.py`, `not
 Esta regra substitui a exceção documentada em "TIMEOUT DO JOB MENOR QUE O CRON" (22/06, sobre não disparar
 quando já há run rodando) — o cancelamento prévio elimina o risco de concurrency group travar o novo run.
 
+## REGRA #-5 — SEM SINAL? OLHAR A LISTA DE BLOQUEADOS POR ERRO DE CÓDIGO (autorizado 25/06, ordem permanente)
+
+Sempre que o bot estiver rodando e não produzir sinal real (diagnóstico mostrar 0 sinais):
+1. **Ler a lista de candidatos BLOQUEADOS** no log do último run
+2. Verificar se há um **erro de código** (variável não definida, campo faltando, contradição de filtro) — ex: `eh_long` usado antes de ser definido (25/06), `ha1=F` checando campo errado (24/06), `rvol_min_exec` desalinhado com pisos de classificação (22/06)
+3. Só concluir "mercado parado" depois de descartar bug — olhar candidatos com score alto (+100/+120) bloqueados isoladamente por 1 filtro suspeito
+4. "gravar" = esta regra está gravada, seguir sempre
+
 ## REGRA #-3 — PARAR IMEDIATAMENTE QUANDO O USUÁRIO ESCREVER "STOP" (autorizado 23/06, prioridade máxima)
 
 Sempre que a mensagem do usuário contiver "stop" (ou "pare"), interrompo **imediatamente** qualquer

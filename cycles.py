@@ -596,7 +596,7 @@ async def executar_ciclo(session, estado, tf, moedas, btc_bloq_short=False):
                     h1_ind = calcular_indicadores(h1_candles)
                     if h1_ind:
                         h1_score = h1_ind.get("score", 0)
-                        h1_contrario = (eh_long and h1_score < -15) or (not eh_long and h1_score > 15)
+                        h1_contrario = (_eh_long_uni and h1_score < -15) or (not _eh_long_uni and h1_score > 15)
                         if h1_contrario:
                             log.info(f"  🚫 {abrev} [{tf}] bloqueado — H1 contrario (score {h1_score:+d})")
                             candidatos.append((abs(result["score"]), abrev, result["score"],
