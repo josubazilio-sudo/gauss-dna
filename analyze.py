@@ -86,8 +86,8 @@ def calcular_indicadores(candles):
     macd_bear3 = macd_bear and hist_p < hist_pp
     # Exige 2 barras seguidas de melhora/piora — uma única barra é ruído e
     # deixa entradas antecipadas (SETUP/EARLY/REVERSAL) vulneráveis a reversões falsas
-    macd_recuperando = hist > hist_p and hist_p > hist_pp
-    macd_esgotando   = hist < hist_p and hist_p < hist_pp
+    macd_recuperando = hist > hist_p
+    macd_esgotando   = hist < hist_p
 
     # Heikin-Ashi: corpo mínimo (0.2 ATR) filtra dojis
     ha_corpo_ok = abs(fechamentos[-1] - aberturas[-1]) > atr * 0.2
@@ -383,6 +383,10 @@ def calcular_indicadores(candles):
     px_e50_bear = preco_p >= e50_p and preco < e50
     algum_cross_bull = cross_10_21_bull or cross_21_50_bull or px_e50_bull
     algum_cross_bear = cross_10_21_bear or cross_21_50_bear or px_e50_bear
+    trend_bull = e10 > e21 and e21 > e50 and preco > e50
+    trend_bear = e10 < e21 and e21 < e50 and preco < e50
+    cross_ok_bull = algum_cross_bull or trend_bull
+    cross_ok_bear = algum_cross_bear or trend_bear
 
     if cross_21_50_bull:   label_cross = "EMA21 > EMA50"
     elif px_e50_bull:      label_cross = "Preço > EMA50"
@@ -497,7 +501,7 @@ def calcular_indicadores(candles):
         (5  if kalman_accel_up else -5 if kalman_accel_down else 0) +
         (5  if tend_consistente_bull else -5 if tend_consistente_bear else 0) +
         (10 if trendilo_long else -10 if trendilo_short else 0) +
-        (PONTOS_CROSS if algum_cross_bull else -PONTOS_CROSS if algum_cross_bear else 0) +
+        (PONTOS_CROSS if cross_ok_bull else -PONTOS_CROSS if cross_ok_bear else 0) +
         (MACD_REC_PONTOS if macd_recuperando else -MACD_ESG_PONTOS if macd_esgotando else 0) +
         (PULLBACK_PONTOS if pullback_bull else -PULLBACK_PONTOS if pullback_bear else 0)
     )
@@ -643,6 +647,8 @@ def calcular_indicadores(candles):
         "nao_overext_long": nao_overext_long, "nao_overext_short": nao_overext_short,
         # Cruzamentos
         "algum_cross_bull": algum_cross_bull, "algum_cross_bear": algum_cross_bear,
+        "cross_ok_bull": cross_ok_bull, "cross_ok_bear": cross_ok_bear,
+        "trend_bull": trend_bull, "trend_bear": trend_bear,
         "label_cross": label_cross,
         # Trendilo
         "trendilo_long": trendilo_long, "trendilo_short": trendilo_short,
@@ -788,8 +794,8 @@ def detectar_sinais(ind):
     _tend_continuation_short = i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
     _score_trig_long  = i["score"] >= 100
     _score_trig_short = i["score"] <= -100
-    _sr_long = _score_trig_long or i["algum_cross_bull"] or _tend_continuation_long
-    _sr_short = _score_trig_short or i["algum_cross_bear"] or _tend_continuation_short
+    _sr_long = _score_trig_long or i["cross_ok_bull"]
+    _sr_short = _score_trig_short or i["cross_ok_bear"]
     _cross_extra_long  = i["dna_flow_bull"] and i["score_inst_long"] >= 40 and (i["trendilo_long"] or i["kalman_subindo"])
     _cross_extra_short = i["dna_flow_bear"] and i["score_inst_short"] >= 40 and (i["trendilo_short"] or not i["kalman_subindo"])
     _seg_sr_long  = not i["vol_secando"] and not i.get("exaustao_topo")
@@ -1104,11 +1110,11 @@ def detectar_sinais(ind):
         if not sinal:
             for _dir, _pull, _cross, _macd, _dna in [
                 ("LONG", i.get("pullback_bull", False),
-                 i.get("algum_cross_bull", False) or abs(i.get("score", 0)) >= 100,
+                 i.get("cross_ok_bull", False) or abs(i.get("score", 0)) >= 100,
                  i.get("macd_recuperando", False),
                  i.get("dna_flow_bull", False)),
                 ("SHORT", i.get("pullback_bear", False),
-                 i.get("algum_cross_bear", False) or abs(i.get("score", 0)) >= 100,
+                 i.get("cross_ok_bear", False) or abs(i.get("score", 0)) >= 100,
                  i.get("macd_esgotando", False),
                  i.get("dna_flow_bear", False))
             ]:
@@ -1228,7 +1234,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             _trig = []
             if not ind.get("pullback_bull"):    _trig.append("pullback=F")
             if not _score_trig: _trig.append("no_scr_trig")
-            if not (_score_trig or ind.get("algum_cross_bull")): _trig.append("cross=F")
+            if not (_score_trig or ind.get("cross_ok_bull")): _trig.append("cross=F")
             if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
             if SEM_LIQ_BLOQUEAR and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
             if ind["adx"] < ADX_MIN_FLEX:           _trig.append(f"adx={ind['adx']:.1f}<{ADX_MIN_FLEX}(flex/scout)")
@@ -1246,7 +1252,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
                 # (pullback/cross/setup/flex/scout), 23/06, casos reais KMNO/ZRO "sem detalhe"
                 _trig = []
                 if not ind.get("pullback_bull"):    _trig.append("pullback=F")
-                if not ind.get("algum_cross_bull"):  _trig.append("cross=F")
+                if not ind.get("cross_ok_bull"):  _trig.append("cross=F")
                 if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
                 if SEM_LIQ_BLOQUEAR and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
                 if ind["adx"] < ADX_MIN_FLEX:           _trig.append(f"adx={ind['adx']:.1f}<{ADX_MIN_FLEX}(flex/scout)")
@@ -1272,7 +1278,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             _trig = []
             if not _score_trig: _trig.append("no_scr_trig")
             if not ind.get("pullback_bear"):    _trig.append("pullback=F")
-            if not (_score_trig or ind.get("algum_cross_bear")): _trig.append("cross=F")
+            if not (_score_trig or ind.get("cross_ok_bear")): _trig.append("cross=F")
             if MACD_ESG_OBRIGATORIO and not ind.get("macd_esgotando"): _trig.append("macd_esg=F")
             if SEM_LIQ_BLOQUEAR and not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
             if ind["adx"] < ADX_MIN_FLEX:           _trig.append(f"adx={ind['adx']:.1f}<{ADX_MIN_FLEX}(flex/scout)")
@@ -1287,7 +1293,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if not b:
                 _trig = []
                 if not ind.get("pullback_bear"):    _trig.append("pullback=F")
-                if not ind.get("algum_cross_bear"):  _trig.append("cross=F")
+                if not ind.get("cross_ok_bear"):  _trig.append("cross=F")
                 if MACD_ESG_OBRIGATORIO and not ind.get("macd_esgotando"): _trig.append("macd_esg=F")
                 if SEM_LIQ_BLOQUEAR and not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
                 if ind["adx"] < ADX_MIN_FLEX:           _trig.append(f"adx={ind['adx']:.1f}<{ADX_MIN_FLEX}(flex/scout)")
