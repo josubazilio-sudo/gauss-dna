@@ -387,6 +387,8 @@ def calcular_indicadores(candles):
     trend_bear = e10 < e21 and e21 < e50 and preco < e50
     cross_ok_bull = algum_cross_bull or trend_bull
     cross_ok_bear = algum_cross_bear or trend_bear
+    pullback_ok_bull = pullback_bull or trend_bull
+    pullback_ok_bear = pullback_bear or trend_bear
 
     if cross_21_50_bull:   label_cross = "EMA21 > EMA50"
     elif px_e50_bull:      label_cross = "Preço > EMA50"
@@ -626,6 +628,7 @@ def calcular_indicadores(candles):
         "reteste_mm50_bull": reteste_mm50_bull, "reteste_mm50_bear": reteste_mm50_bear,
         "correcao_bull": correcao_bull, "correcao_bear": correcao_bear,
         "pullback_bull": pullback_bull, "pullback_bear": pullback_bear,
+        "pullback_ok_bull": pullback_ok_bull, "pullback_ok_bear": pullback_ok_bear,
         "impulso_bull": impulso_bull, "impulso_bear": impulso_bear,
         # FLEX V3 — Continuation pattern
         "flex_v3_impulso_recente_bull": flex_v3_impulso_recente_bull,
@@ -706,20 +709,20 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
     # ── OURO ──
-    if (score_inst >= 55 and rvol >= 0.80 and adx >= 18
+    if (score_inst >= 45 and rvol >= 0.70 and adx >= 16
             and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
             and dist_pct <= 5.0
             and fluxo and liq and not ex):
         return "OURO"
 
     # ── PRATA ──
-    if (score_inst >= 45 and rvol >= 0.60 and adx >= 15
+    if (score_inst >= 35 and rvol >= 0.50 and adx >= 14
             and (40 <= rsi <= 68 if eh_long else 33 <= rsi <= 58)
             and dist_pct <= 5.0):
         return "PRATA"
 
     # ── BRONZE ──
-    if (score_inst >= 35 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
+    if (score_inst >= 30 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
             and (RSI_LONG_MIN <= rsi <= RSI_LONG_MAX if eh_long else RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX)
             and dist_pct <= 5.0
             and not ex):
@@ -765,12 +768,12 @@ def detectar_sinais(ind):
     tbull_r = i["tbull_r"]; tbear_r = i["tbear_r"]
     long_pullback  = (i["pullback_bull"] and tbull_r and i["preco"] < i["e21"] * 1.03 and
                       i["dna_flow_bull"] and i["adx"] > ADX_MIN_GLOBAL and i["pdi"] > i["mdi"] and
-                      i["rsi_zona_long"] and i["score_inst_long"] >= 40 and
-                      i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"] and
-                      i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
+                       i["rsi_zona_long"] and i["score_inst_long"] >= 30 and
+                       i["seguro_long"] and i["trendilo_long"] and not i["liq_topo"] and
+                       i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
     short_pullback = (i["pullback_bear"] and tbear_r and i["preco"] > i["e21"] * 0.97 and
                       i["dna_flow_bear"] and i["adx"] > ADX_MIN_GLOBAL and i["mdi"] > i["pdi"] and
-                      i["rsi_zona_short"] and i["score_inst_short"] >= 40 and
+                      i["rsi_zona_short"] and i["score_inst_short"] >= 30 and
                       i["seguro_short"] and i["trendilo_short"] and not i["liq_fundo"] and
                       i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
 
@@ -792,12 +795,12 @@ def detectar_sinais(ind):
     # ── Cross / continuação da tendência ─────────────────────────────────────
     _tend_continuation_long = i["preco"] > i["e21"] and i["e10"] > i["e10_p"]
     _tend_continuation_short = i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
-    _score_trig_long  = i["score"] >= 100
-    _score_trig_short = i["score"] <= -100
+    _score_trig_long  = i["score"] >= 90
+    _score_trig_short = i["score"] <= -90
     _sr_long = _score_trig_long or i["cross_ok_bull"]
     _sr_short = _score_trig_short or i["cross_ok_bear"]
-    _cross_extra_long  = i["dna_flow_bull"] and i["score_inst_long"] >= 40 and (i["trendilo_long"] or i["kalman_subindo"])
-    _cross_extra_short = i["dna_flow_bear"] and i["score_inst_short"] >= 40 and (i["trendilo_short"] or not i["kalman_subindo"])
+    _cross_extra_long  = i["dna_flow_bull"] and i["score_inst_long"] >= 30 and (i["trendilo_long"] or i["kalman_subindo"])
+    _cross_extra_short = i["dna_flow_bear"] and i["score_inst_short"] >= 30 and (i["trendilo_short"] or not i["kalman_subindo"])
     _seg_sr_long  = not i["vol_secando"] and not i.get("exaustao_topo")
     _seg_sr_short = not i["vol_secando"] and not i.get("exaustao_fund")
     long_cross  = (_sr_long and i["preco"] > i["e200"] and
@@ -841,7 +844,7 @@ def detectar_sinais(ind):
                       i["obv_bull"] and _no_liq_topo and i["preco"] > i["e200"] and
                       i["preco"] > i["e50"] and not i["stoch_esticado_up"] and
                       i["rvol"] >= _rvol_bb and i["rsi_zona_long"] and i["rsi"] < 65 and
-                       i["score_inst_long"] >= 40 and
+                       i["score_inst_long"] >= 30 and
                        i["nao_overext_long"] and i["rsi_nao_chasing_long"])
     short_bb_break = (i["bb_break_short"] and i["bb_expand"] and i["kalman_descendo"] and
                        i["k_short_descendo"] and i["score"] < -40 and i["adx"] >= 15 and
@@ -849,15 +852,15 @@ def detectar_sinais(ind):
                        i["obv_bear"] and _no_liq_fund and i["preco"] < i["e200"] and
                        i["preco"] < i["e50"] and not i["stoch_esticado_down"] and
                        i["rvol"] >= _rvol_bb and i["rsi_zona_short"] and i["rsi"] > 35 and
-                       i["score_inst_short"] >= 40 and
+                       i["score_inst_short"] >= 30 and
                       i["nao_overext_short"] and i["rsi_nao_chasing_short"])
 
     # ── Smart Money ───────────────────────────────────────────────────────────
     long_sm  = (i["sm_bull"] and i["rsi"] > 25 and i["rsi_zona_long"] and
-                i["preco"] > i["e200"] and i["score_inst_long"] >= 40 and
+                i["preco"] > i["e200"] and i["score_inst_long"] >= 30 and
                 i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
     short_sm = (i["sm_bear"] and i["rsi_zona_short"] and i["rsi"] < 75 and
-                i["preco"] < i["e200"] and i["score_inst_short"] >= 40 and
+                i["preco"] < i["e200"] and i["score_inst_short"] >= 30 and
                 i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
 
     # ── Reversão extrema ──────────────────────────────────────────────────────
@@ -883,10 +886,10 @@ def detectar_sinais(ind):
     _surge_flow_short = i["dna_flow_bear"] or i["trendilo_short"]
     long_surge  = (_surge_vol_ok and i["candle_bull_pct"] > 0.03 and i["surge_break_h"] and
                    not i["exaustao_topo"] and (i["kalman_subindo"] or i["k_short_subindo"]) and i["ha_bull"] and
-                   i["rsi"] < 78 and i["score_inst_long"] >= 40 and _surge_flow_long)
+                   i["rsi"] < 78 and i["score_inst_long"] >= 30 and _surge_flow_long)
     short_surge = (_surge_vol_ok and i["candle_bear_pct"] > 0.03 and i["surge_break_l"] and
                    not i["exaustao_fund"] and (i["kalman_descendo"] or i["k_short_descendo"]) and i["ha_bear"] and
-                   i["rsi"] > 22 and i["score_inst_short"] >= 40 and _surge_flow_short)
+                   i["rsi"] > 22 and i["score_inst_short"] >= 30 and _surge_flow_short)
 
     # ── Momentum RSI ──────────────────────────────────────────────────────────
     rsi_fresh_long  = i["rsi_ant"] < 65 <= i["rsi"] < 73
@@ -902,10 +905,10 @@ def detectar_sinais(ind):
                         not i["ext_abaixo_e21"] and _mom_vol_ok_s and
                         not i["exaustao_fund"] and not i["stoch_esticado_down"])
     long_momentum  = (rsi_fresh_long  and i["ha_bull"] and i["dna_flow_bull"] and not i["liq_topo"] and
-                      i["adx"] > 22 and i["v_forte"] and i["trendilo_long"]  and i["score_inst_long"]  >= 50 and
+                      i["adx"] > 22 and i["v_forte"] and i["trendilo_long"]  and i["score_inst_long"]  >= 40 and
                       mom_seguro_long)
     short_momentum = (rsi_fresh_short and i["ha_bear"] and i["dna_flow_bear"] and not i["liq_fundo"] and
-                      i["adx"] > 22 and i["v_forte"] and i["trendilo_short"] and i["score_inst_short"] >= 50 and
+                      i["adx"] > 22 and i["v_forte"] and i["trendilo_short"] and i["score_inst_short"] >= 40 and
                       mom_seguro_short)
 
     # ── Rebound RSI ───────────────────────────────────────────────────────────
@@ -925,12 +928,12 @@ def detectar_sinais(ind):
     long_div  = (i["rsi_div_bull"] and i["ha_bull"] and i["v_bom"] and
                  i["rsi"] > 25 and i["rsi_zona_long"] and not i["exaustao_topo"] and
                  i["adx"] > ADX_MIN_GLOBAL and not i["lateralizado"] and i["preco"] > i["e200"] and
-                 i["score_inst_long"] >= 45 and
+                 i["score_inst_long"] >= 35 and
                  i["nao_overext_long"] and i["rsi_nao_chasing_long"])
     short_div = (i["rsi_div_bear"] and i["ha_bear"] and i["v_bom"] and
                  i["rsi_zona_short"] and i["rsi"] < 70 and i["preco"] < i["e200"] and
                  not i["exaustao_fund"] and i["adx"] > ADX_MIN_GLOBAL and not i["lateralizado"] and
-                 i["score_inst_short"] >= 45 and
+                 i["score_inst_short"] >= 35 and
                  i["nao_overext_short"] and i["rsi_nao_chasing_short"])
 
     # ── FLEX V3 — Continuação de Tendência (Impulso → Pullback → Rompimento) ──
@@ -979,12 +982,12 @@ def detectar_sinais(ind):
     long_setup  = (i["score"] > 50 and i["ha_bull2"] and i["macd_recuperando"] and i["adx"] > ADX_MIN_GLOBAL and
                    i["obv_bull"] and i["v_bom"] and i["acima_vwap"] and not i["lateralizado"] and
                    i["nao_ext_long_tight"] and i["seguro_long"] and (i["liq_long"] or i["liq_fundo"]) and
-                   i["preco"] > i["e200"] and i["score_inst_long"] >= 40 and i["rsi_zona_long"] and
+                   i["preco"] > i["e200"] and i["score_inst_long"] >= 30 and i["rsi_zona_long"] and
                    i["nao_overext_long"] and i["rsi_nao_chasing_long"])
     short_setup = (i["score"] < -50 and i["ha_bear2"] and i["macd_esgotando"] and i["adx"] > ADX_MIN_GLOBAL and
                    i["obv_bear"] and i["v_bom"] and i["abaixo_vwap"] and not i["lateralizado"] and
                    i["nao_ext_short_tight"] and i["seguro_short"] and (i["liq_short"] or i["liq_topo"]) and
-                   i["preco"] < i["e200"] and i["score_inst_short"] >= 40 and i["rsi_zona_short"] and
+                   i["preco"] < i["e200"] and i["score_inst_short"] >= 30 and i["rsi_zona_short"] and
                    i["nao_overext_short"] and i["rsi_nao_chasing_short"])
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
@@ -1105,21 +1108,20 @@ def detectar_sinais(ind):
             if condição:
                 sinal = dir_; fonte = src; break
 
-        # 3/4 gates: se nenhum sinal especifico disparou mas 3/4 gatilhos
-        # principais passam (pullback, cross, macd_rec, dna_flow), libera FLEX
+        # V4.2: votacao de gatilhos — se 2+ de 4 passam, libera FLEX
         if not sinal:
             for _dir, _pull, _cross, _macd, _dna in [
-                ("LONG", i.get("pullback_bull", False),
-                 i.get("cross_ok_bull", False) or abs(i.get("score", 0)) >= 100,
+                ("LONG", i.get("pullback_ok_bull", False),
+                 i.get("cross_ok_bull", False),
                  i.get("macd_recuperando", False),
                  i.get("dna_flow_bull", False)),
-                ("SHORT", i.get("pullback_bear", False),
-                 i.get("cross_ok_bear", False) or abs(i.get("score", 0)) >= 100,
+                ("SHORT", i.get("pullback_ok_bear", False),
+                 i.get("cross_ok_bear", False),
                  i.get("macd_esgotando", False),
                  i.get("dna_flow_bear", False))
             ]:
                 _triggers = [_pull, _cross, _macd, _dna]
-                if sum(_triggers) >= 3 and abs(i.get("score", 0)) >= 40:
+                if sum(_triggers) >= 2 and abs(i.get("score", 0)) >= 40:
                     sinal = _dir; fonte = "FLEX"; break
 
     return sinal, fonte
