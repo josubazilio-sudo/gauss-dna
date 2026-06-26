@@ -788,11 +788,13 @@ def detectar_sinais(ind):
     # ── Cross / continuação da tendência ─────────────────────────────────────
     _tend_continuation_long = i["preco"] > i["e21"] and i["e10"] > i["e10_p"]
     _tend_continuation_short = i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
-    long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long) and i["dna_flow_bull"] and
+    _score_trig_long  = i["score"] >= 100
+    _score_trig_short = i["score"] <= -100
+    long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long or _score_trig_long) and i["dna_flow_bull"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
                    i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
-    short_cross = ((i["algum_cross_bear"] or _tend_continuation_short) and i["dna_flow_bear"] and
+    short_cross = ((i["algum_cross_bear"] or _tend_continuation_short or _score_trig_short) and i["dna_flow_bear"] and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]) and
                    i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])
