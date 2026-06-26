@@ -93,7 +93,7 @@ def _detectar_bloqueadores_diag(result: dict) -> list:
     ha1_s = result.get("ha_bear_1", False)
 
     _sc_min  = 25 if FILTER_LEVEL <= 0 else 40
-    _vol_thr = 0.20 if FILTER_LEVEL <= 0 else (0.50 if FILTER_LEVEL == 1 else (0.65 if FILTER_LEVEL == 2 else 0.80))
+    _vol_thr = max(0.20, RVOL_MIN_EXEC) if FILTER_LEVEL <= 0 else (RVOL_MIN_EXEC if FILTER_LEVEL == 1 else (0.65 if FILTER_LEVEL == 2 else 0.80))
 
     if sc < _sc_min:
         motivos.append("score baixo")
