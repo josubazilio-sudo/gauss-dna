@@ -435,11 +435,8 @@ def calcular_indicadores(candles):
     # de baixo volume, mas não mata o sinal isoladamente na cascata de detecção.
     _bloq_bb_topo   = not perto_bb_topo if BB_TOPO_BLOQUEAR else True
     _bloq_bb_fundo  = not perto_bb_fund if BB_FUNDO_BLOQUEAR else True
-    _bloq_exaustao  = not exaustao_topo if EXAUSTAO_BLOQUEAR else True
-    _bloq_exaustao_s = not exaustao_fund if EXAUSTAO_BLOQUEAR else True
-    seguro_long  = (_bloq_bb_topo and not ext_acima_e21 and
-                    _bloq_exaustao and rsi_nao_topo)
-    seguro_short = (_bloq_bb_fundo and _bloq_exaustao_s and rsi_nao_fundo)
+    seguro_long  = (_bloq_bb_topo and not ext_acima_e21 and rsi_nao_topo)
+    seguro_short = (_bloq_bb_fundo and rsi_nao_fundo)
 
     # SEGURO — contagem de alertas (GAUSS+DNA v5.0): cada booleano abaixo é um
     # "alerta leve" de qualidade de entrada; PRATA/BRONZE toleram no máx. 1.
@@ -790,9 +787,9 @@ def detectar_sinais(ind):
 
     # ── Cross / continuação da tendência ─────────────────────────────────────
     _tend_continuation_long = (i["preco"] > i["e21"] and i["e10"] > i["e10_p"]
-                               and i["_fechamentos"][-1] > i["_aberturas"][-1])
+                               and (i["preco"] > i["_maximas"][-2] or i["candle_bull_pct"] > 0))
     _tend_continuation_short = (i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
-                                and i["_fechamentos"][-1] < i["_aberturas"][-1])
+                                and (i["preco"] < i["_minimas"][-2] or i["candle_bear_pct"] < 0))
     long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long) and i["dna_flow_bull"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
