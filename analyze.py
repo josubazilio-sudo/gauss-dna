@@ -790,9 +790,9 @@ def detectar_sinais(ind):
 
     # ── Cross / continuação da tendência ─────────────────────────────────────
     _tend_continuation_long = (i["preco"] > i["e21"] and i["e10"] > i["e10_p"]
-                               and i["preco"] > i["_maximas"][-2])
+                               and i["fechamento_ha"] > i["abertura_ha"])
     _tend_continuation_short = (i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
-                                and i["preco"] < i["_minimas"][-2])
+                                and i["fechamento_ha"] < i["abertura_ha"])
     long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long) and i["dna_flow_bull"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
