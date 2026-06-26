@@ -794,10 +794,16 @@ def detectar_sinais(ind):
     _sr_short = _score_trig_short or i["algum_cross_bear"] or _tend_continuation_short
     _cross_extra_long  = i["dna_flow_bull"] and i["score_inst_long"] >= 50 and (i["trendilo_long"] or i["kalman_subindo"])
     _cross_extra_short = i["dna_flow_bear"] and i["score_inst_short"] >= 50 and (i["trendilo_short"] or not i["kalman_subindo"])
-    long_cross  = (_sr_long and i["preco"] > i["e200"] and i["rsi_zona_long"] and i["seguro_long"] and
-                   (_score_trig_long or (_cross_extra_long and i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])))
-    short_cross = (_sr_short and i["preco"] < i["e200"] and i["rsi_zona_short"] and i["seguro_short"] and
-                   (_score_trig_short or (_cross_extra_short and i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])))
+    _seg_sr_long  = not i["vol_secando"] and not i.get("exaustao_topo")
+    _seg_sr_short = not i["vol_secando"] and not i.get("exaustao_fund")
+    long_cross  = (_sr_long and i["preco"] > i["e200"] and
+                   ((_score_trig_long and _seg_sr_long) or
+                    (i["rsi_zona_long"] and i["seguro_long"] and _cross_extra_long and
+                     i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])))
+    short_cross = (_sr_short and i["preco"] < i["e200"] and
+                   ((_score_trig_short and _seg_sr_short) or
+                    (i["rsi_zona_short"] and i["seguro_short"] and _cross_extra_short and
+                     i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])))
 
     # ── Variáveis de nível de filtro (usadas em BB_BREAK e SCOUT) ────────────
     _fluxo_min   = 0 if _FLV <= 0 else (1 if _FLV == 1 else 2)
@@ -1198,6 +1204,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             _score_trig = sc >= 100
             _trig = []
             if not ind.get("pullback_bull"):    _trig.append("pullback=F")
+            if not _score_trig: _trig.append("no_scr_trig")
             if not (_score_trig or ind.get("algum_cross_bull")): _trig.append("cross=F")
             if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
             if SEM_LIQ_BLOQUEAR and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
@@ -1240,6 +1247,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if fluxo < 2:                b.append(f"fluxo={fluxo}/4")
             _score_trig = sc <= -100
             _trig = []
+            if not _score_trig: _trig.append("no_scr_trig")
             if not ind.get("pullback_bear"):    _trig.append("pullback=F")
             if not (_score_trig or ind.get("algum_cross_bear")): _trig.append("cross=F")
             if MACD_ESG_OBRIGATORIO and not ind.get("macd_esgotando"): _trig.append("macd_esg=F")
