@@ -786,10 +786,8 @@ def detectar_sinais(ind):
                   i["preco"] >= i["e21"] * 0.98)
 
     # ── Cross / continuação da tendência ─────────────────────────────────────
-    _tend_continuation_long = (i["preco"] > i["e21"] and i["e10"] > i["e10_p"]
-                               and (i["preco"] > i["_maximas"][-2] or i["candle_bull_pct"] > 0))
-    _tend_continuation_short = (i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
-                                and (i["preco"] < i["_minimas"][-2] or i["candle_bear_pct"] < 0))
+    _tend_continuation_long = i["preco"] > i["e21"] and i["e10"] > i["e10_p"]
+    _tend_continuation_short = i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
     long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long) and i["dna_flow_bull"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
