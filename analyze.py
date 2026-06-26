@@ -707,22 +707,22 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
 
-    # ── OURO (dist 5%, alav 10-20x) ──
-    if (score_inst >= 90 and rvol >= 1.50 and adx >= 25
+    # ── OURO (dist 5%) ──
+    if (score_inst >= 82 and rvol >= 1.50 and adx >= 24
             and (45 <= rsi <= 62 if eh_long else 38 <= rsi <= 55)
             and dist_pct <= 5.0
             and fluxo and liq and not ex):
         return "OURO"
 
-    # ── PRATA (dist 3%, alav 5-10x) ──
-    if (score_inst >= 80 and rvol >= 1.00 and adx >= 20
+    # ── PRATA (dist 3%) ──
+    if (score_inst >= 76 and rvol >= 1.00 and adx >= 20
             and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
             and dist_pct <= 3.0
             and fluxo and liq and not ex):
         return "PRATA"
 
-    # ── BRONZE (dist 3%, alav 3-5x) ──
-    if (score_inst >= SCORE_MIN and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
+    # ── BRONZE (dist 3%) ──
+    if (score_inst >= 70 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
             and (RSI_LONG_MIN <= rsi <= RSI_LONG_MAX if eh_long else RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX)
             and dist_pct <= 3.0
             and not ex):
@@ -792,12 +792,16 @@ def detectar_sinais(ind):
                   not i["liq_fundo"] and i["preco"] < i["e200"] and
                   i["preco"] >= i["e21"] * 0.98)
 
-    # ── Cross ─────────────────────────────────────────────────────────────────
-    long_cross  = (i["algum_cross_bull"] and i["dna_flow_bull"] and i["adx_long_ok"] and
+    # ── Cross / continuação da tendência ─────────────────────────────────────
+    _tend_continuation_long = (i["tendencia_bull"] and i["dna_flow_bull"] and i["adx_long_ok"]
+                               and i["macd_bull_r"] and (i["trendilo_long"] or i["kalman_subindo"]))
+    _tend_continuation_short = (i["tendencia_bear"] and i["dna_flow_bear"] and i["adx_short_ok"]
+                                and i["macd_bear_r"] and (i["trendilo_short"] or not i["kalman_subindo"]))
+    long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long) and i["dna_flow_bull"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
                    i["nao_overext_long"] and i["rsi_nao_chasing_long"] and i["nao_ext_long_tight"])
-    short_cross = (i["algum_cross_bear"] and i["dna_flow_bear"] and i["adx_short_ok"] and
+    short_cross = ((i["algum_cross_bear"] or _tend_continuation_short) and i["dna_flow_bear"] and
                    i["preco"] < i["e200"] and i["score_inst_short"] >= 50 and i["rsi_zona_short"] and
                    i["seguro_short"] and (i["trendilo_short"] or not i["kalman_subindo"]) and
                    i["nao_overext_short"] and i["rsi_nao_chasing_short"] and i["nao_ext_short_tight"])

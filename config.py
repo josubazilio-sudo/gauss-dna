@@ -102,7 +102,7 @@ ADX_NAO_SUBINDO_BLOQUEIA = False
 ADX_FLEX_MARGIN = 1.5
 
 # Filtros principais
-RVOL_MIN = 0.35
+RVOL_MIN = 0.40
 
 ADX_MIN_SURGE = 15
 ADX_MIN_PULLBACK = 15
@@ -121,16 +121,16 @@ HA_H1_CONFIRMAR = False
 HA_H1_PESO = 10
 
 # V4 — alinhados ao piso do usuário
-ADX_MIN_GLOBAL = 15
-RVOL_MIN_BY_TF = {"30m": 0.35, "1h": 0.35}
-RVOL_MIN_EXEC = 0.35
+ADX_MIN_GLOBAL = 18
+RVOL_MIN_BY_TF = {"30m": 0.40, "1h": 0.40}
+RVOL_MIN_EXEC = 0.40
 
 # V4 — thresholds do usuário
 SCORE_MIN = 72
 CONFIANCA_MIN = 60
-SCORE_OURO = 90
-SCORE_PRATA = 80
-SCORE_BRONZE = 72
+SCORE_OURO = 82
+SCORE_PRATA = 76
+SCORE_BRONZE = 70
 
 # RSI por direção
 RSI_LONG_MIN = 38
@@ -174,7 +174,7 @@ BB_TOPO_BLOQUEAR    = True    # bb_topo bloqueia LONG
 BB_FUNDO_BLOQUEAR   = True    # bb_fundo bloqueia SHORT
 STOCH_EXTREMO_BLOQUEAR = False
 VOLUME_SECANDO_BLOQUEAR = False
-MERCADO_LATERAL_BLOQUEAR = False
+MERCADO_LATERAL_BLOQUEAR = True
 
 # ── Arquivos de estado ────────────────────────────────────────────────────────
 STATE_FILE   = Path("last_signals.json")
