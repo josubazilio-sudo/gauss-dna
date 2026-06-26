@@ -567,7 +567,7 @@ def calcular_indicadores(candles):
         "tbull_r": tbull_r, "tbear_r": tbear_r, "tbull_loose": tbull_loose, "tbear_loose": tbear_loose,
         "tend_consistente_bull": tend_consistente_bull, "tend_consistente_bear": tend_consistente_bear,
         # EMAs
-        "e10": e10, "e21": e21, "e50": e50, "e200": e200,
+        "e10": e10, "e10_p": e10_p, "e21": e21, "e50": e50, "e200": e200,
         "e10_arr": e10_arr, "e21_arr": e21_arr,
         # Kalman
         "kalman_subindo": kalman_subindo, "kalman_descendo": kalman_descendo,
@@ -791,9 +791,9 @@ def detectar_sinais(ind):
 
     # ── Cross / continuação da tendência ─────────────────────────────────────
     _tend_continuation_long = (i["preco"] > i["e21"] and i["e10"] > i["e10_p"]
-                               and i["preco"] > i["maximas"][-2])
+                               and i["preco"] > i["_maximas"][-2])
     _tend_continuation_short = (i["preco"] < i["e21"] and i["e10"] < i["e10_p"]
-                                and i["preco"] < i["minimas"][-2])
+                                and i["preco"] < i["_minimas"][-2])
     long_cross  = ((i["algum_cross_bull"] or _tend_continuation_long) and i["dna_flow_bull"] and
                    i["preco"] > i["e200"] and i["score_inst_long"] >= 50 and i["rsi_zona_long"] and
                    i["seguro_long"] and (i["trendilo_long"] or i["kalman_subindo"]) and
