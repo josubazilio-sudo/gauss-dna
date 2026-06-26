@@ -637,24 +637,24 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
 
-    # ── OURO ──
+    # ── OURO (dist 5%, alav 10-20x) ──
     if (score_inst >= 90 and rvol >= 1.50 and adx >= 25
             and (45 <= rsi <= 62 if eh_long else 38 <= rsi <= 55)
-            and dist_pct <= 2.5
+            and dist_pct <= 5.0
             and fluxo and liq and not ex):
         return "OURO"
 
-    # ── PRATA ──
+    # ── PRATA (dist 3%, alav 5-10x) ──
     if (score_inst >= 80 and rvol >= 1.00 and adx >= 20
             and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
-            and dist_pct <= 3.5
+            and dist_pct <= 3.0
             and fluxo and liq and not ex):
         return "PRATA"
 
-    # ── BRONZE — alinhado às configs do usuário ──
+    # ── BRONZE (dist 3%, alav 3-5x) ──
     if (score_inst >= SCORE_MIN and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
             and (RSI_LONG_MIN <= rsi <= RSI_LONG_MAX if eh_long else RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX)
-            and dist_pct <= 4.0
+            and dist_pct <= 3.0
             and not ex):
         return "BRONZE"
 
@@ -857,7 +857,7 @@ def detectar_sinais(ind):
                  i["nao_overext_short"] and i["rsi_nao_chasing_short"])
 
     # ── FLEX geral ────────────────────────────────────────────────────────────
-    # RVOL>=1.2 e ADX>=25 (pedido 20/06 — caso TIA/USDT BRONZE 2/5 com RVOL 0.65/ADX 24 era fraco demais)
+    # RVOL>=1.2 e ADX>=22 (autorizado 25/06 — flex/scout de 25 pra 22)
     _macd_ok_l = not MACD_R_OBRIGATORIO or i["macd_bull_r"]
     _macd_ok_s = not MACD_R_OBRIGATORIO or i["macd_bear_r"]
     _liq_ok_l  = FLEX_SCOUT_SEM_LIQ or i["liq_long"] or i["liq_fundo"] or (i["trendilo_long"] and i["kalman_subindo"])
@@ -888,8 +888,7 @@ def detectar_sinais(ind):
                    i["nao_overext_short"] and i["rsi_nao_chasing_short"])
 
     # ── Scout (sinal secundário) ──────────────────────────────────────────────
-    # RVOL>=1.2 e ADX>=25 (pedido 20/06 — mesmo piso do FLEX, caso TRUMP/USDT
-    # SCOUT BRONZE 1/5 com RVOL 0.24x passou pelo vol_nao_fade solto demais)
+    # RVOL>=1.2 e ADX>=22 (autorizado 25/06 — mesmo piso do FLEX)
     _sc_min  = 25 if _FLV <= 0 else 40
     _seg_l   = i["seguro_long"]  if _FLV >= 1 else True
     _seg_s   = i["seguro_short"] if _FLV >= 1 else True
@@ -1131,7 +1130,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if not ind.get("algum_cross_bull"):  _trig.append("cross=F")
             if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
             if SEM_LIQ_BLOQUEAR and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
-            if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
+            if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<22(flex/scout)")
             if not ind.get("macd_bull_r"):        _trig.append("macd_r=F")
             if ind.get("nao_overext_long") is False: _trig.append("overext")
             if ind.get("rsi_nao_chasing_long") is False: _trig.append("rsi_chase")
@@ -1145,7 +1144,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
                 if not ind.get("algum_cross_bull"):  _trig.append("cross=F")
                 if not ind.get("macd_recuperando"):  _trig.append("macd_rec=F")
                 if SEM_LIQ_BLOQUEAR and not (ind.get("liq_long") or ind.get("liq_fundo")): _trig.append("sem_liq")
-                if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
+                if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<22(flex/scout)")
                 b.append("gatilho:" + ",".join(_trig) if _trig else "sem detalhe real")
             bloqueio_detalhe = "; ".join(b) or "sem detalhe"
             log.info(f"  LONG-BLOQ {simbolo}: score={sc:+d} | {bloqueio_detalhe}")
@@ -1169,7 +1168,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if not ind.get("algum_cross_bear"):  _trig.append("cross=F")
             if MACD_ESG_OBRIGATORIO and not ind.get("macd_esgotando"): _trig.append("macd_esg=F")
             if SEM_LIQ_BLOQUEAR and not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
-            if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
+            if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<22(flex/scout)")
             if not ind.get("macd_bear_r"):        _trig.append("macd_r=F")
             if ind.get("nao_overext_short") is False: _trig.append("overext")
             if ind.get("rsi_nao_chasing_short") is False: _trig.append("rsi_chase")
@@ -1180,7 +1179,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
                 if not ind.get("algum_cross_bear"):  _trig.append("cross=F")
                 if MACD_ESG_OBRIGATORIO and not ind.get("macd_esgotando"): _trig.append("macd_esg=F")
                 if SEM_LIQ_BLOQUEAR and not (ind.get("liq_short") or ind.get("liq_topo")): _trig.append("sem_liq")
-                if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<25(flex/scout)")
+                if ind["adx"] < 25:                  _trig.append(f"adx={ind['adx']:.1f}<22(flex/scout)")
                 b.append("gatilho:" + ",".join(_trig) if _trig else "sem detalhe real")
             bloqueio_detalhe = "; ".join(b) or "sem detalhe"
             log.info(f"  SHORT-BLOQ {simbolo}: score={sc:+d} | {bloqueio_detalhe}")
