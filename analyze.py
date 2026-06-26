@@ -422,7 +422,7 @@ def calcular_indicadores(candles):
     tbull_loose = e10 > e21 and e21 > e50
     tbear_loose = e10 < e21 and e21 < e50
 
-    rsi_nao_topo   = rsi < 75
+    rsi_nao_topo   = rsi < RSI_LONG_MAX
     rsi_nao_fundo  = rsi >= 20
     # vol_secando saiu do bloqueio binário (23/06, 4ª rodada): mesmo após 3 afrouxa-
     # mentos de limiar no mesmo dia, continuava sendo o bloqueador isolado dominante
@@ -691,7 +691,8 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     dist_pct = abs((preco - e21) / e21) * 100 if e21 else 999
 
     # GLOBAIS (aplicam a todos os tiers)
-    if not (ind["tendencia_bull"] if eh_long else ind["tendencia_bear"]):
+    mm200_ok = (ind["preco"] > ind["e200"]) if eh_long else (ind["preco"] < ind["e200"])
+    if not mm200_ok:
         return None
 
     fluxo = (ind["dna_flow_bull"] or ind["trendilo_long"]) if eh_long else \
@@ -699,21 +700,21 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     liq = (ind["liq_fundo_12"] if eh_long else ind["liq_topo_12"])
     ex = ind.get("exaustao_topo" if eh_long else "exaustao_fund", False)
     # ── OURO ──
-    if (score_inst >= 75 and rvol >= 1.20 and adx >= 22
+    if (score_inst >= 65 and rvol >= 1.0 and adx >= 20
             and (42 <= rsi <= 65 if eh_long else 35 <= rsi <= 58)
             and dist_pct <= 5.0
             and fluxo and liq and not ex):
         return "OURO"
 
     # ── PRATA ──
-    if (score_inst >= 65 and rvol >= 0.80 and adx >= 18
+    if (score_inst >= 55 and rvol >= 0.70 and adx >= 16
             and (40 <= rsi <= 68 if eh_long else 33 <= rsi <= 58)
             and dist_pct <= 5.0
             and fluxo):
         return "PRATA"
 
     # ── BRONZE ──
-    if (score_inst >= 55 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
+    if (score_inst >= 45 and rvol >= RVOL_MIN_EXEC and adx >= ADX_MIN_GLOBAL
             and (RSI_LONG_MIN <= rsi <= RSI_LONG_MAX if eh_long else RSI_SHORT_MIN <= rsi <= RSI_SHORT_MAX)
             and dist_pct <= 5.0
             and not ex):
@@ -1236,7 +1237,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if ind.get("nao_overext_long") is False: _trig.append("overext")
             if ind.get("rsi_nao_chasing_long") is False: _trig.append("rsi_chase")
             if not ind.get("dna_flow_bull"):        _trig.append("dna_flow=F")
-            if ind.get("score_inst_long", 0) < 50:  _trig.append(f"inst={ind['score_inst_long']:.0f}<50")
+            if ind.get("score_inst_long", 0) < 40:  _trig.append(f"inst={ind['score_inst_long']:.0f}<40")
             if not (ind.get("trendilo_long") or ind.get("kalman_subindo")): _trig.append("sem_trendilo")
             if ind.get("nao_ext_long_tight") is False: _trig.append("ext_tight")
             b.append("gatilho:" + ",".join(_trig) if _trig else "tudo ok")
@@ -1280,7 +1281,7 @@ def analisar(simbolo, candles, funding_rate=None, ha4_bull=None, ha4_bear=None):
             if ind.get("nao_overext_short") is False: _trig.append("overext")
             if ind.get("rsi_nao_chasing_short") is False: _trig.append("rsi_chase")
             if not ind.get("dna_flow_bear"):        _trig.append("dna_flow=F")
-            if ind.get("score_inst_short", 0) < 50: _trig.append(f"inst={ind['score_inst_short']:.0f}<50")
+            if ind.get("score_inst_short", 0) < 40: _trig.append(f"inst={ind['score_inst_short']:.0f}<40")
             if not (ind.get("trendilo_short") or not ind.get("kalman_subindo")): _trig.append("sem_trendilo")
             if ind.get("nao_ext_short_tight") is False: _trig.append("ext_tight")
             b.append("gatilho:" + ",".join(_trig) if _trig else "tudo ok")
