@@ -700,6 +700,9 @@ def classificar_v2(ind, sinal, ha4_bull=None, ha4_bear=None, h1_aligned=None):
     dist_pct = abs((preco - e21) / e21) * 100 if e21 else 999
 
     # GLOBAIS (aplicam a todos os tiers)
+    if score_inst < 60:
+        return None
+
     mm200_ok = (ind["preco"] > ind["e200"]) if eh_long else (ind["preco"] < ind["e200"])
     if not mm200_ok:
         return None

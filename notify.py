@@ -161,7 +161,7 @@ async def enviar_sinal(session, simbolo, label, abrev, direcao, preco, atr, scor
     contratos = valor_pos / preco if preco else 0
     valor_risco = contratos * risco
     pos_alav  = margem
-    _confianca = max(40, min(95, score_inst - 10))
+    _confianca = score_inst
 
     # ── Saída em 2 estágios (v5.0): TP1=1:1R fecha 50% e move o stop pra BE;
     # os 50% restantes seguem em trailing (50% do ganho máximo desde o TP1,
